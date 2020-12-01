@@ -4,7 +4,7 @@ import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
 import {CommandContext, Config, ScriptDetails, ScriptProcessorMap} from "./config";
 import {Strings} from "./utils";
-import {consoleHandleShell, executeShell, ShellResult} from "./shell";
+import {consoleHandleShell, executeShell, shellDebugPrint, ShellResult} from "./shell";
 
 
 export class Cli {
@@ -48,7 +48,13 @@ export class Cli {
                         console.log('Step'.padEnd(nameWidth), 'Command')
                         console.log('-'.padEnd(nameWidth, '-'), '-'.padEnd(cmdWidth, '-'))
                         script.commands.forEach(c => console.log(c.name.padEnd(nameWidth), c.command))
-                    } else this.executeScripts({shellDebug: cmd.shellDebug, all: cmd.all}, script, cmd.all).then(consoleHandleShell(script.name), consoleHandleShell(script.name))
+                    } else {
+                        let results = this.executeScripts({shellDebug: cmd.shellDebug, all: cmd.all}, script, cmd.all);
+                        if (cmd.shellDebug)
+                            results.then(shellDebugPrint, shellDebugPrint)
+                        else
+                            results.then(consoleHandleShell, consoleHandleShell)
+                    }
                 }
             )
         })
@@ -92,16 +98,16 @@ let config = JSON.parse(fs.readFileSync(laobanFile(laoban)).toString())
 function projectScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
     return Promise.all(Files.findProjectFiles(c.directory).map(fd => {
         let command = `cd ${fd}\n` + s.commands.map(s => s.command).join("\n")
-        return executeShell(context.shellDebug, command);
+        return executeShell(context.shellDebug, "Project Directory: " + fd, command);
     }))
 }
 function globalScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
     let command = s.commands.map(s => s.command).join("\n")
-    let result = executeShell(context.shellDebug, command);
+    let result = executeShell(context.shellDebug, "Directory: " + process.cwd(), command);
     return Promise.all([result])
 }
 
-let scriptProcessor : ScriptProcessorMap= new Map()
+let scriptProcessor: ScriptProcessorMap = new Map()
 scriptProcessor.set('project', projectScriptProcessor)
 scriptProcessor.set('global', globalScriptProcessor)
 
