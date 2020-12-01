@@ -17,7 +17,7 @@ function replaceVar(name: string, dic: any,  ref: string) : string {
         console.log('dic', dic)
         throw new Error(`Value for ${name} references illegal variable ${i}`)
 }
-/** If the string has ${a.b.c} in it, then that is replaced by the dic entry */
+/** If the string has ${a} in it, then that is replaced by the dic entry */
 function derefence(name: string, dic: any, s: string) {
     const regex = /(\$\{.*\})/g
     let groups = s.match(regex)
