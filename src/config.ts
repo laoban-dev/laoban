@@ -8,7 +8,6 @@ export interface ConfigVariables {
 }
 export interface RawConfig extends ConfigVariables {
     scripts?: ScriptDefns,
-    templateScripts?: ScriptDefns,
     projectScripts?: ScriptDefns
 }
 
@@ -17,18 +16,20 @@ export interface ScriptResult {
 }
 export interface ScriptDetails {
     name: string
-    script: ScriptDefn
+    description: string
+    commands: Command[]
     type: ScriptProcessor
 }
-export type ScriptProcessor = 'simple' | 'project' | 'template'
+export type ScriptProcessor = 'global' | 'project'
 
-type ScriptProcessorMap = Map<ScriptProcessor, (s: ScriptDefn>
+export type ScriptProcessorMap = Map<ScriptProcessor, (c: Config, s: ScriptDetails) => ScriptResult>
 
 export interface Config extends ConfigVariables {
     directory: string
     laobanConfig: string
     variables: { [name: string]: string }
-    scripts: ScriptProcessor[]
+    globalScripts: ScriptDetails[]
+    projectScripts: ScriptDetails[]
 }
 export interface ScriptDefns {
     [name: string]: ScriptDefn
