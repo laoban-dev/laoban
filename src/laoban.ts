@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import {Files, findLaoban, laobanFile} from "./Files";
+import {compactStatus, Files, findLaoban, laobanFile, printStatus, writeCompactedStatus} from "./Files";
 import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
 import {Config, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
 import {Strings} from "./utils";
 import {consoleHandleShell, executeShellDetails, executeShellDetailsInAllDirectories, shellDebugPrint} from "./shell";
+import * as path from "path";
 
 
 export class Cli {
@@ -27,6 +28,7 @@ export class Cli {
         arguments('').//
         version('0.1.0')//
 
+    makeDirectories(all: boolean) {return all ? Files.findProjectFiles(this.config.directory) : [process.cwd()]}
     addScripts(scripts: ScriptDetails[], options: (program: any) => any) {
         scripts.forEach(script => {
             this.command(script.name, script.description, options).action((cmd: any) => {
@@ -42,7 +44,7 @@ export class Cli {
                     } else {
                         let sc: ScriptInContext = {
                             config: this.config, details: script, timestamp: new Date(),
-                            context: {shellDebug: cmd.shellDebug, directories: cmd.all ? Files.findProjectFiles(this.config.directory) : [process.cwd()]}
+                            context: {shellDebug: cmd.shellDebug, directories: this.makeDirectories(cmd.all)}
                         }
                         let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
                         let processor = cmd.shellDebug ? shellDebugPrint : consoleHandleShell
@@ -58,7 +60,19 @@ export class Cli {
         this.config = config
 
         this.command('config', 'displays the config', this.defaultOptions).//
-            action((cmd: any) => console.log(laoban, JSON.stringify(config, null, 2)))
+            action((cmd: any) => {
+                let simpleConfig = {...config}
+                delete simpleConfig.scripts
+                console.log(laoban, JSON.stringify(simpleConfig, null, 2))
+            })
+        this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
+            action((cmd: any) => {
+                this.makeDirectories(cmd.all).forEach(d => printStatus(d, compactStatus(path.join(d, this.config.status))))
+            })
+        this.command('compactStatus', 'crunches the status', this.defaultOptions).//
+            action((cmd: any) => {
+                this.makeDirectories(cmd.all).forEach(d => writeCompactedStatus(path.join(d, this.config.status), compactStatus(path.join(d, this.config.status))))
+            })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) => Files.findProjectFiles(config.directory).forEach(p => console.log(p)))
         this.addScripts(config.scripts, this.defaultOptions)

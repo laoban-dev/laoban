@@ -21,7 +21,7 @@
       "description": "lists all the projects", "commands": [
         {"name": "ls", "command": "ls", "status": true},
         {"name": "pwd", "command": "pwd", "status": true},
-        {"name": "echo", "command": "echo", "status": true}
+        {"name": "echo", "command": "sdsdsd", "status": true}
       ]
     },
     "install"   : {

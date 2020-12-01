@@ -45,8 +45,8 @@ export function shellDebugPrint(drs: DirectoryAndResults[]) {
 function statusResults(scd: ScriptInContextAndDirectory, command: CommandDefn, result: ShellResult) {
     let statusFile = path.join(scd.directory, scd.scriptInContext.config.status)
     if (command.status) {
-        let status = result.err ? true : false
-        fs.appendFile(statusFile, `${scd.scriptInContext.timestamp.toISOString()} ${command.name}: ${status}\n`, err => {
+        let status = result.err ? false : true
+        fs.appendFile(statusFile, `${scd.scriptInContext.timestamp.toISOString()} ${status} ${command.name}\n`, err => {
             if (err) console.log('error making status', scd.directory, command, err)
         })
     }
