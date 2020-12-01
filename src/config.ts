@@ -1,3 +1,5 @@
+import {ShellResult} from "./shell";
+
 export interface ConfigVariables {
     templateDir: string,
     globalLog: string,
@@ -11,9 +13,6 @@ export interface RawConfig extends ConfigVariables {
     projectScripts?: ScriptDefns
 }
 
-export interface ScriptResult {
-    exitCode: number
-}
 export interface ScriptDetails {
     name: string
     description: string
@@ -22,7 +21,11 @@ export interface ScriptDetails {
 }
 export type ScriptProcessor = 'global' | 'project'
 
-export type ScriptProcessorMap = Map<ScriptProcessor, (c: Config, s: ScriptDetails) => ScriptResult>
+export interface CommandContext {
+    shellDebug: boolean,
+    all?: boolean
+}
+export type ScriptProcessorMap = Map<ScriptProcessor, (context: CommandContext, c: Config, s: ScriptDetails) => Promise<ShellResult[]>>
 
 export interface Config extends ConfigVariables {
     directory: string
