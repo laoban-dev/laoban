@@ -36,3 +36,4 @@ out/
 *.old.json
 *.review
 target/
+.log

@@ -2,13 +2,13 @@
 import {Files, findLaoban, laobanFile} from "./Files";
 import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
-import {CommandContext, Config, ScriptDetails, ScriptProcessorMap} from "./config";
+import {Config, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
 import {Strings} from "./utils";
-import {consoleHandleShell, executeShell, shellDebugPrint, ShellResult} from "./shell";
+import {consoleHandleShell, executeShellDetails, executeShellDetailsInAllDirectories, shellDebugPrint} from "./shell";
 
 
 export class Cli {
-    private scriptProcessor: ScriptProcessorMap;
+    private scriptProcessor: ScriptProcessor;
     private config: Config;
 
     command(cmd: string, description: string, ...fns: ((a: any) => any)[]) {
@@ -31,17 +31,12 @@ export class Cli {
         arguments('').//
         version('0.1.0')//
 
-    executeScripts(commandContext: CommandContext, script: ScriptDetails, all: boolean): Promise<ShellResult[]> {
-        let processor = this.scriptProcessor.get(script.type);
-        return processor(commandContext, this.config, script)
-    }
-
     addScripts(scripts: ScriptDetails[], options: (program: any) => any) {
         scripts.forEach(script => {
             this.command(script.name, script.description, options).action((cmd: any) => {
                     if (cmd.dryrun) {
                         if (cmd.all) {console.log("In every project...")}
-                        console.log(script.name + " (" + script.type + ")", script.description)
+                        console.log(script.name, script.description)
                         console.log()
                         let nameWidth = Math.max(4, Strings.maxLength(script.commands.map(s => s.name)))
                         let cmdWidth = Math.max(4, Strings.maxLength(script.commands.map(s => s.command)))
@@ -49,18 +44,20 @@ export class Cli {
                         console.log('-'.padEnd(nameWidth, '-'), '-'.padEnd(cmdWidth, '-'))
                         script.commands.forEach(c => console.log(c.name.padEnd(nameWidth), c.command))
                     } else {
-                        let results = this.executeScripts({shellDebug: cmd.shellDebug, all: cmd.all}, script, cmd.all);
-                        if (cmd.shellDebug)
-                            results.then(shellDebugPrint, shellDebugPrint)
-                        else
-                            results.then(consoleHandleShell, consoleHandleShell)
+                        let sc: ScriptInContext = {
+                            config: this.config, details: script,
+                            context: {shellDebug: cmd.shellDebug, directories: cmd.all ? Files.findProjectFiles(this.config.directory) : [process.cwd()]}
+                        }
+                        let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
+                        let processor = cmd.shellDebug ? shellDebugPrint : consoleHandleShell
+                        results.then(processor, processor)
                     }
                 }
             )
         })
     }
 
-    constructor(config: Config, scriptProcessor: ScriptProcessorMap) {
+    constructor(config: Config, scriptProcessor: ScriptProcessor) {
         this.scriptProcessor = scriptProcessor;
         this.config = config
 
@@ -95,25 +92,26 @@ export class Cli {
 let laoban = findLaoban(process.cwd())
 let config = JSON.parse(fs.readFileSync(laobanFile(laoban)).toString())
 
-function allProjectScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
-    return Promise.all(Files.findProjectFiles(c.directory).map(fd => {
-        let command = `cd ${fd}\n` + s.commands.map(s => s.command).join("\n")
-        return executeShell(context.shellDebug, "Project Directory: " + fd, command);
-    }))
-}
-function projectScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
-    return context.all ? allProjectScriptProcessor(context, c, s) : globalScriptProcessor(context, c, s)
-}
-function globalScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
-    let command = s.commands.map(s => s.command).join("\n")
-    let result = executeShell(context.shellDebug, "Directory: " + process.cwd(), command);
-    return Promise.all([result])
-}
+// function allProjectScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
+//     return Promise.all(Files.findProjectFiles(c.directory).map(fd => {
+//         let command = `cd ${fd}\n` + s.commands.map(s => s.command).join("\n")
+//         return executeShell(context.shellDebug, "Project Directory: " + fd, command, path.join(fd, c.projectLog));
+//     }))
+// }
+// function projectScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
+//     return context.all ? allProjectScriptProcessor(context, c, s) : globalScriptProcessor(context, c, s)
+// }
+// function globalScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
+//     let command = s.commands.map(s => s.command).join("\n")
+//     let result = executeShell(context.shellDebug, "Directory: " + process.cwd(), command, c.globalLog);
+//     return Promise.all([result])
+// }
 
-let scriptProcessor: ScriptProcessorMap = new Map()
-scriptProcessor.set('project', projectScriptProcessor)
-scriptProcessor.set('global', globalScriptProcessor)
+//
+// let scriptProcessor: ScriptProcessorMap = new Map()
+// scriptProcessor.set('project', projectScriptProcessor)
+// scriptProcessor.set('global', globalScriptProcessor)
 
-let cli = new Cli(configProcessor(laoban, config), scriptProcessor);
+let cli = new Cli(configProcessor(laoban, config), executeShellDetailsInAllDirectories);
 
 cli.start(process.argv)

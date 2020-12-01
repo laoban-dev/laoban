@@ -16,16 +16,30 @@ export interface RawConfig extends ConfigVariables {
 export interface ScriptDetails {
     name: string
     description: string
-    commands: Command[]
-    type: ScriptProcessor
+    commands: CommandDefn[]
 }
-export type ScriptProcessor = 'global' | 'project'
 
 export interface CommandContext {
     shellDebug: boolean,
-    all?: boolean
+    directories: string[]
 }
-export type ScriptProcessorMap = Map<ScriptProcessor, (context: CommandContext, c: Config, s: ScriptDetails) => Promise<ShellResult[]>>
+
+export interface ScriptInContextAndDirectory {
+    scriptInContext: ScriptInContext,
+    directory: string
+}
+export interface ScriptInContext {
+    config: Config,
+    context: CommandContext,
+    details: ScriptDetails
+}
+
+export interface DirectoryAndResults {
+    directory: string
+    results: ShellResult[]
+}
+export type ScriptProcessor = (sc: ScriptInContext) => Promise<DirectoryAndResults[]>
+
 
 export interface Config extends ConfigVariables {
     directory: string
@@ -34,16 +48,17 @@ export interface Config extends ConfigVariables {
     globalScripts: ScriptDetails[]
     projectScripts: ScriptDetails[]
 }
+
 export interface ScriptDefns {
     [name: string]: ScriptDefn
 
 }
 export interface ScriptDefn {
     description: string,
-    commands: (string | Command)[],
+    commands: (string | CommandDefn)[],
 }
 
-export interface Command {
+export interface CommandDefn {
     name: string,
     command: string
     status?: boolean

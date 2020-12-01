@@ -1,7 +1,8 @@
 {
   "templateDir"   : "template",
-  "globalLog"     : "${directory}/laoban.log",
-  "projectLog"    : "laoban.log",
+  "globalLog"     : ".log",
+  "projectLog"    : ".log",
+  "statusFile"    : ".status",
   "scriptDir"     : "${directory}/scripts",
   "packageManager": "npm",
   "scripts"       : {

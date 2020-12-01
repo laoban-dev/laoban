@@ -1,4 +1,4 @@
-import {Command, Config, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails, ScriptProcessor, ScriptProcessorMap} from "./config";
+import {CommandDefn, Config, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails, ScriptProcessor} from "./config";
 import * as path from "path";
 import {loabanConfigName} from "./Files";
 
@@ -29,27 +29,26 @@ function derefence(name: string, dic: any, s: string) {
 function cleanUpCommandString(dic: any, scriptName: string): (s: string) => string {
     return s => derefence(`Command ${scriptName}`, dic, s)
 }
-function isCommand(x: (string | Command)): x is Command {
+function isCommand(x: (string | CommandDefn)): x is CommandDefn {
     return typeof x === 'object'
 }
-function cleanUpCommand(dic: any, scriptName: string): (command: (string | Command)) => Command {
+function cleanUpCommand(dic: any, scriptName: string): (command: (string | CommandDefn)) => CommandDefn {
     return command => isCommand(command) ?
         ({...command, command: cleanUpCommandString(dic, scriptName)(command.command)}) :
         ({name: '', command: cleanUpCommandString(dic, scriptName)(command)})
 }
 
-function cleanUpScript(dic: any, scriptProcessor: ScriptProcessor): (scriptName: string, defn: ScriptDefn) => ScriptDetails {
+function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => ScriptDetails {
     return (scriptName, defn) => ({
-        name: derefence(scriptProcessor + "." + scriptName + '.name', dic, scriptName),
-        description: derefence(scriptProcessor + "." + scriptName + '.description', dic, defn.description),
-        commands: defn.commands.map(cleanUpCommand(dic, scriptName)),
-        type: scriptProcessor
+        name: derefence(scriptName + '.name', dic, scriptName),
+        description: derefence(scriptName + '.description', dic, defn.description),
+        commands: defn.commands.map(cleanUpCommand(dic, scriptName))
     })
 }
-function addScripts(dic: any, scripts: ScriptDefns, scriptProcessor: ScriptProcessor) {
+function addScripts(dic: any, scripts: ScriptDefns) {
     var result: ScriptDetails[] = []
     for (const scriptName in scripts)
-        result.push(cleanUpScript(dic, scriptProcessor)(scriptName, scripts[scriptName]))
+        result.push(cleanUpScript(dic)(scriptName, scripts[scriptName]))
     return result;
 }
 export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
@@ -63,8 +62,8 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     add("packageManager", rawConfig)
     add("scriptDir", rawConfig)
     for (const k in rawConfig.variables) add(k, rawConfig.variables)
-    result.globalScripts = addScripts(result, rawConfig.scripts, 'global');
-    result.projectScripts = addScripts(result, rawConfig.projectScripts, 'project');
+    result.globalScripts = addScripts(result, rawConfig.scripts);
+    result.projectScripts = addScripts(result, rawConfig.projectScripts);
     return result
 
 }
