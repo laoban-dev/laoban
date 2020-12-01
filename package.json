@@ -26,6 +26,6 @@
     "nyc": "^15.0.1"
   },
   "bin": {
-    "laoban": "dist/src/laoban.js"
+    "laoban": "dist/laoban.js"
   }
 }

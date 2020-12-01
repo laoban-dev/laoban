@@ -1,28 +1,27 @@
 {
-  "templateDir": "template",
-  "globalLog": "laoban/log",
-  "projectLog": "log",
-  "scriptDir": "laobanScripts",
+  "templateDir"   : "template",
+  "globalLog"     : "${directory}/laoban.log",
+  "projectLog"    : "laoban.log",
+  "scriptDir"     : "${directory}/scripts",
   "packageManager": "npm",
-  "scripts": {
+  "scripts"       : {
     "log": {"description": "displays the global log file", "commands": ["cat ${scriptDir} log"]}
   },
   "projectScripts": {
-    // "_comment": "executed in each project. Logged like the other commands",
-    "update": {
+    "update"    : {
       "description": "updates the package.json in each projects", "commands": [
-        "laoban makePackageJson ${laoban.projectDetails.template}",
-        "laoban cp -r ${laoban.projectDetails.template} ."
+        "laoban makePackageJson ${projectDetails.template}",
+        "laoban cp -r ${projectDetails.template} ."
       ]
     },
     "remoteLink": {
       "description": "call '${packageManager} link' in each project directory",
-      "commands": ["${packageManager} link"]
+      "commands"   : ["${packageManager} link"]
     },
-    "ls": {"description": "lists all the projects", "commands": ["pwd"]},
-    "install": {
+    "ls"        : {"description": "lists all the projects", "commands": ["pwd"]},
+    "install"   : {
       "description": "does the initial install/link/tsc/test... etc in each project",
-      "commands": [
+      "commands"   : [
         "echo \"Installing in `pwd` \"",
         {"name": "install", "command": "${packageManager} install", "status": true},
         {"name": "link", "command": "${packageManager} link", "status": true},
@@ -31,16 +30,16 @@
         {"name": "test", "command": "${packageManager} test", "status": true}
       ]
     },
-    "pack": {
+    "pack"      : {
       "description": "does everything for a publish except the actual 'npm publish'",
-      "commands": [
+      "commands"   : [
         "find . -type f -name 'enzymeAdapterSetup.*' -delete",
         "${packageManager} pack"
       ]
     },
-    "publish": {
+    "publish"   : {
       "description": "publishes the projects to npmjs",
-      "commands": [
+      "commands"   : [
         "find . -type f -name 'enzymeAdapterSetup.*' -delete",
         "${packageManager} pack"
       ]

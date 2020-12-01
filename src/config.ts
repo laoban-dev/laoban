@@ -24,7 +24,8 @@ export type ScriptProcessor = 'simple' | 'project' | 'template'
 
 
 export interface Config extends ConfigVariables {
-    laobanDirectory: string
+    directory: string
+    laobanConfig: string
     variables: { [name: string]: string }
     scripts: ScriptProcessor[]
 }
