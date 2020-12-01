@@ -22,6 +22,7 @@ export interface ScriptDetails {
 }
 export type ScriptProcessor = 'simple' | 'project' | 'template'
 
+type ScriptProcessorMap = Map<ScriptProcessor, (s: ScriptDefn>
 
 export interface Config extends ConfigVariables {
     directory: string
