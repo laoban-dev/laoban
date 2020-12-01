@@ -30,6 +30,7 @@ export interface ScriptInContextAndDirectory {
 }
 export interface ScriptInContext {
     config: Config,
+    timestamp: Date,
     context: CommandContext,
     details: ScriptDetails
 }

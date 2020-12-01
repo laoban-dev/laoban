@@ -32,7 +32,7 @@ export class Cli {
             this.command(script.name, script.description, options).action((cmd: any) => {
                     if (cmd.dryrun) {
                         if (cmd.all) {console.log("In every project...")}
-                        console.log(script.name,":", script.description)
+                        console.log(script.name, ":", script.description)
                         console.log()
                         let nameWidth = Math.max(4, Strings.maxLength(script.commands.map(s => s.name)))
                         let cmdWidth = Math.max(4, Strings.maxLength(script.commands.map(s => s.command)))
@@ -41,7 +41,7 @@ export class Cli {
                         script.commands.forEach(c => console.log(c.name.padEnd(nameWidth), c.command))
                     } else {
                         let sc: ScriptInContext = {
-                            config: this.config, details: script,
+                            config: this.config, details: script, timestamp: new Date(),
                             context: {shellDebug: cmd.shellDebug, directories: cmd.all ? Files.findProjectFiles(this.config.directory) : [process.cwd()]}
                         }
                         let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
@@ -61,7 +61,7 @@ export class Cli {
             action((cmd: any) => console.log(laoban, JSON.stringify(config, null, 2)))
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) => Files.findProjectFiles(config.directory).forEach(p => console.log(p)))
-        this.addScripts(config.scripts,this.defaultOptions)
+        this.addScripts(config.scripts, this.defaultOptions)
 
         var p = this.program
         this.program.on('command:*',

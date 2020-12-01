@@ -46,7 +46,7 @@ function statusResults(scd: ScriptInContextAndDirectory, command: CommandDefn, r
     let statusFile = path.join(scd.directory, scd.scriptInContext.config.status)
     if (command.status) {
         let status = result.err ? true : false
-        fs.appendFile(statusFile, `${command.name}: ${status}\n`, err => {
+        fs.appendFile(statusFile, `${scd.scriptInContext.timestamp.toISOString()} ${command.name}: ${status}\n`, err => {
             if (err) console.log('error making status', scd.directory, command, err)
         })
     }
@@ -58,11 +58,13 @@ function logResults(scd: ScriptInContextAndDirectory, command: CommandDefn, resu
     let context = scd.scriptInContext.context
     let logFile = path.join(scd.directory, scd.scriptInContext.config.log)
     if (logFile) {
-        fs.appendFile(logFile, result.stdout, err => {
-            fs.appendFile(logFile, result.stderr, err => {
-                if (err) reject(result); else {
-                    resolve(result);
-                }
+        fs.appendFile(logFile, `${scd.scriptInContext.timestamp.toISOString()} ${command.name} ${command.command}\n`, err => {
+            fs.appendFile(logFile, result.stdout, err => {
+                fs.appendFile(logFile, result.stderr, err => {
+                    if (err) reject(result); else {
+                        resolve(result);
+                    }
+                })
             })
         })
     } else if (result.err) reject(result); else {
