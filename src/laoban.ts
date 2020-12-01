@@ -32,7 +32,7 @@ export class Cli {
             this.command(script.name, script.description, options).action((cmd: any) => {
                     if (cmd.dryrun) {
                         if (cmd.all) {console.log("In every project...")}
-                        console.log(script.name, script.description)
+                        console.log(script.name,":", script.description)
                         console.log()
                         let nameWidth = Math.max(4, Strings.maxLength(script.commands.map(s => s.name)))
                         let cmdWidth = Math.max(4, Strings.maxLength(script.commands.map(s => s.command)))

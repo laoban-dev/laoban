@@ -1,7 +1,7 @@
 {
   "templateDir"   : "template",
   "log"           : ".log",
-  "statusFile"    : ".status",
+  "status"        : ".status",
   "scriptDir"     : "${directory}/scripts",
   "packageManager": "npm",
   "scripts"       : {
@@ -17,7 +17,13 @@
       "commands"   : ["${packageManager} link"]
     },
     "ls"        : {"description": "lists all the projects", "commands": ["pwd"]},
-    "ls3"        : {"description": "lists all the projects", "commands": ["ls", "pwd", "echo"]},
+    "ls3"       : {
+      "description": "lists all the projects", "commands": [
+        {"name": "ls", "command": "ls", "status": true},
+        {"name": "pwd", "command": "pwd", "status": true},
+        {"name": "echo", "command": "echo", "status": true}
+      ]
+    },
     "install"   : {
       "description": "does the initial install/link/tsc/test... etc in each project",
       "commands"   : [

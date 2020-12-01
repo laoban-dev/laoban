@@ -42,29 +42,18 @@ export function shellDebugPrint(drs: DirectoryAndResults[]) {
     })
 }
 
-export function executeShell(shellDebug: boolean, title: string, cmd: string, logFile?: string): Promise<ShellResult> {
-    return new Promise<ShellResult>((resolve, reject) => {
-        cp.exec(cmd, (err: any, stdout: string, stderr: string) => {
-                let result = {title: title, err: err, stdout: stdout, stderr: stderr}
-                console.log('logfile', logFile)
-                if (logFile) {
-                    fs.appendFile(logFile, stdout, err => {
-                        fs.appendFile(logFile, stderr, err => {
-                            if (err) reject(result); else {
-                                resolve(result);
-                            }
-                        })
-                    })
-                } else if (err) reject(result); else {
-                    resolve(result);
-                }
-            }
-        )
-    })
+function statusResults(scd: ScriptInContextAndDirectory, command: CommandDefn, result: ShellResult) {
+    let statusFile = path.join(scd.directory, scd.scriptInContext.config.status)
+    if (command.status) {
+        let status = result.err ? true : false
+        fs.appendFile(statusFile, `${command.name}: ${status}\n`, err => {
+            if (err) console.log('error making status', scd.directory, command, err)
+        })
+    }
+
 }
-
-
-function logResults(scd: ScriptInContextAndDirectory, result: ShellResult, resolve: (value: (ShellResult)) => void, reject: (reason?: any) => void) {
+function logResults(scd: ScriptInContextAndDirectory, command: CommandDefn, result: ShellResult, resolve: (value: (ShellResult)) => void, reject: (reason?: any) => void) {
+    statusResults(scd, command, result)
     let details = scd.scriptInContext.details;
     let context = scd.scriptInContext.context
     let logFile = path.join(scd.directory, scd.scriptInContext.config.log)
@@ -84,7 +73,7 @@ export function executeShellCommand(scd: ScriptInContextAndDirectory, command: C
     return new Promise<ShellResult>((resolve, reject) => {
         cp.exec(`cd ${scd.directory}\n${command.command}`, (err: any, stdout: string, stderr: string) => {
                 let result = {title: command.name, err: err, stdout: stdout, stderr: stderr}
-                logResults(scd, result, resolve, reject);
+                logResults(scd, command, result, resolve, reject);
             }
         )
     })

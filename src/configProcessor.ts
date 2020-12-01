@@ -58,6 +58,7 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     }
     add("templateDir", rawConfig)
     add("log", rawConfig)
+    add("status", rawConfig)
     add("packageManager", rawConfig)
     add("scriptDir", rawConfig)
     for (const k in rawConfig.variables) add(k, rawConfig.variables)

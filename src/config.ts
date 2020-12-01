@@ -3,6 +3,7 @@ import {ShellResult} from "./shell";
 export interface ConfigVariables {
     templateDir: string,
     log: string,
+    status: string,
     scriptDir: string,
     packageManager: string,
     variables?: { [name: string]: string }
