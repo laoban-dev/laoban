@@ -19,10 +19,6 @@ export class Cli {
 
     defaultOptions(program: any): any {
         return program.option('-d, --dryrun', 'displays the command instead of executing it', false).//
-            option('-s, --shellDebug', 'debugging around the shell', false)
-    }
-    projectOptions(program: any): any {
-        return program.option('-d, --dryrun', 'displays the command instead of executing it', false).//
             option('-s, --shellDebug', 'debugging around the shell', false).//
             option('-a, --all', 'executes this in all projects', false)
     }
@@ -65,9 +61,7 @@ export class Cli {
             action((cmd: any) => console.log(laoban, JSON.stringify(config, null, 2)))
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) => Files.findProjectFiles(config.directory).forEach(p => console.log(p)))
-        let scripts = [...config.projectScripts, ...config.globalScripts]
-        this.addScripts(config.projectScripts, this.projectOptions)
-        this.addScripts(config.globalScripts, this.defaultOptions)
+        this.addScripts(config.scripts,this.defaultOptions)
 
         var p = this.program
         this.program.on('command:*',

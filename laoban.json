@@ -1,14 +1,11 @@
 {
   "templateDir"   : "template",
-  "globalLog"     : ".log",
-  "projectLog"    : ".log",
+  "log"           : ".log",
   "statusFile"    : ".status",
   "scriptDir"     : "${directory}/scripts",
   "packageManager": "npm",
   "scripts"       : {
-    "log": {"description": "displays the global log file", "commands": ["cat ${scriptDir} log"]}
-  },
-  "projectScripts": {
+    "log"       : {"description": "displays the log file", "commands": ["cat ${scriptDir} log"]},
     "update"    : {
       "description": "updates the package.json in each projects", "commands": [
         "laoban makePackageJson ${projectDetails.template}",
@@ -20,6 +17,7 @@
       "commands"   : ["${packageManager} link"]
     },
     "ls"        : {"description": "lists all the projects", "commands": ["pwd"]},
+    "ls3"        : {"description": "lists all the projects", "commands": ["ls", "pwd", "echo"]},
     "install"   : {
       "description": "does the initial install/link/tsc/test... etc in each project",
       "commands"   : [
