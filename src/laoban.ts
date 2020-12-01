@@ -95,11 +95,14 @@ export class Cli {
 let laoban = findLaoban(process.cwd())
 let config = JSON.parse(fs.readFileSync(laobanFile(laoban)).toString())
 
-function projectScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
+function allProjectScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
     return Promise.all(Files.findProjectFiles(c.directory).map(fd => {
         let command = `cd ${fd}\n` + s.commands.map(s => s.command).join("\n")
         return executeShell(context.shellDebug, "Project Directory: " + fd, command);
     }))
+}
+function projectScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
+    return context.all ? allProjectScriptProcessor(context, c, s) : globalScriptProcessor(context, c, s)
 }
 function globalScriptProcessor(context: CommandContext, c: Config, s: ScriptDetails): Promise<ShellResult[]> {
     let command = s.commands.map(s => s.command).join("\n")

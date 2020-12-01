@@ -7,6 +7,10 @@ export let loabanConfigName = 'laoban.json'
 export let projectDetailsFile = 'project.details.json'
 
 export function laobanFile(dir: string) { return path.join(dir, loabanConfigName)}
+
+export function isProjectDirectory(directory: string) {
+    return fs.existsSync(path.join(directory, projectDetailsFile))
+}
 export function findLaoban(directory: string) {
     let fullName = path.join(directory, loabanConfigName);
     if (fs.existsSync(fullName)) return directory
