@@ -79,25 +79,28 @@ function logResults(scd: ScriptInContextAndDirectory, command: CommandDefn, resu
         resolve(result);
     }
 }
+
+function calculateVariableText(variables: boolean, dic: any, directory: string, command: string, cmd: string): string {
+    if (variables) {
+        let simplerdic = {...dic}
+        delete simplerdic.scripts
+        return [`variables in ${directory} for command [${command}]`,
+            `tranformed into [${cmd}]`,"legal variables are",
+            JSON.stringify(simplerdic, null, 2),
+            ''].join("\n")
+    } else return ""
+}
+
 export function executeShellCommand(scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> {
     let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
     return new Promise<ShellResult>((resolve, reject) => {
         let cmd = derefence(dic, command.command)
-        if (scd.scriptInContext.variables) {
-            let simplerdic = {...dic}
-            delete simplerdic.scripts
-            console.log(`variables in ${scd.detailsAndDirectory.directory} for command ${command.command}`)
-            console.log(JSON.stringify(simplerdic,null,2))
-        }
+        let variables = calculateVariableText(scd.scriptInContext.variables, dic, scd.detailsAndDirectory.directory, command.command, cmd)
         if (scd.scriptInContext.dryrun) {
-            resolve({title: command.name, err: null, stdout: cmd, stderr: ""})
+            resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: ""})
         } else
-            cp.exec(`
-            cd ${scd.detailsAndDirectory.directory}
-        \n$
-            {cmd}
-            `, (err: any, stdout: string, stderr: string) => {
-                    let result = {title: command.name, err: err, stdout: stdout, stderr: stderr}
+            cp.exec(`cd ${scd.detailsAndDirectory.directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
+                    let result = {title: command.name, err: err, stdout: variables + stdout, stderr: stderr}
                     logResults(scd, command, result, resolve, reject);
                 }
             )
