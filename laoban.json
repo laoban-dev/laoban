@@ -19,9 +19,8 @@
     "ls"        : {"description": "lists all the projects", "commands": ["pwd"]},
     "ls3"       : {
       "description": "lists all the projects", "commands": [
-        {"name": "ls", "command": "ls", "status": true},
         {"name": "pwd", "command": "pwd", "status": true},
-        {"name": "echo", "command": "sdsdsd", "status": true}
+        {"name": "template", "command": "echo ${project.projectDetails.template}", "status": true}
       ]
     },
     "install"   : {

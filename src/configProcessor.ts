@@ -32,7 +32,7 @@ function cleanUpCommandString(dic: any, scriptName: string): (s: string) => stri
 function isCommand(x: (string | CommandDefn)): x is CommandDefn {
     return typeof x === 'object'
 }
-function cleanUpCommand(dic: any, scriptName: string): (command: (string | CommandDefn)) => CommandDefn {
+export function cleanUpCommand(dic: any, scriptName: string): (command: (string | CommandDefn)) => CommandDefn {
     return command => isCommand(command) ?
         ({...command, command: cleanUpCommandString(dic, scriptName)(command.command)}) :
         ({name: '', command: cleanUpCommandString(dic, scriptName)(command)})

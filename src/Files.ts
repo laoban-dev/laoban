@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import {ParsedPath} from "path";
 import * as path from "path";
 import {Strings} from "./utils";
 import {ProjectDetailsAndDirectory} from "./config";
@@ -20,6 +19,39 @@ export function findLaoban(directory: string) {
     if (parse.dir === parse.root) {throw Error('Cannot find laoban.json')}
     return findLaoban(parse.dir)
 }
+
+export class ProjectDetailFiles {
+    static findAndLoadProjectDetails(root: string, all: boolean): Promise<ProjectDetailsAndDirectory[]> {
+        return all ? this.findAndLoadProjectDetailsFromChildren(root) : this.loadProjectDetails(root).then(x => [x])
+    }
+
+    static findAndLoadProjectDetailsFromChildren(root: string): Promise<ProjectDetailsAndDirectory[]> {return Promise.all(this.findProjectDirectories(root).map(this.loadProjectDetails))}
+
+    static loadProjectDetails(root: string): Promise<ProjectDetailsAndDirectory> {
+        let rootAndFileName = path.join(root, projectDetailsFile);
+        return new Promise<ProjectDetailsAndDirectory>((resolve) => {
+            fs.readFile(rootAndFileName, (err, data) => {
+                if (err) {resolve({directory: root})} else
+                    resolve({directory: root, projectDetails: JSON.parse(fs.readFileSync(projectDetailsFile).toString())})
+            })
+        })
+    }
+
+    static findProjectDirectories(root: string): string[] {
+        let rootAndFileName = path.join(root, projectDetailsFile);
+        let result = fs.existsSync(rootAndFileName) ? [root] : []
+        let children: string[][] = fs.readdirSync(root).map((file, index) => {
+            if (file !== 'node_modules' && file !== '.git') {
+                const curPath = path.join(root, file);
+                if (fs.lstatSync(curPath).isDirectory())
+                    return this.findProjectDirectories(curPath)
+            }
+            return []
+        });
+        return [].concat.apply(result, children)
+    }
+}
+
 
 export class Files {
     static loadProjectDetails(root: string, projectDetailsFile: string): ProjectDetailsAndDirectory {
@@ -42,10 +74,10 @@ export class Files {
 
 }
 
-function readOrBlank(file: string): string{
+function readOrBlank(file: string): string {
     try {
         return fs.readFileSync(file).toString()
-    }catch(e){return ""}
+    } catch (e) {return ""}
 }
 export function compactStatus(statusFile: string): Map<string, string> {
     let lines = readOrBlank(statusFile)

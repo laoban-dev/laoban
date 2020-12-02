@@ -69,7 +69,7 @@ export interface CommandDefn {
 
 export interface ProjectDetailsAndDirectory {
     directory: string
-    projectDetails: ProjectDetails
+    projectDetails?: ProjectDetails
 }
 export interface ProjectDetails {
     "name": string,

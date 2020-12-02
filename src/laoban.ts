@@ -90,21 +90,15 @@ export class Cli {
                 }
                 this.executeCommand(cmd, s)
             })
-        // this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
-        //     action((cmd: any) => {
-        //         this.findProjectDetailsAndDirectory(cmd.all).forEach(d => printStatus(d, compactStatus(path.join(d, this.config.status))))
-        //     })
+
         this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
             action((cmd: any) => {
                 let compactedStatusMap: DirectoryAndCompactedStatusMap[] = this.findProjectDetailsAndDirectory(cmd.all).map(d => ({
                     directory: d,
                     compactedStatusMap: compactStatus(path.join(d, this.config.status))
                 }))
-                // console.log(toStatusDetails(compactedStatusMap))
                 let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
-                // console.log(prettyPrintStatusData)
                 prettyPrintData(prettyPrintStatusData)
-
             })
         this.command('compactStatus', 'crunches the status', this.defaultOptions).//
             action((cmd: any) => {
