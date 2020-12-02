@@ -8,8 +8,7 @@
     "log"       : {"description": "displays the log file", "commands": ["cat ${scriptDir} log"]},
     "update"    : {
       "description": "updates the package.json in each projects", "commands": [
-        "laoban makePackageJson ${projectDetails.template}",
-        "laoban cp -r ${projectDetails.template} ."
+        "echo '${scriptDir}/applyPackageJsonTemplate.sh ${template}/${projectDetails.template} package.new `pwd`'"
       ]
     },
     "remoteLink": {

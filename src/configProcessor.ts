@@ -58,7 +58,7 @@ function addScripts(dic: any, scripts: ScriptDefns) {
     return result;
 }
 export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
-    var result: any = {directory: laoban, laobanConfig: path.join(laoban, loabanConfigName)}
+    var result: any = {laobanDirectory: laoban, laobanConfig: path.join(laoban, loabanConfigName)}
     function add(name: string, raw: any) {
         result[name] = derefence(result, raw[name])
     }

@@ -50,8 +50,8 @@ export class Cli {
     private sortProjectDetails(pds: ProjectDetailsAndDirectory[]) {
         return pds.sort((l, r) => l.projectDetails.projectDetails.generation - r.projectDetails.projectDetails.generation);
     }
-    findProjectDetailsAndDirectory(all: boolean) {return all ? this.findSortedFileNames(Files.findProjectFiles(this.config.directory)) : [process.cwd()]}
-    findProjectDetailsAndDirectoryPassingGuard(all: boolean, script: ScriptDetails) {return all ? this.findSortedFileNamesPassingGuard(script, Files.findProjectFiles(this.config.directory)) : [process.cwd()]}
+    findProjectDetailsAndDirectory(all: boolean): string[] {return all ? this.findSortedFileNames(Files.findProjectFiles(this.config.laobanDirectory)) : [process.cwd()]}
+    findProjectDetailsAndDirectoryPassingGuard(all: boolean, script: ScriptDetails) {return all ? this.findSortedFileNamesPassingGuard(script, Files.findProjectFiles(this.config.laobanDirectory)) : [process.cwd()]}
 
     addScripts(scripts: ScriptDetails[], options: (program: any) => any) {
         scripts.forEach(script => {
@@ -62,6 +62,14 @@ export class Cli {
         })
     }
 
+    filterForProjectDirectorys(script: ScriptDetails): (p: ProjectDetailsAndDirectory) => boolean {
+        return p => {
+            if (script.guard)
+                return p.projectDetails.projectDetails.publish
+            return true
+        }
+
+    }
     executeCommand(cmd: any, script: ScriptDetails) {
         if (cmd.dryrun) {
             if (cmd.all) {console.log("In every project...")}
@@ -73,7 +81,7 @@ export class Cli {
             console.log('-'.padEnd(nameWidth, '-'), '-'.padEnd(cmdWidth, '-'))
             script.commands.forEach(c => console.log(c.name.padEnd(nameWidth), c.command))
         } else {
-            ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, () => true).then(details => {
+            ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, this.filterForProjectDirectorys(script)).then(details => {
                 let sc: ScriptInContext = {
                     config: this.config, details: script, timestamp: new Date(),
                     context: {shellDebug: cmd.shellDebug, directories: details}
@@ -97,11 +105,7 @@ export class Cli {
             action((cmd: any) => {
                 let command = this.program.args.slice(0).filter(n => !n.startsWith('-')).join(' ')
                 // console.log(command)
-                let s: ScriptDetails = {
-                    name: 'run', description: `run ${command}`, commands: [
-                        {name: 'run', command: command, status: false}
-                    ]
-                }
+                let s: ScriptDetails = {name: 'run', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
                 this.executeCommand(cmd, s)
             })
 
@@ -111,6 +115,7 @@ export class Cli {
                     directory: d,
                     compactedStatusMap: compactStatus(path.join(d, this.config.status))
                 }))
+
                 let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
                 prettyPrintData(prettyPrintStatusData)
             })
@@ -119,7 +124,7 @@ export class Cli {
                 this.findProjectDetailsAndDirectory(cmd.all).forEach(d => writeCompactedStatus(path.join(d, this.config.status), compactStatus(path.join(d, this.config.status))))
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
-            action((cmd: any) => this.sortProjectDetails(Files.findProjectFiles(config.directory)).forEach(p => console.log(p)))
+            action((cmd: any) => this.sortProjectDetails(Files.findProjectFiles(config.laobanDirectory)).forEach(p => console.log(p)))
         this.addScripts(config.scripts, this.defaultOptions)
 
         var p = this.program

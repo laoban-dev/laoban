@@ -4,6 +4,7 @@ import {CommandDefn, DirectoryAndResults, ScriptInContext, ScriptInContextAndDir
 import * as fs from "fs";
 import * as path from "path";
 import {cleanUpCommand, derefence} from "./configProcessor";
+import {projectDetailsFile} from "./Files";
 
 
 export interface ShellResult {
@@ -32,12 +33,14 @@ export function consoleHandleShell(drs: DirectoryAndResults[]) {
 
 export function shellDebugPrint(drs: DirectoryAndResults[]) {
     drs.forEach(dr => {
-        console.log(`############# ${dr.detailsAndDirectory} ###############`)
+        console.log(`############# ${dr.detailsAndDirectory.directory} ###############`)
+        if (dr.detailsAndDirectory.projectDetails  === undefined) console.log( `warning: ${projectDetailsFile} not found`)
         dr.results.forEach(sr => {
             console.log(sr.stdout.trimEnd())
             if (sr.stderr !== "") {
                 console.log("#########ERRORS#############")
                 console.error(sr.stderr.trimEnd())
+                console.log("#######ERRORS END###########")
             }
         })
     })
@@ -76,7 +79,7 @@ function logResults(scd: ScriptInContextAndDirectory, command: CommandDefn, resu
     }
 }
 export function executeShellCommand(scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> {
-    let dic = {...scd.scriptInContext.config, projectDetails: scd.detailsAndDirectory.projectDetails}
+    let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
     return new Promise<ShellResult>((resolve, reject) => {
         let cmd = derefence(dic, command.command)
         // console.log("about to execute ", command, cmd)

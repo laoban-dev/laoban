@@ -44,7 +44,7 @@ export type ScriptProcessor = (sc: ScriptInContext) => Promise<DirectoryAndResul
 
 
 export interface Config extends ConfigVariables {
-    directory: string
+    laobanDirectory: string
     laobanConfig: string
     variables: { [name: string]: string }
     scripts: ScriptDetails[]
