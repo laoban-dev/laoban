@@ -1,10 +1,11 @@
 import * as cp from 'child_process'
 import {ExecException} from 'child_process'
-import {CommandDefn, DirectoryAndResults, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {CommandDefn, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 import * as fs from "fs";
 import * as path from "path";
 import {cleanUpCommand, derefence} from "./configProcessor";
 import {projectDetailsFile} from "./Files";
+import {Strings} from "./utils";
 
 
 export interface ShellResult {
@@ -34,7 +35,7 @@ export function consoleHandleShell(drs: DirectoryAndResults[]) {
 export function shellDebugPrint(drs: DirectoryAndResults[]) {
     drs.forEach(dr => {
         console.log(`############# ${dr.detailsAndDirectory.directory} ###############`)
-        if (dr.detailsAndDirectory.projectDetails  === undefined) console.log( `warning: ${projectDetailsFile} not found`)
+        if (dr.detailsAndDirectory.projectDetails === undefined) console.log(`warning: ${projectDetailsFile} not found`)
         dr.results.forEach(sr => {
             console.log(sr.stdout.trimEnd())
             if (sr.stderr !== "") {
@@ -82,13 +83,14 @@ export function executeShellCommand(scd: ScriptInContextAndDirectory, command: C
     let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
     return new Promise<ShellResult>((resolve, reject) => {
         let cmd = derefence(dic, command.command)
-        // console.log("about to execute ", command, cmd)
-        // console.log("dic", dic)
-        cp.exec(`cd ${scd.detailsAndDirectory.directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
-                let result = {title: command.name, err: err, stdout: stdout, stderr: stderr}
-                logResults(scd, command, result, resolve, reject);
-            }
-        )
+        if (scd.scriptInContext.dryrun) {
+            resolve({title: command.name, err: null, stdout: cmd, stderr: ""})
+        } else
+            cp.exec(`cd ${scd.detailsAndDirectory.directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
+                    let result = {title: command.name, err: err, stdout: stdout, stderr: stderr}
+                    logResults(scd, command, result, resolve, reject);
+                }
+            )
     })
 }
 

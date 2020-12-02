@@ -30,6 +30,7 @@ export interface ScriptInContextAndDirectory {
     detailsAndDirectory: ProjectDetailsAndDirectory
 }
 export interface ScriptInContext {
+    dryrun: boolean,
     config: Config,
     timestamp: Date,
     context: CommandContext,

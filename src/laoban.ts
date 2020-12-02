@@ -71,26 +71,16 @@ export class Cli {
 
     }
     executeCommand(cmd: any, script: ScriptDetails) {
-        if (cmd.dryrun) {
-            if (cmd.all) {console.log("In every project...")}
-            console.log(script.name, ":", script.description)
-            console.log()
-            let nameWidth = Math.max(4, Strings.maxLength(script.commands.map(s => s.name)))
-            let cmdWidth = Math.max(4, Strings.maxLength(script.commands.map(s => s.command)))
-            console.log('Step'.padEnd(nameWidth), 'Command')
-            console.log('-'.padEnd(nameWidth, '-'), '-'.padEnd(cmdWidth, '-'))
-            script.commands.forEach(c => console.log(c.name.padEnd(nameWidth), c.command))
-        } else {
-            ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, this.filterForProjectDirectorys(script)).then(details => {
-                let sc: ScriptInContext = {
-                    config: this.config, details: script, timestamp: new Date(),
-                    context: {shellDebug: cmd.shellDebug, directories: details}
-                }
-                let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
-                let processor = cmd.quiet ? noHandleShell : (cmd.shellDebug ? shellDebugPrint : consoleHandleShell)
-                return results.then(processor, processor)
-            })
-        }
+        ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, this.filterForProjectDirectorys(script)).then(details => {
+            let sc: ScriptInContext = {
+                dryrun: cmd.dryrun,
+                config: this.config, details: script, timestamp: new Date(),
+                context: {shellDebug: cmd.shellDebug, directories: details}
+            }
+            let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
+            let processor = cmd.quiet ? noHandleShell : (cmd.shellDebug ? shellDebugPrint : consoleHandleShell)
+            return results.then(processor, processor)
+        })
     }
     constructor(config: Config, scriptProcessor: ScriptProcessor) {
         this.scriptProcessor = scriptProcessor;
@@ -105,15 +95,14 @@ export class Cli {
             action((cmd: any) => {
                 let command = this.program.args.slice(0).filter(n => !n.startsWith('-')).join(' ')
                 // console.log(command)
-                let s: ScriptDetails = {name: 'run', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
+                let s: ScriptDetails = {name: 'run',  description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
                 this.executeCommand(cmd, s)
             })
 
         this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
             action((cmd: any) => {
                 let compactedStatusMap: DirectoryAndCompactedStatusMap[] = this.findProjectDetailsAndDirectory(cmd.all).map(d => ({
-                    directory: d,
-                    compactedStatusMap: compactStatus(path.join(d, this.config.status))
+                    directory: d, compactedStatusMap: compactStatus(path.join(d, this.config.status))
                 }))
 
                 let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
