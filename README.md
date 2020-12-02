@@ -31,6 +31,18 @@ Laoban is not opinionated at all. Replaceing `npm` with `yarn`  in the config wi
 If you want to use it with maven or sbt or... it works fine (although those tools already have much of the capabliities that laoban brings to the javascript world)
 
 
+# What are the 'golden moments'
+* Running all the tests in parallel across multiple projects
+     * Without this I have to either use a pipeline after a commit, or make a script to call them one at a time
+* Seeing the status of the important commands
+     * When working with ten or more projects I found it very hard to get a simple of view of how well the code was behaving in each project
+* Updating all the 'react' project settings in one go
+     * You can update the template settings, call `laoban update` followed by `laoban install` and `laoban status`
+     * Now you know how all the projects have responded to the upgrade: they are all using it, and they have been compiled and tested
+* Updating a global version number
+     * If the projects are tightly coupled, I like them to share a version number.
+
+
 # Typical usage
 
 ## When loading a project with many subprojects from git 
@@ -100,7 +112,8 @@ If this is present in a directory it tells laoban that the directory is a projec
 * `publish` should this project be affected by commands with the guard condition ${projectDetails.projectDetails.publish}
       * Typically these are projects to be published to npmjs
       * typicall commands are `laoban pack`, `laoban publish`, `laoban ls-publish`
-* `generation` the projects are sorted in generation order so that all generation 0 projects are processed before generation 1 
+* `generation` the projects are sorted in generation order so that all generation 0 projects are processed before generation 1
+      * See the 'TODO' section at the end: generations are only respected in display order at the moment
 
 ## Commands
 
@@ -151,3 +164,16 @@ The idea of `status` is to give a way to visualise what is happening across all 
 * When these are executed they are recorded in the status file for that project
 * `laoban status` will display the latest status
 * `laoban compactStatus` will crunch the status down
+
+# TODO
+
+## Autocalculate generation from links
+Because we have links between projects we can calculate this and display them
+
+## Allow some commands to obey generations 
+by means of waiting until all earlier generation commands have finished. Usually this isn't needed, so 
+the commands should be flagged
+
+## Improve the 'shelling out'. 
+Currently we shell out and wait for it to finish. It would be better to use spawn and be able to 
+process the logs as the commands execute. This will reduce memory load and give a better experience

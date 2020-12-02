@@ -51,10 +51,6 @@
       "guard"      : "${projectDetails.projectDetails.publish}",
       "commands"   : ["pwd"]
     },
-    "latika-cmd": {
-      "description": "does something coold",
-      "commands"   : ["echo 'hello' $(pwd)"]
-    },
     "pack"      : {
       "description": "does everything for a publish except the actual 'npm publish'",
       "guard"      : "${projectDetails.projectDetails.publish}",
