@@ -27,7 +27,7 @@ Laoban makes the following easy:
 * It keeps track of the status of important things: such as last test execution, last compile, last install
 
 ## Other package managers
-Laoban is not opinionated at all. Replaceing `npm` with `yarn`  in the config will let you use all the features with yarn.
+Laoban is not opinionated. Replaceing `npm` with `yarn`  in the config will let you use all the features with yarn.
 If you want to use it with maven or sbt or... it works fine (although those tools already have much of the capabliities that laoban brings to the javascript world)
 
 
@@ -166,6 +166,18 @@ The idea of `status` is to give a way to visualise what is happening across all 
 * `laoban compactStatus` will crunch the status down
 
 # TODO
+
+## Validation on laoban.json
+
+## Validation on project.details.json
+
+## Profiling each command
+* Add to log
+* Create new '.profile' which is appended to by each command
+* Add command to show profiles
+    * latest
+    * maybe some stats
+    * maybe even a picture...
 
 ## Autocalculate generation from links
 Because we have links between projects we can calculate this and display them
