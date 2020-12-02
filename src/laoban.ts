@@ -1,22 +1,9 @@
 #!/usr/bin/env node
-import {
-    compactStatus,
-    DirectoryAndCompactedStatusMap,
-    Files,
-    findLaoban,
-    laobanFile,
-    prettyPrintData,
-    printStatus,
-    ProjectDetailFiles,
-    toPrettyPrintData,
-    toStatusDetails,
-    writeCompactedStatus
-} from "./Files";
+import {compactStatus, DirectoryAndCompactedStatusMap, findLaoban, laobanFile, prettyPrintData, ProjectDetailFiles, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./Files";
 import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
 import {Config, DirectoryAndResults, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
-import {Strings} from "./utils";
-import {consoleHandleShell, executeShellDetails, executeShellDetailsInAllDirectories, noHandleShell, shellDebugPrint} from "./shell";
+import {consoleHandleShell, executeShellDetailsInAllDirectories, noHandleShell, shellDebugPrint} from "./shell";
 import * as path from "path";
 
 
@@ -52,16 +39,8 @@ export class Cli {
         })
     }
 
-    filterForProjectDirectorys(script: ScriptDetails): (p: ProjectDetailsAndDirectory) => boolean {
-        return p => {
-            if (script.guard)
-                return p.projectDetails.projectDetails.publish
-            return true
-        }
-
-    }
     executeCommand(cmd: any, script: ScriptDetails) {
-        ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, this.filterForProjectDirectorys(script)).then(details => {
+        ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(details => {
             let sc: ScriptInContext = {
                 dryrun: cmd.dryrun,variables: cmd.variables,
                 config: this.config, details: script, timestamp: new Date(),
@@ -91,7 +70,7 @@ export class Cli {
 
         this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, () => true).then(ds => {
+                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => {
                     let compactedStatusMap: DirectoryAndCompactedStatusMap[] = ds.map(d =>
                         ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, this.config.status))}))
                     let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
@@ -100,13 +79,13 @@ export class Cli {
             })
         this.command('compactStatus', 'crunches the status', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, () => true).then(ds => {
+                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => {
                     ds.forEach(d => writeCompactedStatus(path.join(d.directory, this.config.status), compactStatus(path.join(d.directory, this.config.status))))
                 })
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>
-                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, true, () => true).then(ds => ds.forEach(p => console.log(p.directory))))
+                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, true).then(ds => ds.forEach(p => console.log(p.directory))))
         this.addScripts(config.scripts, this.defaultOptions)
 
         var p = this.program

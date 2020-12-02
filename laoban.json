@@ -51,6 +51,11 @@
       "guard"      : "${projectDetails.projectDetails.publish}",
       "commands"   : ["pwd"]
     },
+  "ls-ports": {
+      "description": "lists the projects that have a port defined in project.details.json",
+      "guard"      : "${projectDetails.projectDetails.port}",
+      "commands"   : ["pwd"]
+    },
     "pack"      : {
       "description": "does everything for a publish except the actual 'npm publish'",
       "guard"      : "${projectDetails.projectDetails.publish}",

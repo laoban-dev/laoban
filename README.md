@@ -194,7 +194,3 @@ process the logs as the commands execute. This will reduce memory load and give 
 * For example updating package json... only important for npm/yarn. Currently done by a script
 * We want to be able to use other people's scripts easily
 
-## Guard conditions using a path
-* At the moment the guard conditions are tightly bound to publish.
-* Make it so that they can be any variable and thus we can have our own categories
-* e.g. if there was a port variable in project.details.json, then this could spin up servers if the project has a server

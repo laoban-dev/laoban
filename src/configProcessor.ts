@@ -16,7 +16,7 @@ function replaceVar(dic: any, ref: string): string {
     // console.log('parts', parts)
     try {
         let result = parts.reduce((acc, part) => acc[part], dic)
-        return result ? result : ref
+        return result!== undefined ? result : ref
     } catch (e) {return ref}
 }
 /** If the string has ${a} in it, then that is replaced by the dic entry */
@@ -31,6 +31,28 @@ export function derefence(dic: any, s: string) {
     }
     return s
 }
+
+export function replaceVarToUndefined(dic: any, ref: string): string {
+    let i = ref.slice(2, ref.length - 1);
+    let parts = i.split('.')
+    // console.log('dic', dic)
+    // console.log('parts', parts)
+    try {
+       return parts.reduce((acc, part) => acc[part], dic)
+    } catch (e) {return undefined}
+}
+export function derefenceToUndefined(dic: any, s: string) {
+    const regex = /(\$\{[^}]*\})/g
+    let groups = s.match(regex)
+    if (groups) {
+        // console.log("    deref", s, groups)
+        let result = groups.reduce((acc, v) => acc.replace(v, replaceVarToUndefined(dic, v)), s)
+        // console.log("      result", result)
+        return result
+    }
+    return undefined
+}
+
 function cleanUpCommandString(dic: any,): (s: string) => string {
     return s => derefence(dic, s)
 }

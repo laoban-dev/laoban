@@ -1,11 +1,10 @@
 import * as cp from 'child_process'
 import {ExecException} from 'child_process'
-import {CommandDefn, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {CommandDefn, DirectoryAndResults, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 import * as fs from "fs";
 import * as path from "path";
-import {cleanUpCommand, derefence} from "./configProcessor";
+import {derefence, replaceVarToUndefined} from "./configProcessor";
 import {projectDetailsFile} from "./Files";
-import {Strings} from "./utils";
 
 
 export interface ShellResult {
@@ -85,26 +84,27 @@ function calculateVariableText(variables: boolean, dic: any, directory: string, 
         let simplerdic = {...dic}
         delete simplerdic.scripts
         return [`variables in ${directory} for command [${command}]`,
-            `tranformed into [${cmd}]`,"legal variables are",
+            `tranformed into [${cmd}]`, "legal variables are",
             JSON.stringify(simplerdic, null, 2),
             ''].join("\n")
     } else return ""
 }
 
-export function executeShellCommand(scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> {
-    let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
-    return new Promise<ShellResult>((resolve, reject) => {
-        let cmd = derefence(dic, command.command)
-        let variables = calculateVariableText(scd.scriptInContext.variables, dic, scd.detailsAndDirectory.directory, command.command, cmd)
-        if (scd.scriptInContext.dryrun) {
-            resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: ""})
-        } else
-            cp.exec(`cd ${scd.detailsAndDirectory.directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
-                    let result = {title: command.name, err: err, stdout: variables + stdout, stderr: stderr}
-                    logResults(scd, command, result, resolve, reject);
-                }
-            )
-    })
+export function executeShellCommand(dic: any) {
+    return (scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> => {
+        return new Promise<ShellResult>((resolve, reject) => {
+            let cmd = derefence(dic, command.command)
+            let variables = calculateVariableText(scd.scriptInContext.variables, dic, scd.detailsAndDirectory.directory, command.command, cmd)
+            if (scd.scriptInContext.dryrun) {
+                resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: ""})
+            } else
+                cp.exec(`cd ${scd.detailsAndDirectory.directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
+                        let result = {title: command.name, err: err, stdout: variables + stdout, stderr: stderr}
+                        logResults(scd, command, result, resolve, reject);
+                    }
+                )
+        })
+    }
 }
 
 function chain<Context, From, To>(context: Context, list: From[], fn: (context: Context, from: From) => Promise<To>): Promise<To[]> {
@@ -114,7 +114,11 @@ function chain<Context, From, To>(context: Context, list: From[], fn: (context: 
 }
 
 export function executeShellDetails(scd: ScriptInContextAndDirectory): Promise<ShellResult[]> {
-    return chain(scd, scd.scriptInContext.details.commands, executeShellCommand)
+    let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
+    let guard = scd.scriptInContext.details.guard;
+    let canExecute = guard ? replaceVarToUndefined(dic, guard)  : false
+    // console.log("execute", guard, replaceVarToUndefined(dic, guard), canExecute, typeof canExecute)
+    return canExecute ? chain(scd, scd.scriptInContext.details.commands, executeShellCommand(dic)) : Promise.resolve([])
 }
 
 export function executeShellDetailsInAllDirectories(sc: ScriptInContext): Promise<DirectoryAndResults[]> {

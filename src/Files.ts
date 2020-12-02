@@ -21,9 +21,9 @@ export function findLaoban(directory: string) {
 }
 
 export class ProjectDetailFiles {
-    static findAndLoadSortedProjectDetails(root: string, all: boolean, filter: (p: ProjectDetailsAndDirectory) => boolean): Promise<ProjectDetailsAndDirectory[]> {
+    static findAndLoadSortedProjectDetails(root: string, all: boolean): Promise<ProjectDetailsAndDirectory[]> {
         let unsorted = all ? this.findAndLoadProjectDetailsFromChildren(root) : this.loadProjectDetails(process.cwd()).then(x => [x])
-        return unsorted.then(raw => raw.filter(filter).sort((l, r) => {
+        return unsorted.then(raw => raw.sort((l, r) => {
             try { return l.projectDetails.projectDetails.generation - r.projectDetails.projectDetails.generation} catch (e) {return 0}
         }))
     }
@@ -56,26 +56,6 @@ export class ProjectDetailFiles {
 }
 
 
-export class Files {
-    static loadProjectDetails(root: string, projectDetailsFile: string): ProjectDetailsAndDirectory {
-        return ({directory: root, projectDetails: JSON.parse(fs.readFileSync(projectDetailsFile).toString())})
-    }
-    static findProjectFiles(root: string): ProjectDetailsAndDirectory[] {
-        let rootAndFileName = path.join(root, projectDetailsFile);
-        let result = fs.existsSync(rootAndFileName) ? [Files.loadProjectDetails(root, rootAndFileName)] : []
-        let children: ProjectDetailsAndDirectory[][] = fs.readdirSync(root).map((file, index) => {
-            if (file !== 'node_modules' && file !== '.git') {
-                const curPath = path.join(root, file);
-                if (fs.lstatSync(curPath).isDirectory()) {
-                    return this.findProjectFiles(curPath)
-                }
-            }
-            return []
-        });
-        return [].concat.apply(result, children)
-    }
-
-}
 
 function readOrBlank(file: string): string {
     try {
