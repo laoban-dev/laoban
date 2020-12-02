@@ -3,6 +3,7 @@ import {ExecException} from 'child_process'
 import {CommandDefn, DirectoryAndResults, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 import * as fs from "fs";
 import * as path from "path";
+import {cleanUpCommand, derefence} from "./configProcessor";
 
 
 export interface ShellResult {
@@ -31,7 +32,7 @@ export function consoleHandleShell(drs: DirectoryAndResults[]) {
 
 export function shellDebugPrint(drs: DirectoryAndResults[]) {
     drs.forEach(dr => {
-        console.log(`############# ${dr.directory} ###############`)
+        console.log(`############# ${dr.detailsAndDirectory} ###############`)
         dr.results.forEach(sr => {
             console.log(sr.stdout.trimEnd())
             if (sr.stderr !== "") {
@@ -46,11 +47,11 @@ export function shellDebugPrint(drs: DirectoryAndResults[]) {
 export function noHandleShell(drs: DirectoryAndResults[]) {
 }
 function statusResults(scd: ScriptInContextAndDirectory, command: CommandDefn, result: ShellResult) {
-    let statusFile = path.join(scd.directory, scd.scriptInContext.config.status)
+    let statusFile = path.join(scd.detailsAndDirectory.directory, scd.scriptInContext.config.status)
     if (command.status) {
         let status = result.err ? false : true
         fs.appendFile(statusFile, `${scd.scriptInContext.timestamp.toISOString()} ${status} ${command.name}\n`, err => {
-            if (err) console.log('error making status', scd.directory, command, err)
+            if (err) console.log('error making status', scd.detailsAndDirectory, command, err)
         })
     }
 
@@ -59,7 +60,7 @@ function logResults(scd: ScriptInContextAndDirectory, command: CommandDefn, resu
     statusResults(scd, command, result)
     let details = scd.scriptInContext.details;
     let context = scd.scriptInContext.context
-    let logFile = path.join(scd.directory, scd.scriptInContext.config.log)
+    let logFile = path.join(scd.detailsAndDirectory.directory, scd.scriptInContext.config.log)
     if (logFile) {
         fs.appendFile(logFile, `${scd.scriptInContext.timestamp.toISOString()} ${command.name} ${command.command}\n`, err => {
             fs.appendFile(logFile, result.stdout, err => {
@@ -75,8 +76,12 @@ function logResults(scd: ScriptInContextAndDirectory, command: CommandDefn, resu
     }
 }
 export function executeShellCommand(scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> {
+    let dic = {...scd.scriptInContext.config, projectDetails: scd.detailsAndDirectory.projectDetails}
     return new Promise<ShellResult>((resolve, reject) => {
-        cp.exec(`cd ${scd.directory}\n${command.command}`, (err: any, stdout: string, stderr: string) => {
+        let cmd = derefence(dic, command.command)
+        // console.log("about to execute ", command, cmd)
+        // console.log("dic", dic)
+        cp.exec(`cd ${scd.detailsAndDirectory.directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
                 let result = {title: command.name, err: err, stdout: stdout, stderr: stderr}
                 logResults(scd, command, result, resolve, reject);
             }
@@ -96,6 +101,6 @@ export function executeShellDetails(scd: ScriptInContextAndDirectory): Promise<S
 
 export function executeShellDetailsInAllDirectories(sc: ScriptInContext): Promise<DirectoryAndResults[]> {
     let results: Promise<DirectoryAndResults>[] = sc.context.directories.//
-        map(d => executeShellDetails({directory: d, scriptInContext: sc}).then(res => ({directory: d, results: res})));
+        map(d => executeShellDetails({detailsAndDirectory: d, scriptInContext: sc}).then(res => ({detailsAndDirectory: d, results: res})));
     return Promise.all(results)
 }

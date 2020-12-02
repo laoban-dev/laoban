@@ -22,12 +22,12 @@ export interface ScriptDetails {
 
 export interface CommandContext {
     shellDebug: boolean,
-    directories: string[]
+    directories: ProjectDetailsAndDirectory[]
 }
 
 export interface ScriptInContextAndDirectory {
     scriptInContext: ScriptInContext,
-    directory: string
+    detailsAndDirectory: ProjectDetailsAndDirectory
 }
 export interface ScriptInContext {
     config: Config,
@@ -37,7 +37,7 @@ export interface ScriptInContext {
 }
 
 export interface DirectoryAndResults {
-    directory: string
+    detailsAndDirectory: ProjectDetailsAndDirectory
     results: ShellResult[]
 }
 export type ScriptProcessor = (sc: ScriptInContext) => Promise<DirectoryAndResults[]>

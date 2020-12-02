@@ -9,41 +9,46 @@ function find(dic: any, s: string) {
 
 
 /** ref is like ${xxx} and this returns dic[xxx]. If the variable doesn't exist it is left alone... */
-function replaceVar(name: string, dic: any, ref: string): string {
+function replaceVar(dic: any, ref: string): string {
     let i = ref.slice(2, ref.length - 1);
-    let result = dic[i];
-    return result ? result : ref
+    let parts = i.split('.')
+    // console.log('dic', dic)
+    // console.log('parts', parts)
+    try {
+        let result = parts.reduce((acc, part) => acc[part], dic)
+        return result ? result : ref
+    } catch (e) {return ref}
 }
 /** If the string has ${a} in it, then that is replaced by the dic entry */
-function derefence(name: string, dic: any, s: string) {
-    const regex = /(\$\{.*\})/g
+export function derefence(dic: any, s: string) {
+    const regex = /(\$\{[^}]*\})/g
     let groups = s.match(regex)
     if (groups) {
         // console.log("    deref", s, groups)
-        let result = groups.reduce((acc, v) => acc.replace(v, replaceVar(name, dic, v)), s)
+        let result = groups.reduce((acc, v) => acc.replace(v, replaceVar(dic, v)), s)
         // console.log("      result", result)
         return result
     }
     return s
 }
-function cleanUpCommandString(dic: any, scriptName: string): (s: string) => string {
-    return s => derefence(`Command ${scriptName}`, dic, s)
+function cleanUpCommandString(dic: any,): (s: string) => string {
+    return s => derefence(dic, s)
 }
 function isCommand(x: (string | CommandDefn)): x is CommandDefn {
     return typeof x === 'object'
 }
-export function cleanUpCommand(dic: any, scriptName: string): (command: (string | CommandDefn)) => CommandDefn {
+export function cleanUpCommand(dic: any): (command: (string | CommandDefn)) => CommandDefn {
     return command => isCommand(command) ?
-        ({...command, command: cleanUpCommandString(dic, scriptName)(command.command)}) :
-        ({name: '', command: cleanUpCommandString(dic, scriptName)(command)})
+        ({...command, command: cleanUpCommandString(dic)(command.command)}) :
+        ({name: '', command: cleanUpCommandString(dic)(command)})
 }
 
 function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => ScriptDetails {
     return (scriptName, defn) => ({
-        name: derefence(scriptName + '.name', dic, scriptName),
-        description: derefence(scriptName + '.description', dic, defn.description),
+        name: derefence(dic, scriptName),
+        description: derefence(dic, defn.description),
         guard: defn.guard,
-        commands: defn.commands.map(cleanUpCommand(dic, scriptName))
+        commands: defn.commands.map(cleanUpCommand(dic))
     })
 }
 function addScripts(dic: any, scripts: ScriptDefns) {
@@ -55,7 +60,7 @@ function addScripts(dic: any, scripts: ScriptDefns) {
 export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     var result: any = {directory: laoban, laobanConfig: path.join(laoban, loabanConfigName)}
     function add(name: string, raw: any) {
-        result[name] = derefence(name, result, raw[name])
+        result[name] = derefence(result, raw[name])
     }
     add("templateDir", rawConfig)
     add("log", rawConfig)

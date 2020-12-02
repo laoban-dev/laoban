@@ -35,7 +35,7 @@ export class ProjectDetailFiles {
         return new Promise<ProjectDetailsAndDirectory>((resolve) => {
             fs.readFile(rootAndFileName, (err, data) => {
                 if (err) {resolve({directory: root})} else
-                    resolve({directory: root, projectDetails: JSON.parse(fs.readFileSync(projectDetailsFile).toString())})
+                    resolve({directory: root, projectDetails: JSON.parse(data.toString())})
             })
         })
     }

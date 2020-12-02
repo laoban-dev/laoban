@@ -1,5 +1,17 @@
 #!/usr/bin/env node
-import {compactStatus, DirectoryAndCompactedStatusMap, Files, findLaoban, laobanFile, prettyPrintData, printStatus, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./Files";
+import {
+    compactStatus,
+    DirectoryAndCompactedStatusMap,
+    Files,
+    findLaoban,
+    laobanFile,
+    prettyPrintData,
+    printStatus,
+    ProjectDetailFiles,
+    toPrettyPrintData,
+    toStatusDetails,
+    writeCompactedStatus
+} from "./Files";
 import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
 import {Config, DirectoryAndResults, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
@@ -61,13 +73,15 @@ export class Cli {
             console.log('-'.padEnd(nameWidth, '-'), '-'.padEnd(cmdWidth, '-'))
             script.commands.forEach(c => console.log(c.name.padEnd(nameWidth), c.command))
         } else {
-            let sc: ScriptInContext = {
-                config: this.config, details: script, timestamp: new Date(),
-                context: {shellDebug: cmd.shellDebug, directories: this.findProjectDetailsAndDirectoryPassingGuard(cmd.all, script)}
-            }
-            let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
-            let processor = cmd.quiet ? noHandleShell : (cmd.shellDebug ? shellDebugPrint : consoleHandleShell)
-            results.then(processor, processor)
+            ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, () => true).then(details => {
+                let sc: ScriptInContext = {
+                    config: this.config, details: script, timestamp: new Date(),
+                    context: {shellDebug: cmd.shellDebug, directories: details}
+                }
+                let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
+                let processor = cmd.quiet ? noHandleShell : (cmd.shellDebug ? shellDebugPrint : consoleHandleShell)
+                return results.then(processor, processor)
+            })
         }
     }
     constructor(config: Config, scriptProcessor: ScriptProcessor) {
@@ -82,7 +96,7 @@ export class Cli {
         this.command('run', 'runs an arbitary command (the rest of the command line).', this.defaultOptions).//
             action((cmd: any) => {
                 let command = this.program.args.slice(0).filter(n => !n.startsWith('-')).join(' ')
-                console.log(command)
+                // console.log(command)
                 let s: ScriptDetails = {
                     name: 'run', description: `run ${command}`, commands: [
                         {name: 'run', command: command, status: false}
@@ -129,9 +143,10 @@ export class Cli {
 }
 
 let laoban = findLaoban(process.cwd())
-let config = JSON.parse(fs.readFileSync(laobanFile(laoban)).toString())
+let rawConfig = JSON.parse(fs.readFileSync(laobanFile(laoban)).toString())
 
 
-let cli = new Cli(configProcessor(laoban, config), executeShellDetailsInAllDirectories);
+let config = configProcessor(laoban, rawConfig);
+let cli = new Cli(config, executeShellDetailsInAllDirectories);
 
 cli.start(process.argv)
