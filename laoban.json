@@ -2,6 +2,7 @@
   "templateDir"   : "template",
   "log"           : ".log",
   "status"        : ".status",
+  "profile"        : ".profile",
   "scriptDir"     : "${laobanDirectory}/scripts",
   "packageManager": "npm",
   "scripts"       : {

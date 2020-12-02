@@ -94,15 +94,22 @@ export function executeShellCommand(dic: any) {
     return (scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> => {
         return new Promise<ShellResult>((resolve, reject) => {
             let cmd = derefence(dic, command.command)
-            let variables = calculateVariableText(scd.scriptInContext.variables, dic, scd.detailsAndDirectory.directory, command.command, cmd)
+            let directory = scd.detailsAndDirectory.directory;
+            let variables = calculateVariableText(scd.scriptInContext.variables, dic, directory, command.command, cmd)
             if (scd.scriptInContext.dryrun) {
                 resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: ""})
-            } else
-                cp.exec(`cd ${scd.detailsAndDirectory.directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
+            } else {
+                let startTime = new Date()
+                cp.exec(`cd ${directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
+                        let endTime = new Date();
+                        let duration = endTime.getTime() - startTime.getTime()
+                        if (command.name !== "")
+                            fs.appendFile(path.join(directory, scd.scriptInContext.config.profile), scd.scriptInContext.details.name + " " + command.name + " " + duration + "\n", (err) => {if (err) console.log(err)})
                         let result = {title: command.name, err: err, stdout: variables + stdout, stderr: stderr}
                         logResults(scd, command, result, resolve, reject);
                     }
                 )
+            }
         })
     }
 }
@@ -116,7 +123,7 @@ function chain<Context, From, To>(context: Context, list: From[], fn: (context: 
 export function executeShellDetails(scd: ScriptInContextAndDirectory): Promise<ShellResult[]> {
     let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
     let guard = scd.scriptInContext.details.guard;
-    let canExecute = guard ? replaceVarToUndefined(dic, guard)  : false
+    let canExecute = guard ? replaceVarToUndefined(dic, guard) : true
     // console.log("execute", guard, replaceVarToUndefined(dic, guard), canExecute, typeof canExecute)
     return canExecute ? chain(scd, scd.scriptInContext.details.commands, executeShellCommand(dic)) : Promise.resolve([])
 }

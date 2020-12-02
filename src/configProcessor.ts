@@ -10,6 +10,7 @@ function find(dic: any, s: string) {
 
 /** ref is like ${xxx} and this returns dic[xxx]. If the variable doesn't exist it is left alone... */
 function replaceVar(dic: any, ref: string): string {
+    if (ref=== undefined)return undefined
     let i = ref.slice(2, ref.length - 1);
     let parts = i.split('.')
     // console.log('dic', dic)
@@ -33,6 +34,7 @@ export function derefence(dic: any, s: string) {
 }
 
 export function replaceVarToUndefined(dic: any, ref: string): string {
+    if (ref=== undefined)return undefined
     let i = ref.slice(2, ref.length - 1);
     let parts = i.split('.')
     // console.log('dic', dic)
@@ -87,6 +89,7 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     add("templateDir", rawConfig)
     add("log", rawConfig)
     add("status", rawConfig)
+    add("profile", rawConfig)
     add("packageManager", rawConfig)
     add("scriptDir", rawConfig)
     for (const k in rawConfig.variables) add(k, rawConfig.variables)

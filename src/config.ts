@@ -4,6 +4,7 @@ export interface ConfigVariables {
     templateDir: string,
     log: string,
     status: string,
+    profile: string,
     scriptDir: string,
     packageManager: string,
     variables?: { [name: string]: string }
