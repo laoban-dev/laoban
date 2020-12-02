@@ -65,3 +65,15 @@ export interface CommandDefn {
     status?: boolean
 }
 
+export interface ProjectDetailsAndDirectory {
+    directory: string
+    projectDetails: ProjectDetails
+}
+export interface ProjectDetails {
+    "name": string,
+    "description": string,
+    "projectDetails": {
+        "generation": 0,
+        "publish": true
+    }
+}

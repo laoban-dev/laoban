@@ -2,6 +2,7 @@ import * as fs from "fs";
 import {ParsedPath} from "path";
 import * as path from "path";
 import {Strings} from "./utils";
+import {ProjectDetailsAndDirectory} from "./config";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -21,9 +22,13 @@ export function findLaoban(directory: string) {
 }
 
 export class Files {
-    static findProjectFiles(root: string): string[] {
-        let result = fs.existsSync(path.join(root, projectDetailsFile)) ? [root] : []
-        let children: string[][] = fs.readdirSync(root).map((file, index) => {
+    static loadProjectDetails(root: string, projectDetailsFile: string): ProjectDetailsAndDirectory {
+        return ({directory: root, projectDetails: JSON.parse(fs.readFileSync(projectDetailsFile).toString())})
+    }
+    static findProjectFiles(root: string): ProjectDetailsAndDirectory[] {
+        let rootAndFileName = path.join(root, projectDetailsFile);
+        let result = fs.existsSync(rootAndFileName) ? [Files.loadProjectDetails(root,rootAndFileName)] : []
+        let children: ProjectDetailsAndDirectory[][] = fs.readdirSync(root).map((file, index) => {
             if (file !== 'node_modules' && file !== '.git') {
                 const curPath = path.join(root, file);
                 if (fs.lstatSync(curPath).isDirectory()) {

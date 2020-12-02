@@ -5,7 +5,7 @@
   "projectDetails": {
     "publish"     : true,
     "links"       : ["@phil-rice/lens", "@phil-rice/nav"],
-    "generation"  : 1,
+    "generation"  : 2,
     "extraDeps"   : {},
     "extraDevDeps": {}
   }
