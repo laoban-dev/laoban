@@ -5,7 +5,7 @@
   "scriptDir"     : "${laobanDirectory}/scripts",
   "packageManager": "npm",
   "scripts"       : {
-    "log"       : {"description": "displays the log file", "commands": ["cat log"]},
+    "log"       : {"description": "displays the log file", "commands": ["cat ${log}"]},
     "update"    : {
       "description": "updates the package.json in each project, using the template",
       "commands"   : [
@@ -24,11 +24,6 @@
     "link"      : {
       "description": "call '${packageManager} link' in each project directory",
       "commands"   : ["${packageManager} link"]
-    },
-    "ls"        : {"description": "lists all the projects", "commands": ["pwd"]},
-    "tsc"       : {
-      "description": "runs tsc",
-      "commands"   : [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
     "test"      : {
       "description": "runs ${packageManager} test",

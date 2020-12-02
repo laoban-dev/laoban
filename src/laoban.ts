@@ -41,17 +41,6 @@ export class Cli {
         arguments('').//
         version('0.1.0')//
 
-    findSortedFileNames(pds: ProjectDetailsAndDirectory[]): string[] { return this.sortProjectDetails(pds).map(pd => pd.directory) }
-    findSortedFileNamesPassingGuard(script: ScriptDetails, pds: ProjectDetailsAndDirectory[]): string[] {
-        // console.log('findSortedFileNamesPassingGuard', script, pds)
-        let projectDetails = this.sortProjectDetails(pds)
-        return (script.guard ? projectDetails.filter(pd => pd.projectDetails.projectDetails.publish == true) : projectDetails).map(pd => pd.directory);
-    }
-    private sortProjectDetails(pds: ProjectDetailsAndDirectory[]) {
-        return pds.sort((l, r) => l.projectDetails.projectDetails.generation - r.projectDetails.projectDetails.generation);
-    }
-    findProjectDetailsAndDirectory(all: boolean): string[] {return all ? this.findSortedFileNames(Files.findProjectFiles(this.config.laobanDirectory)) : [process.cwd()]}
-    findProjectDetailsAndDirectoryPassingGuard(all: boolean, script: ScriptDetails) {return all ? this.findSortedFileNamesPassingGuard(script, Files.findProjectFiles(this.config.laobanDirectory)) : [process.cwd()]}
 
     addScripts(scripts: ScriptDetails[], options: (program: any) => any) {
         scripts.forEach(script => {
@@ -110,10 +99,13 @@ export class Cli {
             })
         this.command('compactStatus', 'crunches the status', this.defaultOptions).//
             action((cmd: any) => {
-                this.findProjectDetailsAndDirectory(cmd.all).forEach(d => writeCompactedStatus(path.join(d, this.config.status), compactStatus(path.join(d, this.config.status))))
+                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, () => true).then(ds => {
+                    ds.forEach(d => writeCompactedStatus(path.join(d.directory, this.config.status), compactStatus(path.join(d.directory, this.config.status))))
+                })
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
-            action((cmd: any) => this.sortProjectDetails(Files.findProjectFiles(config.laobanDirectory)).forEach(p => console.log(p)))
+            action((cmd: any) =>
+                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, true, () => true).then(ds => ds.forEach(p => console.log(p.directory))))
         this.addScripts(config.scripts, this.defaultOptions)
 
         var p = this.program
