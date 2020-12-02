@@ -21,8 +21,11 @@ export function findLaoban(directory: string) {
 }
 
 export class ProjectDetailFiles {
-    static findAndLoadProjectDetails(root: string, all: boolean): Promise<ProjectDetailsAndDirectory[]> {
-        return all ? this.findAndLoadProjectDetailsFromChildren(root) : this.loadProjectDetails(root).then(x => [x])
+    static findAndLoadSortedProjectDetails(root: string, all: boolean, filter: (p: ProjectDetailsAndDirectory) => boolean): Promise<ProjectDetailsAndDirectory[]> {
+        let unsorted = all ? this.findAndLoadProjectDetailsFromChildren(root) : this.loadProjectDetails(root).then(x => [x])
+        return unsorted.then(raw => raw.filter(filter).sort((l, r) => {
+            try { return l.projectDetails.projectDetails.generation - r.projectDetails.projectDetails.generation} catch (e) {return 0}
+        }))
     }
 
     static findAndLoadProjectDetailsFromChildren(root: string): Promise<ProjectDetailsAndDirectory[]> {return Promise.all(this.findProjectDirectories(root).map(this.loadProjectDetails))}
