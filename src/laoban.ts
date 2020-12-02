@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import {compactStatus, Files, findLaoban, laobanFile, printStatus, writeCompactedStatus} from "./Files";
+import {compactStatus, DirectoryAndCompactedStatusMap, Files, findLaoban, laobanFile, prettyPrintData, printStatus, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./Files";
 import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
 import {Config, DirectoryAndResults, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
@@ -36,7 +36,6 @@ export class Cli {
         return (script.guard ? projectDetails.filter(pd => pd.projectDetails.projectDetails.publish == true) : projectDetails).map(pd => pd.directory);
     }
     private sortProjectDetails(pds: ProjectDetailsAndDirectory[]) {
-
         return pds.sort((l, r) => l.projectDetails.projectDetails.generation - r.projectDetails.projectDetails.generation);
     }
     findProjectDetailsAndDirectory(all: boolean) {return all ? this.findSortedFileNames(Files.findProjectFiles(this.config.directory)) : [process.cwd()]}
@@ -91,9 +90,21 @@ export class Cli {
                 }
                 this.executeCommand(cmd, s)
             })
+        // this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
+        //     action((cmd: any) => {
+        //         this.findProjectDetailsAndDirectory(cmd.all).forEach(d => printStatus(d, compactStatus(path.join(d, this.config.status))))
+        //     })
         this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
             action((cmd: any) => {
-                this.findProjectDetailsAndDirectory(cmd.all).forEach(d => printStatus(d, compactStatus(path.join(d, this.config.status))))
+                let compactedStatusMap: DirectoryAndCompactedStatusMap[] = this.findProjectDetailsAndDirectory(cmd.all).map(d => ({
+                    directory: d,
+                    compactedStatusMap: compactStatus(path.join(d, this.config.status))
+                }))
+                // console.log(toStatusDetails(compactedStatusMap))
+                let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
+                // console.log(prettyPrintStatusData)
+                prettyPrintData(prettyPrintStatusData)
+
             })
         this.command('compactStatus', 'crunches the status', this.defaultOptions).//
             action((cmd: any) => {
