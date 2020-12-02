@@ -4,7 +4,7 @@ import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
 import {Config, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
 import {Strings} from "./utils";
-import {consoleHandleShell, executeShellDetails, executeShellDetailsInAllDirectories, shellDebugPrint} from "./shell";
+import {consoleHandleShell, executeShellDetails, executeShellDetailsInAllDirectories, noHandleShell, shellDebugPrint} from "./shell";
 import * as path from "path";
 
 
@@ -21,6 +21,7 @@ export class Cli {
     defaultOptions(program: any): any {
         return program.option('-d, --dryrun', 'displays the command instead of executing it', false).//
             option('-s, --shellDebug', 'debugging around the shell', false).//
+            option('-q, --quiet', "don't display the output from the commands", false).//
             option('-a, --all', 'executes this in all projects', false)
     }
 
@@ -47,7 +48,7 @@ export class Cli {
                             context: {shellDebug: cmd.shellDebug, directories: this.makeDirectories(cmd.all)}
                         }
                         let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
-                        let processor = cmd.shellDebug ? shellDebugPrint : consoleHandleShell
+                        let processor = cmd.quiet? noHandleShell: (cmd.shellDebug ? shellDebugPrint : consoleHandleShell)
                         results.then(processor, processor)
                     }
                 }

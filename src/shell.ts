@@ -42,6 +42,9 @@ export function shellDebugPrint(drs: DirectoryAndResults[]) {
     })
 }
 
+
+export function noHandleShell(drs: DirectoryAndResults[]) {
+}
 function statusResults(scd: ScriptInContextAndDirectory, command: CommandDefn, result: ShellResult) {
     let statusFile = path.join(scd.directory, scd.scriptInContext.config.status)
     if (command.status) {
