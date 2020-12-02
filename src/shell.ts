@@ -83,10 +83,20 @@ export function executeShellCommand(scd: ScriptInContextAndDirectory, command: C
     let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
     return new Promise<ShellResult>((resolve, reject) => {
         let cmd = derefence(dic, command.command)
+        if (scd.scriptInContext.variables) {
+            let simplerdic = {...dic}
+            delete simplerdic.scripts
+            console.log(`variables in ${scd.detailsAndDirectory.directory} for command ${command.command}`)
+            console.log(JSON.stringify(simplerdic,null,2))
+        }
         if (scd.scriptInContext.dryrun) {
             resolve({title: command.name, err: null, stdout: cmd, stderr: ""})
         } else
-            cp.exec(`cd ${scd.detailsAndDirectory.directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
+            cp.exec(`
+            cd ${scd.detailsAndDirectory.directory}
+        \n$
+            {cmd}
+            `, (err: any, stdout: string, stderr: string) => {
                     let result = {title: command.name, err: err, stdout: stdout, stderr: stderr}
                     logResults(scd, command, result, resolve, reject);
                 }

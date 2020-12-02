@@ -31,6 +31,7 @@ export interface ScriptInContextAndDirectory {
 }
 export interface ScriptInContext {
     dryrun: boolean,
+    variables: boolean,
     config: Config,
     timestamp: Date,
     context: CommandContext,

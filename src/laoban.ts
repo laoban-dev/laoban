@@ -34,6 +34,7 @@ export class Cli {
         return program.option('-d, --dryrun', 'displays the command instead of executing it', false).//
             option('-s, --shellDebug', 'debugging around the shell', false).//
             option('-q, --quiet', "don't display the output from the commands", false).//
+            option('-v, --variables', "used when debugging scripts. Shows the variables available to a command when the command is executed", false).//
             option('-a, --all', 'executes this in all projects', false)
     }
 
@@ -62,7 +63,7 @@ export class Cli {
     executeCommand(cmd: any, script: ScriptDetails) {
         ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, this.filterForProjectDirectorys(script)).then(details => {
             let sc: ScriptInContext = {
-                dryrun: cmd.dryrun,
+                dryrun: cmd.dryrun,variables: cmd.variables,
                 config: this.config, details: script, timestamp: new Date(),
                 context: {shellDebug: cmd.shellDebug, directories: details}
             }
