@@ -37,10 +37,10 @@ function cleanUpCommandString(dic: any,): (s: string) => string {
 function isCommand(x: (string | CommandDefn)): x is CommandDefn {
     return typeof x === 'object'
 }
-export function cleanUpCommand(dic: any): (command: (string | CommandDefn)) => CommandDefn {
-    return command => isCommand(command) ?
-        ({...command, command: cleanUpCommandString(dic)(command.command)}) :
-        ({name: '', command: cleanUpCommandString(dic)(command)})
+export function cleanUpCommand(command: (string | CommandDefn)): CommandDefn {
+    return isCommand(command) ?
+        ({...command, command: command.command}) :
+        ({name: '', command: command})
 }
 
 function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => ScriptDetails {
@@ -48,7 +48,7 @@ function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => Scri
         name: derefence(dic, scriptName),
         description: derefence(dic, defn.description),
         guard: defn.guard,
-        commands: defn.commands.map(cleanUpCommand(dic))
+        commands: defn.commands.map(cleanUpCommand)
     })
 }
 function addScripts(dic: any, scripts: ScriptDefns) {

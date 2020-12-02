@@ -177,3 +177,7 @@ the commands should be flagged
 ## Improve the 'shelling out'. 
 Currently we shell out and wait for it to finish. It would be better to use spawn and be able to 
 process the logs as the commands execute. This will reduce memory load and give a better experience
+
+## Need a plugin story so that we don't have to shell out for common things
+* For example updating package json... only important for npm/yarn. Currently done by a script
+* We want to be able to use other people's scripts easily
