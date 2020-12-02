@@ -37,6 +37,7 @@
     },
     "pack"      : {
       "description": "does everything for a publish except the actual 'npm publish'",
+      "guard": ["${projectDetails.projectDetails.pack}"],
       "commands"   : [
         "find . -type f -name 'enzymeAdapterSetup.*' -delete",
         "${packageManager} pack"

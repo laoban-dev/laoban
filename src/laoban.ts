@@ -29,13 +29,19 @@ export class Cli {
         arguments('').//
         version('0.1.0')//
 
-    findSortedFileNames(pds: ProjectDetailsAndDirectory[]): string[] {
-        return this.sortProjectDetails(pds).map(pd => pd.directory)
+    findSortedFileNames(pds: ProjectDetailsAndDirectory[]): string[] { return this.sortProjectDetails(pds).map(pd => pd.directory) }
+    findSortedFileNamesPassingGuard(script: ScriptDetails, pds: ProjectDetailsAndDirectory[]): string[] {
+        // console.log('findSortedFileNamesPassingGuard', script, pds)
+        let projectDetails = this.sortProjectDetails(pds)
+        return (script.guard ? projectDetails.filter(pd => pd.projectDetails.projectDetails.publish == true) : projectDetails).map(pd => pd.directory);
     }
     private sortProjectDetails(pds: ProjectDetailsAndDirectory[]) {
-        return pds.sort((l,r) => l.projectDetails.projectDetails.generation-r.projectDetails.projectDetails.generation);
+
+        return pds.sort((l, r) => l.projectDetails.projectDetails.generation - r.projectDetails.projectDetails.generation);
     }
     findProjectDetailsAndDirectory(all: boolean) {return all ? this.findSortedFileNames(Files.findProjectFiles(this.config.directory)) : [process.cwd()]}
+    findProjectDetailsAndDirectoryPassingGuard(all: boolean, script: ScriptDetails) {return all ? this.findSortedFileNamesPassingGuard(script, Files.findProjectFiles(this.config.directory)) : [process.cwd()]}
+
     addScripts(scripts: ScriptDetails[], options: (program: any) => any) {
         scripts.forEach(script => {
             this.command(script.name, script.description, options).action((cmd: any) => {
@@ -58,7 +64,7 @@ export class Cli {
         } else {
             let sc: ScriptInContext = {
                 config: this.config, details: script, timestamp: new Date(),
-                context: {shellDebug: cmd.shellDebug, directories: this.findProjectDetailsAndDirectory(cmd.all)}
+                context: {shellDebug: cmd.shellDebug, directories: this.findProjectDetailsAndDirectoryPassingGuard(cmd.all, script)}
             }
             let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
             let processor = cmd.quiet ? noHandleShell : (cmd.shellDebug ? shellDebugPrint : consoleHandleShell)

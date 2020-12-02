@@ -42,6 +42,7 @@ function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => Scri
     return (scriptName, defn) => ({
         name: derefence(scriptName + '.name', dic, scriptName),
         description: derefence(scriptName + '.description', dic, defn.description),
+        guard: defn.guard,
         commands: defn.commands.map(cleanUpCommand(dic, scriptName))
     })
 }

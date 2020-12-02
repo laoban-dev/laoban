@@ -14,8 +14,9 @@ export interface RawConfig extends ConfigVariables {
 }
 
 export interface ScriptDetails {
-    name: string
-    description: string
+    name: string,
+    description: string,
+    guard?: string,
     commands: CommandDefn[]
 }
 
@@ -56,6 +57,7 @@ export interface ScriptDefns {
 }
 export interface ScriptDefn {
     description: string,
+    guard?: string,
     commands: (string | CommandDefn)[],
 }
 
