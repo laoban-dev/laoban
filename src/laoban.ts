@@ -95,18 +95,18 @@ export class Cli {
             action((cmd: any) => {
                 let command = this.program.args.slice(0).filter(n => !n.startsWith('-')).join(' ')
                 // console.log(command)
-                let s: ScriptDetails = {name: 'run',  description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
+                let s: ScriptDetails = {name: 'run', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
                 this.executeCommand(cmd, s)
             })
 
         this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
             action((cmd: any) => {
-                let compactedStatusMap: DirectoryAndCompactedStatusMap[] = this.findProjectDetailsAndDirectory(cmd.all).map(d => ({
-                    directory: d, compactedStatusMap: compactStatus(path.join(d, this.config.status))
-                }))
-
-                let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
-                prettyPrintData(prettyPrintStatusData)
+                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all, () => true).then(ds => {
+                    let compactedStatusMap: DirectoryAndCompactedStatusMap[] = ds.map(d =>
+                        ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, this.config.status))}))
+                    let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
+                    prettyPrintData(prettyPrintStatusData)
+                })
             })
         this.command('compactStatus', 'crunches the status', this.defaultOptions).//
             action((cmd: any) => {
