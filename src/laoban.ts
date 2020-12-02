@@ -2,9 +2,13 @@
 import {compactStatus, DirectoryAndCompactedStatusMap, findLaoban, laobanFile, prettyPrintData, ProjectDetailFiles, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./Files";
 import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
-import {Config, DirectoryAndResults, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
+import {Config, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
 import {consoleHandleShell, executeShellDetailsInAllDirectories, noHandleShell, shellDebugPrint} from "./shell";
 import * as path from "path";
+import {findProfilesFromString, loadProfile, Profile} from "./profiling";
+import {Profiler} from "inspector";
+
+
 
 
 export class Cli {
@@ -42,7 +46,7 @@ export class Cli {
     executeCommand(cmd: any, script: ScriptDetails) {
         ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(details => {
             let sc: ScriptInContext = {
-                dryrun: cmd.dryrun,variables: cmd.variables,
+                dryrun: cmd.dryrun, variables: cmd.variables,
                 config: this.config, details: script, timestamp: new Date(),
                 context: {shellDebug: cmd.shellDebug, directories: details}
             }
@@ -82,6 +86,12 @@ export class Cli {
                 ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => {
                     ds.forEach(d => writeCompactedStatus(path.join(d.directory, this.config.status), compactStatus(path.join(d.directory, this.config.status))))
                 })
+            })
+        this.command('profile', 'shows the time taken by named steps of commands', this.defaultOptions).//
+            action((cmd: any) => {
+                let x: Promise<Profile[]> = ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => Promise.all(ds.map(d =>
+                    loadProfile(this.config, d.directory).then(findProfilesFromString(d.directory)))))
+                x.then(p=>console.log(JSON.stringify(p,null,2)))
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>
