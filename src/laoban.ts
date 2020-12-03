@@ -106,7 +106,15 @@ export class Cli {
                     loadTemplateFile(config, p.projectDetails).then(raw =>
                         loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))))))
          this.addScripts(config.scripts, this.defaultOptions)
-
+        this.program.on('--help', () => {
+            console.log('');
+            console.log('Notes');
+            console.log('  You can ask for help for a command by "laoban <cmd> --help"');
+            console.log('');
+            console.log('Common command options (not every command)');
+            console.log('  -a    do it in all projects (default is to execute the command in the current project');
+            console.log('  -d    do a dryrun and only print what would be executed, rather than executing it');
+        });
         var p = this.program
         this.program.on('command:*',
             function () {

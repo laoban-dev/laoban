@@ -30,7 +30,6 @@ export function saveProjectJsonFile(directory: string, packageJson: any) {
 
 export function modifyPackageJson(raw: any, version: string, projectDetails: ProjectDetails) {
     let result = {...raw}
-    result.version = version
     // console.log('pd', projectDetails)
     Object.assign(result, projectDetails)
     add(result, 'dependencies', projectDetails.projectDetails.extraDeps)
@@ -38,6 +37,9 @@ export function modifyPackageJson(raw: any, version: string, projectDetails: Pro
     add(result, 'devDependencies', projectDetails.projectDetails.extraDevDeps)
     add(result, 'bin', projectDetails.projectDetails.extraBins)
     delete result.projectDetails
+    result.version = version
+    result.name = projectDetails.name
+    result.description = projectDetails.description
     return result
 }
 
