@@ -87,11 +87,12 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
         result[name] = derefence(result, raw[name])
     }
     add("templateDir", rawConfig)
+    add("versionFile", rawConfig)
+    add("scriptDir", rawConfig)
     add("log", rawConfig)
     add("status", rawConfig)
     add("profile", rawConfig)
     add("packageManager", rawConfig)
-    add("scriptDir", rawConfig)
     for (const k in rawConfig.variables) add(k, rawConfig.variables)
     result.scripts = addScripts(result, rawConfig.scripts);
     return result

@@ -2,6 +2,7 @@ import {ShellResult} from "./shell";
 
 export interface ConfigVariables {
     templateDir: string,
+    versionFile: string,
     log: string,
     status: string,
     profile: string,
@@ -77,8 +78,15 @@ export interface ProjectDetailsAndDirectory {
 export interface ProjectDetails {
     "name": string,
     "description": string,
+    template: string,
+
+
     "projectDetails": {
-        "generation": 0,
-        "publish": true
+        "generation": number,
+        "publish": boolean,
+        "links": string[],
+        "extraDeps": any,
+        "extraDevDeps": any,
+        extraBins: any
     }
 }

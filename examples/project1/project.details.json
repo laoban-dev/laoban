@@ -5,8 +5,9 @@
   "projectDetails": {
     "generation"  : 0,
     "publish"     : true,
-    "links"       : [],
-    "extraDeps"   : {},
-    "extraDevDeps": {}
+    "links"       : ["link1", "link2"],
+    "extraDeps"   : {"someDef": "depV"},
+    "extraDevDeps": {"someExtraDev": "devV"},
+    "extraBins"   : {"someExtraBin": "devV"}
   }
 }

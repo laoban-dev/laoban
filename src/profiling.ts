@@ -42,9 +42,11 @@ export function findProfilesFromString(s: string): Profile {
             let parts = line.split(" ")
             let key = parts[1]
             let duration = Number(parts[2])
-            latest[key] = duration
-            count[key] = (count[key] ? count[key] + 1 : 1)
-            total[key] = (total[key] ? total[key] : 0) + duration
+            if (duration > 0) {
+                latest[key] = duration
+                count[key] = (count[key] ? count[key] + 1 : 1)
+                total[key] = (total[key] ? total[key] : 0) + duration
+            }
         })
         let result: Profile = {}
         for (let k in count) {
@@ -76,7 +78,7 @@ export function prettyPrintProfileData(profiles: ProfileAndDirectory[]): PrettyP
 
 
 export function prettyPrintProfiles(title: string, p: PrettyProfleData, fn: (s: ProfileStats) => any) {
-    if (p.commandTitlesAndWidths.length==0)
+    if (p.commandTitlesAndWidths.length == 0)
         console.log(title.padEnd(p.directoryWidth), "no profile data available")
     else
         console.log([[title.padEnd(p.directoryWidth), ...p.commandTitlesAndWidths.map(ct => ct.value.padStart(ct.width))].join(' '),

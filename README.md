@@ -171,14 +171,6 @@ The idea of `status` is to give a way to visualise what is happening across all 
 
 ## Validation on project.details.json
 
-## Profiling each command
-* Add to log
-* Create new '.profile' which is appended to by each command
-* Add command to show profiles
-    * latest
-    * maybe some stats
-    * maybe even a picture...
-
 ## Autocalculate generation from links
 Because we have links between projects we can calculate this and display them
 

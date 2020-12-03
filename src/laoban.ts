@@ -7,6 +7,7 @@ import {consoleHandleShell, executeShellDetailsInAllDirectories, noHandleShell, 
 import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, Profile, ProfileAndDirectory} from "./profiling";
 import {Profiler} from "inspector";
+import {loadTemplateFile, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
 
 
 export class Cli {
@@ -91,15 +92,20 @@ export class Cli {
                     loadProfile(this.config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))))
                 x.then(p => {
                     let data = prettyPrintProfileData(p);
-                    prettyPrintProfiles('latest', data, p => (p.latest/1000).toPrecision(3))
+                    prettyPrintProfiles('latest', data, p => (p.latest / 1000).toPrecision(3))
                     console.log()
-                    prettyPrintProfiles('average', data, p => (p.average/1000).toPrecision(3))
+                    prettyPrintProfiles('average', data, p => (p.average / 1000).toPrecision(3))
                 })
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>
                 ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, true).then(ds => ds.forEach(p => console.log(p.directory))))
-        this.addScripts(config.scripts, this.defaultOptions)
+        this.command('updatePackageJson', 'overwrites the package.json based on the project.details.json', this.defaultOptions).//
+            action((cmd: any) =>
+                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => ds.forEach(p =>
+                    loadTemplateFile(config, p.projectDetails).then(raw =>
+                        loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))))))
+         this.addScripts(config.scripts, this.defaultOptions)
 
         var p = this.program
         this.program.on('command:*',

@@ -8,7 +8,8 @@ import {projectDetailsFile} from "./Files";
 
 
 export interface ShellResult {
-    title: string
+    title: string,
+    duration: number,
     err: ExecException | null,
     stdout: string,
     stderr: string
@@ -25,7 +26,8 @@ export function consoleHandleShell(drs: DirectoryAndResults[]) {
             console.log("Exited with error", shellResult.err)
 
         }
-        console.log(shellResult.stdout.trimEnd())
+        let result = shellResult.stdout.trimEnd();
+        if (result.length > 0) console.log(result)
         if (shellResult.stderr) {console.error(shellResult.stderr.trimEnd())}
     }))
 }
@@ -97,7 +99,7 @@ export function executeShellCommand(dic: any) {
             let directory = scd.detailsAndDirectory.directory;
             let variables = calculateVariableText(scd.scriptInContext.variables, dic, directory, command.command, cmd)
             if (scd.scriptInContext.dryrun) {
-                resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: ""})
+                resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: "", duration: -1})
             } else {
                 let startTime = new Date()
                 cp.exec(`cd ${directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
@@ -105,7 +107,7 @@ export function executeShellCommand(dic: any) {
                         let duration = endTime.getTime() - startTime.getTime()
                         if (command.name !== "")
                             fs.appendFile(path.join(directory, scd.scriptInContext.config.profile), scd.scriptInContext.details.name + " " + command.name + " " + duration + "\n", (err) => {if (err) console.log(err)})
-                        let result = {title: command.name, err: err, stdout: variables + stdout, stderr: stderr}
+                        let result = {title: command.name, err: err, stdout: variables + stdout, stderr: stderr, duration: duration}
                         logResults(scd, command, result, resolve, reject);
                     }
                 )
