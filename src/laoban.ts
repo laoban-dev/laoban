@@ -106,12 +106,7 @@ export class Cli {
                     copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
                         loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
                             loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))))
-        // this.command("copyTemplateDirectory", 'copys the template directory to the project', this.defaultOptions).action((cmd: any) => {
-        //     ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => ds.forEach(p =>
-        //         loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
-        //             loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))
-        //
-        // })
+
 
 
         this.addScripts(config.scripts, this.defaultOptions)

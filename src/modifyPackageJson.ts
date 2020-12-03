@@ -22,7 +22,7 @@ export function loadVersionFile(config: Config): Promise<string> {
 }
 export function saveProjectJsonFile(directory: string, packageJson: any) {
     return new Promise<void>((resolve, reject) => fs.writeFile(path.join(directory, 'package.json'),
-        JSON.stringify(packageJson, null, 2), (err) => {
+        JSON.stringify(packageJson, null, 2) + "\n", (err) => {
             if (err) reject(err)
             else resolve()
         }))
