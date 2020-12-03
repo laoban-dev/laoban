@@ -12,7 +12,7 @@
     "update"    : {
       "description": "copies the files from the template to the updates the package.json in each project, using the template",
       "commands"   : [
-        "echo a && cp -r ${templateDir}/${projectDetails.template}/* ${projectDirectory} && echo b",
+        "cp -r ${templateDir}/${projectDetails.template}/* ${projectDirectory}",
         "laoban updatePackageJson"
       ]
     },

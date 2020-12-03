@@ -1,7 +1,8 @@
 import * as fs from "fs";
+import * as fse from "fs-extra";
 import * as path from "path";
 import {StringAndWidth, Strings} from "./utils";
-import {ProjectDetailsAndDirectory} from "./config";
+import {Config, ProjectDetailsAndDirectory} from "./config";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -9,6 +10,9 @@ export let projectDetailsFile = 'project.details.json'
 
 export function laobanFile(dir: string) { return path.join(dir, loabanConfigName)}
 
+export function copyTemplateDirectory(config: Config, template: string, target: string): Promise<void> {
+    return fse.copy(path.join(config.templateDir, template), target)
+}
 export function isProjectDirectory(directory: string) {
     return fs.existsSync(path.join(directory, projectDetailsFile))
 }
@@ -21,6 +25,14 @@ export function findLaoban(directory: string) {
 }
 
 export class ProjectDetailFiles {
+
+
+    // static workOutProjectDetails(root: string, all: boolean){
+    //     if (all)  return this.findAndLoadProjectDetailsFromChildren(root);
+    //
+    //     this.loadProjectDetails(process.cwd()).then(pd=> {if (pd.projectDetails)))
+    // }
+
     static findAndLoadSortedProjectDetails(root: string, all: boolean): Promise<ProjectDetailsAndDirectory[]> {
         let unsorted = all ? this.findAndLoadProjectDetailsFromChildren(root) : this.loadProjectDetails(process.cwd()).then(x => [x])
         return unsorted.then(raw => raw.sort((l, r) => {
@@ -56,104 +68,3 @@ export class ProjectDetailFiles {
 }
 
 
-
-function readOrBlank(file: string): string {
-    try {
-        return fs.readFileSync(file).toString()
-    } catch (e) {return ""}
-}
-export function compactStatus(statusFile: string): Map<string, string> {
-    let lines = readOrBlank(statusFile)
-    let map = new Map<string, string>()
-    lines.split("\n").forEach(line => {
-        let groups = line.split(" ")
-        if (groups && groups[2])
-            // console.log('compact', groups)
-            map.set(groups[2], line)
-
-
-    })
-    return map
-}
-
-export function writeCompactedStatus(statusFile: string, statusMap: Map<string, string>) {
-    let keys = [...statusMap.keys()].sort()
-    let compacted = keys.map(k => statusMap.get(k)).join("\n") + "\n"
-    fs.writeFile(statusFile, compacted, err => {
-        if (err) console.log('error compacting status', statusFile, statusMap, compacted)
-    })
-}
-
-
-export function printStatus(directory: string, statusMap: Map<string, string>) {
-    let regex = /^([^ ]*) ([^ ]*) (.*)/
-    let keys = [...statusMap.keys()]
-    keys.sort()
-    let width = 10// Strings.maxLength(keys)
-    console.log(directory)
-    keys.forEach(k => {
-        let value = statusMap.get(k)
-        let groups = value.match(regex)
-        if (groups)
-            console.log('  ', k.padEnd(width), groups[2].padEnd(5), groups[1])
-        else
-            console.log('  Status file error', value)
-    })
-}
-
-interface StatusDetails {
-    directory: string,
-    command: string,
-    status: string,
-    timestamp: string
-}
-interface CommandAndStatusDetails {
-    command: string,
-    details: StatusDetails[]
-}
-
-export interface DirectoryAndCompactedStatusMap {
-    directory: string,
-    compactedStatusMap: Map<string, string>
-}
-
-
-function stringToStatusDetails(directory: string, s: string): StatusDetails {
-    let regex = /^([^ ]*) ([^ ]*) (.*)/
-    let groups = s.match(regex)
-    let result = {directory: directory, timestamp: groups[1], status: groups[2], command: groups[3]};
-    return result
-}
-export function toStatusDetails(ds: DirectoryAndCompactedStatusMap[]): StatusDetails[] {
-    let result: StatusDetails[][] = ds.map(d => [...d.compactedStatusMap.keys()].map(command => stringToStatusDetails(d.directory, d.compactedStatusMap.get(command))))
-    return [].concat(...result)
-}
-
-
-interface PrettyPrintStatusData {
-    commandsTitles: StringAndWidth[]
-    directories: string[]
-    directoriesWidth: number
-    directoryToCommandToData: Map<string, Map<string, string>>
-}
-export function toPrettyPrintData(sds: StatusDetails[]): PrettyPrintStatusData {
-    let directories = [...new Set(sds.map(sd => sd.directory))]
-    let directoriesWidth = Strings.maxLength(directories)
-    let commandTitles = [...new Set(sds.map(sd => sd.command))].sort()
-    let commandsTitles = ['', ...commandTitles].map(d => ({value: d, width: Math.max(5, d.length)}))  //later might want more sophisticated
-    let directoryToCommandToData = new Map<string, Map<string, string>>()
-    sds.forEach(sd => {
-        let existingCommandToData = directoryToCommandToData.get(sd.directory)
-        let map: Map<string, string> = existingCommandToData ? existingCommandToData : new Map<string, string>()
-        map.set(sd.command, sd.status)
-        directoryToCommandToData.set(sd.directory, map)
-    })
-    return ({commandsTitles: commandsTitles, directories: directories, directoriesWidth: directoriesWidth, directoryToCommandToData: directoryToCommandToData})
-}
-export function prettyPrintData(pretty: PrettyPrintStatusData) {
-    console.log(''.padEnd(pretty.directoriesWidth), pretty.commandsTitles.map(ct => ct.value.padEnd(ct.width)).join(' '))
-    pretty.directories.forEach(d => console.log(d.padEnd(pretty.directoriesWidth), pretty.commandsTitles.map(ct => {
-        let value = pretty.directoryToCommandToData.get(d).get(ct.value);
-        return (value ? value : "").padEnd(ct.width)
-    }).join(' ')))
-}

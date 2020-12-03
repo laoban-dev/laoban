@@ -11,6 +11,7 @@
   "dependencies": {
     "commander": "^4.1.1",
     "core-js": "^3.6.4",
+    "fs-extra": "^9.0.1",
     "typescript": "^3.7.5"
   },
   "repository": {
@@ -22,6 +23,7 @@
     "@types/core-js": "^2.5.2",
     "@types/mocha": "^5.2.7",
     "@types/node": "^12.12.38",
+    "@types/fs-extra": "^9.0.4",
     "mocha": "^6.2.3",
     "nyc": "^15.0.1"
   },

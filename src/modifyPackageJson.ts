@@ -2,7 +2,7 @@ import {Config, ProjectDetails} from "./config";
 import * as path from "path";
 import * as fs from "fs";
 
-export function loadTemplateFile(config: Config, projectDetails: ProjectDetails): Promise<any> {
+export function loadPackageJsonInTemplateDirectory(config: Config, projectDetails: ProjectDetails): Promise<any> {
     let file = path.join(config.templateDir, projectDetails.template, 'package.json')
     return new Promise<any>((resolve, reject) => fs.readFile(file, (err, data) => {
         if (err) reject(err)
@@ -30,7 +30,6 @@ export function saveProjectJsonFile(directory: string, packageJson: any) {
 
 export function modifyPackageJson(raw: any, version: string, projectDetails: ProjectDetails) {
     let result = {...raw}
-    // console.log('pd', projectDetails)
     Object.assign(result, projectDetails)
     add(result, 'dependencies', projectDetails.projectDetails.extraDeps)
     projectDetails.projectDetails.links.map(l => result['dependencies'][l] = version)

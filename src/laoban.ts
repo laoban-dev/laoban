@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-import {compactStatus, DirectoryAndCompactedStatusMap, findLaoban, laobanFile, prettyPrintData, ProjectDetailFiles, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./Files";
+import {copyTemplateDirectory, findLaoban, laobanFile, ProjectDetailFiles} from "./Files";
 import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
 import {Config, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
 import {consoleHandleShell, executeShellDetailsInAllDirectories, noHandleShell, shellDebugPrint} from "./shell";
 import * as path from "path";
-import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, Profile, ProfileAndDirectory} from "./profiling";
-import {Profiler} from "inspector";
-import {loadTemplateFile, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
+import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
+import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
+import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
 
 
 export class Cli {
@@ -100,12 +100,21 @@ export class Cli {
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>
                 ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, true).then(ds => ds.forEach(p => console.log(p.directory))))
-        this.command('updatePackageJson', 'overwrites the package.json based on the project.details.json', this.defaultOptions).//
+        this.command('copyTemplateDirectory', 'overwrites the package.json based on the project.details.json', this.defaultOptions).//
             action((cmd: any) =>
                 ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => ds.forEach(p =>
-                    loadTemplateFile(config, p.projectDetails).then(raw =>
-                        loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))))))
-         this.addScripts(config.scripts, this.defaultOptions)
+                    copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
+                        loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
+                            loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))))
+        // this.command("copyTemplateDirectory", 'copys the template directory to the project', this.defaultOptions).action((cmd: any) => {
+        //     ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => ds.forEach(p =>
+        //         loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
+        //             loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))
+        //
+        // })
+
+
+        this.addScripts(config.scripts, this.defaultOptions)
         this.program.on('--help', () => {
             console.log('');
             console.log('Notes');
