@@ -5,10 +5,8 @@ import {configProcessor} from "./configProcessor";
 import {Config, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
 import {consoleHandleShell, executeShellDetailsInAllDirectories, noHandleShell, shellDebugPrint} from "./shell";
 import * as path from "path";
-import {findProfilesFromString, loadProfile, Profile} from "./profiling";
+import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, Profile, ProfileAndDirectory} from "./profiling";
 import {Profiler} from "inspector";
-
-
 
 
 export class Cli {
@@ -68,7 +66,7 @@ export class Cli {
             action((cmd: any) => {
                 let command = this.program.args.slice(0).filter(n => !n.startsWith('-')).join(' ')
                 // console.log(command)
-                let s: ScriptDetails = {name: 'run', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
+                let s: ScriptDetails = {name: '', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
                 this.executeCommand(cmd, s)
             })
 
@@ -89,9 +87,14 @@ export class Cli {
             })
         this.command('profile', 'shows the time taken by named steps of commands', this.defaultOptions).//
             action((cmd: any) => {
-                let x: Promise<Profile[]> = ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => Promise.all(ds.map(d =>
-                    loadProfile(this.config, d.directory).then(findProfilesFromString(d.directory)))))
-                x.then(p=>console.log(JSON.stringify(p,null,2)))
+                let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => Promise.all(ds.map(d =>
+                    loadProfile(this.config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))))
+                x.then(p => {
+                    let data = prettyPrintProfileData(p);
+                    prettyPrintProfiles('latest', data, p => (p.latest/1000).toPrecision(3))
+                    console.log()
+                    prettyPrintProfiles('average', data, p => (p.average/1000).toPrecision(3))
+                })
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>

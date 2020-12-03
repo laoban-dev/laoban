@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import {Strings} from "./utils";
+import {StringAndWidth, Strings} from "./utils";
 import {ProjectDetailsAndDirectory} from "./config";
 
 
@@ -129,10 +129,7 @@ export function toStatusDetails(ds: DirectoryAndCompactedStatusMap[]): StatusDet
     return [].concat(...result)
 }
 
-interface StringAndWidth {
-    value: string,
-    width: number
-}
+
 interface PrettyPrintStatusData {
     commandsTitles: StringAndWidth[]
     directories: string[]
