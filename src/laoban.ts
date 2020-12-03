@@ -25,7 +25,8 @@ export class Cli {
             option('-s, --shellDebug', 'debugging around the shell', false).//
             option('-q, --quiet', "don't display the output from the commands", false).//
             option('-v, --variables', "used when debugging scripts. Shows the variables available to a command when the command is executed", false).//
-            option('-a, --all', 'executes this in all projects', false)
+            option('-a, --all', "executes this in all projects, even if 'ín' a project", false).//
+            option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "")
     }
 
     program = require('commander').//
@@ -43,7 +44,7 @@ export class Cli {
     }
 
     executeCommand(cmd: any, script: ScriptDetails) {
-        ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(details => {
+        ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
             let sc: ScriptInContext = {
                 dryrun: cmd.dryrun, variables: cmd.variables,
                 config: this.config, details: script, timestamp: new Date(),
@@ -73,7 +74,7 @@ export class Cli {
 
         this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => {
+                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => {
                     let compactedStatusMap: DirectoryAndCompactedStatusMap[] = ds.map(d =>
                         ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, this.config.status))}))
                     let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
@@ -82,13 +83,13 @@ export class Cli {
             })
         this.command('compactStatus', 'crunches the status', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => {
+                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => {
                     ds.forEach(d => writeCompactedStatus(path.join(d.directory, this.config.status), compactStatus(path.join(d.directory, this.config.status))))
                 })
             })
         this.command('profile', 'shows the time taken by named steps of commands', this.defaultOptions).//
             action((cmd: any) => {
-                let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => Promise.all(ds.map(d =>
+                let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => Promise.all(ds.map(d =>
                     loadProfile(this.config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))))
                 x.then(p => {
                     let data = prettyPrintProfileData(p);
@@ -102,17 +103,18 @@ export class Cli {
                 ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, true).then(ds => ds.forEach(p => console.log(p.directory))))
         this.command('updateConfigFilesFromTemplates', "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", this.defaultOptions).//
             action((cmd: any) =>
-                ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => ds.forEach(p =>
+                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => ds.forEach(p =>
                     copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
                         loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
                             loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))))
-
 
 
         this.addScripts(config.scripts, this.defaultOptions)
         this.program.on('--help', () => {
             console.log('');
             console.log('Notes');
+            console.log("  If you are 'in' a project (the current directory has a project.details.json') then commands are executed by default just for the current project ");
+            console.log("     but if you are not 'in' a project, the commands are executed for all projects");
             console.log('  You can ask for help for a command by "laoban <cmd> --help"');
             console.log('');
             console.log('Common command options (not every command)');

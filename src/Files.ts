@@ -24,14 +24,24 @@ export function findLaoban(directory: string) {
     return findLaoban(parse.dir)
 }
 
+interface ProjectDetailOptions {
+    all: boolean,
+    projects: string
+}
 export class ProjectDetailFiles {
 
 
-    // static workOutProjectDetails(root: string, all: boolean){
-    //     if (all)  return this.findAndLoadProjectDetailsFromChildren(root);
-    //
-    //     this.loadProjectDetails(process.cwd()).then(pd=> {if (pd.projectDetails)))
-    // }
+    static workOutProjectDetails(root: string, options: ProjectDetailOptions): Promise<ProjectDetailsAndDirectory[]> {
+        if (options.projects) return this.findAndLoadProjectDetailsFromChildren(root).then(pd => pd.filter(p => p.directory.match(options.projects)))
+        if (options.all) return this.findAndLoadProjectDetailsFromChildren(root);
+
+        return this.loadProjectDetails(process.cwd()).then(pd => {
+            if (pd.projectDetails) {
+                return this.loadProjectDetails(process.cwd()).then(x => [x])
+            }
+            return this.findAndLoadProjectDetailsFromChildren(root);
+        })
+    }
 
     static findAndLoadSortedProjectDetails(root: string, all: boolean): Promise<ProjectDetailsAndDirectory[]> {
         let unsorted = all ? this.findAndLoadProjectDetailsFromChildren(root) : this.loadProjectDetails(process.cwd()).then(x => [x])
