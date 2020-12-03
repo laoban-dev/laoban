@@ -9,13 +9,6 @@
   "packageManager": "npm",
   "scripts"       : {
     "log"       : {"description": "displays the log file", "commands": ["cat ${log}"]},
-    "update"    : {
-      "description": "copies the files from the template to the updates the package.json in each project, using the template",
-      "commands"   : [
-        "cp -r ${templateDir}/${projectDetails.template}/* ${projectDirectory}",
-        "laoban updatePackageJson"
-      ]
-    },
     "link"      : {
       "description": "call '${packageManager} link' in each project directory",
       "commands"   : ["${packageManager} link"]

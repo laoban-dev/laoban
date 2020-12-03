@@ -100,7 +100,7 @@ export class Cli {
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>
                 ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, true).then(ds => ds.forEach(p => console.log(p.directory))))
-        this.command('copyTemplateDirectory', 'overwrites the package.json based on the project.details.json', this.defaultOptions).//
+        this.command('updateConfigFilesFromTemplates', "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", this.defaultOptions).//
             action((cmd: any) =>
                 ProjectDetailFiles.findAndLoadSortedProjectDetails(laoban, cmd.all).then(ds => ds.forEach(p =>
                     copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
