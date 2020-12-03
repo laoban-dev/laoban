@@ -8,6 +8,7 @@ import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
+import {calcAllGeneration, calculateGenerations, prettyPrintGenerations} from "./generations";
 
 
 export class Cli {
@@ -86,6 +87,10 @@ export class Cli {
                 ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => {
                     ds.forEach(d => writeCompactedStatus(path.join(d.directory, this.config.status), compactStatus(path.join(d.directory, this.config.status))))
                 })
+            })
+     this.command('generations', 'wip: calculating generations', this.defaultOptions).//
+            action((cmd: any) => {
+                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds =>prettyPrintGenerations(ds.map(d=>d.projectDetails),calcAllGeneration(ds.map(d => d.projectDetails), {existing: [], generations: []})))
             })
         this.command('profile', 'shows the time taken by named steps of commands', this.defaultOptions).//
             action((cmd: any) => {
