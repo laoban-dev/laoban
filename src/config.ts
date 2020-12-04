@@ -6,7 +6,6 @@ export interface ConfigVariables {
     log: string,
     status: string,
     profile: string,
-    scriptDir: string,
     packageManager: string,
     variables?: { [name: string]: string }
 }
@@ -20,6 +19,8 @@ export interface ScriptDetails {
     description: string,
     guard?: string,
     osGuard?: string,
+    pmGuard?: string,
+    guardReason?: string,
     commands: CommandDefn[]
 }
 
@@ -64,6 +65,8 @@ export interface ScriptDefn {
     description: string,
     guard?: string,
     osGuard?:string,
+    pmGuard?: string,
+    guardReason?: string,
     commands: (string | CommandDefn)[],
 }
 

@@ -164,6 +164,11 @@ Commands can be marked so that they only run in a particularly OS. Examples can 
     },
 ```
 
+## pmGuard
+If a command requires a particular package manager (example `npm test` and `yarn test` are both OK but `yarn install` is not allowed),
+then a pmGuard can be set. 
+
+
 ## options
 
 ### option `-a`

@@ -73,6 +73,8 @@ function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => Scri
         description: derefence(dic, defn.description),
         guard: defn.guard,
         osGuard: defn.osGuard,
+        pmGuard: defn.pmGuard,
+        guardReason: defn.guardReason,
         commands: defn.commands.map(cleanUpCommand)
     })
 }
@@ -89,7 +91,6 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     }
     add("templateDir", rawConfig)
     add("versionFile", rawConfig)
-    add("scriptDir", rawConfig)
     add("log", rawConfig)
     add("status", rawConfig)
     add("profile", rawConfig)

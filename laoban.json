@@ -1,10 +1,9 @@
 {
-  "templateDir"   : "${laobanDirectory}/template",
+  "templateDir"   : "${laobanDirectory}/examples/template",
   "versionFile"   : "${templateDir}/version.txt",
   "log"           : ".log",
   "status"        : ".status",
   "profile"       : ".profile",
-  "scriptDir"     : "${laobanDirectory}/scripts",
   "packageManager": "npm",
   "scripts"       : {
     "log"        : {"description": "displays the log file", "commands": ["cat ${log}"]},
@@ -26,6 +25,8 @@
     },
     "install"    : {
       "description": "does the initial updateConfigFilesFromTemplates/install/link/tsc/test... etc in each project",
+      "pmGuard"    : "npm",
+      "guardReason": "Yard and npm have a different command for '<pm> install'.",
       "commands"   : [
         "laoban updateConfigFilesFromTemplates",
         {"name": "install", "command": "${packageManager} install", "status": true},
@@ -52,7 +53,8 @@
     "pack"       : {
       "description": "does everything for a publish except the actual 'npm publish'",
       "guard"      : "${projectDetails.projectDetails.publish}",
-      "osGuard":  "Linux",
+      "osGuard"    : "Linux",
+      "guardReason": "the find and copy commands used only work on window",
       "commands"   : [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
         "find dist -type f -name 'enzymeAdapterSetup.*' -delete",
@@ -63,7 +65,8 @@
     "publish"    : {
       "description": "publishes the projects to npmjs",
       "guard"      : "${projectDetails.projectDetails.publish}",
-      "osGuard":  "Linux",
+      "osGuard"    : "Linux",
+      "guardReason": "the find and copy commands used only work on window",
       "commands"   : [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
         "find dist -type f -name 'enzymeAdapterSetup.*' -delete",

@@ -48,7 +48,16 @@ export class Cli {
     executeCommand(cmd: any, script: ScriptDetails) {
         if (script.osGuard) {
             if (!os.type().match(script.osGuard)) {
-                console.error('os is ', os.type(),  `and this command has an osGuard of  [${script.osGuard}]`)
+                console.error('os is ', os.type(), `and this command has an osGuard of  [${script.osGuard}]`)
+                if (script.guardReason) console.error(script.guardReason)
+                return
+            }
+        }
+        if (script.pmGuard) {
+            console.log('checking packaageManager')
+            if (!config.packageManager.match(script.pmGuard)) {
+                console.error('Package Manager is ', config.packageManager, `and this command has an pmGuard of  [${script.pmGuard}]`)
+                if (script.guardReason) console.error(script.guardReason)
                 return
             }
         }
