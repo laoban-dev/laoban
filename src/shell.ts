@@ -119,7 +119,7 @@ function executeCommandIn(dic: any, scd: ScriptInContextAndDirectory, command: C
 
 function executeShell(directory: string, cmd: string): Promise<RawShellResult> {
     return new Promise<RawShellResult>((resolve, reject) => {
-        cp.exec(`cd ${directory}\n${cmd}`, (err: any, stdout: string, stderr: string) =>
+        cp.exec(cmd, {cwd: directory}, (err: any, stdout: string, stderr: string) =>
             resolve({err: err, stdout: stdout, stderr: stderr}))
     })
 }
@@ -140,8 +140,7 @@ function executeInJavascript(directory: string, cmd: string): Promise<RawShellRe
 
 export function executeShellCommand(dic: any) {
     return (scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> =>
-        executeCommandIn(dic, scd, command, command
-            .command.startsWith("js:") ? executeInJavascript : executeShell)
+        executeCommandIn(dic, scd, command, command.command.startsWith("js:") ? executeInJavascript : executeShell)
 }
 
 

@@ -172,13 +172,24 @@ then a pmGuard can be set.
 ## options
 
 ### option `-a`
-The -a means 'in all projects'. Without this laoban will execute the command only in the current directory. 
-If the current directory is not a project directory strange things may result
+The -a means 'in all projects'. Without this laoban looks at the current directory
+* If it contains a project.details.json, the command is executed in this directory only
+* If it doesn't contain a project.details.json the command is executed as though -a had been specified  
 
-If -a is present laoban will run the command across the projects, and (unless -q is present) print the output from the command
+
+### options `-p <project>`
+You can give a regex for the project name and the command will be executed in those projects
+
+Example
+* You are in a project X that depends on another project Y
+* you type laoban tsc -p X 
+    * Now the tsc is executed in project X
 
 ### option `-s`
 This allows a bit of debugging of scripts. If you are having problems adding -s gives a little more information about what is happening
+
+This is a great option when you want 'information from many places'. Like 
+* laoban run 'ls *.config' -as
 
 ### option `-d`
 This is a dryrun. Instead of executing the command, it is just printed. This includes dereferencing the variables. 
