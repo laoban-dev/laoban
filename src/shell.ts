@@ -125,11 +125,15 @@ function executeShell(directory: string, cmd: string): Promise<RawShellResult> {
 }
 function executeInJavascript(directory: string, cmd: string): Promise<RawShellResult> {
     let c = "return  " + cmd.substring(3);
+    let start = process.cwd()
+    process.chdir(directory)
     try {
         let stdout = Function(c)()
         return Promise.resolve({err: null, stdout: stdout, stderr: ""})
     } catch (e) {
         return Promise.resolve({err: e, stdout: `Command was [${c}]`, stderr: ""})
+    } finally {
+        process.chdir(start)
     }
 }
 
