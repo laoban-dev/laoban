@@ -26,21 +26,18 @@ export function findLaoban(directory: string) {
 
 interface ProjectDetailOptions {
     all: boolean,
+    one: boolean,
     projects: string
 }
 export class ProjectDetailFiles {
 
-
     static workOutProjectDetails(root: string, options: ProjectDetailOptions): Promise<ProjectDetailsAndDirectory[]> {
         if (options.projects) return this.findAndLoadProjectDetailsFromChildren(root).then(pd => pd.filter(p => p.directory.match(options.projects)))
         if (options.all) return this.findAndLoadProjectDetailsFromChildren(root);
+        if (options.one) return this.loadProjectDetails(process.cwd()).then(x => [x])
 
-        return this.loadProjectDetails(process.cwd()).then(pd => {
-            if (pd.projectDetails) {
-                return this.loadProjectDetails(process.cwd()).then(x => [x])
-            }
-            return this.findAndLoadProjectDetailsFromChildren(root);
-        })
+        return this.loadProjectDetails(process.cwd()).then(pd =>
+            pd.projectDetails ? this.loadProjectDetails(process.cwd()).then(x => [x]) : this.findAndLoadProjectDetailsFromChildren(root))
     }
 
     static findAndLoadSortedProjectDetails(root: string, all: boolean): Promise<ProjectDetailsAndDirectory[]> {

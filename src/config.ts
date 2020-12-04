@@ -72,11 +72,11 @@ export interface ScriptDefn {
     pmGuard?: string,
     guardReason?: string,
     commands: (string | CommandDefn)[],
-    env: Envs
+    env?: Envs
 }
 
 export interface CommandDefn {
-    name: string,
+    name?: string,
     command: string,
     status?: boolean,
     directory?: string
@@ -90,8 +90,6 @@ export interface ProjectDetails {
     "name": string,
     "description": string,
     template: string,
-
-
     "projectDetails": {
         "generation": number,
         "publish": boolean,

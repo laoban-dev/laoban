@@ -10,6 +10,7 @@ import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, 
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
 import {calcAllGeneration, calculateGenerations, prettyPrintGenerations} from "./generations";
 import * as os from "os";
+import {validateLaobanJson} from "./validation";
 
 
 export class Cli {
@@ -27,6 +28,7 @@ export class Cli {
             option('-s, --shellDebug', 'debugging around the shell', false).//
             option('-q, --quiet', "don't display the output from the commands", false).//
             option('-v, --variables', "used when debugging scripts. Shows the variables available to a command when the command is executed", false).//
+            option('-1, --one', "executes in this project directory (opposite of --all)", false).//
             option('-a, --all', "executes this in all projects, even if 'ín' a project", false).//
             option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "")
     }
@@ -54,7 +56,6 @@ export class Cli {
             }
         }
         if (script.pmGuard) {
-            console.log('checking packaageManager')
             if (!config.packageManager.match(script.pmGuard)) {
                 console.error('Package Manager is ', config.packageManager, `and this command has an pmGuard of  [${script.pmGuard}]`)
                 if (script.guardReason) console.error(script.guardReason)
@@ -167,6 +168,13 @@ export class Cli {
 
 let laoban = findLaoban(process.cwd())
 let rawConfig = JSON.parse(fs.readFileSync(laobanFile(laoban)).toString())
+try {
+    validateLaobanJson(rawConfig)
+}catch (e){
+    console.error(e.message)
+    process.exit(1)
+
+}
 
 
 let config = configProcessor(laoban, rawConfig);
