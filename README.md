@@ -139,6 +139,31 @@ executes `cat ${log}`.
 Here we can see that the command has one step with name `test`. Because status is true the 
 step results will be visible in the status
 
+## More Command features
+
+### Javascript
+If the text of a command starts with js: then the command will be executed in javascript. 
+
+Examples
+* js:process.cwd()
+* js:"Hello World"
+
+This is primarily for `js:process.cwd()` so that we can run scripts on both windows and linux that want to show the current directory
+
+### OsGuard
+
+Commands can be marked so that they only run in a particularly OS. Examples can be seen in the laoban.json
+
+```
+    "pack"       : {
+       ...
+      "osGuard":  "Linux",
+      "commands"   : [
+          ....
+      ]
+    },
+```
+
 ## options
 
 ### option `-a`

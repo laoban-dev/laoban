@@ -72,6 +72,7 @@ function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => Scri
         name: derefence(dic, scriptName),
         description: derefence(dic, defn.description),
         guard: defn.guard,
+        osGuard: defn.osGuard,
         commands: defn.commands.map(cleanUpCommand)
     })
 }

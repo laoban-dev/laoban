@@ -128,7 +128,7 @@ function executeInJavascript(directory: string, cmd: string): Promise<RawShellRe
     let start = process.cwd()
     process.chdir(directory)
     try {
-        let stdout = Function(c)()
+        let stdout = Function(c)().toString()
         return Promise.resolve({err: null, stdout: stdout, stderr: ""})
     } catch (e) {
         return Promise.resolve({err: e, stdout: `Command was [${c}]`, stderr: ""})

@@ -19,6 +19,7 @@ export interface ScriptDetails {
     name: string,
     description: string,
     guard?: string,
+    osGuard?: string,
     commands: CommandDefn[]
 }
 
@@ -62,6 +63,7 @@ export interface ScriptDefns {
 export interface ScriptDefn {
     description: string,
     guard?: string,
+    osGuard?:string,
     commands: (string | CommandDefn)[],
 }
 

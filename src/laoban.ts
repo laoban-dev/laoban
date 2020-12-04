@@ -9,6 +9,7 @@ import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrint
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
 import {calcAllGeneration, calculateGenerations, prettyPrintGenerations} from "./generations";
+import * as os from "os";
 
 
 export class Cli {
@@ -45,6 +46,12 @@ export class Cli {
     }
 
     executeCommand(cmd: any, script: ScriptDetails) {
+        if (script.osGuard) {
+            if (!os.type().match(script.osGuard)) {
+                console.error('os is ', os.type(),  `and this command has an osGuard of  [${script.osGuard}]`)
+                return
+            }
+        }
         ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
             let sc: ScriptInContext = {
                 dryrun: cmd.dryrun, variables: cmd.variables,
@@ -88,9 +95,12 @@ export class Cli {
                     ds.forEach(d => writeCompactedStatus(path.join(d.directory, this.config.status), compactStatus(path.join(d.directory, this.config.status))))
                 })
             })
-     this.command('generations', 'wip: calculating generations', this.defaultOptions).//
+        this.command('generations', 'wip: calculating generations', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds =>prettyPrintGenerations(ds.map(d=>d.projectDetails),calcAllGeneration(ds.map(d => d.projectDetails), {existing: [], generations: []})))
+                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => prettyPrintGenerations(ds.map(d => d.projectDetails), calcAllGeneration(ds.map(d => d.projectDetails), {
+                    existing: [],
+                    generations: []
+                })))
             })
         this.command('profile', 'shows the time taken by named steps of commands', this.defaultOptions).//
             action((cmd: any) => {
