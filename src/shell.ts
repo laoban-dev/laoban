@@ -1,9 +1,9 @@
 import * as cp from 'child_process'
 import {ExecException} from 'child_process'
-import {CommandDefn, DirectoryAndResults, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {CommandDefn, DirectoryAndResults, Envs, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 import * as fs from "fs";
 import * as path from "path";
-import {derefence, replaceVarToUndefined} from "./configProcessor";
+import {cleanUpEnv, derefence, replaceVarToUndefined} from "./configProcessor";
 import {projectDetailsFile} from "./Files";
 
 
@@ -98,15 +98,22 @@ function calculateVariableText(variables: boolean, dic: any, directory: string, 
             ''].join("\n")
     } else return ""
 }
-function executeCommandIn(dic: any, scd: ScriptInContextAndDirectory, command: CommandDefn, fn: (directory: string, cmd: string) => Promise<RawShellResult>): Promise<ShellResult> {
+function calculateDirectory(directory: string, command: CommandDefn) {
+    if (command.directory) {
+        return path.join(directory, command.directory)
+    }
+    return directory
+
+}
+function executeCommandIn(dic: any, scd: ScriptInContextAndDirectory, command: CommandDefn, fn: (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult>): Promise<ShellResult> {
     let cmd = derefence(dic, command.command)
-    let directory = scd.detailsAndDirectory.directory;
+    let directory = calculateDirectory(scd.detailsAndDirectory.directory, command)
     let variables = calculateVariableText(scd.scriptInContext.variables, dic, directory, command.command, cmd)
     if (scd.scriptInContext.dryrun) {
         return Promise.resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: "", duration: -1})
     } else {
         let startTime = new Date()
-        return fn(directory, cmd).then(raw => {
+        return fn(scd, cmd).then(raw => {
             let endTime = new Date();
             let duration = endTime.getTime() - startTime.getTime()
             if (command.name !== "")
@@ -117,30 +124,41 @@ function executeCommandIn(dic: any, scd: ScriptInContextAndDirectory, command: C
     }
 }
 
-function executeShell(directory: string, cmd: string): Promise<RawShellResult> {
-    return new Promise<RawShellResult>((resolve, reject) => {
-        cp.exec(cmd, {cwd: directory}, (err: any, stdout: string, stderr: string) =>
-            resolve({err: err, stdout: stdout, stderr: stderr}))
-    })
+function executeShell(dic: any): (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult> {
+    return (scd, cmd) => {
+        let directory = scd.detailsAndDirectory.directory
+        let raw = process.env
+        let env = cleanUpEnv(dic, scd.scriptInContext.details.env)
+        let processEnv = {...process.env, ...env}
+        let options = env ? {cwd: directory, env: processEnv} : {cwd: directory}
+        // let options =  {cwd: directory}
+        return new Promise<RawShellResult>((resolve, reject) => {
+            cp.exec(cmd, options, (err: any, stdout: string, stderr: string) =>
+                resolve({err: err, stdout: stdout, stderr: stderr}))
+        })
+    }
 }
-function executeInJavascript(directory: string, cmd: string): Promise<RawShellResult> {
-    let c = "return  " + cmd.substring(3);
-    let start = process.cwd()
-    process.chdir(directory)
-    try {
-        let stdout = Function(c)().toString()
-        return Promise.resolve({err: null, stdout: stdout, stderr: ""})
-    } catch (e) {
-        return Promise.resolve({err: e, stdout: `Command was [${c}]`, stderr: ""})
-    } finally {
-        process.chdir(start)
+function executeInJavascript(dic: any): (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult> {
+    return (scd, cmd) => {
+        let directory = scd.detailsAndDirectory.directory
+        let c = "return  " + cmd.substring(3);
+        let start = process.cwd()
+        process.chdir(directory)
+        try {
+            let stdout = Function(c)().toString()
+            return Promise.resolve({err: null, stdout: stdout, stderr: ""})
+        } catch (e) {
+            return Promise.resolve({err: e, stdout: `Command was [${c}]`, stderr: ""})
+        } finally {
+            process.chdir(start)
+        }
     }
 }
 
 
 export function executeShellCommand(dic: any) {
     return (scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> =>
-        executeCommandIn(dic, scd, command, command.command.startsWith("js:") ? executeInJavascript : executeShell)
+        executeCommandIn(dic, scd, command, command.command.startsWith("js:") ? executeInJavascript(dic) : executeShell(dic))
 }
 
 

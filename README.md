@@ -168,6 +168,27 @@ Commands can be marked so that they only run in a particularly OS. Examples can 
 If a command requires a particular package manager (example `npm test` and `yarn test` are both OK but `yarn install` is not allowed),
 then a pmGuard can be set. 
 
+## directory
+If a command needs to run in a different directory (typically a sub directory) the directory can be set 
+``` 
+   "install"    : {
+      "commands"   : [
+        {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
+```             
+This link command is now executed in the `dist` sub directory
+
+## env
+If a command needs access to environment variables (for example a port) these can be added. It is
+not uncommon to have a guard condition on the command. For example:
+
+``` 
+    "startServer": {
+      "description": "${packageManager} start for all projects that have a port defined in project.details.json",
+      "guard"      : "${projectDetails.projectDetails.port}",
+      "commands"   : ["${packageManager} start"],
+      "env"        : {"PORT": "${projectDetails.projectDetails.port}"}
+    },
+```
 
 ## options
 
@@ -175,7 +196,6 @@ then a pmGuard can be set.
 The -a means 'in all projects'. Without this laoban looks at the current directory
 * If it contains a project.details.json, the command is executed in this directory only
 * If it doesn't contain a project.details.json the command is executed as though -a had been specified  
-
 
 ### options `-p <project>`
 You can give a regex for the project name and the command will be executed in those projects

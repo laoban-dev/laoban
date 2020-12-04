@@ -21,6 +21,7 @@ export interface ScriptDetails {
     osGuard?: string,
     pmGuard?: string,
     guardReason?: string,
+    env?: Envs,
     commands: CommandDefn[]
 }
 
@@ -61,6 +62,9 @@ export interface ScriptDefns {
     [name: string]: ScriptDefn
 
 }
+export interface Envs{
+    [name: string]: string
+}
 export interface ScriptDefn {
     description: string,
     guard?: string,
@@ -68,12 +72,14 @@ export interface ScriptDefn {
     pmGuard?: string,
     guardReason?: string,
     commands: (string | CommandDefn)[],
+    env: Envs
 }
 
 export interface CommandDefn {
     name: string,
-    command: string
-    status?: boolean
+    command: string,
+    status?: boolean,
+    directory?: string
 }
 
 export interface ProjectDetailsAndDirectory {

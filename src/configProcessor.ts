@@ -1,4 +1,4 @@
-import {CommandDefn, Config, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails, ScriptProcessor} from "./config";
+import {CommandDefn, Config, Envs, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails, ScriptProcessor} from "./config";
 import * as path from "path";
 import {loabanConfigName} from "./Files";
 
@@ -10,14 +10,14 @@ function find(dic: any, s: string) {
 
 /** ref is like ${xxx} and this returns dic[xxx]. If the variable doesn't exist it is left alone... */
 function replaceVar(dic: any, ref: string): string {
-    if (ref=== undefined)return undefined
+    if (ref === undefined) return undefined
     let i = ref.slice(2, ref.length - 1);
     let parts = i.split('.')
     // console.log('dic', dic)
     // console.log('parts', parts)
     try {
         let result = parts.reduce((acc, part) => acc[part], dic)
-        return result!== undefined ? result : ref
+        return result !== undefined ? result : ref
     } catch (e) {return ref}
 }
 /** If the string has ${a} in it, then that is replaced by the dic entry */
@@ -34,13 +34,13 @@ export function derefence(dic: any, s: string) {
 }
 
 export function replaceVarToUndefined(dic: any, ref: string): string {
-    if (ref=== undefined)return undefined
+    if (ref === undefined) return undefined
     let i = ref.slice(2, ref.length - 1);
     let parts = i.split('.')
     // console.log('dic', dic)
     // console.log('parts', parts)
     try {
-       return parts.reduce((acc, part) => acc[part], dic)
+        return parts.reduce((acc, part) => acc[part], dic)
     } catch (e) {return undefined}
 }
 export function derefenceToUndefined(dic: any, s: string) {
@@ -55,7 +55,7 @@ export function derefenceToUndefined(dic: any, s: string) {
     return undefined
 }
 
-function cleanUpCommandString(dic: any,): (s: string) => string {
+function cleanUpCommandString(dic: any): (s: string) => string {
     return s => derefence(dic, s)
 }
 function isCommand(x: (string | CommandDefn)): x is CommandDefn {
@@ -66,7 +66,14 @@ export function cleanUpCommand(command: (string | CommandDefn)): CommandDefn {
         ({...command, command: command.command}) :
         ({name: '', command: command})
 }
-
+export function cleanUpEnv(dic: any, env: Envs): Envs {
+    if (env) {
+        let result: Envs = {}
+        Object.keys(env).forEach(key => result[key] = derefence(dic, env[key].toString()))
+        return result
+    }
+    return env
+}
 function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => ScriptDetails {
     return (scriptName, defn) => ({
         name: derefence(dic, scriptName),
@@ -75,7 +82,8 @@ function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => Scri
         osGuard: defn.osGuard,
         pmGuard: defn.pmGuard,
         guardReason: defn.guardReason,
-        commands: defn.commands.map(cleanUpCommand)
+        commands: defn.commands.map(cleanUpCommand),
+        env: cleanUpEnv(dic, defn.env)
     })
 }
 function addScripts(dic: any, scripts: ScriptDefns) {
@@ -97,6 +105,7 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     add("packageManager", rawConfig)
     for (const k in rawConfig.variables) add(k, rawConfig.variables)
     result.scripts = addScripts(result, rawConfig.scripts);
+
     return result
 
 }
