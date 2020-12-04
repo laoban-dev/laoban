@@ -10,7 +10,7 @@ import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, 
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
 import {calcAllGeneration, calculateGenerations, prettyPrintGenerations} from "./generations";
 import * as os from "os";
-import {validateLaobanJson} from "./validation";
+import {validateConfigOnHardDrive, validateLaobanJson} from "./validation";
 
 
 export class Cli {
@@ -105,6 +105,10 @@ export class Cli {
                     ds.forEach(d => writeCompactedStatus(path.join(d.directory, this.config.status), compactStatus(path.join(d.directory, this.config.status))))
                 })
             })
+        this.command('validate', 'checks the laoban.json and the project.details.json', this.defaultOptions).//
+            action((cmd: any) => {
+                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => validateConfigOnHardDrive(this.config, ds)).catch(e => console.error(e.message))
+            })
         this.command('generations', 'wip: calculating generations', this.defaultOptions).//
             action((cmd: any) => {
                 ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => prettyPrintGenerations(ds.map(d => d.projectDetails), calcAllGeneration(ds.map(d => d.projectDetails), {
@@ -170,7 +174,7 @@ let laoban = findLaoban(process.cwd())
 let rawConfig = JSON.parse(fs.readFileSync(laobanFile(laoban)).toString())
 try {
     validateLaobanJson(rawConfig)
-}catch (e){
+} catch (e) {
     console.error(e.message)
     process.exit(1)
 

@@ -1,5 +1,6 @@
 import {CommandDefn, Config, ProjectDetailsAndDirectory, RawConfig, ScriptDefn} from "./config";
 import * as fs from "fs";
+import * as path from "path";
 
 function check(context: string, expectedType, json: any): (fieldName: string) => void {
     return fieldName => {
@@ -66,11 +67,19 @@ export function validateProjectDetails(d: ProjectDetailsAndDirectory): d is Proj
     return true
 }
 
-function checkDirectoryExists(context: string, dir: string){
-    if (!fs.lstatSync(dir).isDirectory()) throw new Error(`${context} ${dir} does not exists`)
+function checkDirectoryExists(context: string, dir: string) {
+    function error() { throw new Error(`${context} ${dir} does not exist`)}
+    try {
+        if (!fs.lstatSync(dir).isDirectory()) error(); // ok not the best code...double exception
+    } catch (e) { error()}
 }
 
-export function validateConfigOnHardDrive(c: Config) {
+export function validateConfigOnHardDrive(c: Config, pds: ProjectDetailsAndDirectory[]) {
     checkDirectoryExists('Laoban directory', c.laobanDirectory)
     checkDirectoryExists('template directory', c.templateDir)
+    pds.forEach(t => checkDirectoryExists(`project.json.details in ${t.directory} has template ${t.projectDetails.template}. `, path.join(c.templateDir, t.projectDetails.template)))
+    let names = pds.map(p => p.projectDetails.name).sort()
+    pds.forEach(p => p.projectDetails.projectDetails.links.forEach(l => {
+        if (!names.includes(l)) throw new Error(`${p.directory}/project.details.json has a link to ${l} which is not a known project name. Legal names are ${names}`)
+    }))
 }
