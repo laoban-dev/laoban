@@ -7,6 +7,11 @@ import {derefence, replaceVarToUndefined} from "./configProcessor";
 import {projectDetailsFile} from "./Files";
 
 
+export interface RawShellResult {
+    err: ExecException | null,
+    stdout: string,
+    stderr: string
+}
 export interface ShellResult {
     title: string,
     duration: number,
@@ -61,24 +66,26 @@ function statusResults(scd: ScriptInContextAndDirectory, command: CommandDefn, r
     }
 
 }
-function logResults(scd: ScriptInContextAndDirectory, command: CommandDefn, result: ShellResult, resolve: (value: (ShellResult)) => void, reject: (reason?: any) => void) {
+function logResults(scd: ScriptInContextAndDirectory, command: CommandDefn, result: ShellResult): Promise<ShellResult> {
     statusResults(scd, command, result)
     let details = scd.scriptInContext.details;
     let context = scd.scriptInContext.context
     let logFile = path.join(scd.detailsAndDirectory.directory, scd.scriptInContext.config.log)
-    if (logFile) {
-        fs.appendFile(logFile, `${scd.scriptInContext.timestamp.toISOString()} ${command.name} ${command.command}\n`, err => {
-            fs.appendFile(logFile, result.stdout, err => {
-                fs.appendFile(logFile, result.stderr, err => {
-                    if (err) reject(result); else {
-                        resolve(result);
-                    }
+    return new Promise<ShellResult>((resolve, reject) => {
+        if (logFile) {
+            fs.appendFile(logFile, `${scd.scriptInContext.timestamp.toISOString()} ${command.name} ${command.command}\n`, err => {
+                fs.appendFile(logFile, result.stdout, err => {
+                    fs.appendFile(logFile, result.stderr, err => {
+                        if (err) reject(result); else {
+                            resolve(result);
+                        }
+                    })
                 })
             })
-        })
-    } else if (result.err) reject(result); else {
-        resolve(result);
-    }
+        } else if (result.err) reject(result); else {
+            resolve(result);
+        }
+    })
 }
 
 function calculateVariableText(variables: boolean, dic: any, directory: string, command: string, cmd: string): string {
@@ -91,30 +98,48 @@ function calculateVariableText(variables: boolean, dic: any, directory: string, 
             ''].join("\n")
     } else return ""
 }
-
-export function executeShellCommand(dic: any) {
-    return (scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> => {
-        return new Promise<ShellResult>((resolve, reject) => {
-            let cmd = derefence(dic, command.command)
-            let directory = scd.detailsAndDirectory.directory;
-            let variables = calculateVariableText(scd.scriptInContext.variables, dic, directory, command.command, cmd)
-            if (scd.scriptInContext.dryrun) {
-                resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: "", duration: -1})
-            } else {
-                let startTime = new Date()
-                cp.exec(`cd ${directory}\n${cmd}`, (err: any, stdout: string, stderr: string) => {
-                        let endTime = new Date();
-                        let duration = endTime.getTime() - startTime.getTime()
-                        if (command.name !== "")
-                            fs.appendFile(path.join(directory, scd.scriptInContext.config.profile), scd.scriptInContext.details.name + " " + command.name + " " + duration + "\n", (err) => {if (err) console.log(err)})
-                        let result = {title: command.name, err: err, stdout: variables + stdout, stderr: stderr, duration: duration}
-                        logResults(scd, command, result, resolve, reject);
-                    }
-                )
-            }
+function executeCommandIn(dic: any, scd: ScriptInContextAndDirectory, command: CommandDefn, fn: (directory: string, cmd: string) => Promise<RawShellResult>): Promise<ShellResult> {
+    let cmd = derefence(dic, command.command)
+    let directory = scd.detailsAndDirectory.directory;
+    let variables = calculateVariableText(scd.scriptInContext.variables, dic, directory, command.command, cmd)
+    if (scd.scriptInContext.dryrun) {
+        return Promise.resolve({title: command.name, err: null, stdout: scd.scriptInContext.variables ? variables : cmd, stderr: "", duration: -1})
+    } else {
+        let startTime = new Date()
+        return fn(directory, cmd).then(raw => {
+            let endTime = new Date();
+            let duration = endTime.getTime() - startTime.getTime()
+            if (command.name !== "")
+                fs.appendFile(path.join(directory, scd.scriptInContext.config.profile), scd.scriptInContext.details.name + " " + command.name + " " + duration + "\n", (err) => {if (err) console.log(err)})
+            let result = {title: command.name, err: raw.err, stdout: variables + raw.stdout, stderr: raw.stderr, duration: duration}
+            return logResults(scd, command, result).then(() => result)
         })
     }
 }
+
+function executeShell(directory: string, cmd: string): Promise<RawShellResult> {
+    return new Promise<RawShellResult>((resolve, reject) => {
+        cp.exec(`cd ${directory}\n${cmd}`, (err: any, stdout: string, stderr: string) =>
+            resolve({err: err, stdout: stdout, stderr: stderr}))
+    })
+}
+function executeInJavascript(directory: string, cmd: string): Promise<RawShellResult> {
+    let c = "return  " + cmd.substring(3);
+    try {
+        let stdout = Function(c)()
+        return Promise.resolve({err: null, stdout: stdout, stderr: ""})
+    } catch (e) {
+        return Promise.resolve({err: e, stdout: `Command was [${c}]`, stderr: ""})
+    }
+}
+
+
+export function executeShellCommand(dic: any) {
+    return (scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> =>
+        executeCommandIn(dic, scd, command, command
+            .command.startsWith("js:") ? executeInJavascript : executeShell)
+}
+
 
 function chain<Context, From, To>(context: Context, list: From[], fn: (context: Context, from: From) => Promise<To>): Promise<To[]> {
     if (list.length == 0) return Promise.resolve([])
