@@ -1,24 +1,24 @@
 import * as cp from 'child_process'
 import {ExecException} from 'child_process'
-import {CommandDefn, DirectoryAndResults, Envs, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {CommandDefn, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 import * as fs from "fs";
 import * as path from "path";
 import {cleanUpEnv, derefence, replaceVarToUndefined} from "./configProcessor";
 import {projectDetailsFile} from "./Files";
+import {RawShellResult} from "./executors";
 
-
-export interface RawShellResult {
-    err: ExecException | null,
-    stdout: string,
-    stderr: string
-}
-export interface ShellResult {
+interface ShellResult {
     title: string,
     duration: number,
     err: ExecException | null,
     stdout: string,
     stderr: string
 }
+interface DirectoryAndResults {
+    detailsAndDirectory: ProjectDetailsAndDirectory
+    results: ShellResult[]
+}
+
 
 export function consoleHandleShell(drs: DirectoryAndResults[]) {
     drs.forEach(dr => dr.results.forEach(shellResult => {
@@ -105,6 +105,8 @@ function calculateDirectory(directory: string, command: CommandDefn) {
     return directory
 
 }
+
+
 function executeCommandIn(dic: any, scd: ScriptInContextAndDirectory, command: CommandDefn, fn: (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult>): Promise<ShellResult> {
     let cmd = derefence(dic, command.command)
     let directory = calculateDirectory(scd.detailsAndDirectory.directory, command)
@@ -135,7 +137,7 @@ function shellOptions(scd: ScriptInContextAndDirectory, command: CommandDefn, di
 
 function executeShell(dic: any, command: CommandDefn): (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult> {
     return (scd, cmd) => {
-        let options = shellOptions(scd, command,dic);
+        let options = shellOptions(scd, command, dic);
         // let options =  {cwd: directory}
         return new Promise<RawShellResult>((resolve, reject) => {
             cp.exec(cmd, options, (err: any, stdout: string, stderr: string) =>

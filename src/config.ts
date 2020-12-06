@@ -1,4 +1,4 @@
-import {ShellResult} from "./shell";
+import {ShellResult} from "./executors";
 
 export interface ConfigVariables {
     templateDir: string,
