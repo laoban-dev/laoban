@@ -90,7 +90,7 @@ export interface ProjectDetails {
     "name": string,
     "description": string,
     template: string,
-    "projectDetails": {
+    "details": {
         "generation": number,
         "publish": boolean,
         "links": string[],

@@ -2,7 +2,7 @@
   "template"      : "codeondemand",
   "name"          : "@phil-rice/navigation",
   "description"   : "some navigation stuff",
-  "projectDetails": {
+  "details": {
     "publish"     : true,
     "links"       : ["@phil-rice/lens", "@phil-rice/nav"],
     "generation"  : 1,

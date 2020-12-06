@@ -31,10 +31,10 @@ export function saveProjectJsonFile(directory: string, packageJson: any) {
 export function modifyPackageJson(raw: any, version: string, projectDetails: ProjectDetails) {
     let result = {...raw}
     Object.assign(result, projectDetails)
-    add(result, 'dependencies', projectDetails.projectDetails.extraDeps)
-    projectDetails.projectDetails.links.map(l => result['dependencies'][l] = version)
-    add(result, 'devDependencies', projectDetails.projectDetails.extraDevDeps)
-    add(result, 'bin', projectDetails.projectDetails.extraBins)
+    add(result, 'dependencies', projectDetails.details.extraDeps)
+    projectDetails.details.links.map(l => result['dependencies'][l] = version)
+    add(result, 'devDependencies', projectDetails.details.extraDevDeps)
+    add(result, 'bin', projectDetails.details.extraBins)
     delete result.projectDetails
     result.version = version
     result.name = projectDetails.name

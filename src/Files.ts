@@ -43,7 +43,7 @@ export class ProjectDetailFiles {
     static findAndLoadSortedProjectDetails(root: string, all: boolean): Promise<ProjectDetailsAndDirectory[]> {
         let unsorted = all ? this.findAndLoadProjectDetailsFromChildren(root) : this.loadProjectDetails(process.cwd()).then(x => [x])
         return unsorted.then(raw => raw.sort((l, r) => {
-            try { return l.projectDetails.projectDetails.generation - r.projectDetails.projectDetails.generation} catch (e) {return 0}
+            try { return l.projectDetails.details.generation - r.projectDetails.details.generation} catch (e) {return 0}
         }))
     }
 

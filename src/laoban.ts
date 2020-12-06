@@ -122,9 +122,9 @@ export class Cli {
                     loadProfile(this.config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))))
                 x.then(p => {
                     let data = prettyPrintProfileData(p);
-                    prettyPrintProfiles('latest', data, p => (p.latest / 1000).toPrecision(3))
+                    prettyPrintProfiles('latest', data, p => (p.latest / 1000).toFixed(3))
                     console.log()
-                    prettyPrintProfiles('average', data, p => (p.average / 1000).toPrecision(3))
+                    prettyPrintProfiles('average', data, p => (p.average / 1000).toFixed(3))
                 })
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//

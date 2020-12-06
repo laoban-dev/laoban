@@ -109,7 +109,7 @@ If this is present in a directory it tells laoban that the directory is a projec
 * `links` are used within the 'master project' that laoban is looking after. 
       * It allows laoban to set up symbolic links so that changes in one project are immediately reflected
       * These are added as dependencies to the project, with the 'current version number'
-* `publish` should this project be affected by commands with the guard condition ${projectDetails.projectDetails.publish}
+* `publish` should this project be affected by commands with the guard condition ${projectDetails.details.publish}
       * Typically these are projects to be published to npmjs
       * typicall commands are `laoban pack`, `laoban publish`, `laoban ls-publish`
 * `generation` the projects are sorted in generation order so that all generation 0 projects are processed before generation 1
@@ -184,9 +184,9 @@ not uncommon to have a guard condition on the command. For example:
 ``` 
     "startServer": {
       "description": "${packageManager} start for all projects that have a port defined in project.details.json",
-      "guard"      : "${projectDetails.projectDetails.port}",
+      "guard"      : "${projectDetails.details.port}",
       "commands"   : ["${packageManager} start"],
-      "env"        : {"PORT": "${projectDetails.projectDetails.port}"}
+      "env"        : {"PORT": "${projectDetails.details.port}"}
     },
 ```
 
@@ -237,11 +237,27 @@ Because we have links between projects we can calculate this and display them
 
 ## Allow some commands to obey generations 
 by means of waiting until all earlier generation commands have finished. Usually this isn't needed, so 
-the commands should be flagged
+the commands should be flagged.
+
+When doing this we can handle throttling too... done easily by capping number of threads in a generation, and artifically adding more
+
 
 ## Improve the 'shelling out'. 
 Currently we shell out and wait for it to finish. It would be better to use spawn and be able to 
 process the logs as the commands execute. This will reduce memory load and give a better experience
+
+### what should the 'gui' look like?
+Mostly we want to know that each is going ok. It would be cool if we could have an interactive gui, 
+and flip between the outputs... A bit like top
+
+Use cases:
+* npm start... (ctrl c kills the log... so bad)
+* npm install... takes ages. We just want to see what is happening
+* npm test... can be the same
+
+So 
+
+
 
 ## Need a plugin story so that we don't have to shell out for common things
 * For example updating package json... only important for npm/yarn. Currently done by a script

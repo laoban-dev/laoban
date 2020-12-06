@@ -124,13 +124,18 @@ function executeCommandIn(dic: any, scd: ScriptInContextAndDirectory, command: C
     }
 }
 
-function executeShell(dic: any): (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult> {
+function shellOptions(scd: ScriptInContextAndDirectory, command: CommandDefn, dic: any) {
+    let directory = calculateDirectory(scd.detailsAndDirectory.directory, command)
+    let raw = process.env
+    let env = cleanUpEnv(dic, scd.scriptInContext.details.env)
+    let processEnv = {...process.env, ...env}
+    let options = env ? {cwd: directory, env: processEnv} : {cwd: directory}
+    return options;
+}
+
+function executeShell(dic: any, command: CommandDefn): (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult> {
     return (scd, cmd) => {
-        let directory = scd.detailsAndDirectory.directory
-        let raw = process.env
-        let env = cleanUpEnv(dic, scd.scriptInContext.details.env)
-        let processEnv = {...process.env, ...env}
-        let options = env ? {cwd: directory, env: processEnv} : {cwd: directory}
+        let options = shellOptions(scd, command,dic);
         // let options =  {cwd: directory}
         return new Promise<RawShellResult>((resolve, reject) => {
             cp.exec(cmd, options, (err: any, stdout: string, stderr: string) =>
@@ -138,9 +143,9 @@ function executeShell(dic: any): (scd: ScriptInContextAndDirectory, cmd: string)
         })
     }
 }
-function executeInJavascript(dic: any): (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult> {
+function executeInJavascript(dic: any, command: CommandDefn): (scd: ScriptInContextAndDirectory, cmd: string) => Promise<RawShellResult> {
     return (scd, cmd) => {
-        let directory = scd.detailsAndDirectory.directory
+        let directory = calculateDirectory(scd.detailsAndDirectory.directory, command)
         let c = "return  " + cmd.substring(3);
         let start = process.cwd()
         process.chdir(directory)
@@ -157,8 +162,9 @@ function executeInJavascript(dic: any): (scd: ScriptInContextAndDirectory, cmd: 
 
 
 export function executeShellCommand(dic: any) {
-    return (scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> =>
-        executeCommandIn(dic, scd, command, command.command.startsWith("js:") ? executeInJavascript(dic) : executeShell(dic))
+    return (scd: ScriptInContextAndDirectory, command: CommandDefn): Promise<ShellResult> => {
+        return executeCommandIn(dic, scd, command, command.command.startsWith("js:") ? executeInJavascript(dic, command) : executeShell(dic, command))
+    }
 }
 
 

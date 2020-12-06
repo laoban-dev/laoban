@@ -46,7 +46,7 @@ export function prettyPrintGenerations(pds: ProjectDetails[], gen: GenerationCal
 
 function getChildrenRecurse(pds: ProjectDetails[], existing: string[]) {
     let thisTree = {}
-    pds.forEach(p => thisTree[p.name] = new Set(p.projectDetails.links))
+    pds.forEach(p => thisTree[p.name] = new Set(p.details.links))
 
     // console.log('raw', thisTree)
     // console.log('existing', existing)

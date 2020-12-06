@@ -59,5 +59,15 @@
   "types": "index",
   "version": "0.1.17",
   "template": "codeondemand",
+  "details": {
+    "publish": true,
+    "links": [
+      "@phil-rice/lens",
+      "@phil-rice/nav"
+    ],
+    "generation": 1,
+    "extraDeps": {},
+    "extraDevDeps": {}
+  },
   "name": "@phil-rice/navigation"
 }

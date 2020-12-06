@@ -37,23 +37,23 @@
     },
     "ls-ports"   : {
       "description": "lists the projects that have a port defined in project.details.json",
-      "guard"      : "${projectDetails.projectDetails.port}",
+      "guard"      : "${projectDetails.details.port}",
       "commands"   : ["js:process.cwd()"]
     },
     "startServer": {
       "description": "${packageManager} start for all projects that have a port defined in project.details.json",
-      "guard"      : "${projectDetails.projectDetails.port}",
+      "guard"      : "${projectDetails.details.port}",
       "commands"   : ["${packageManager} start"],
-      "env"        : {"PORT": "${projectDetails.projectDetails.port}"}
+      "env"        : {"PORT": "${projectDetails.details.port}"}
     },
     "ls-publish" : {
       "description": "lists the projects that can be published",
-      "guard"      : "${projectDetails.projectDetails.publish}",
+      "guard"      : "${projectDetails.details.publish}",
       "commands"   : ["js:process.cwd()"]
     },
     "pack"       : {
       "description": "does everything for a publish except the actual 'npm publish'",
-      "guard"      : "${projectDetails.projectDetails.publish}",
+      "guard"      : "${projectDetails.details.publish}",
       "osGuard"    : "Linux",
       "guardReason": "the find and copy commands used only work on window",
       "commands"   : [
@@ -65,7 +65,7 @@
     },
     "publish"    : {
       "description": "publishes the projects to npmjs",
-      "guard"      : "${projectDetails.projectDetails.publish}",
+      "guard"      : "${projectDetails.details.publish}",
       "osGuard"    : "Linux",
       "guardReason": "the find and copy commands used only work on window",
       "commands"   : [

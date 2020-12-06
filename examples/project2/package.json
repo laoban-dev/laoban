@@ -59,5 +59,16 @@
   "types": "index",
   "version": "0.1.17",
   "template": "codeondemand",
+  "details": {
+    "publish": false,
+    "links": [
+      "@phil-rice/lens",
+      "@phil-rice/nav"
+    ],
+    "generation": 2,
+    "extraDeps": {},
+    "extraDevDeps": {},
+    "port": 2000
+  },
   "name": "@phil-rice/codeondemand"
 }

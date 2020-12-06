@@ -4,7 +4,7 @@ import * as path from "path";
 
 function check(context: string, expectedType, json: any): (fieldName: string) => void {
     return fieldName => {
-        if (!(json[fieldName])) throw new Error(`${context} ${fieldName} not found`)
+        if (!(json[fieldName])) throw new Error(`${context} ${fieldName} not found\nValue is `+ JSON.stringify(json))
         if (typeof json[fieldName] !== expectedType) throw new Error(`${context} ${fieldName} is a ${typeof [json[fieldName]]} and not ${expectedType}`)
     }
 }
@@ -42,28 +42,13 @@ export function validateLaobanJson(json: any): json is RawConfig {
 }
 
 
-export interface ProjectDetails {
-    "name": string,
-    "description": string,
-    template: string,
-    "projectDetails": {
-        "generation": number,
-        "publish": boolean,
-        "links": string[],
-        "extraDeps": any,
-        "extraDevDeps": any,
-        extraBins: any
-    }
-}
-
-
 export function validateProjectDetails(d: ProjectDetailsAndDirectory): d is ProjectDetailsAndDirectory {
     let context = `${d.directory}/project.details.json`;
     let cs = check(context, 'string', d.projectDetails)
     cs('name')
     cs('description')
     cs('template')
-    check(context, 'object', d.projectDetails.projectDetails)('projectDetails')
+    check(context, 'object', d.projectDetails.details)('projectDetails')
     return true
 }
 
@@ -79,7 +64,12 @@ export function validateConfigOnHardDrive(c: Config, pds: ProjectDetailsAndDirec
     checkDirectoryExists('template directory', c.templateDir)
     pds.forEach(t => checkDirectoryExists(`project.json.details in ${t.directory} has template ${t.projectDetails.template}. `, path.join(c.templateDir, t.projectDetails.template)))
     let names = pds.map(p => p.projectDetails.name).sort()
-    pds.forEach(p => p.projectDetails.projectDetails.links.forEach(l => {
-        if (!names.includes(l)) throw new Error(`${p.directory}/project.details.json has a link to ${l} which is not a known project name. Legal names are ${names}`)
-    }))
+    pds.forEach(p => {
+        check(`${p.directory}/project.details.json`, 'object', p.projectDetails)('details')
+        // check(`${p.directory}/project.details.json`, 'object', p)('links')
+        p.projectDetails.details.links.forEach(l => {
+            if (!names.includes(l)) throw new Error(`${p.directory}/project.details.json has a link to ${l} which is not a known project name. Legal names are ${names}`)
+        })
+    })
+
 }
