@@ -1,6 +1,7 @@
 import {CommandDefn, Config, Envs, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails, ScriptProcessor} from "./config";
 import * as path from "path";
 import {loabanConfigName} from "./Files";
+import * as os from "os";
 
 /** if dic has a.b.c, then if s is a.b.c, this return dic.a.b.c. Or undefined */
 function find(dic: any, s: string) {
@@ -33,7 +34,7 @@ export function derefence(dic: any, s: string) {
     return s
 }
 
-export function replaceVarToUndefined(dic: any, ref: string): string {
+export function replaceVarToUndefined(dic: any, ref: string): string | undefined {
     if (ref === undefined) return undefined
     let i = ref.slice(2, ref.length - 1);
     let parts = i.split('.')
@@ -48,7 +49,10 @@ export function derefenceToUndefined(dic: any, s: string) {
     let groups = s.match(regex)
     if (groups) {
         // console.log("    deref", s, groups)
-        let result = groups.reduce((acc, v) => acc.replace(v, replaceVarToUndefined(dic, v)), s)
+        let result = groups.reduce((acc, v) => {
+            let repl = replaceVarToUndefined(dic, v)
+            return acc.replace(v, repl?repl: "")
+        }, s)
         // console.log("      result", result)
         return result
     }
@@ -105,7 +109,7 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     add("packageManager", rawConfig)
     for (const k in rawConfig.variables) add(k, rawConfig.variables)
     result.scripts = addScripts(result, rawConfig.scripts);
-
+    result.os = os.type()
     return result
 
 }

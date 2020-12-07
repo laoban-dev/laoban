@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import {copyTemplateDirectory, findLaoban, laobanFile, ProjectDetailFiles} from "./Files";
 import * as fs from "fs";
+import * as fse from "fs-extra";
 import {configProcessor} from "./configProcessor";
 import {Config, DirectoryAndResults, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 
@@ -12,6 +13,7 @@ import {calcAllGeneration, prettyPrintGenerations} from "./generations";
 import * as os from "os";
 import {validateConfigOnHardDrive, validateLaobanJson} from "./validation";
 import {
+    AppendToFileIf,
     buildShellCommandDetails, CommandDetails,
     defaultExecutor,
     executeAllGenerations,
@@ -81,7 +83,7 @@ export class Cli {
         }
         ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
             let sc: ScriptInContext = {
-                dryrun: cmd.dryrun, variables: cmd.variables,
+                dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet,
                 config: this.config, details: script, timestamp: new Date(),
                 context: {shellDebug: cmd.shellDebug, directories: details}
             }
@@ -89,7 +91,7 @@ export class Cli {
             let gens: Generations = [scds]
             // console.log('here goes nothing-0')
             // scds.forEach(summariseCommandDetails)
-            this.executeGenerations(gens).catch(e =>  {
+            this.executeGenerations(gens).catch(e => {
                 console.error('had error in execution')
                 console.error(e)
             })
@@ -207,13 +209,17 @@ function reporter(gen: GenerationResult) {
     gen.forEach((sr, i) => {
         // console.log(`sr ${i} Took ${sr.duration}`)
         sr.results.forEach((x, i) => {
-            console.log( x.stdout)
+            if (x.stdout.length>0) console.log(x.stdout)
         })
     })
 }
 
 let config = configProcessor(laoban, rawConfig)
-let executeOne: ExecuteOne = defaultExecutor(name => Promise.resolve())
+let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {
+    if (condition) return fse.appendFile(name, contentGenerator())
+    else return Promise.resolve();
+}
+let executeOne: ExecuteOne = defaultExecutor(appendToFiles)
 let executeOneScript: ExecuteOneScript = executeScript(executeOne)
 let executeGeneration: ExecuteOneGeneration = executeOneGeneration(executeOneScript)
 // let reporter: (g: GenerationResult) => void = g => {console.log("reporting generation finished", g)}

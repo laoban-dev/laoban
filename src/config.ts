@@ -36,6 +36,8 @@ export interface ScriptInContextAndDirectory {
 }
 export interface ScriptInContext {
     dryrun: boolean,
+    shell: boolean,
+    quiet: boolean,
     variables: boolean,
     config: Config,
     timestamp: Date,
@@ -54,7 +56,8 @@ export interface Config extends ConfigVariables {
     laobanDirectory: string
     laobanConfig: string
     variables: { [name: string]: string }
-    scripts: ScriptDetails[]
+    scripts: ScriptDetails[],
+    os: string
 
 }
 
