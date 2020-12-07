@@ -9,7 +9,7 @@ import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
-import {calcAllGeneration, prettyPrintGenerations} from "./generations";
+import {calcAllGenerationRecurse, prettyPrintGenerations} from "./generations";
 import * as os from "os";
 import {validateConfigOnHardDrive, validateLaobanJson} from "./validation";
 import {
@@ -53,7 +53,8 @@ export class Cli {
             option('-a, --all', "executes this in all projects, even if 'ín' a project", false).//
             option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "").//
             option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
-            option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", config.throttle)
+            option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", config.throttle).//
+            option('-l, --links', "the scripts will be put into generations based on links", false)
     }
 
     program = require('commander').//
@@ -88,6 +89,7 @@ export class Cli {
         ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
             let sc: ScriptInContext = {
                 dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet,
+                links: cmd.links,
                 config: this.config, details: script, timestamp: new Date(), genPlan: cmd.generationPlan,
                 throttle: cmd.throttle,
                 context: {shellDebug: cmd.shellDebug, directories: details}
@@ -139,13 +141,13 @@ export class Cli {
             action((cmd: any) => {
                 ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => validateConfigOnHardDrive(this.config, ds)).catch(e => console.error(e.message))
             })
-        this.command('generations', 'wip: calculating generations', this.defaultOptions).//
-            action((cmd: any) => {
-                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => prettyPrintGenerations(ds.map(d => d.projectDetails), calcAllGeneration(ds.map(d => d.projectDetails), {
-                    existing: [],
-                    generations: []
-                })))
-            })
+        // this.command('generations', 'wip: calculating generations', this.defaultOptions).//
+        //     action((cmd: any) => {
+        //         ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => prettyPrintGenerations(ds), calcAllGeneration(ds.map(d => d.projectDetails), {
+        //             existing: [],
+        //             generations: []
+        //         })))
+        //     })
         this.command('profile', 'shows the time taken by named steps of commands', this.defaultOptions).//
             action((cmd: any) => {
                 let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => Promise.all(ds.map(d =>

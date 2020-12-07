@@ -22,6 +22,7 @@ export interface ScriptDetails {
     osGuard?: string,
     pmGuard?: string,
     guardReason?: string,
+    inLinksOrder?: boolean,
     env?: Envs,
     commands: CommandDefn[]
 }
@@ -39,6 +40,7 @@ export interface ScriptInContext {
     dryrun: boolean,
     shell: boolean,
     genPlan: boolean,
+    links: boolean,
     throttle: number,
     quiet: boolean,
     variables: boolean,
@@ -68,15 +70,16 @@ export interface ScriptDefns {
     [name: string]: ScriptDefn
 
 }
-export interface Envs{
+export interface Envs {
     [name: string]: string
 }
 export interface ScriptDefn {
     description: string,
     guard?: string,
-    osGuard?:string,
+    osGuard?: string,
     pmGuard?: string,
     guardReason?: string,
+    inLinksOrder?: boolean,
     commands: (string | CommandDefn)[],
     env?: Envs
 }

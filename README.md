@@ -114,7 +114,7 @@ If this is present in a directory it tells laoban that the directory is a projec
       * typicall commands are `laoban pack`, `laoban publish`, `laoban ls-publish`
 * `generation` the projects are sorted in generation order so that all generation 0 projects are processed before generation 1
       * See the 'TODO' section at the end: generations are only respected in display order at the moment
-
+* `throttle` sets the maximum number of parallel activites that will be executed. The default is 0 which doesn't limit things
 ## Commands
 
 These are added to laoban by means of the laoban.json file. An inspection of it should give you a good idea
@@ -176,6 +176,14 @@ If a command needs to run in a different directory (typically a sub directory) t
         {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
 ```             
 This link command is now executed in the `dist` sub directory
+
+## inLinksOrder
+Some commands don't parallelise that well. For example if we are compiling projects, and some projects depend on other projects
+then we want to compile them in 'the right order'.
+
+Setting 'inLinksOrder' means that the links in the projectDetails are used to determine the order in which things are executed
+
+This can be seen using '-g | --generationPlan' as an option. This behavior can also be forced on any command by selecting  -l, --links
 
 ## env
 If a command needs access to environment variables (for example a port) these can be added. It is

@@ -1,10 +1,11 @@
 import * as cp from 'child_process'
 import {ExecException} from 'child_process'
-import {CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {CommandDefn, Envs, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 import {cleanUpEnv, derefence, derefenceToUndefined} from "./configProcessor";
 import * as path from "path";
 import {Promise} from "core-js";
 import {partition} from "./utils";
+import {splitGenerationsByLinks} from "./generations";
 
 export interface RawShellResult {
     err: ExecException | null,
@@ -146,7 +147,7 @@ interface GenerationsDecoratorTemplate {
 
 export class GenerationsDecorators {
     static normalDecorators() {
-        return chainGens([this.PlanDecorator, this.ThrottlePlanDecorator].map(this.applyTemplate))
+        return chainGens([this.PlanDecorator, this.ThrottlePlanDecorator, this.LinkPlanDecorator].map(this.applyTemplate))
     }
 
     static PlanDecorator: GenerationsDecoratorTemplate = {
@@ -161,6 +162,11 @@ export class GenerationsDecorators {
     static ThrottlePlanDecorator: GenerationsDecoratorTemplate = {
         condition: scd => scd.throttle > 0,
         transform: (scd, gens) => [].concat(...(gens.map(gen => partition(gen, scd.throttle))))
+    }
+
+    static LinkPlanDecorator: GenerationsDecoratorTemplate = {
+        condition: scd => scd.links || scd.details.inLinksOrder,
+        transform: (scd, g) => [].concat(...g.map(splitGenerationsByLinks))
     }
     static applyTemplate: (t: GenerationsDecoratorTemplate) => GenerationsDecorator = t => e => gens => {
         if (gens.length > 0 && gens[0].length > 0) {
@@ -193,12 +199,12 @@ export class ExecuteScriptDecorators {
     static status: ToFileDecorator = {
         appendCondition: d => d.details.command.status,
         filename: d => path.join(d.scd.detailsAndDirectory.directory, d.scd.scriptInContext.config.status),
-        content: (d, res) => `${d.scd.scriptInContext.timestamp} ${d.details.command.name} ${res.err !== null}\n`
+        content: (d, res) => `${d.scd.scriptInContext.timestamp.toISOString()} ${res.err === null} ${d.details.command.name}\n`
     }
     static profile: ToFileDecorator = {
         appendCondition: d => d.details.command.name,
         filename: d => path.join(d.scd.detailsAndDirectory.directory, d.scd.scriptInContext.config.profile),
-        content: (d, res) => `${d.scd.scriptInContext.details.name} ${d.details.command.name}  ${res.duration}\n`
+        content: (d, res) => `${d.scd.scriptInContext.details.name} ${d.details.command.name} ${res.duration}\n`
     }
     static log: ToFileDecorator = {
         appendCondition: d => true,

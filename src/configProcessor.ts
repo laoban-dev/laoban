@@ -86,6 +86,7 @@ function cleanUpScript(dic: any): (scriptName: string, defn: ScriptDefn) => Scri
         osGuard: defn.osGuard,
         pmGuard: defn.pmGuard,
         guardReason: defn.guardReason,
+        inLinksOrder: defn.inLinksOrder,
         commands: defn.commands.map(cleanUpCommand),
         env: cleanUpEnv(dic, defn.env)
     })

@@ -1,52 +1,55 @@
-import {ProjectDetails, ProjectDetailsAndDirectory} from "./config";
+import {ProjectDetails, ProjectDetailsAndDirectory, ScriptInContextAndDirectory} from "./config";
 import {Maps} from "./utils";
 
 interface Tree {
     [name: string]: Set<string>
-}
-export function calculateGenerations(pds: ProjectDetails[]) {
-    let gen0 = getChildrenRecurse(pds, [])
-    // let gen1 = getChildrenRecurse(pds, gen0, map)
-    console.log("gen0", gen0)
-    let gen1 = getChildrenRecurse(pds, gen0)
-    console.log("gen1", gen1)
-    let gen2 = getChildrenRecurse(pds, [...gen0, ...gen1])
-    console.log("gen2", gen2)
 }
 
 interface GenerationCalc {
     existing: string[],
     generations: string[][]
 }
-interface Generations{
+interface Generations {
     generations: ProjectDetailsAndDirectory[][],
     errors?: string
 }
 
-
-export function calcAllGeneration(pds: ProjectDetails[], start: GenerationCalc): GenerationCalc {
-    let newGen = getChildrenRecurse(pds, start.existing)
-    if (newGen.length == 0) return start;
-    return calcAllGeneration(pds, {existing: [...start.existing, ...newGen], generations: [...start.generations, newGen]})
+export function calculateAllGenerations(scds: ScriptInContextAndDirectory[]) {
+    return calcAllGenerationRecurse(scds, {existing: [], generations: []})
 }
-export function prettyPrintGenerations(pds: ProjectDetails[], gen: GenerationCalc) {
-    gen.generations.forEach((g,i) =>{
+
+export function splitGenerationsByLinks(scds: ScriptInContextAndDirectory[]):ScriptInContextAndDirectory[][] {
+    let map = new Map()
+    scds.forEach(scd => map.set(scd.detailsAndDirectory.projectDetails.name, scd))
+    if (scds.length !== map.size) throw new Error('Cannot calculate generations: multiple projects with the same name')
+    let genNames = calculateAllGenerations(scds).generations
+    return genNames.map(names => names.map(n => map.get(n)))
+
+}
+
+export function calcAllGenerationRecurse(scds: ScriptInContextAndDirectory[], start: GenerationCalc): GenerationCalc {
+    let newGen = getChildrenRecurse(scds, start.existing)
+    if (newGen.length == 0) return start;
+    return calcAllGenerationRecurse(scds, {existing: [...start.existing, ...newGen], generations: [...start.generations, newGen]})
+}
+export function prettyPrintGenerations(scds: ScriptInContextAndDirectory[], gen: GenerationCalc) {
+    gen.generations.forEach((g, i) => {
         console.log('Generation', i)
         console.log('  ', g.join(", "))
     })
     let thisTree = {}
-    let missing = new Set(pds.map(p => p.name))
+    let missing = new Set(scds.map(p => p.detailsAndDirectory.projectDetails.name))
     gen.generations.forEach(g => g.forEach(n => missing.delete(n)))
-    if (missing.size>0) {
+    if (missing.size > 0) {
         console.log()
         console.log("Missing: can't put in a generation")
         console.log(missing)
     }
 }
 
-function getChildrenRecurse(pds: ProjectDetails[], existing: string[]) {
+function getChildrenRecurse(pds: ScriptInContextAndDirectory[], existing: string[]) {
     let thisTree = {}
-    pds.forEach(p => thisTree[p.name] = new Set(p.details.links))
+    pds.forEach(p => thisTree[p.detailsAndDirectory.projectDetails.name] = new Set(p.detailsAndDirectory.projectDetails.details.links))
 
     // console.log('raw', thisTree)
     // console.log('existing', existing)
