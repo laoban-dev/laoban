@@ -2,19 +2,36 @@
 import {copyTemplateDirectory, findLaoban, laobanFile, ProjectDetailFiles} from "./Files";
 import * as fs from "fs";
 import {configProcessor} from "./configProcessor";
-import {Config, DirectoryAndResults, ScriptDetails, ScriptInContext, ScriptProcessor} from "./config";
-import {consoleHandleShell, executeShellDetailsInAllDirectories, noHandleShell, shellDebugPrint} from "./shell";
+import {Config, DirectoryAndResults, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+
 import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
-import {calcAllGeneration, calculateGenerations, prettyPrintGenerations} from "./generations";
+import {calcAllGeneration, prettyPrintGenerations} from "./generations";
 import * as os from "os";
 import {validateConfigOnHardDrive, validateLaobanJson} from "./validation";
+import {
+    buildShellCommandDetails, CommandDetails,
+    defaultExecutor,
+    executeAllGenerations,
+    ExecuteGenerations,
+    ExecuteOne,
+    ExecuteOneGeneration,
+    executeOneGeneration,
+    ExecuteOneScript,
+    executeScript, Generation,
+    GenerationResult, Generations, ShellCommandDetails
+} from "./executors";
 
+function summariseCommandDetails(scd: ScriptInContextAndDirectory) {
+    // console.log("scd", scd)
+    console.log("scd", scd.detailsAndDirectory.directory, scd.scriptInContext.details.name)
+
+}
 
 export class Cli {
-    private scriptProcessor: ScriptProcessor;
+    private executeGenerations: ExecuteGenerations;
     private config: Config;
 
     command(cmd: string, description: string, ...fns: ((a: any) => any)[]) {
@@ -68,13 +85,19 @@ export class Cli {
                 config: this.config, details: script, timestamp: new Date(),
                 context: {shellDebug: cmd.shellDebug, directories: details}
             }
-            let results: Promise<DirectoryAndResults[]> = this.scriptProcessor(sc)
-            let processor = cmd.quiet ? noHandleShell : (cmd.shellDebug ? shellDebugPrint : consoleHandleShell)
-            return results.then(processor, processor)
+            let scds: Generation = details.map(d => ({detailsAndDirectory: d, scriptInContext: sc}))
+            let gens: Generations = [scds]
+            // console.log('here goes nothing-0')
+            // scds.forEach(summariseCommandDetails)
+            this.executeGenerations(gens).catch(e =>  {
+                console.error('had error in execution')
+                console.error(e)
+            })
+
         })
     }
-    constructor(config: Config, scriptProcessor: ScriptProcessor) {
-        this.scriptProcessor = scriptProcessor;
+    constructor(config: Config, executeGenerations: ExecuteGenerations) {
+        this.executeGenerations = executeGenerations;
         this.config = config
         this.command('config', 'displays the config', this.defaultOptions).//
             action((cmd: any) => {
@@ -180,8 +203,22 @@ try {
 
 }
 
+function reporter(gen: GenerationResult) {
+    gen.forEach((sr, i) => {
+        // console.log(`sr ${i} Took ${sr.duration}`)
+        sr.results.forEach((x, i) => {
+            console.log( x.stdout)
+        })
+    })
+}
 
-let config = configProcessor(laoban, rawConfig);
-let cli = new Cli(config, executeShellDetailsInAllDirectories);
+let config = configProcessor(laoban, rawConfig)
+let executeOne: ExecuteOne = defaultExecutor(name => Promise.resolve())
+let executeOneScript: ExecuteOneScript = executeScript(executeOne)
+let executeGeneration: ExecuteOneGeneration = executeOneGeneration(executeOneScript)
+// let reporter: (g: GenerationResult) => void = g => {console.log("reporting generation finished", g)}
+let executeGenerations: ExecuteGenerations = executeAllGenerations(executeGeneration, reporter)
+
+let cli = new Cli(config, executeGenerations);
 
 cli.start(process.argv)

@@ -15,6 +15,18 @@
       ]
     },
     "ls"         : {"description": "lists all the projects", "commands": ["js:process.cwd()"]},
+    "lsDist"    : {
+      "description": "check that the directory option works", "commands": [
+        {"command": "js:process.cwd()", "directory": "dist"},
+        {"command": "pwd", "directory": "dist"}
+      ]
+    },
+    "envCheck"  : {
+      "description": "checks evn",
+      "commands"   : ["echo Linux: [${PORT}] windows: [%PORT%]", "js:'js:' + process.env.PORT"],
+      "guard"      : "${projectDetails.details.port}",
+      "env"        : {"PORT": "${projectDetails.details.port}"}
+    },
     "tsc"        : {
       "description": "runs tsc",
       "commands"   : [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]

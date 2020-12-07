@@ -1,23 +1,13 @@
 import * as cp from 'child_process'
 import {ExecException} from 'child_process'
-import {CommandDefn, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {CommandDefn, DirectoryAndResults, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 import * as fs from "fs";
 import * as path from "path";
 import {cleanUpEnv, derefence, replaceVarToUndefined} from "./configProcessor";
 import {projectDetailsFile} from "./Files";
-import {RawShellResult} from "./executors";
+import {RawShellResult, ShellResult} from "./executors";
 
-interface ShellResult {
-    title: string,
-    duration: number,
-    err: ExecException | null,
-    stdout: string,
-    stderr: string
-}
-interface DirectoryAndResults {
-    detailsAndDirectory: ProjectDetailsAndDirectory
-    results: ShellResult[]
-}
+
 
 
 export function consoleHandleShell(drs: DirectoryAndResults[]) {
