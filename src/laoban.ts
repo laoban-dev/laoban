@@ -207,7 +207,6 @@ try {
 
 function reporter(gen: GenerationResult) {
     gen.forEach((sr, i) => {
-        // console.log(`sr ${i} Took ${sr.duration}`)
         sr.results.forEach((x, i) => {
             if (x.stdout.length>0) console.log(x.stdout)
         })
@@ -222,7 +221,6 @@ let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {
 let executeOne: ExecuteOne = defaultExecutor(appendToFiles)
 let executeOneScript: ExecuteOneScript = executeScript(executeOne)
 let executeGeneration: ExecuteOneGeneration = executeOneGeneration(executeOneScript)
-// let reporter: (g: GenerationResult) => void = g => {console.log("reporting generation finished", g)}
 let executeGenerations: ExecuteGenerations = executeAllGenerations(executeGeneration, reporter)
 
 let cli = new Cli(config, executeGenerations);
