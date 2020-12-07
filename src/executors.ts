@@ -46,77 +46,54 @@ export interface CommandDetails {
 function calculateDirectory(directory: string, command: CommandDefn) { return (command.directory) ? path.join(directory, command.directory) : directory;}
 
 export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): ShellCommandDetails<CommandDetails>[] {
-    // console.log('buildShellCommandDetails - 0')
-    // console.log('buildShellCommandDetails - 0a')
     let result = scd.scriptInContext.details.commands.map(cmd => {
-        // console.log('buildShellCommandDetails - 1')
         let directory = calculateDirectory(scd.detailsAndDirectory.directory, cmd)
-        // console.log('buildShellCommandDetails - 2')
         let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
-        // console.log('buildShellCommandDetails - 3')
+        let env = cleanUpEnv(dic, scd.scriptInContext.details.env);
+        console.log('cleanedUpEnv', scd.detailsAndDirectory.directory, env)
         let result: ShellCommandDetails<CommandDetails> = {
             scd: scd,
             details: ({
                 command: cmd,
                 commandString: derefence(dic, cmd.command),
                 dic: dic,
-                env: cleanUpEnv(dic, scd.scriptInContext.details.env),
+                env: env,
                 directory: derefence(dic, directory),
             })
         };
-        // console.log('buildShellCommandDetails - 4')
         return result
     });
-    // console.log('buildShellCommandDetails - 5')
     return result
 }
 
 export function addDirectoryDetailsToCommands(details: ProjectDetailsAndDirectory, sc: ScriptInContext): ScriptInContextAndDirectory { return ({detailsAndDirectory: details, scriptInContext: sc});}
 
 
-export let executeOneGeneration: (e: ExecuteOneScript) => ExecuteOneGeneration = e => gen => {
-    // console.log('executeOneGeneration', e, gen)
-    return Promise.all(gen.map(x => e(x)))
-}
+export let executeOneGeneration: (e: ExecuteOneScript) => ExecuteOneGeneration = e => gen => Promise.all(gen.map(x => e(x)))
 
 export function executeAllGenerations(executeOne: ExecuteOneGeneration, reporter: (GenerationResult) => void): ExecuteGenerations {
     let fn = (gs, sofar) => {
-        // console.log('  fn', gs, sofar)
         if (gs.length == 0) return Promise.resolve(sofar)
         return executeOne(gs[0]).then(gen0Res => {
             reporter(gen0Res)
             return fn(gs.slice(1), [...sofar, gen0Res])
         })
-
     }
-    // console.log('executeAllGenerations zero')
-    return gs => {
-        // console.log('executeAllGenerations one', gs)
-        return fn(gs, [])
-    }
+    return gs => fn(gs, [])
 }
 
 export let executeScript: (e: ExecuteOne) => ExecuteOneScript = e => (scd: ScriptInContextAndDirectory) => {
-    // console.log('execute script', e,scd)
-    // console.log('execute script', e, scd.detailsAndDirectory.directory, scd.scriptInContext.details.name)
     let startTime = new Date().getTime()
-    return executeOneAfterTheOther(e)(buildShellCommandDetails(scd)).then(results => ({results, scd, duration: new Date().getTime() - startTime}))
+    return executeOneAfterTheOther(e)(buildShellCommandDetails(scd)).then(results => ({results: [].concat(...results), scd, duration: new Date().getTime() - startTime}))
 }
 
 function executeOneAfterTheOther<From, To>(fn: (from: From) => Promise<To>): (froms: From[]) => Promise<To[]> {
-    // console.log('executeOneAfterTheOther - 0', fn)
-    return froms => {
-        // console.log('executeOneAfterTheOther - 1', fn, froms)
-        return froms.reduce((res, f) => res.then(r => {
-            // console.log('executeOneAfterTheOther - 2', fn, f)
-            return fn(f).then(to => [...r, to])
-        }), Promise.resolve([]))
-    }
+    return froms => froms.reduce((res, f) => res.then(r => fn(f).then(to => [...r, to])), Promise.resolve([]))
 }
 
 
 export type RawExecutor = (d: ShellCommandDetails<CommandDetails>) => Promise<RawShellResult>
-export type ExecuteOne = (d: ShellCommandDetails<CommandDetails>) => Promise<ShellResult>
+export type ExecuteOne = (d: ShellCommandDetails<CommandDetails>) => Promise<ShellResult[]> // guard conditions return no results. 'link' commands in the future will return multiple results
 
 export type ExecuteGenerations = (generations: Generations) => Promise<GenerationsResult>
 export type ExecuteOneGeneration = (generation: Generation) => Promise<GenerationResult>
@@ -151,7 +128,7 @@ export class ExecutorDecorators {
     }
 
     static decorate: (a: AppendToFileIf) => (fileDecorator: ToFileDecorator) => ExecutorDecorator = appendIf => dec => e =>
-        d => e(d).then(res => appendIf(dec.appendCondition(d) && shouldAppend(d), dec.filename(d), dec.content(d, res)).then(() => res))
+        d => e(d).then(res => Promise.all(res.map(r => appendIf(dec.appendCondition(d) && shouldAppend(d), dec.filename(d), dec.content(d, r)))).then(() => res))
 
 
     static status: ToFileDecorator = {
@@ -170,8 +147,13 @@ export class ExecutorDecorators {
         content: (d, res) => `${d.scd.scriptInContext.timestamp} ${d.details.command.name}\n${res.stdout}\nTook ${res.duration}\n\n`
     }
 
-    static dryRun: ExecutorDecorator = e => d => d.scd.scriptInContext.dryrun ? Promise.resolve({duration: 0, details: d.details, stdout: dryRunContents(d), err: null, stderr: ""}) : e(d)
+    static dryRun: ExecutorDecorator = e => d => d.scd.scriptInContext.dryrun ? Promise.resolve([{duration: 0, details: d.details, stdout: dryRunContents(d), err: null, stderr: ""}]) : e(d)
 
+    // static pmGuard: ExecutorDecorator = e => d => {
+    //     if (d.scd.scriptInContext.details.pmGuard){
+    //
+    //     } else e(d)
+    // }
 
 }
 
@@ -183,7 +165,7 @@ function jsOrShellFinder(js: ExecuteOne, shell: ExecuteOne): Finder {
 export function timeIt(e: RawExecutor): ExecuteOne {
     return d => {
         let startTime = new Date()
-        return e(d).then(res => ({...res, details: d.details, duration: (new Date().getTime() - startTime.getTime())}));
+        return e(d).then(res => [{...res, details: d.details, duration: (new Date().getTime() - startTime.getTime())}]);
     }
 }
 
