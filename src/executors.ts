@@ -4,6 +4,7 @@ import {CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptIn
 import {cleanUpEnv, derefence, derefenceToUndefined} from "./configProcessor";
 import * as path from "path";
 import {Promise} from "core-js";
+import {partition} from "./utils";
 
 export interface RawShellResult {
     err: ExecException | null,
@@ -24,6 +25,7 @@ export interface ScriptResult {
     duration: number
 }
 
+//TODO consider ifG refactor this a little so that there is only one script being executed.
 export type  Generation = ScriptInContextAndDirectory[]
 export type  Generations = Generation[]
 export type GenerationsResult = ScriptResult[][]
@@ -65,9 +67,6 @@ export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): Shel
     return result
 }
 
-export function addDirectoryDetailsToCommands(details: ProjectDetailsAndDirectory, sc: ScriptInContext): ScriptInContextAndDirectory { return ({detailsAndDirectory: details, scriptInContext: sc});}
-
-
 export let executeOneGeneration: (e: ExecuteOneScript) => ExecuteOneGeneration = e => gen => Promise.all(gen.map(x => e(x)))
 
 export function executeAllGenerations(executeOne: ExecuteOneGeneration, reporter: (GenerationResult) => void): ExecuteGenerations {
@@ -98,6 +97,7 @@ export type ExecuteGenerations = (generations: Generations) => Promise<Generatio
 export type ExecuteOneGeneration = (generation: Generation) => Promise<GenerationResult>
 export type ExecuteOneScript = (s: ScriptInContextAndDirectory) => Promise<ScriptResult>
 
+export type GenerationsDecorator = (e: ExecuteGenerations) => ExecuteGenerations
 export type ExecutorDecorator = (e: ExecuteOne) => ExecuteOne
 export type AppendToFileIf = (condition: any | undefined, name: string, content: () => string) => Promise<void>
 type Finder = (c: ShellCommandDetails<CommandDetails>) => ExecuteOne
@@ -127,8 +127,9 @@ export function consoleOutputFor(d: ShellCommandDetails<CommandDetails>, res: Sh
     return `${errorString}${stdErrString}${res.stdout}`
 }
 
-
+//TODO generize this
 export function chain(executors: ExecutorDecorator[]): ExecutorDecorator {return raw => executors.reduce((acc, v) => v(acc), raw)}
+export function chainGens(executors: GenerationsDecorator[]): GenerationsDecorator {return raw => executors.reduce((acc, v) => v(acc), raw)}
 function calculateVariableText(d: ShellCommandDetails<CommandDetails>): string {
     let dic = d.details.dic
     let simplerdic = {...dic}
@@ -137,6 +138,43 @@ function calculateVariableText(d: ShellCommandDetails<CommandDetails>): string {
         "legal variables are",
         JSON.stringify(simplerdic, null, 2)].join("\n") + "\n"
 }
+
+interface GenerationsDecoratorTemplate {
+    condition: (scd: ScriptInContext) => boolean,
+    transform: (scd: ScriptInContext, g: Generations) => Generations
+}
+
+export class GenerationsDecorators {
+    static normalDecorators() {
+        return chainGens([this.PlanDecorator, this.ThrottlePlanDecorator].map(this.applyTemplate))
+    }
+
+    static PlanDecorator: GenerationsDecoratorTemplate = {
+        condition: scd => {
+            return scd.genPlan
+        },
+        transform: (scd, g) => {
+            g.forEach((gen, i) => console.log("Generation", i, gen.map(scd => scd.detailsAndDirectory.directory).join(", ")))
+            return []
+        }
+    }
+    static ThrottlePlanDecorator: GenerationsDecoratorTemplate = {
+        condition: scd => scd.throttle > 0,
+        transform: (scd, gens) => [].concat(...(gens.map(gen => partition(gen, scd.throttle))))
+    }
+    static applyTemplate: (t: GenerationsDecoratorTemplate) => GenerationsDecorator = t => e => gens => {
+        if (gens.length > 0 && gens[0].length > 0) {
+            let scd: ScriptInContext = gens[0][0].scriptInContext;
+            if (t.condition(scd)) {
+                return e(t.transform(scd, gens))
+            }
+        }
+        return e(gens)
+    }
+
+
+}
+
 export class ExecuteScriptDecorators {
 
     static normalDecorator(a: AppendToFileIf): ExecutorDecorator {

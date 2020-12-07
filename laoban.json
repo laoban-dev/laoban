@@ -2,6 +2,7 @@
   "templateDir"   : "${laobanDirectory}/examples/template",
   "versionFile"   : "${templateDir}/version.txt",
   "log"           : ".log",
+  "throttle"      : 2,
   "status"        : ".status",
   "profile"       : ".profile",
   "packageManager": "npm",
@@ -11,17 +12,17 @@
       "description": "call '${packageManager} link' in each project directory",
       "commands"   : [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        {"name": "link", "command": "${packageManager} link", "status": true, "directory":  "dist"}
+        {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"}
       ]
     },
     "ls"         : {"description": "lists all the projects", "commands": ["js:process.cwd()"]},
-    "lsDist"    : {
+    "lsDist"     : {
       "description": "check that the directory option works", "commands": [
         {"command": "js:process.cwd()", "directory": "dist"},
         {"command": "pwd", "directory": "dist"}
       ]
     },
-    "envCheck"  : {
+    "envCheck"   : {
       "description": "checks evn",
       "commands"   : ["echo Linux: [${PORT}] windows: [%PORT%]", "js:'js:' + process.env.PORT"],
       "guard"      : "${projectDetails.details.port}",

@@ -3,7 +3,7 @@ import {copyTemplateDirectory, findLaoban, laobanFile, ProjectDetailFiles} from 
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import {configProcessor} from "./configProcessor";
-import {Config, DirectoryAndResults, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {Config, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 
 import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
@@ -14,7 +14,6 @@ import * as os from "os";
 import {validateConfigOnHardDrive, validateLaobanJson} from "./validation";
 import {
     AppendToFileIf,
-    buildShellCommandDetails, CommandDetails,
     defaultExecutor,
     executeAllGenerations,
     ExecuteGenerations,
@@ -22,8 +21,10 @@ import {
     ExecuteOneGeneration,
     executeOneGeneration,
     ExecuteOneScript,
-    executeScript, Generation,
-    GenerationResult, Generations, ShellCommandDetails
+    executeScript,
+    Generation,
+    GenerationResult,
+    Generations, GenerationsDecorators
 } from "./executors";
 
 function summariseCommandDetails(scd: ScriptInContextAndDirectory) {
@@ -43,13 +44,16 @@ export class Cli {
     }
 
     defaultOptions(program: any): any {
-        return program.option('-d, --dryrun', 'displays the command instead of executing it', false).//
+        return program.//
+            option('-d, --dryrun', 'displays the command instead of executing it', false).//
             option('-s, --shellDebug', 'debugging around the shell', false).//
             option('-q, --quiet', "don't display the output from the commands", false).//
             option('-v, --variables', "used when debugging scripts. Shows the variables available to a command when the command is executed", false).//
             option('-1, --one', "executes in this project directory (opposite of --all)", false).//
             option('-a, --all', "executes this in all projects, even if 'ín' a project", false).//
-            option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "")
+            option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "").//
+            option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
+            option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", config.throttle)
     }
 
     program = require('commander').//
@@ -84,7 +88,8 @@ export class Cli {
         ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
             let sc: ScriptInContext = {
                 dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet,
-                config: this.config, details: script, timestamp: new Date(),
+                config: this.config, details: script, timestamp: new Date(), genPlan: cmd.generationPlan,
+                throttle: cmd.throttle,
                 context: {shellDebug: cmd.shellDebug, directories: details}
             }
             let scds: Generation = details.map(d => ({detailsAndDirectory: d, scriptInContext: sc}))
@@ -208,7 +213,7 @@ try {
 function reporter(gen: GenerationResult) {
     gen.forEach((sr, i) => {
         sr.results.forEach((x, i) => {
-            if (x.stdout.length>0) console.log(x.stdout)
+            if (x.stdout.length > 0) console.log(x.stdout)
         })
     })
 }
@@ -221,7 +226,7 @@ let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {
 let executeOne: ExecuteOne = defaultExecutor(appendToFiles)
 let executeOneScript: ExecuteOneScript = executeScript(executeOne)
 let executeGeneration: ExecuteOneGeneration = executeOneGeneration(executeOneScript)
-let executeGenerations: ExecuteGenerations = executeAllGenerations(executeGeneration, reporter)
+let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, reporter))
 
 let cli = new Cli(config, executeGenerations);
 

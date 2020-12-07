@@ -1,4 +1,4 @@
-import {CommandDefn, Config, Envs, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails, ScriptProcessor} from "./config";
+import {CommandDefn, Config, Envs, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails} from "./config";
 import * as path from "path";
 import {loabanConfigName} from "./Files";
 import * as os from "os";
@@ -51,7 +51,7 @@ export function derefenceToUndefined(dic: any, s: string) {
         // console.log("    deref", s, groups)
         let result = groups.reduce((acc, v) => {
             let repl = replaceVarToUndefined(dic, v)
-            return acc.replace(v, repl?repl: "")
+            return acc.replace(v, repl ? repl : "")
         }, s)
         // console.log("      result", result)
         return result
@@ -107,6 +107,7 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     add("status", rawConfig)
     add("profile", rawConfig)
     add("packageManager", rawConfig)
+    result.throttle= rawConfig.throttle ? rawConfig.throttle : 0
     for (const k in rawConfig.variables) add(k, rawConfig.variables)
     result.scripts = addScripts(result, rawConfig.scripts);
     result.os = os.type()

@@ -3,6 +3,7 @@ import {ShellResult} from "./executors";
 export interface ConfigVariables {
     templateDir: string,
     versionFile: string,
+    throttle?: number,
     log: string,
     status: string,
     profile: string,
@@ -37,6 +38,8 @@ export interface ScriptInContextAndDirectory {
 export interface ScriptInContext {
     dryrun: boolean,
     shell: boolean,
+    genPlan: boolean,
+    throttle: number,
     quiet: boolean,
     variables: boolean,
     config: Config,

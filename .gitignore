@@ -39,3 +39,6 @@ target/
 .log
 .status
 .profile
+
+.bsp
+project/
