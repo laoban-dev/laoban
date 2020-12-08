@@ -1,5 +1,8 @@
 export class Strings {
     static maxLength = (ss: string[]) => Math.max(...(ss.map(s => s.length)));
+    static indentEachLine(indent: string, lines: string): string {
+        return lines.split('\n').map(s => indent + s).join('\n')
+    }
 }
 
 export interface StringAndWidth {
@@ -7,10 +10,10 @@ export interface StringAndWidth {
     width: number
 }
 
-export var partition = function(arr, length) {
+export var partition = function (arr, length) {
     var result = [];
-    for(var i = 0; i < arr.length; i++) {
-        if(i % length === 0) result.push([]);
+    for (var i = 0; i < arr.length; i++) {
+        if (i % length === 0) result.push([]);
         result[result.length - 1].push(arr[i]);
     }
     return result;

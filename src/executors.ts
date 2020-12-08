@@ -100,7 +100,8 @@ export type ExecuteOneGeneration = (generation: Generation) => Promise<Generatio
 export type ExecuteOneScript = (s: ScriptInContextAndDirectory) => Promise<ScriptResult>
 
 export type GenerationsDecorator = (e: ExecuteGenerations) => ExecuteGenerations
-export type ExecutorDecorator = (e: ExecuteOne) => ExecuteOne
+export type ExecuteOneScriptDecorator = (e: ExecuteOneScript) => ExecuteOneScript
+export type ExecuteOneDecorator = (e: ExecuteOne) => ExecuteOne
 export type AppendToFileIf = (condition: any | undefined, name: string, content: () => string) => Promise<void>
 type Finder = (c: ShellCommandDetails<CommandDetails>) => ExecuteOne
 
@@ -117,7 +118,8 @@ interface GuardDecorator {
 
 interface StdOutDecorator {
     condition: (d: ShellCommandDetails<CommandDetails>) => any | undefined,
-    pretext: (d: ShellCommandDetails<CommandDetails>) => string
+    pretext: (d: ShellCommandDetails<CommandDetails>) => string,
+    transform: (sr: ShellResult) => ShellResult,
     posttext: (d: ShellCommandDetails<CommandDetails>, sr: ShellResult) => string
 }
 const shouldAppend = (d: ShellCommandDetails<CommandDetails>) => !d.scd.scriptInContext.dryrun;
@@ -134,8 +136,9 @@ export function consoleOutputFor(res: ShellResult): string {
     return `${res.stdout}${errorString}${stdErrString}`
 }
 
+
 //TODO generize this
-export function chain(executors: ExecutorDecorator[]): ExecutorDecorator {return raw => executors.reduce((acc, v) => v(acc), raw)}
+export function chain(executors: ExecuteOneDecorator[]): ExecuteOneDecorator {return raw => executors.reduce((acc, v) => v(acc), raw)}
 export function chainGens(executors: GenerationsDecorator[]): GenerationsDecorator {return raw => executors.reduce((acc, v) => v(acc), raw)}
 function calculateVariableText(d: ShellCommandDetails<CommandDetails>): string {
     let dic = d.details.dic
@@ -190,6 +193,7 @@ export class GenerationsDecorators {
         condition: scd => scd.links || scd.details.inLinksOrder,
         transform: (scd, g) => [].concat(...g.map(splitGenerationsByLinks))
     }
+
     static applyTemplate: (t: GenerationsDecoratorTemplate) => GenerationsDecorator = t => e => gens => {
         if (gens.length > 0 && gens[0].length > 0) {
             let scd: ScriptInContext = gens[0][0].scriptInContext;
@@ -199,22 +203,22 @@ export class GenerationsDecorators {
         }
         return e(gens)
     }
-
-
 }
 
-export class ExecuteScriptDecorators {
 
-    static normalDecorator(a: AppendToFileIf): ExecutorDecorator {
+export class ExecuteOneDecorators {
+
+    static normalDecorator(a: AppendToFileIf): ExecuteOneDecorator {
         return chain([
-            ...[ExecuteScriptDecorators.guard, ExecuteScriptDecorators.osGuard, ExecuteScriptDecorators.pmGuard].map(ExecuteScriptDecorators.guardDecorate),
-            ExecuteScriptDecorators.dryRun,
-            ExecuteScriptDecorators.quietDisplay,
-            ...[ExecuteScriptDecorators.variablesDisplay, ExecuteScriptDecorators.shellDisplay].map(ExecuteScriptDecorators.stdOutDecorator),
-            ...[ExecuteScriptDecorators.status, ExecuteScriptDecorators.profile, ExecuteScriptDecorators.log].map(ExecuteScriptDecorators.fileDecorate(a))])
+            ...[ExecuteOneDecorators.guard].map(ExecuteOneDecorators.guardDecorate),
+            ExecuteOneDecorators.dryRun,
+            ...[ExecuteOneDecorators.status, ExecuteOneDecorators.profile, ExecuteOneDecorators.log].map(ExecuteOneDecorators.fileDecorate(a)),
+            ExecuteOneDecorators.quietDisplay,
+            ...[ExecuteOneDecorators.variablesDisplay].map(ExecuteOneDecorators.stdOutDecorator)
+        ])
     }
 
-    static fileDecorate: (a: AppendToFileIf) => (fileDecorator: ToFileDecorator) => ExecutorDecorator = appendIf => dec => e =>
+    static fileDecorate: (a: AppendToFileIf) => (fileDecorator: ToFileDecorator) => ExecuteOneDecorator = appendIf => dec => e =>
         d => e(d).then(res => Promise.all(res.map(r => appendIf(dec.appendCondition(d) && shouldAppend(d), dec.filename(d), () => dec.content(d, r)))).then(() => res))
 
 
@@ -234,43 +238,39 @@ export class ExecuteScriptDecorators {
         content: (d, res) => `${d.scd.scriptInContext.timestamp} ${d.details.commandString}\n${res.stdout}\nTook ${res.duration}\n\n`
     }
 
-    static dryRun: ExecutorDecorator = e => d =>
+    static dryRun: ExecuteOneDecorator = e => d =>
         d.scd.scriptInContext.dryrun ? Promise.resolve([{duration: 0, details: d, stdout: dryRunContents(d), err: null, stderr: ""}]) : e(d)
 
-    static stdOutDecorator: (dec: StdOutDecorator) => ExecutorDecorator = dec => e => d =>
+    static stdOutDecorator: (dec: StdOutDecorator) => ExecuteOneDecorator = dec => e => d =>
         dec.condition(d) ? e(d).then(sr => sr.map(r => ({...r, stdout: `${dec.pretext(d)}${r.stdout}${dec.posttext(d, r)}`}))) : e(d)
 
-    static shellDisplay: StdOutDecorator = {
-        condition: d => d.scd.scriptInContext.shell,
-        pretext: d => `#### ${d.details.directory} ${d.details.commandString}${d.details.env ? ', Env: ' + JSON.stringify(d.details.env) : ''}\n`,
-        posttext: (d, sr) => '\n---------------'
-    }
 
     static variablesDisplay: StdOutDecorator = {
         condition: d => d.scd.scriptInContext.variables,
         pretext: d => calculateVariableText(d),
+        transform: sr => sr,
         posttext: (d, sr) => ''
     }
 
-    static quietDisplay: ExecutorDecorator = e => d =>
+    static quietDisplay: ExecuteOneDecorator = e => d =>
         d.scd.scriptInContext.quiet ? e(d).then(sr => sr.map(r => ({...r, stdout: ''}))) : e(d)
 
 
-    static guardDecorate: (guardDecorator: GuardDecorator) => ExecutorDecorator = dec => e =>
+    static guardDecorate: (guardDecorator: GuardDecorator) => ExecuteOneDecorator = dec => e =>
         d => {
             let guard = dec.guard(d)
             // console.log('guardDec', d.scd.scriptInContext.details.guard, guard)
             return (!guard || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
         }
 
-    static pmGuard: GuardDecorator = {
-        guard: d => d.scd.scriptInContext.details.pmGuard,
-        valid: (g, d) => d.scd.scriptInContext.config.packageManager === g
-    }
-    static osGuard: GuardDecorator = {
-        guard: d => d.scd.scriptInContext.details.osGuard,
-        valid: (g, d) => d.scd.scriptInContext.config.os === g
-    }
+    // static pmGuard: GuardDecorator = {
+    //     guard: d => d.scd.scriptInContext.details.pmGuard,
+    //     valid: (g, d) => d.scd.scriptInContext.config.packageManager === g
+    // }
+    // static osGuard: GuardDecorator = {
+    //     guard: d => d.scd.scriptInContext.details.osGuard,
+    //     valid: (g, d) => d.scd.scriptInContext.config.os === g
+    // }
     static guard: GuardDecorator = {
         guard: d => d.scd.scriptInContext.details.guard,
         valid: (g, d) => {
@@ -293,9 +293,9 @@ export function timeIt(e: RawExecutor): ExecuteOne {
     }
 }
 
-export function defaultExecutor(a: AppendToFileIf) { return make(execInShell, execJS, timeIt, ExecuteScriptDecorators.normalDecorator(a))}
+export function defaultExecutor(a: AppendToFileIf) { return make(execInShell, execJS, timeIt, ExecuteOneDecorators.normalDecorator(a))}
 
-export function make(shell: RawExecutor, js: RawExecutor, timeIt: (e: RawExecutor) => ExecuteOne, ...decorators: ExecutorDecorator[]): ExecuteOne {
+export function make(shell: RawExecutor, js: RawExecutor, timeIt: (e: RawExecutor) => ExecuteOne, ...decorators: ExecuteOneDecorator[]): ExecuteOne {
     let decorate = chain(decorators)
     let decoratedShell = decorate(timeIt(shell))
     let decoratedJs = decorate(timeIt(js))

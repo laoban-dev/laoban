@@ -29,11 +29,6 @@ import {
 } from "./executors";
 import {Strings} from "./utils";
 
-function summariseCommandDetails(scd: ScriptInContextAndDirectory) {
-    // console.log("scd", scd)
-    console.log("scd", scd.detailsAndDirectory.directory, scd.scriptInContext.details.name)
-
-}
 
 export class Cli {
     private executeGenerations: ExecuteGenerations;
@@ -90,7 +85,7 @@ export class Cli {
         }
         ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
             let allDirectorys = details.map(d => d.directory)
-            let dirWidth = Strings.maxLength(allDirectorys)-laoban.length
+            let dirWidth = Strings.maxLength(allDirectorys) - laoban.length
             let sc: ScriptInContext = {
                 dirWidth: dirWidth,
                 dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet,
@@ -224,6 +219,22 @@ function reporter(gen: GenerationResult) {
         })
     })
 }
+function shellReporter(gen: GenerationResult) {
+    if (gen.length > 0) {
+        let scd: ScriptInContextAndDirectory = gen[0].scd;
+        if (scd.scriptInContext.shell&& !scd.scriptInContext.dryrun) {
+            gen.forEach((sr, i) => {
+            console.log(sr.scd.detailsAndDirectory.directory)
+                sr.results.forEach((r, i) => {
+                    console.log('   ', r.details.details.commandString, r.details.details.directory.substring(sr.scd.detailsAndDirectory.directory.length))
+                    let out =consoleOutputFor(r);
+                    if (out.length > 0) {console.log( Strings.indentEachLine('        ', out))}
+                })
+            })
+
+        } else reporter(gen)
+    }
+}
 
 let config = configProcessor(laoban, rawConfig)
 let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {
@@ -233,7 +244,7 @@ let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {
 let executeOne: ExecuteOne = defaultExecutor(appendToFiles)
 let executeOneScript: ExecuteOneScript = executeScript(executeOne)
 let executeGeneration: ExecuteOneGeneration = executeOneGeneration(executeOneScript)
-let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, reporter))
+let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter))
 
 let cli = new Cli(config, executeGenerations);
 
