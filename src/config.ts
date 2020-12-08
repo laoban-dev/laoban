@@ -37,6 +37,7 @@ export interface ScriptInContextAndDirectory {
     detailsAndDirectory: ProjectDetailsAndDirectory
 }
 export interface ScriptInContext {
+    dirWidth: number,
     dryrun: boolean,
     shell: boolean,
     genPlan: boolean,

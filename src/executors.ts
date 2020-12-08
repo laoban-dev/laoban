@@ -13,7 +13,7 @@ export interface RawShellResult {
     stderr: string
 }
 export interface ShellResult {
-    details:  ShellCommandDetails<CommandDetails>
+    details: ShellCommandDetails<CommandDetails>
     duration: number,
     err: ExecException | null,
     stdout: string,
@@ -121,9 +121,11 @@ interface StdOutDecorator {
     posttext: (d: ShellCommandDetails<CommandDetails>, sr: ShellResult) => string
 }
 const shouldAppend = (d: ShellCommandDetails<CommandDetails>) => !d.scd.scriptInContext.dryrun;
-const dryRunContents = (d: ShellCommandDetails<CommandDetails>) => `${d.details.directory} ${d.details.commandString}`;
-
-export function consoleOutputFor( res: ShellResult): string {
+const dryRunContents = (d: ShellCommandDetails<CommandDetails>) => {
+    let trim = trimmedDirectory(d.scd.scriptInContext)
+    return `${trim(d.details.directory).padEnd(d.scd.scriptInContext.dirWidth)} ${d.details.commandString}`;
+}
+export function consoleOutputFor(res: ShellResult): string {
     // console.log('consoleOutputFor', res)
     let errorString = res.err ? `***Error***${res.err}\n` : ""
     let stdErrString = res.stderr.length > 0 ? `***StdError***${res.stderr}\n` : ""
@@ -149,6 +151,9 @@ interface GenerationsDecoratorTemplate {
     transform: (scd: ScriptInContext, g: Generations) => Generations
 }
 
+function trimmedDirectory(sc: ScriptInContext) {
+    return (dir: string) => dir.substring(sc.config.laobanDirectory.length + 1)
+}
 export class GenerationsDecorators {
     static normalDecorators() {
         return chainGens([this.PlanDecorator, this.ThrottlePlanDecorator, this.LinkPlanDecorator].map(this.applyTemplate))
@@ -158,8 +163,24 @@ export class GenerationsDecorators {
         condition: scd => {
             return scd.genPlan
         },
-        transform: (scd, g) => {
-            g.forEach((gen, i) => console.log("Generation", i, gen.map(scd => scd.detailsAndDirectory.directory).join(", ")))
+        transform: (sc, gens) => {
+            let trim = trimmedDirectory(sc)
+            if (sc.dryrun) {
+                gens.forEach((gen, i) => {
+                    gen.forEach(g => {
+                        console.log("Generation", i)
+                        if (g.scriptInContext.details.commands.length == 1)
+                            gen.forEach(scd => {
+                                console.log('   ', trim(scd.detailsAndDirectory.directory), scd.scriptInContext.details.commands[0].command)
+                            })
+                        else
+                            gen.forEach(scd => {
+                                console.log('   ', trim(scd.detailsAndDirectory.directory))
+                                scd.scriptInContext.details.commands.forEach(c => console.log('       ', c.command))
+                            })
+                    })
+                })
+            } else gens.forEach((gen, i) => console.log("Generation", i, gen.map(scd => trim(scd.detailsAndDirectory.directory)).join(", ")))
             return []
         }
     }
@@ -285,7 +306,7 @@ export function make(shell: RawExecutor, js: RawExecutor, timeIt: (e: RawExecuto
     return c => finder(c)(c)
 }
 
-export let execInShell: RawExecutor = (d:  ShellCommandDetails<CommandDetails>) => {
+export let execInShell: RawExecutor = (d: ShellCommandDetails<CommandDetails>) => {
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) =>
         cp.exec(d.details.commandString, options, (err: any, stdout: string, stderr: string) =>

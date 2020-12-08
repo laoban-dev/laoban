@@ -27,6 +27,7 @@ import {
     Generations,
     GenerationsDecorators
 } from "./executors";
+import {Strings} from "./utils";
 
 function summariseCommandDetails(scd: ScriptInContextAndDirectory) {
     // console.log("scd", scd)
@@ -88,7 +89,10 @@ export class Cli {
             }
         }
         ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
+            let allDirectorys = details.map(d => d.directory)
+            let dirWidth = Strings.maxLength(allDirectorys)-laoban.length
             let sc: ScriptInContext = {
+                dirWidth: dirWidth,
                 dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet,
                 links: cmd.links,
                 config: this.config, details: script, timestamp: new Date(), genPlan: cmd.generationPlan,
@@ -99,7 +103,7 @@ export class Cli {
             let gens: Generations = [scds]
             // console.log('here goes nothing-0')
             // scds.forEach(summariseCommandDetails)
-           return this.executeGenerations(gens).catch(e => {
+            return this.executeGenerations(gens).catch(e => {
                 console.error('had error in execution')
                 console.error(e)
             })
