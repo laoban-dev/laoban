@@ -167,17 +167,14 @@ export class GenerationsDecorators {
             let trim = trimmedDirectory(sc)
             if (sc.dryrun) {
                 gens.forEach((gen, i) => {
-                    gen.forEach(g => {
-                        console.log("Generation", i)
-                        if (g.scriptInContext.details.commands.length == 1)
-                            gen.forEach(scd => {
-                                console.log('   ', trim(scd.detailsAndDirectory.directory), scd.scriptInContext.details.commands[0].command)
-                            })
-                        else
-                            gen.forEach(scd => {
-                                console.log('   ', trim(scd.detailsAndDirectory.directory))
-                                scd.scriptInContext.details.commands.forEach(c => console.log('       ', c.command))
-                            })
+                    console.log("Generation", i)
+                    gen.forEach(scd => {
+                        if (scd.scriptInContext.details.commands.length == 1)
+                            console.log('   ', trim(scd.detailsAndDirectory.directory), scd.scriptInContext.details.commands[0].command)
+                        else {
+                            console.log('   ', trim(scd.detailsAndDirectory.directory))
+                            scd.scriptInContext.details.commands.forEach(c => console.log('       ', c.command))
+                        }
                     })
                 })
             } else gens.forEach((gen, i) => console.log("Generation", i, gen.map(scd => trim(scd.detailsAndDirectory.directory)).join(", ")))
