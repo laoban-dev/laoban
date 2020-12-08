@@ -18,9 +18,13 @@ export function calculateAllGenerations(scds: ScriptInContextAndDirectory[]) {
     return calcAllGenerationRecurse(scds, {existing: [], generations: []})
 }
 
-export function splitGenerationsByLinks(scds: ScriptInContextAndDirectory[]):ScriptInContextAndDirectory[][] {
+export function splitGenerationsByLinks(scds: ScriptInContextAndDirectory[]): ScriptInContextAndDirectory[][] {
     let map = new Map()
-    scds.forEach(scd => map.set(scd.detailsAndDirectory.projectDetails.name, scd))
+    scds.forEach(scd => {
+        let projectDetails = scd.detailsAndDirectory.projectDetails;
+        if (!projectDetails) throw new Error(`Cannot calculate generations as we have a directory without project.details.json [${scd.detailsAndDirectory.directory}]`)
+        return map.set(projectDetails.name, scd)
+    })
     if (scds.length !== map.size) throw new Error('Cannot calculate generations: multiple projects with the same name')
     let genNames = calculateAllGenerations(scds).generations
     return genNames.map(names => names.map(n => map.get(n)))

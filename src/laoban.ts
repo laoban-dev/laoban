@@ -9,11 +9,11 @@ import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
-import {calcAllGenerationRecurse, prettyPrintGenerations} from "./generations";
 import * as os from "os";
 import {validateConfigOnHardDrive, validateLaobanJson} from "./validation";
 import {
     AppendToFileIf,
+    consoleOutputFor,
     defaultExecutor,
     executeAllGenerations,
     ExecuteGenerations,
@@ -24,7 +24,8 @@ import {
     executeScript,
     Generation,
     GenerationResult,
-    Generations, GenerationsDecorators
+    Generations,
+    GenerationsDecorators
 } from "./executors";
 
 function summariseCommandDetails(scd: ScriptInContextAndDirectory) {
@@ -54,7 +55,7 @@ export class Cli {
             option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "").//
             option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
             option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", config.throttle).//
-            option('-l, --links', "the scripts will be put into generations based on links", false)
+            option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet)", false)
     }
 
     program = require('commander').//
@@ -98,12 +99,11 @@ export class Cli {
             let gens: Generations = [scds]
             // console.log('here goes nothing-0')
             // scds.forEach(summariseCommandDetails)
-            this.executeGenerations(gens).catch(e => {
+           return this.executeGenerations(gens).catch(e => {
                 console.error('had error in execution')
                 console.error(e)
             })
-
-        })
+        }).catch(e => console.error('Could not execute because', e))
     }
     constructor(config: Config, executeGenerations: ExecuteGenerations) {
         this.executeGenerations = executeGenerations;
@@ -214,8 +214,9 @@ try {
 
 function reporter(gen: GenerationResult) {
     gen.forEach((sr, i) => {
-        sr.results.forEach((x, i) => {
-            if (x.stdout.length > 0) console.log(x.stdout)
+        sr.results.forEach((r, i) => {
+            let out = consoleOutputFor(r);
+            if (out.length > 0) {console.log(out)}
         })
     })
 }

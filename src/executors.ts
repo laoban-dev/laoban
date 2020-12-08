@@ -13,7 +13,7 @@ export interface RawShellResult {
     stderr: string
 }
 export interface ShellResult {
-    details: CommandDetails
+    details:  ShellCommandDetails<CommandDetails>
     duration: number,
     err: ExecException | null,
     stdout: string,
@@ -65,6 +65,7 @@ export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): Shel
         };
         return result
     });
+    // console.log('buildShellCommandDetails', result)
     return result
 }
 
@@ -92,7 +93,7 @@ function executeOneAfterTheOther<From, To>(fn: (from: From) => Promise<To>): (fr
 
 
 export type RawExecutor = (d: ShellCommandDetails<CommandDetails>) => Promise<RawShellResult>
-export type ExecuteOne = (d: ShellCommandDetails<CommandDetails>) => Promise<ShellResult[]> // guard conditions return no results. 'link' commands in the future will return multiple results
+export type ExecuteOne = (d: ShellCommandDetails<CommandDetails>) => Promise<ShellResult[]>
 
 export type ExecuteGenerations = (generations: Generations) => Promise<GenerationsResult>
 export type ExecuteOneGeneration = (generation: Generation) => Promise<GenerationResult>
@@ -122,10 +123,13 @@ interface StdOutDecorator {
 const shouldAppend = (d: ShellCommandDetails<CommandDetails>) => !d.scd.scriptInContext.dryrun;
 const dryRunContents = (d: ShellCommandDetails<CommandDetails>) => `${d.details.directory} ${d.details.commandString}`;
 
-export function consoleOutputFor(d: ShellCommandDetails<CommandDetails>, res: ShellResult): string {
+export function consoleOutputFor( res: ShellResult): string {
+    // console.log('consoleOutputFor', res)
     let errorString = res.err ? `***Error***${res.err}\n` : ""
     let stdErrString = res.stderr.length > 0 ? `***StdError***${res.stderr}\n` : ""
-    return `${errorString}${stdErrString}${res.stdout}`
+    // console.log('errorString', errorString)
+    // console.log('stdErrString', stdErrString)
+    return `${res.stdout}${errorString}${stdErrString}`
 }
 
 //TODO generize this
@@ -213,7 +217,7 @@ export class ExecuteScriptDecorators {
     }
 
     static dryRun: ExecutorDecorator = e => d =>
-        d.scd.scriptInContext.dryrun ? Promise.resolve([{duration: 0, details: d.details, stdout: dryRunContents(d), err: null, stderr: ""}]) : e(d)
+        d.scd.scriptInContext.dryrun ? Promise.resolve([{duration: 0, details: d, stdout: dryRunContents(d), err: null, stderr: ""}]) : e(d)
 
     static stdOutDecorator: (dec: StdOutDecorator) => ExecutorDecorator = dec => e => d =>
         dec.condition(d) ? e(d).then(sr => sr.map(r => ({...r, stdout: `${dec.pretext(d)}${r.stdout}${dec.posttext(d, r)}`}))) : e(d)
@@ -267,7 +271,7 @@ function jsOrShellFinder(js: ExecuteOne, shell: ExecuteOne): Finder {
 export function timeIt(e: RawExecutor): ExecuteOne {
     return d => {
         let startTime = new Date()
-        return e(d).then(res => [{...res, details: d.details, duration: (new Date().getTime() - startTime.getTime())}]);
+        return e(d).then(res => [{...res, details: d, duration: (new Date().getTime() - startTime.getTime())}]);
     }
 }
 
@@ -281,7 +285,7 @@ export function make(shell: RawExecutor, js: RawExecutor, timeIt: (e: RawExecuto
     return c => finder(c)(c)
 }
 
-export let execInShell: RawExecutor = d => {
+export let execInShell: RawExecutor = (d:  ShellCommandDetails<CommandDetails>) => {
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) =>
         cp.exec(d.details.commandString, options, (err: any, stdout: string, stderr: string) =>

@@ -16,6 +16,11 @@
       ]
     },
     "ls"         : {"description": "lists all the projects", "commands": ["js:process.cwd()"]},
+    "slow": {
+      "description": "prints something, delays 2s, prints something",
+      "commands": ["echo `pwd` 'start'", "sleep 2s", "echo `pwd` 'stop'"]
+    },
+
     "lsDist"     : {
       "description": "check that the directory option works", "commands": [
         {"command": "js:process.cwd()", "directory": "dist"},

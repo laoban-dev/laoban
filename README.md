@@ -115,6 +115,7 @@ If this is present in a directory it tells laoban that the directory is a projec
 * `generation` the projects are sorted in generation order so that all generation 0 projects are processed before generation 1
       * See the 'TODO' section at the end: generations are only respected in display order at the moment
 * `throttle` sets the maximum number of parallel activites that will be executed. The default is 0 which doesn't limit things
+
 ## Commands
 
 These are added to laoban by means of the laoban.json file. An inspection of it should give you a good idea
@@ -226,6 +227,14 @@ A combination of `-ds` gives quite nice information about what is executing
 ### option `-v`
 Only used when debugging to help work out what are legal variables
 
+### option `-g`
+Rather like '-a' in that it does not display any commands. Instead it outputs the 'generation plan': the directories that 
+will be processed in parallel.
+
+### option `-t xxx`
+Sets the maximum number of items executed at once, so that the computer doesn't get over loaded. This overrides the
+setting in laoban.json
+
 
 ## status
 The idea of `status` is to give a way to visualise what is happening across all the sub projects
@@ -236,23 +245,18 @@ The idea of `status` is to give a way to visualise what is happening across all 
 
 # TODO
 
-## Validation on laoban.json
-
-## Validation on project.details.json
-
-## Autocalculate generation from links
-Because we have links between projects we can calculate this and display them
-
-## Allow some commands to obey generations 
-by means of waiting until all earlier generation commands have finished. Usually this isn't needed, so 
-the commands should be flagged.
-
-When doing this we can handle throttling too... done easily by capping number of threads in a generation, and artifically adding more
-
+## Validation on laoban.json / project.details.json
+Now we have some... but it bombs out at the first error. Would like nicer message
 
 ## Improve the 'shelling out'. 
 Currently we shell out and wait for it to finish. It would be better to use spawn and be able to 
 process the logs as the commands execute. This will reduce memory load and give a better experience
+
+# Nicer directory names so that we can see 'offset from the root'
+This is just a 'nicer looking output'. 
+
+# Nicer progress reporting
+
 
 ### what should the 'gui' look like?
 Mostly we want to know that each is going ok. It would be cool if we could have an interactive gui, 
