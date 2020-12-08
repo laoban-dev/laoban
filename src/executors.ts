@@ -1,6 +1,6 @@
 import * as cp from 'child_process'
 import {ExecException} from 'child_process'
-import {CommandDefn, Envs, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory} from "./config";
 import {cleanUpEnv, derefence, derefenceToUndefined} from "./configProcessor";
 import * as path from "path";
 import {Promise} from "core-js";
@@ -12,7 +12,7 @@ export interface RawShellResult {
     stdout: string,
     stderr: string
 }
-export interface ShellResult extends RawShellResult{
+export interface ShellResult extends RawShellResult {
     details: ShellCommandDetails<CommandDetails>
     duration: number
 }
@@ -30,7 +30,8 @@ export type GenerationResult = ScriptResult[]
 
 
 export interface ShellCommandDetails<Cmd> {
-    scd: ScriptInContextAndDirectory,
+    scriptInContext: ScriptInContext,
+    detailsAndDirectory: ProjectDetailsAndDirectory
     details: Cmd,
 }
 
@@ -50,7 +51,7 @@ export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): Shel
         let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
         let env = cleanUpEnv(dic, scd.scriptInContext.details.env);
         let result: ShellCommandDetails<CommandDetails> = {
-            scd: scd,
+            ...scd,
             details: ({
                 command: cmd,
                 commandString: derefence(dic, cmd.command),
@@ -118,10 +119,10 @@ interface StdOutDecorator {
     transform: (sr: ShellResult) => ShellResult,
     posttext: (d: ShellCommandDetails<CommandDetails>, sr: ShellResult) => string
 }
-const shouldAppend = (d: ShellCommandDetails<CommandDetails>) => !d.scd.scriptInContext.dryrun;
+const shouldAppend = (d: ShellCommandDetails<CommandDetails>) => !d.scriptInContext.dryrun;
 const dryRunContents = (d: ShellCommandDetails<CommandDetails>) => {
-    let trim = trimmedDirectory(d.scd.scriptInContext)
-    return `${trim(d.details.directory).padEnd(d.scd.scriptInContext.dirWidth)} ${d.details.commandString}`;
+    let trim = trimmedDirectory(d.scriptInContext)
+    return `${trim(d.details.directory).padEnd(d.scriptInContext.dirWidth)} ${d.details.commandString}`;
 }
 export function consoleOutputFor(res: ShellResult): string {
     // console.log('consoleOutputFor', res)
@@ -220,42 +221,42 @@ export class ExecuteOneDecorators {
 
     static status: ToFileDecorator = {
         appendCondition: d => d.details.command.status,
-        filename: d => path.join(d.scd.detailsAndDirectory.directory, d.scd.scriptInContext.config.status),
-        content: (d, res) => `${d.scd.scriptInContext.timestamp.toISOString()} ${res.err === null} ${d.details.command.name}\n`
+        filename: d => path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.status),
+        content: (d, res) => `${d.scriptInContext.timestamp.toISOString()} ${res.err === null} ${d.details.command.name}\n`
     }
     static profile: ToFileDecorator = {
         appendCondition: d => d.details.command.name,
-        filename: d => path.join(d.scd.detailsAndDirectory.directory, d.scd.scriptInContext.config.profile),
-        content: (d, res) => `${d.scd.scriptInContext.details.name} ${d.details.command.name} ${res.duration}\n`
+        filename: d => path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.profile),
+        content: (d, res) => `${d.scriptInContext.details.name} ${d.details.command.name} ${res.duration}\n`
     }
     static log: ToFileDecorator = {
         appendCondition: d => true,
-        filename: d => path.join(d.scd.detailsAndDirectory.directory, d.scd.scriptInContext.config.log),
-        content: (d, res) => `${d.scd.scriptInContext.timestamp} ${d.details.commandString}\n${res.stdout}\nTook ${res.duration}\n\n`
+        filename: d => path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.log),
+        content: (d, res) => `${d.scriptInContext.timestamp} ${d.details.commandString}\n${res.stdout}\nTook ${res.duration}\n\n`
     }
 
     static dryRun: ExecuteOneDecorator = e => d =>
-        d.scd.scriptInContext.dryrun ? Promise.resolve([{duration: 0, details: d, stdout: dryRunContents(d), err: null, stderr: ""}]) : e(d)
+        d.scriptInContext.dryrun ? Promise.resolve([{duration: 0, details: d, stdout: dryRunContents(d), err: null, stderr: ""}]) : e(d)
 
     static stdOutDecorator: (dec: StdOutDecorator) => ExecuteOneDecorator = dec => e => d =>
         dec.condition(d) ? e(d).then(sr => sr.map(r => ({...r, stdout: `${dec.pretext(d)}${r.stdout}${dec.posttext(d, r)}`}))) : e(d)
 
 
     static variablesDisplay: StdOutDecorator = {
-        condition: d => d.scd.scriptInContext.variables,
+        condition: d => d.scriptInContext.variables,
         pretext: d => calculateVariableText(d),
         transform: sr => sr,
         posttext: (d, sr) => ''
     }
 
     static quietDisplay: ExecuteOneDecorator = e => d =>
-        d.scd.scriptInContext.quiet ? e(d).then(sr => sr.map(r => ({...r, stdout: ''}))) : e(d)
+        d.scriptInContext.quiet ? e(d).then(sr => sr.map(r => ({...r, stdout: ''}))) : e(d)
 
 
     static guardDecorate: (guardDecorator: GuardDecorator) => ExecuteOneDecorator = dec => e =>
         d => {
             let guard = dec.guard(d)
-             return (!guard || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
+            return (!guard || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
         }
 
     // static pmGuard: GuardDecorator = {
@@ -267,7 +268,7 @@ export class ExecuteOneDecorators {
     //     valid: (g, d) => d.scd.scriptInContext.config.os === g
     // }
     static guard: GuardDecorator = {
-        guard: d => d.scd.scriptInContext.details.guard,
+        guard: d => d.scriptInContext.details.guard,
         valid: (g, d) => {
             let value = derefenceToUndefined(d.details.dic, g);
             let result = value != ''
