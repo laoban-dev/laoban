@@ -12,12 +12,9 @@ export interface RawShellResult {
     stdout: string,
     stderr: string
 }
-export interface ShellResult {
+export interface ShellResult extends RawShellResult{
     details: ShellCommandDetails<CommandDetails>
-    duration: number,
-    err: ExecException | null,
-    stdout: string,
-    stderr: string
+    duration: number
 }
 
 export interface ScriptResult {
@@ -26,7 +23,6 @@ export interface ScriptResult {
     duration: number
 }
 
-//TODO consider ifG refactor this a little so that there is only one script being executed.
 export type  Generation = ScriptInContextAndDirectory[]
 export type  Generations = Generation[]
 export type GenerationsResult = ScriptResult[][]
