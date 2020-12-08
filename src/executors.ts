@@ -259,8 +259,7 @@ export class ExecuteOneDecorators {
     static guardDecorate: (guardDecorator: GuardDecorator) => ExecuteOneDecorator = dec => e =>
         d => {
             let guard = dec.guard(d)
-            // console.log('guardDec', d.scd.scriptInContext.details.guard, guard)
-            return (!guard || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
+             return (!guard || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
         }
 
     // static pmGuard: GuardDecorator = {

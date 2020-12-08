@@ -10,7 +10,7 @@ import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrint
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
 import * as os from "os";
-import {validateConfigOnHardDrive, validateLaobanJson} from "./validation";
+import {reportValidation, validateConfigOnHardDrive, validateLaobanJson} from "./validation";
 import {
     AppendToFileIf,
     consoleOutputFor,
@@ -138,7 +138,8 @@ export class Cli {
             })
         this.command('validate', 'checks the laoban.json and the project.details.json', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => validateConfigOnHardDrive(this.config, ds)).catch(e => console.error(e.message))
+                ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => validateConfigOnHardDrive(this.config, ds)).//
+                    then(v => reportValidation(v)).catch(e => console.error(e.message))
             })
         // this.command('generations', 'wip: calculating generations', this.defaultOptions).//
         //     action((cmd: any) => {
@@ -203,12 +204,10 @@ export class Cli {
 
 let laoban = findLaoban(process.cwd())
 let rawConfig = JSON.parse(fs.readFileSync(laobanFile(laoban)).toString())
-try {
-    validateLaobanJson(rawConfig)
-} catch (e) {
-    console.error(e.message)
-    process.exit(1)
-
+let issues = validateLaobanJson(rawConfig);
+if (issues.length > 0) {
+    issues.forEach(e => console.error(e))
+    process.exit(2)
 }
 
 function reporter(gen: GenerationResult) {
@@ -222,13 +221,13 @@ function reporter(gen: GenerationResult) {
 function shellReporter(gen: GenerationResult) {
     if (gen.length > 0) {
         let scd: ScriptInContextAndDirectory = gen[0].scd;
-        if (scd.scriptInContext.shell&& !scd.scriptInContext.dryrun) {
+        if (scd.scriptInContext.shell && !scd.scriptInContext.dryrun) {
             gen.forEach((sr, i) => {
-            console.log(sr.scd.detailsAndDirectory.directory)
+                console.log(sr.scd.detailsAndDirectory.directory)
                 sr.results.forEach((r, i) => {
                     console.log('   ', r.details.details.commandString, r.details.details.directory.substring(sr.scd.detailsAndDirectory.directory.length))
-                    let out =consoleOutputFor(r);
-                    if (out.length > 0) {console.log( Strings.indentEachLine('        ', out))}
+                    let out = consoleOutputFor(r);
+                    if (out.length > 0) {console.log(Strings.indentEachLine('        ', out))}
                 })
             })
 
