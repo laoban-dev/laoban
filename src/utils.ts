@@ -1,8 +1,17 @@
+import {Writable} from "stream";
+
 export class Strings {
     static maxLength = (ss: string[]) => Math.max(...(ss.map(s => s.length)));
     static indentEachLine(indent: string, lines: string): string {
         return lines.split('\n').map(s => indent + s).join('\n')
     }
+}
+export function chain<From, To>(decorators: ((fn: (f: From) => To) => ((f: From) => To))[]): ((fn: (f: From) => To) => ((f: From) => To)) {
+    return raw => decorators.reduce((acc, v) => v(acc), raw)
+}
+
+export function writeTo(ws: Writable[], data: any) {
+    ws.forEach(s => s.write(data))
 }
 
 export interface StringAndWidth {

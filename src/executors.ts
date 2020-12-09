@@ -1,12 +1,11 @@
 import * as cp from 'child_process'
 import {CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream} from "./config";
-import {cleanUpEnv, derefence, derefenceToUndefined} from "./configProcessor";
+import {cleanUpEnv, derefence} from "./configProcessor";
 import * as path from "path";
 import {Promise} from "core-js";
-import {partition} from "./utils";
-import {splitGenerationsByLinks} from "./generations";
+import {chain, writeTo} from "./utils";
 import {Writable} from "stream";
-import * as fs from "fs";
+import {CommandDecorator} from "./decorators";
 
 export interface RawShellResult {
     err: any
@@ -99,240 +98,17 @@ function executeOneAfterTheOther<From, To>(fn: (from: From) => Promise<To>): (fr
 export type RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => Promise<RawShellResult>
 
 export type ExecuteCommand = (d: ShellCommandDetails<CommandDetails>) => Promise<ShellResult[]>
-export type CommandDecorator = (e: ExecuteCommand) => ExecuteCommand
 
 export type ExecuteScript = (s: ScriptInContextAndDirectory) => Promise<ScriptResult>
-export type ScriptDecorator = (e: ExecuteScript) => ExecuteScript
+
 
 export type ExecuteGeneration = (generation: Generation) => Promise<GenerationResult>
-export type GenerationDecorator = (e: ExecuteGeneration) => ExecuteGeneration
 
 export type ExecuteOneGeneration = (generation: Generation) => Promise<GenerationResult>
 
 export type ExecuteGenerations = (generations: Generations) => Promise<GenerationsResult>
-export type GenerationsDecorator = (e: ExecuteGenerations) => ExecuteGenerations
 
-
-export type AppendToFileIf = (condition: any | undefined, name: string, content: () => string) => Promise<void>
 type Finder = (c: ShellCommandDetails<CommandDetails>) => ExecuteCommand
-
-interface ToFileDecorator {
-    appendCondition: (d: ShellCommandDetails<CommandDetails>) => any | undefined
-    filename: (d: ShellCommandDetails<CommandDetails>) => string
-    content: (d: ShellCommandDetails<CommandDetails>, res: ShellResult) => string
-}
-
-interface GuardDecorator {
-    guard: (d: ShellCommandDetails<CommandDetails>) => any | undefined
-    valid: (guard: any, d: ShellCommandDetails<CommandDetails>) => any
-}
-
-interface StdOutDecorator {
-    condition: (d: ShellCommandDetails<CommandDetails>) => any | undefined,
-    pretext: (d: ShellCommandDetails<CommandDetails>) => string,
-    transform: (sr: ShellResult) => ShellResult,
-    posttext: (d: ShellCommandDetails<CommandDetails>, sr: ShellResult) => string
-}
-const shouldAppend = (d: ShellCommandDetails<CommandDetails>) => !d.scriptInContext.dryrun;
-const dryRunContents = (d: ShellCommandDetails<CommandDetails>) => {
-    let trim = trimmedDirectory(d.scriptInContext)
-    return `${trim(d.details.directory).padEnd(d.scriptInContext.dirWidth)} ${d.details.commandString}`;
-}
-
-export function chain<From, To>(decorators: ((fn: (f: From) => To) => ((f: From) => To))[]): ((fn: (f: From) => To) => ((f: From) => To)) {
-    return raw => decorators.reduce((acc, v) => v(acc), raw)
-}
-
-function writeTo(ws: Writable[], data: any) {
-    ws.forEach(s => s.write(data))
-}
-
-
-// export function chainScript(decorators: CommandDecorator[]): CommandDecorator {return raw => decorators.reduce((acc, v) => v(acc), raw)}
-// export function chainGens(decorators: GenerationsDecorator[]): GenerationsDecorator {return raw => decorators.reduce((acc, v) => v(acc), raw)}
-function calculateVariableText(d: ShellCommandDetails<CommandDetails>): string {
-    let dic = d.details.dic
-    let simplerdic = {...dic}
-    delete simplerdic.scripts
-    return [`Raw command is [${d.details.command.command}] became [${d.details.commandString}]`,
-        "legal variables are",
-        JSON.stringify(simplerdic, null, 2)].join("\n") + "\n"
-}
-
-interface GenerationsDecoratorTemplate {
-    condition: (scd: ScriptInContext) => boolean,
-    transform: (scd: ScriptInContext, g: Generations) => Generations
-}
-
-function trimmedDirectory(sc: ScriptInContext) {
-    return (dir: string) => dir.substring(sc.config.laobanDirectory.length + 1)
-}
-
-
-export class ScriptDecorators {
-    static normalDecorators(): ScriptDecorator {
-        return chain([this.shellDecoratorForScript])
-    }
-    static shellDecoratorForScript: ScriptDecorator = e => scd => {
-        if (scd.scriptInContext.shell && !scd.scriptInContext.dryrun)
-            writeTo(scd.streams, '*' + scd.detailsAndDirectory.directory + '\n')
-        return e(scd)
-    }
-}
-
-export class GenerationDecorators {
-    static normalDecorators(): GenerationDecorator {
-        return e => e
-    }
-}
-
-export class GenerationsDecorators {
-    static normalDecorators(): GenerationsDecorator {
-        return chain([this.PlanDecorator, this.ThrottlePlanDecorator, this.LinkPlanDecorator].map(this.applyTemplate))
-    }
-
-    static PlanDecorator: GenerationsDecoratorTemplate = {
-        condition: scd => {
-            return scd.genPlan
-        },
-        transform: (sc, gens) => {
-            let trim = trimmedDirectory(sc)
-            if (sc.dryrun) {
-                gens.forEach((gen, i) => {
-                    console.log("Generation", i)
-                    gen.forEach(scd => {
-                        if (scd.scriptInContext.details.commands.length == 1)
-                            console.log('   ', trim(scd.detailsAndDirectory.directory), scd.scriptInContext.details.commands[0].command)
-                        else {
-                            console.log('   ', trim(scd.detailsAndDirectory.directory))
-                            scd.scriptInContext.details.commands.forEach(c => console.log('       ', c.command))
-                        }
-                    })
-                })
-            } else gens.forEach((gen, i) => console.log("Generation", i, gen.map(scd => trim(scd.detailsAndDirectory.directory)).join(", ")))
-            return []
-        }
-    }
-    static ThrottlePlanDecorator: GenerationsDecoratorTemplate = {
-        condition: scd => scd.throttle > 0,
-        transform: (scd, gens) => [].concat(...(gens.map(gen => partition(gen, scd.throttle))))
-    }
-
-    static LinkPlanDecorator: GenerationsDecoratorTemplate = {
-        condition: scd => scd.links || scd.details.inLinksOrder,
-        transform: (scd, g) => [].concat(...g.map(splitGenerationsByLinks))
-    }
-
-    static applyTemplate: (t: GenerationsDecoratorTemplate) => GenerationsDecorator = t => e => gens => {
-        if (gens.length > 0 && gens[0].length > 0) {
-            let scd: ScriptInContext = gens[0][0].scriptInContext;
-            if (t.condition(scd)) {
-                return e(t.transform(scd, gens))
-            }
-        }
-        return e(gens)
-    }
-}
-
-
-export class CommandDecorators {
-
-    static normalDecorator(a: AppendToFileIf): CommandDecorator {
-        return chain([
-            ...[CommandDecorators.guard].map(CommandDecorators.guardDecorate),
-            CommandDecorators.dryRun,
-            CommandDecorators.log,
-            ...[CommandDecorators.status, CommandDecorators.profile].map(CommandDecorators.fileDecorate(a)),
-            CommandDecorators.quietDisplay,
-            ...[CommandDecorators.variablesDisplay, CommandDecorators.shellDisplay].map(CommandDecorators.stdOutDecorator)
-        ])
-    }
-
-    static fileDecorate: (a: AppendToFileIf) => (fileDecorator: ToFileDecorator) => CommandDecorator = appendIf => dec => e =>
-        d => e(d).then(res => Promise.all(res.map(r => appendIf(dec.appendCondition(d) && shouldAppend(d), dec.filename(d), () => dec.content(d, r)))).then(() => res))
-
-
-    static status: ToFileDecorator = {
-        appendCondition: d => d.details.command.status,
-        filename: d => path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.status),
-        content: (d, res) => `${d.scriptInContext.timestamp.toISOString()} ${res.err === null} ${d.details.command.name}\n`
-    }
-    static profile: ToFileDecorator = {
-        appendCondition: d => d.details.command.name,
-        filename: d => path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.profile),
-        content: (d, res) => `${d.scriptInContext.details.name} ${d.details.command.name} ${res.duration}\n`
-    }
-    static log: CommandDecorator = e => d => {
-        let log = path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.log)
-        let logStream = fs.createWriteStream(log, {flags: 'a'})
-        logStream.write(`${d.scriptInContext.timestamp.toISOString()} ${d.details.commandString}\n`)
-        let newD = {...d, streams: [...d.streams, logStream]}
-        return e(newD).then(sr => {
-            sr.forEach(res => logStream.write(`Took ${res.duration}${res.err ? `, Error was [${res.err}]` : ''}\n`))
-            return sr
-        })
-    }
-
-    static dryRun: CommandDecorator = e => d => {
-        if (d.scriptInContext.dryrun) {
-            let value = dryRunContents(d);
-            // console.log('dryRun', value)
-            writeTo(d.streams, value + '\n')
-            return Promise.resolve([{duration: 0, details: d, stdout: value, err: null, stderr: ""}])
-        } else return e(d)
-    }
-    static stdOutDecorator: (dec: StdOutDecorator) => CommandDecorator = dec => e => d => {
-        if (dec.condition(d)) {
-            writeTo(d.streams, dec.pretext(d))
-            return e(d).then(sr => sr.map(r => {
-                writeTo(r.details.streams, dec.posttext(d, r))
-                return r
-            }))
-        } else return e(d)
-    }
-
-    static shellDisplay: StdOutDecorator = {
-        condition: d => d.scriptInContext.shell && !d.scriptInContext.dryrun,
-        pretext: d => '*   ' + d.details.commandString + '\n',
-        transform: sr => sr,
-        posttext: (d, sr) => ''
-    }
-
-    static variablesDisplay: StdOutDecorator = {
-        condition: d => d.scriptInContext.variables,
-        pretext: d => calculateVariableText(d),
-        transform: sr => sr,
-        posttext: (d, sr) => ''
-    }
-
-    static quietDisplay: CommandDecorator = e => d =>
-        d.scriptInContext.quiet ? e(d).then(sr => sr.map(r => ({...r, stdout: ''}))) : e(d)
-
-
-    static guardDecorate: (guardDecorator: GuardDecorator) => CommandDecorator = dec => e =>
-        d => {
-            let guard = dec.guard(d)
-            return (!guard || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
-        }
-
-    // static pmGuard: GuardDecorator = {
-    //     guard: d => d.scd.scriptInContext.details.pmGuard,
-    //     valid: (g, d) => d.scd.scriptInContext.config.packageManager === g
-    // }
-    // static osGuard: GuardDecorator = {
-    //     guard: d => d.scd.scriptInContext.details.osGuard,
-    //     valid: (g, d) => d.scd.scriptInContext.config.os === g
-    // }
-    static guard: GuardDecorator = {
-        guard: d => d.scriptInContext.details.guard,
-        valid: (g, d) => {
-            let value = derefenceToUndefined(d.details.dic, g);
-            let result = value != ''
-            // console.log('guard', d.details.commandString, value, typeof value, result)
-            return result
-        }
-    }
-}
 
 function jsOrShellFinder(js: ExecuteCommand, shell: ExecuteCommand): Finder {
     return c => (c.details.commandString.startsWith('js:')) ? js : shell
@@ -345,7 +121,6 @@ export function timeIt(e: RawCommandExecutor): ExecuteCommand {
     }
 }
 
-export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
 
 export function make(shell: RawCommandExecutor, js: RawCommandExecutor, timeIt: (e: RawCommandExecutor) => ExecuteCommand, ...decorators: CommandDecorator[]): ExecuteCommand {
     let decorate = chain(decorators)
@@ -355,12 +130,6 @@ export function make(shell: RawCommandExecutor, js: RawCommandExecutor, timeIt: 
     return c => finder(c)(c)
 }
 
-export let execInShell: RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => {
-    let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
-    return new Promise<RawShellResult>((resolve, reject) =>
-        cp.exec(d.details.commandString, options, (err: any, stdout: string, stderr: string) =>
-            resolve({err: err})))
-}
 export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => {
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) => {
@@ -389,7 +158,7 @@ function executeInChangedEnv<To>(env: Envs, block: () => To): To {
 }
 
 
-let execJS: RawCommandExecutor = d => {
+export let execJS: RawCommandExecutor = d => {
     try {
         let res = executeInChangedEnv<any>(d.details.env, () => executeInChangedDir(d.details.directory,
             () => Function("return  " + d.details.commandString.substring(3))().toString()))

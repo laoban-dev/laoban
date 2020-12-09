@@ -11,8 +11,8 @@ import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPretty
 import * as os from "os";
 import {reportValidation, validateConfigOnHardDrive, validateLaobanJson} from "./validation";
 import {
-    AppendToFileIf,
-    defaultExecutor,
+    execInSpawn,
+    execJS,
     executeAllGenerations,
     ExecuteCommand,
     ExecuteGenerations,
@@ -21,14 +21,15 @@ import {
     ExecuteScript,
     executeScript,
     Generation,
-    GenerationDecorators,
     GenerationResult,
     Generations,
-    GenerationsDecorators,
-    ScriptDecorators,
-    streamName
+    make,
+    streamName,
+    timeIt
 } from "./executors";
 import {Strings} from "./utils";
+import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
+import {shellReporter} from "./report";
 
 const makeSessionId = (d: Date, suffix: any) => d.toISOString().replace(/:/g, '.') + '.' + suffix;
 
@@ -89,7 +90,7 @@ export class Cli {
                 return
             }
         }
-        let sessionId = makeSessionId(new Date(),script.name);
+        let sessionId = makeSessionId(new Date(), script.name);
         fse.mkdirp(path.join(this.config.sessionDir, sessionId)).then(() => {
             ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
                 let allDirectorys = details.map(d => d.directory)
@@ -223,44 +224,7 @@ if (issues.length > 0) {
     process.exit(2)
 }
 
-function reporter(gen: GenerationResult, reportDecorator: ReportDecorator) {
-    Promise.all(gen.map((sr, i) => {
-        let logFile = streamName(sr.scd);
-        return new Promise<string>((resolve, reject) => {
-            sr.scd.logStream.on('finish', () => resolve(logFile))
-        })
-    })).then(fileNames => fileNames.map(logFile => {
-        if (gen.length > 0) {
-            let report = {scd: gen[0].scd, text: fse.readFileSync(logFile).toString()}
-            let message = reportDecorator(report).text;
-            if (message.length > 0) console.log(message.trimRight())
-        }
-    }))
-    gen.forEach(sr => sr.scd.streams.forEach(s => s.end()))
-}
-
-interface Report {
-    scd: ScriptInContextAndDirectory,
-    text: string
-}
-
-type ReportDecorator = (report: Report) => Report
-
-const prefixLinesThatDontStartWithStar = (s: string) => s.split('\n').map(s => s.startsWith('*') ? s : '        ' + s).join('\n');
-
-const shellReportDecorator: ReportDecorator = report =>
-    report.scd.scriptInContext.shell ?
-        {...report, text: prefixLinesThatDontStartWithStar(report.text)} :
-        report;
-
-const quietDecorator: ReportDecorator = report => report.scd.scriptInContext.quiet ? {...report, text: ''} : report
-
-function chainReports(decorators: ReportDecorator[]): ReportDecorator {return report => decorators.reduce((acc, r) => r(acc), report)}
-const reportDecorators: ReportDecorator = chainReports([shellReportDecorator, quietDecorator])
-
-function shellReporter(gen: GenerationResult) {
-    reporter(gen, reportDecorators)
-}
+export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
 
 let config = configProcessor(laoban, rawConfig)
 let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {

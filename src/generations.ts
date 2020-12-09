@@ -1,5 +1,4 @@
-import {ProjectDetails, ProjectDetailsAndDirectory, ScriptInContextAndDirectory} from "./config";
-import {Maps} from "./utils";
+import {ProjectDetailsAndDirectory, ScriptInContextAndDirectory} from "./config";
 
 interface Tree {
     [name: string]: Set<string>
@@ -54,9 +53,6 @@ export function prettyPrintGenerations(scds: ScriptInContextAndDirectory[], gen:
 function getChildrenRecurse(pds: ScriptInContextAndDirectory[], existing: string[]) {
     let thisTree = {}
     pds.forEach(p => thisTree[p.detailsAndDirectory.projectDetails.name] = new Set(p.detailsAndDirectory.projectDetails.details.links))
-
-    // console.log('raw', thisTree)
-    // console.log('existing', existing)
     for (let k in thisTree) {
         if (existing.includes(k)) delete thisTree[k]
         else {
@@ -64,16 +60,9 @@ function getChildrenRecurse(pds: ScriptInContextAndDirectory[], existing: string
             existing.forEach(e => values.delete(e))
         }
     }
-    // console.log('tree after existing removed', thisTree)
-
     for (let k in thisTree) {
         if (thisTree[k].size > 0)
             delete thisTree[k]
     }
     return [...Object.keys(thisTree)].sort()
-
 }
-// function calculateRoots<V>(map: Map<V,V[]>, ignore: V[]){
-//     allChildren = map.keys().reduce((acc, v) => )
-//
-// }
