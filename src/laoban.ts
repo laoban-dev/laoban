@@ -16,12 +16,12 @@ import {
     defaultExecutor,
     executeAllGenerations,
     ExecuteGenerations,
-    ExecuteOne,
+    ExecuteCommand,
     ExecuteOneGeneration,
     executeOneGeneration,
-    ExecuteOneScript,
+    ExecuteScript,
     executeScript,
-    Generation,
+    Generation, GenerationDecorators,
     GenerationResult,
     Generations,
     GenerationsDecorators, ScriptDecorators, ScriptResult, ShellResult, streamName
@@ -247,7 +247,7 @@ function shellReporter(gen: GenerationResult) {
                 })
             })
 
-        } else reporter(gen, (sr,text) => text)
+        } else reporter(gen, (sr, text) => text)
     }
 }
 
@@ -256,9 +256,9 @@ let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {
     if (condition) return fse.appendFile(name, contentGenerator())
     else return Promise.resolve();
 }
-let executeOne: ExecuteOne = defaultExecutor(appendToFiles)
-let executeOneScript: ExecuteOneScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
-let executeGeneration: ExecuteOneGeneration = executeOneGeneration(executeOneScript)
+let executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
+let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
+let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
 let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter))
 
 let cli = new Cli(config, executeGenerations);

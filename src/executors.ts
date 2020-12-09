@@ -27,8 +27,8 @@ export interface ScriptResult {
 
 export type  Generation = ScriptInContextAndDirectory[]
 export type  Generations = Generation[]
-export type GenerationsResult = ScriptResult[][]
 export type GenerationResult = ScriptResult[]
+export type GenerationsResult = GenerationResult[]
 
 
 export interface ShellCommandDetails<Cmd> {
@@ -74,7 +74,7 @@ export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): Shel
     return result
 }
 
-export let executeOneGeneration: (e: ExecuteOneScript) => ExecuteOneGeneration = e => gen => Promise.all(gen.map(x => e(x)))
+export let executeOneGeneration: (e: ExecuteScript) => ExecuteOneGeneration = e => gen => Promise.all(gen.map(x => e(x)))
 
 export function executeAllGenerations(executeOne: ExecuteOneGeneration, reporter: (GenerationResult) => void): ExecuteGenerations {
     let fn = (gs, sofar) => {
@@ -87,7 +87,7 @@ export function executeAllGenerations(executeOne: ExecuteOneGeneration, reporter
     return gs => fn(gs, [])
 }
 
-export let executeScript: (e: ExecuteOne) => ExecuteOneScript = e => (scd: ScriptInContextAndDirectory) => {
+export let executeScript: (e: ExecuteCommand) => ExecuteScript = e => (scd: ScriptInContextAndDirectory) => {
     let startTime = new Date().getTime()
     return executeOneAfterTheOther(e)(buildShellCommandDetails(scd)).then(results => ({results: [].concat(...results), scd, duration: new Date().getTime() - startTime}))
 }
@@ -97,19 +97,25 @@ function executeOneAfterTheOther<From, To>(fn: (from: From) => Promise<To>): (fr
 }
 
 
-export type RawExecutor = (d: ShellCommandDetails<CommandDetails>) => Promise<RawShellResult>
-export type ExecuteOne = (d: ShellCommandDetails<CommandDetails>) => Promise<ShellResult[]>
+export type RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => Promise<RawShellResult>
+
+export type ExecuteCommand = (d: ShellCommandDetails<CommandDetails>) => Promise<ShellResult[]>
+export type CommandDecorator = (e: ExecuteCommand) => ExecuteCommand
+
+export type ExecuteScript = (s: ScriptInContextAndDirectory) => Promise<ScriptResult>
+export type ScriptDecorator = (e: ExecuteScript) => ExecuteScript
+
+export type ExecuteGeneration = (generation: Generation) => Promise<GenerationResult>
+export type GenerationDecorator = (e: ExecuteGeneration) => ExecuteGeneration
+
+export type ExecuteOneGeneration = (generation: Generation) => Promise<GenerationResult>
 
 export type ExecuteGenerations = (generations: Generations) => Promise<GenerationsResult>
-export type ExecuteOneGeneration = (generation: Generation) => Promise<GenerationResult>
-export type ExecuteOneScript = (s: ScriptInContextAndDirectory) => Promise<ScriptResult>
-
 export type GenerationsDecorator = (e: ExecuteGenerations) => ExecuteGenerations
-export type ExecuteScriptDecorator = (e: ExecuteOneScript) => ExecuteOneScript
-export type ExecuteOneDecorator = (e: ExecuteOne) => ExecuteOne
-export type MakeLogStream = (directory: string) => Writable
+
+
 export type AppendToFileIf = (condition: any | undefined, name: string, content: () => string) => Promise<void>
-type Finder = (c: ShellCommandDetails<CommandDetails>) => ExecuteOne
+type Finder = (c: ShellCommandDetails<CommandDetails>) => ExecuteCommand
 
 interface ToFileDecorator {
     appendCondition: (d: ShellCommandDetails<CommandDetails>) => any | undefined
@@ -144,8 +150,13 @@ export function consoleOutputFor(res: ShellResult): string {
 
 
 //TODO generize this
-export function chain(executors: ExecuteOneDecorator[]): ExecuteOneDecorator {return raw => executors.reduce((acc, v) => v(acc), raw)}
-export function chainGens(executors: GenerationsDecorator[]): GenerationsDecorator {return raw => executors.reduce((acc, v) => v(acc), raw)}
+export function chain<From, To>(decorators: ((fn: (f: From) => To) => ((f: From) => To))[]): ((fn: (f: From) => To) => ((f: From) => To)) {
+    return raw => decorators.reduce((acc, v) => v(acc), raw)
+}
+
+
+// export function chainScript(decorators: CommandDecorator[]): CommandDecorator {return raw => decorators.reduce((acc, v) => v(acc), raw)}
+// export function chainGens(decorators: GenerationsDecorator[]): GenerationsDecorator {return raw => decorators.reduce((acc, v) => v(acc), raw)}
 function calculateVariableText(d: ShellCommandDetails<CommandDetails>): string {
     let dic = d.details.dic
     let simplerdic = {...dic}
@@ -166,10 +177,11 @@ function trimmedDirectory(sc: ScriptInContext) {
 
 //export type ExecuteOneScript = (s: ScriptInContextAndDirectory) => Promise<ScriptResult>
 export class ScriptDecorators {
-    static normalDecorators(): ExecuteScriptDecorator {
+    static normalDecorators(): ScriptDecorator {
         return e => e
     }
-    static shellDecoratorForScript: ExecuteScriptDecorator = e => scd => {
+    static shellDecoratorForScript: ScriptDecorator = e => scd => {
+        console.log('in script decorator')
         scd.logStream.write('In Shell Decorator')
         return e(scd)
     }
@@ -177,9 +189,15 @@ export class ScriptDecorators {
 
 }
 
+export class GenerationDecorators {
+    static normalDecorators(): GenerationDecorator {
+        return e => e
+    }
+}
+
 export class GenerationsDecorators {
-    static normalDecorators() {
-        return chainGens([this.PlanDecorator, this.ThrottlePlanDecorator, this.LinkPlanDecorator].map(this.applyTemplate))
+    static normalDecorators(): GenerationsDecorator {
+        return chain([this.PlanDecorator, this.ThrottlePlanDecorator, this.LinkPlanDecorator].map(this.applyTemplate))
     }
 
     static PlanDecorator: GenerationsDecoratorTemplate = {
@@ -228,7 +246,7 @@ export class GenerationsDecorators {
 
 export class ExecuteOneDecorators {
 
-    static normalDecorator(a: AppendToFileIf): ExecuteOneDecorator {
+    static normalDecorator(a: AppendToFileIf): CommandDecorator {
         return chain([
             ...[ExecuteOneDecorators.guard].map(ExecuteOneDecorators.guardDecorate),
             ExecuteOneDecorators.dryRun,
@@ -238,7 +256,7 @@ export class ExecuteOneDecorators {
         ])
     }
 
-    static fileDecorate: (a: AppendToFileIf) => (fileDecorator: ToFileDecorator) => ExecuteOneDecorator = appendIf => dec => e =>
+    static fileDecorate: (a: AppendToFileIf) => (fileDecorator: ToFileDecorator) => CommandDecorator = appendIf => dec => e =>
         d => e(d).then(res => Promise.all(res.map(r => appendIf(dec.appendCondition(d) && shouldAppend(d), dec.filename(d), () => dec.content(d, r)))).then(() => res))
 
 
@@ -258,7 +276,7 @@ export class ExecuteOneDecorators {
         content: (d, res) => `${d.scriptInContext.timestamp} ${d.details.commandString}\n${res.stdout}\nTook ${res.duration}\n\n`
     }
 
-    static dryRun: ExecuteOneDecorator = e => d => {
+    static dryRun: CommandDecorator = e => d => {
         if (d.scriptInContext.dryrun) {
             let value = dryRunContents(d);
             // console.log('dryRun', value)
@@ -267,7 +285,7 @@ export class ExecuteOneDecorators {
             return Promise.resolve([{duration: 0, details: d, stdout: value, err: null, stderr: ""}])
         } else return e(d)
     }
-    static stdOutDecorator: (dec: StdOutDecorator) => ExecuteOneDecorator = dec => e => d =>
+    static stdOutDecorator: (dec: StdOutDecorator) => CommandDecorator = dec => e => d =>
         dec.condition(d) ? e(d).then(sr => sr.map(r => {
             let value = `${dec.pretext(d)}${r.stdout}${dec.posttext(d, r)}`;
             console.log('stdOutDecorator', value)
@@ -283,11 +301,11 @@ export class ExecuteOneDecorators {
         posttext: (d, sr) => ''
     }
 
-    static quietDisplay: ExecuteOneDecorator = e => d =>
+    static quietDisplay: CommandDecorator = e => d =>
         d.scriptInContext.quiet ? e(d).then(sr => sr.map(r => ({...r, stdout: ''}))) : e(d)
 
 
-    static guardDecorate: (guardDecorator: GuardDecorator) => ExecuteOneDecorator = dec => e =>
+    static guardDecorate: (guardDecorator: GuardDecorator) => CommandDecorator = dec => e =>
         d => {
             let guard = dec.guard(d)
             return (!guard || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
@@ -312,11 +330,11 @@ export class ExecuteOneDecorators {
     }
 }
 
-function jsOrShellFinder(js: ExecuteOne, shell: ExecuteOne): Finder {
+function jsOrShellFinder(js: ExecuteCommand, shell: ExecuteCommand): Finder {
     return c => (c.details.commandString.startsWith('js:')) ? js : shell
 
 }
-export function timeIt(e: RawExecutor): ExecuteOne {
+export function timeIt(e: RawCommandExecutor): ExecuteCommand {
     return d => {
         let startTime = new Date()
         return e(d).then(res => [{...res, details: d, duration: (new Date().getTime() - startTime.getTime())}]);
@@ -325,7 +343,7 @@ export function timeIt(e: RawExecutor): ExecuteOne {
 
 export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, ExecuteOneDecorators.normalDecorator(a))}
 
-export function make(shell: RawExecutor, js: RawExecutor, timeIt: (e: RawExecutor) => ExecuteOne, ...decorators: ExecuteOneDecorator[]): ExecuteOne {
+export function make(shell: RawCommandExecutor, js: RawCommandExecutor, timeIt: (e: RawCommandExecutor) => ExecuteCommand, ...decorators: CommandDecorator[]): ExecuteCommand {
     let decorate = chain(decorators)
     let decoratedShell = decorate(timeIt(shell))
     let decoratedJs = decorate(timeIt(js))
@@ -333,13 +351,13 @@ export function make(shell: RawExecutor, js: RawExecutor, timeIt: (e: RawExecuto
     return c => finder(c)(c)
 }
 
-export let execInShell: RawExecutor = (d: ShellCommandDetails<CommandDetails>) => {
+export let execInShell: RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => {
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) =>
         cp.exec(d.details.commandString, options, (err: any, stdout: string, stderr: string) =>
             resolve({err: err, stdout: stdout.trimRight(), stderr: stderr})))
 }
-export let execInSpawn: RawExecutor = (d: ShellCommandDetails<CommandDetails>) => {
+export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => {
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) => {
         let child = cp.spawn(d.details.commandString, {shell: true})
@@ -369,7 +387,7 @@ function executeInChangedEnv<To>(env: Envs, block: () => To): To {
 }
 
 
-let execJS: RawExecutor = d => {
+let execJS: RawCommandExecutor = d => {
     try {
         let res = executeInChangedEnv<any>(d.details.env, () => executeInChangedDir(d.details.directory,
             () => Function("return  " + d.details.commandString.substring(3))().toString()))
