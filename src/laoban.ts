@@ -4,7 +4,6 @@ import * as fs from "fs";
 import * as fse from "fs-extra";
 import {configProcessor} from "./configProcessor";
 import {Config, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory} from "./config";
-
 import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
@@ -25,11 +24,15 @@ import {
     Generation,
     GenerationResult,
     Generations,
-    GenerationsDecorators
+    GenerationsDecorators, ScriptDecorators, ScriptResult, ShellResult, streamName
 } from "./executors";
 import {Strings} from "./utils";
+import {createWriteStream} from "fs";
+import {log} from "util";
 
-
+function makeSessionId(d: Date, clashAvoider: any) {
+    return [d.getFullYear(), (d.getMonth() + 1), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), clashAvoider].join('.')
+}
 export class Cli {
     private executeGenerations: ExecuteGenerations;
     private config: Config;
@@ -83,24 +86,32 @@ export class Cli {
                 return
             }
         }
-        ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
-            let allDirectorys = details.map(d => d.directory)
-            let dirWidth = Strings.maxLength(allDirectorys) - laoban.length
-            let sc: ScriptInContext = {
-                dirWidth: dirWidth,
-                dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet,
-                links: cmd.links,
-                config: this.config, details: script, timestamp: new Date(), genPlan: cmd.generationPlan,
-                throttle: cmd.throttle,
-                context: {shellDebug: cmd.shellDebug, directories: details}
-            }
-            let scds: Generation = details.map(d => ({detailsAndDirectory: d, scriptInContext: sc}))
-            let gens: Generations = [scds]
-            // console.log('here goes nothing-0')
-            // scds.forEach(summariseCommandDetails)
-            return this.executeGenerations(gens).catch(e => {
-                console.error('had error in execution')
-                console.error(e)
+        let sessionId = makeSessionId(new Date(), Math.random().toPrecision(3));
+        fse.mkdirp(path.join(this.config.sessionDir, sessionId)).then(() => {
+            ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
+                let allDirectorys = details.map(d => d.directory)
+                let dirWidth = Strings.maxLength(allDirectorys) - laoban.length
+                let sc: ScriptInContext = {
+                    sessionId: sessionId,
+                    dirWidth: dirWidth,
+                    dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet,
+                    links: cmd.links,
+                    config: this.config, details: script, timestamp: new Date(), genPlan: cmd.generationPlan,
+                    throttle: cmd.throttle,
+                    context: {shellDebug: cmd.shellDebug, directories: details}
+                }
+                let scds: Generation = details.map(d => ({
+                    detailsAndDirectory: d,
+                    scriptInContext: sc,
+                    logStream: fs.createWriteStream(streamName(this.config.sessionDir, sessionId, d.directory))
+                }))
+                let gens: Generations = [scds]
+                // console.log('here goes nothing-0')
+                // scds.forEach(summariseCommandDetails)
+                return this.executeGenerations(gens).catch(e => {
+                    console.error('had error in execution')
+                    console.error(e)
+                })
             })
         }).catch(e => console.error('Could not execute because', e))
     }
@@ -210,14 +221,19 @@ if (issues.length > 0) {
     process.exit(2)
 }
 
-function reporter(gen: GenerationResult) {
-    gen.forEach((sr, i) => {
-        sr.results.forEach((r, i) => {
-            let out = consoleOutputFor(r);
-            if (out.length > 0) {console.log(out)}
+function reporter(gen: GenerationResult, enrich: (sr: ScriptResult[], text: string) => string) {
+    Promise.all(gen.map((sr, i) => {
+        let logFile = streamName(sr.scd.scriptInContext.config.sessionDir, sr.scd.scriptInContext.sessionId, sr.scd.detailsAndDirectory.directory);
+        return new Promise<string>((resolve, reject) => {
+            sr.scd.logStream.on('finish', () => resolve(logFile))
         })
-    })
+    })).then(fileNames => fileNames.map(logFile => {
+        let text = fse.readFileSync(logFile).toString()
+        console.log(enrich(gen, text))
+    }))
+    gen.forEach(sr => sr.scd.logStream.end())
 }
+
 function shellReporter(gen: GenerationResult) {
     if (gen.length > 0) {
         let scd: ScriptInContextAndDirectory = gen[0].scd;
@@ -231,7 +247,7 @@ function shellReporter(gen: GenerationResult) {
                 })
             })
 
-        } else reporter(gen)
+        } else reporter(gen, (sr,text) => text)
     }
 }
 
@@ -241,7 +257,7 @@ let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {
     else return Promise.resolve();
 }
 let executeOne: ExecuteOne = defaultExecutor(appendToFiles)
-let executeOneScript: ExecuteOneScript = executeScript(executeOne)
+let executeOneScript: ExecuteOneScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
 let executeGeneration: ExecuteOneGeneration = executeOneGeneration(executeOneScript)
 let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter))
 

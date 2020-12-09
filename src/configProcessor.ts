@@ -108,7 +108,8 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     add("status", rawConfig)
     add("profile", rawConfig)
     add("packageManager", rawConfig)
-    result.throttle= rawConfig.throttle ? rawConfig.throttle : 0
+    result.sessionDir = rawConfig.sessionDir ? rawConfig.sessionDir : path.join(laoban, '.session')
+    result.throttle = rawConfig.throttle ? rawConfig.throttle : 0
     for (const k in rawConfig.variables) add(k, rawConfig.variables)
     result.scripts = addScripts(result, rawConfig.scripts);
     result.os = os.type()

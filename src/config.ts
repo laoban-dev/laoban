@@ -1,8 +1,10 @@
 import {ShellResult} from "./executors";
+import {Writable} from "stream";
 
 export interface ConfigVariables {
     templateDir: string,
     versionFile: string,
+    sessionDir: string,
     throttle?: number,
     log: string,
     status: string,
@@ -34,6 +36,7 @@ export interface CommandContext {
 
 export interface ScriptInContextAndDirectory {
     scriptInContext: ScriptInContext,
+    logStream: Writable,
     detailsAndDirectory: ProjectDetailsAndDirectory
 }
 export interface ScriptInContext {
@@ -48,7 +51,8 @@ export interface ScriptInContext {
     config: Config,
     timestamp: Date,
     context: CommandContext,
-    details: ScriptDetails
+    details: ScriptDetails,
+    sessionId: string
 }
 
 export interface DirectoryAndResults {
@@ -59,9 +63,10 @@ export type ScriptProcessor = (sc: ScriptInContext) => Promise<DirectoryAndResul
 
 
 export interface Config extends ConfigVariables {
-    laobanDirectory: string
-    laobanConfig: string
-    variables: { [name: string]: string }
+    laobanDirectory: string,
+    laobanConfig: string,
+    sessionDir: string,
+    variables: { [name: string]: string },
     scripts: ScriptDetails[],
     os: string
 
