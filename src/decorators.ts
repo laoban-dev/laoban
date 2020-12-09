@@ -6,6 +6,7 @@ import {chain, partition, writeTo} from "./utils";
 import {splitGenerationsByLinks} from "./generations";
 import * as fs from "fs";
 import {CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult} from "./executors";
+import {monitorCommandDecorator, monitorGenerationDecorator, monitorScriptDecorator} from "./monitor";
 
 export type CommandDecorator = (e: ExecuteCommand) => ExecuteCommand
 export type ScriptDecorator = (e: ExecuteScript) => ExecuteScript
@@ -60,7 +61,7 @@ function trimmedDirectory(sc: ScriptInContext) {
 
 export class ScriptDecorators {
     static normalDecorators(): ScriptDecorator {
-        return chain([this.shellDecoratorForScript])
+        return chain([this.shellDecoratorForScript, monitorScriptDecorator])
     }
     static shellDecoratorForScript: ScriptDecorator = e => scd => {
         if (scd.scriptInContext.shell && !scd.scriptInContext.dryrun)
@@ -71,7 +72,7 @@ export class ScriptDecorators {
 
 export class GenerationDecorators {
     static normalDecorators(): GenerationDecorator {
-        return e => e
+        return monitorGenerationDecorator
     }
 }
 
@@ -131,6 +132,7 @@ export class CommandDecorators {
             ...[CommandDecorators.guard].map(CommandDecorators.guardDecorate),
             CommandDecorators.dryRun,
             CommandDecorators.log,
+            monitorCommandDecorator,
             ...[CommandDecorators.status, CommandDecorators.profile].map(CommandDecorators.fileDecorate(a)),
             CommandDecorators.quietDisplay,
             ...[CommandDecorators.variablesDisplay, CommandDecorators.shellDisplay].map(CommandDecorators.stdOutDecorator)

@@ -1,5 +1,6 @@
 import {ShellResult} from "./executors";
 import {Writable} from "stream";
+import {Status} from "./monitor";
 
 export interface ConfigVariables {
     templateDir: string,
@@ -44,6 +45,7 @@ export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectory
 }
 export interface ScriptInContext {
     dirWidth: number,
+    status: Status,
     dryrun: boolean,
     shell: boolean,
     genPlan: boolean,

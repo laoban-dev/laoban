@@ -44,10 +44,13 @@ export interface CommandDetails {
 
 function calculateDirectory(directory: string, command: CommandDefn) { return (command.directory) ? path.join(directory, command.directory) : directory;}
 
+export function streamNamefn(sessionDir: string, sessionId: string, scriptName: string, directory: string) {
+    return path.join(sessionDir,
+        sessionId,
+        directory.replace(/\//g, '_')) + '.' + scriptName + '.log'
+}
 export function streamName(scd: ScriptInContextAndDirectoryWithoutStream) {
-    return path.join(scd.scriptInContext.config.sessionDir,
-        scd.scriptInContext.sessionId,
-        scd.detailsAndDirectory.directory.replace(/\//g, '_')) + '.' + scd.scriptInContext.details.name + '.log'
+    return streamNamefn(scd.scriptInContext.config.sessionDir, scd.scriptInContext.sessionId, scd.scriptInContext.details.name, scd.detailsAndDirectory.directory)
 }
 
 
@@ -72,12 +75,11 @@ export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): Shel
 
 export let executeOneGeneration: (e: ExecuteScript) => ExecuteOneGeneration = e => gen => Promise.all(gen.map(x => e(x)))
 
-export function executeAllGenerations(executeOne: ExecuteOneGeneration, reporter: (GenerationResult) => void): ExecuteGenerations {
+export function executeAllGenerations(executeOne: ExecuteOneGeneration, reporter: (GenerationResult) => Promise<void>): ExecuteGenerations {
     let fn = (gs, sofar) => {
         if (gs.length == 0) return Promise.resolve(sofar)
         return executeOne(gs[0]).then(gen0Res => {
-            reporter(gen0Res)
-            return fn(gs.slice(1), [...sofar, gen0Res])
+            return reporter(gen0Res).then(() => fn(gs.slice(1), [...sofar, gen0Res]))
         })
     }
     return gs => fn(gs, [])

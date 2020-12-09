@@ -21,15 +21,16 @@ import {
     ExecuteScript,
     executeScript,
     Generation,
-    GenerationResult,
-    Generations,
+    Generations, GenerationsResult,
     make,
-    streamName,
+    streamName, streamNamefn,
     timeIt
 } from "./executors";
 import {Strings} from "./utils";
 import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
 import {shellReporter} from "./report";
+import * as readline from "readline";
+import {monitor, Status} from "./monitor";
 
 const makeSessionId = (d: Date, suffix: any) => d.toISOString().replace(/:/g, '.') + '.' + suffix;
 
@@ -95,9 +96,11 @@ export class Cli {
             ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
                 let allDirectorys = details.map(d => d.directory)
                 let dirWidth = Strings.maxLength(allDirectorys) - laoban.length
+                let status = new Status(dir => streamNamefn(this.config.sessionDir, sessionId, sc.details.name, dir))
                 let sc: ScriptInContext = {
-                    sessionId: sessionId,
-                    dirWidth: dirWidth,
+                    sessionId,
+                    status,
+                    dirWidth,
                     dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet,
                     links: cmd.links,
                     config: this.config, details: script, timestamp: new Date(), genPlan: cmd.generationPlan,
@@ -109,10 +112,13 @@ export class Cli {
                     scriptInContext: sc
                 }))
                 let gens: Generations = [scds]
-                return this.executeGenerations(gens).catch(e => {
+                let promises = this.executeGenerations(gens).catch(e => {
                     console.error('had error in execution')
                     console.error(e)
-                })
+                    throw e
+                });
+                monitor(status, promises.then(() => {}))
+                return promises
             })
         }).catch(e => console.error('Could not execute because', e))
     }
@@ -152,13 +158,6 @@ export class Cli {
                 ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => validateConfigOnHardDrive(this.config, ds)).//
                     then(v => reportValidation(v)).catch(e => console.error(e.message))
             })
-        // this.command('generations', 'wip: calculating generations', this.defaultOptions).//
-        //     action((cmd: any) => {
-        //         ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => prettyPrintGenerations(ds), calcAllGeneration(ds.map(d => d.projectDetails), {
-        //             existing: [],
-        //             generations: []
-        //         })))
-        //     })
         this.command('profile', 'shows the time taken by named steps of commands', this.defaultOptions).//
             action((cmd: any) => {
                 let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(ds => Promise.all(ds.map(d =>
@@ -179,11 +178,11 @@ export class Cli {
                     copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
                         loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
                             loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))))
-
-
         this.addScripts(config.scripts, this.defaultOptions)
         this.program.on('--help', () => {
             console.log('');
+            console.log("Press ? while running for list of 'status'comments")
+            console.log()
             console.log('Notes');
             console.log("  If you are 'in' a project (the current directory has a project.details.json') then commands are executed by default just for the current project ");
             console.log("     but if you are not 'in' a project, the commands are executed for all projects");
@@ -224,10 +223,9 @@ if (issues.length > 0) {
 export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
 
 let config = configProcessor(laoban, rawConfig)
-let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) => {
-    if (condition) return fse.appendFile(name, contentGenerator())
-    else return Promise.resolve();
-}
+let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
+    condition ? fse.appendFile(name, contentGenerator()) : Promise.resolve()
+
 let executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
 let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
 let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
@@ -236,3 +234,4 @@ let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorat
 let cli = new Cli(config, executeGenerations);
 
 cli.start(process.argv)
+

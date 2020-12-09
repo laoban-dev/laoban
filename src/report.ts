@@ -2,12 +2,12 @@ import {GenerationResult, streamName} from "./executors";
 import * as fse from "fs-extra";
 import {ScriptInContextAndDirectory} from "./config";
 
-function reporter(gen: GenerationResult, reportDecorator: ReportDecorator) {
-    Promise.all(gen.map((sr, i) => {
+function reporter(gen: GenerationResult, reportDecorator: ReportDecorator): Promise<void> {
+    let result = Promise.all(gen.map((sr, i) => {
         let logFile = streamName(sr.scd);
-        return new Promise<string>((resolve, reject) => {
+        return Promise.all(sr.scd.streams.map(s => new Promise<string>((resolve, reject) => {
             sr.scd.logStream.on('finish', () => resolve(logFile))
-        })
+        }))).then(() => logFile)
     })).then(fileNames => fileNames.map(logFile => {
         if (gen.length > 0) {
             let report = {scd: gen[0].scd, text: fse.readFileSync(logFile).toString()}
@@ -16,6 +16,7 @@ function reporter(gen: GenerationResult, reportDecorator: ReportDecorator) {
         }
     }))
     gen.forEach(sr => sr.scd.streams.forEach(s => s.end()))
+    return result.then(() => {})
 }
 
 interface Report {
@@ -37,6 +38,6 @@ const quietDecorator: ReportDecorator = report => report.scd.scriptInContext.qui
 function chainReports(decorators: ReportDecorator[]): ReportDecorator {return report => decorators.reduce((acc, r) => r(acc), report)}
 const reportDecorators: ReportDecorator = chainReports([shellReportDecorator, quietDecorator])
 
-export function shellReporter(gen: GenerationResult) {
-    reporter(gen, reportDecorators)
+export function shellReporter(gen: GenerationResult): Promise<void> {
+    return reporter(gen, reportDecorators)
 }

@@ -1,5 +1,8 @@
 import {Writable} from "stream";
 
+export function flatten<T>(list: T[][]): T[]{
+    return [].concat(...list)
+}
 export class Strings {
     static maxLength = (ss: string[]) => Math.max(...(ss.map(s => s.length)));
     static indentEachLine(indent: string, lines: string): string {
