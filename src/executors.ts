@@ -9,9 +9,7 @@ import {Writable} from "stream";
 import * as fs from "fs";
 
 export interface RawShellResult {
-    err: any,
-    stdout: string,
-    stderr: string
+    err: any
 }
 export interface ShellResult extends RawShellResult {
     details: ShellCommandDetails<CommandDetails>
@@ -140,15 +138,6 @@ const dryRunContents = (d: ShellCommandDetails<CommandDetails>) => {
     let trim = trimmedDirectory(d.scriptInContext)
     return `${trim(d.details.directory).padEnd(d.scriptInContext.dirWidth)} ${d.details.commandString}`;
 }
-export function consoleOutputFor(res: ShellResult): string {
-    // console.log('consoleOutputFor', res)
-    let errorString = res.err ? `***Error***${res.err}\n` : ""
-    let stdErrString = res.stderr.length > 0 ? `***StdError***${res.stderr}\n` : ""
-    // console.log('errorString', errorString)
-    // console.log('stdErrString', stdErrString)
-    return `${res.stdout}${errorString}${stdErrString}`
-}
-
 
 export function chain<From, To>(decorators: ((fn: (f: From) => To) => ((f: From) => To))[]): ((fn: (f: From) => To) => ((f: From) => To)) {
     return raw => decorators.reduce((acc, v) => v(acc), raw)
@@ -279,7 +268,7 @@ export class CommandDecorators {
         logStream.write(`${d.scriptInContext.timestamp.toISOString()} ${d.details.commandString}\n`)
         let newD = {...d, streams: [...d.streams, logStream]}
         return e(newD).then(sr => {
-            sr.forEach(res => logStream.write(`Took ${res.duration}\n`))
+            sr.forEach(res => logStream.write(`Took ${res.duration}${res.err ? `, Error was [${res.err}]` : ''}\n`))
             return sr
         })
     }
@@ -370,7 +359,7 @@ export let execInShell: RawCommandExecutor = (d: ShellCommandDetails<CommandDeta
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) =>
         cp.exec(d.details.commandString, options, (err: any, stdout: string, stderr: string) =>
-            resolve({err: err, stdout: stdout.trimRight(), stderr: stderr})))
+            resolve({err: err})))
 }
 export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => {
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
@@ -378,7 +367,7 @@ export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDeta
         let child = cp.spawn(d.details.commandString, {...options, shell: true})
         child.stdout.on('data', data => writeTo(d.streams, data))
         child.stderr.on('data', data => writeTo(d.streams, data))
-        child.on('close', (code) => {resolve({err: code == 0 ? null : code, stdout: "old stdout", stderr: "oldstderr"})})
+        child.on('close', (code) => {resolve({err: code == 0 ? null : code})})
     })
 }
 
@@ -408,7 +397,9 @@ let execJS: RawCommandExecutor = d => {
         writeTo(d.streams, result + '\n')
         return Promise.resolve({err: null, stdout: result, stderr: ""})
     } catch (e) {
-        let result = `Error: ${e} Command was [${d.details.commandString}]`;
+        let result =
+            `Error: ${e} Command was [${d.details.commandString}]`
+        ;
         writeTo(d.streams, result + '\n')
         return Promise.resolve({err: e, stdout: result, stderr: ""})
     }
