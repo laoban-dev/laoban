@@ -1,6 +1,5 @@
 import * as cp from 'child_process'
-import {ExecException} from 'child_process'
-import {CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream} from "./config";
 import {cleanUpEnv, derefence, derefenceToUndefined} from "./configProcessor";
 import * as path from "path";
 import {Promise} from "core-js";
@@ -35,7 +34,7 @@ export interface ShellCommandDetails<Cmd> {
     scriptInContext: ScriptInContext,
     detailsAndDirectory: ProjectDetailsAndDirectory
     details: Cmd,
-    logStream: Writable
+    streams: Writable[]
 }
 
 export interface CommandDetails {
@@ -48,8 +47,10 @@ export interface CommandDetails {
 
 function calculateDirectory(directory: string, command: CommandDefn) { return (command.directory) ? path.join(directory, command.directory) : directory;}
 
-export function streamName(sessionDir: string, sessionId: string, directory: string) {
-    return path.join(sessionDir, sessionId, directory.replace(/\//g, '_'))
+export function streamName(scd: ScriptInContextAndDirectoryWithoutStream) {
+    return path.join(scd.scriptInContext.config.sessionDir,
+        scd.scriptInContext.sessionId,
+        scd.detailsAndDirectory.directory.replace(/\//g, '_')) + '.' + scd.scriptInContext.details.name + '.log'
 }
 
 
@@ -149,9 +150,12 @@ export function consoleOutputFor(res: ShellResult): string {
 }
 
 
-//TODO generize this
 export function chain<From, To>(decorators: ((fn: (f: From) => To) => ((f: From) => To))[]): ((fn: (f: From) => To) => ((f: From) => To)) {
     return raw => decorators.reduce((acc, v) => v(acc), raw)
+}
+
+function writeTo(ws: Writable[], data: any) {
+    ws.forEach(s => s.write(data))
 }
 
 
@@ -175,18 +179,16 @@ function trimmedDirectory(sc: ScriptInContext) {
     return (dir: string) => dir.substring(sc.config.laobanDirectory.length + 1)
 }
 
-//export type ExecuteOneScript = (s: ScriptInContextAndDirectory) => Promise<ScriptResult>
+
 export class ScriptDecorators {
     static normalDecorators(): ScriptDecorator {
         return chain([this.shellDecoratorForScript])
     }
     static shellDecoratorForScript: ScriptDecorator = e => scd => {
-        console.log('in script decorator')
-        scd.logStream.write('In Shell Decorator')
+        if (scd.scriptInContext.shell && !scd.scriptInContext.dryrun)
+            writeTo(scd.streams, '*' + scd.detailsAndDirectory.directory + '\n')
         return e(scd)
     }
-
-
 }
 
 export class GenerationDecorators {
@@ -244,15 +246,16 @@ export class GenerationsDecorators {
 }
 
 
-export class ExecuteOneDecorators {
+export class CommandDecorators {
 
     static normalDecorator(a: AppendToFileIf): CommandDecorator {
         return chain([
-            ...[ExecuteOneDecorators.guard].map(ExecuteOneDecorators.guardDecorate),
-            ExecuteOneDecorators.dryRun,
-            ...[ExecuteOneDecorators.status, ExecuteOneDecorators.profile, ExecuteOneDecorators.log].map(ExecuteOneDecorators.fileDecorate(a)),
-            ExecuteOneDecorators.quietDisplay,
-            ...[ExecuteOneDecorators.variablesDisplay].map(ExecuteOneDecorators.stdOutDecorator)
+            ...[CommandDecorators.guard].map(CommandDecorators.guardDecorate),
+            CommandDecorators.dryRun,
+            CommandDecorators.log,
+            ...[CommandDecorators.status, CommandDecorators.profile].map(CommandDecorators.fileDecorate(a)),
+            CommandDecorators.quietDisplay,
+            ...[CommandDecorators.variablesDisplay, CommandDecorators.shellDisplay].map(CommandDecorators.stdOutDecorator)
         ])
     }
 
@@ -270,29 +273,41 @@ export class ExecuteOneDecorators {
         filename: d => path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.profile),
         content: (d, res) => `${d.scriptInContext.details.name} ${d.details.command.name} ${res.duration}\n`
     }
-    static log: ToFileDecorator = {
-        appendCondition: d => true,
-        filename: d => path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.log),
-        content: (d, res) => `${d.scriptInContext.timestamp} ${d.details.commandString}\n${res.stdout}\nTook ${res.duration}\n\n`
+    static log: CommandDecorator = e => d => {
+        let log = path.join(d.detailsAndDirectory.directory, d.scriptInContext.config.log)
+        let logStream = fs.createWriteStream(log, {flags: 'a'})
+        logStream.write(`${d.scriptInContext.timestamp.toISOString()} ${d.details.commandString}\n`)
+        let newD = {...d, streams: [...d.streams, logStream]}
+        return e(newD).then(sr => {
+            sr.forEach(res => logStream.write(`Took ${res.duration}\n`))
+            return sr
+        })
     }
 
     static dryRun: CommandDecorator = e => d => {
         if (d.scriptInContext.dryrun) {
             let value = dryRunContents(d);
             // console.log('dryRun', value)
-            d.logStream.write(value)
-            d.logStream.write('\n')
+            writeTo(d.streams, value + '\n')
             return Promise.resolve([{duration: 0, details: d, stdout: value, err: null, stderr: ""}])
         } else return e(d)
     }
-    static stdOutDecorator: (dec: StdOutDecorator) => CommandDecorator = dec => e => d =>
-        dec.condition(d) ? e(d).then(sr => sr.map(r => {
-            let value = `${dec.pretext(d)}${r.stdout}${dec.posttext(d, r)}`;
-            console.log('stdOutDecorator', value)
-            r.details.logStream.write(value)
-            return ({...r, stdout: value})
-        })) : e(d)
+    static stdOutDecorator: (dec: StdOutDecorator) => CommandDecorator = dec => e => d => {
+        if (dec.condition(d)) {
+            writeTo(d.streams, dec.pretext(d))
+            return e(d).then(sr => sr.map(r => {
+                writeTo(r.details.streams, dec.posttext(d, r))
+                return r
+            }))
+        } else return e(d)
+    }
 
+    static shellDisplay: StdOutDecorator = {
+        condition: d => d.scriptInContext.shell && !d.scriptInContext.dryrun,
+        pretext: d => '*   ' + d.details.commandString + '\n',
+        transform: sr => sr,
+        posttext: (d, sr) => ''
+    }
 
     static variablesDisplay: StdOutDecorator = {
         condition: d => d.scriptInContext.variables,
@@ -341,7 +356,7 @@ export function timeIt(e: RawCommandExecutor): ExecuteCommand {
     }
 }
 
-export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, ExecuteOneDecorators.normalDecorator(a))}
+export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
 
 export function make(shell: RawCommandExecutor, js: RawCommandExecutor, timeIt: (e: RawCommandExecutor) => ExecuteCommand, ...decorators: CommandDecorator[]): ExecuteCommand {
     let decorate = chain(decorators)
@@ -360,12 +375,10 @@ export let execInShell: RawCommandExecutor = (d: ShellCommandDetails<CommandDeta
 export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => {
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) => {
-        let child = cp.spawn(d.details.commandString, {shell: true})
-        child.stdout.on('data', data => (d.logStream.write(data)))
-        child.stderr.on('data', data => (d.logStream.write(data)))
-        child.on('close', (code) => {
-            resolve({err: code, stdout: "old stdout", stderr: "oldstderr"})
-        })
+        let child = cp.spawn(d.details.commandString, {...options, shell: true})
+        child.stdout.on('data', data => writeTo(d.streams, data))
+        child.stderr.on('data', data => writeTo(d.streams, data))
+        child.on('close', (code) => {resolve({err: code == 0 ? null : code, stdout: "old stdout", stderr: "oldstderr"})})
     })
 }
 
@@ -391,8 +404,12 @@ let execJS: RawCommandExecutor = d => {
     try {
         let res = executeInChangedEnv<any>(d.details.env, () => executeInChangedDir(d.details.directory,
             () => Function("return  " + d.details.commandString.substring(3))().toString()))
-        return Promise.resolve({err: null, stdout: res.toString(), stderr: ""})
+        let result = res.toString();
+        writeTo(d.streams, result + '\n')
+        return Promise.resolve({err: null, stdout: result, stderr: ""})
     } catch (e) {
-        return Promise.resolve({err: e, stdout: `Error: ${e} Command was [${d.details.commandString}]`, stderr: ""})
+        let result = `Error: ${e} Command was [${d.details.commandString}]`;
+        writeTo(d.streams, result + '\n')
+        return Promise.resolve({err: e, stdout: result, stderr: ""})
     }
 }

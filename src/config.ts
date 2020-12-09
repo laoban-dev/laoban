@@ -34,10 +34,13 @@ export interface CommandContext {
     directories: ProjectDetailsAndDirectory[]
 }
 
-export interface ScriptInContextAndDirectory {
+export interface ScriptInContextAndDirectoryWithoutStream {
     scriptInContext: ScriptInContext,
-    logStream: Writable,
     detailsAndDirectory: ProjectDetailsAndDirectory
+}
+export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectoryWithoutStream {
+    logStream: Writable
+    streams: Writable[]
 }
 export interface ScriptInContext {
     dirWidth: number,

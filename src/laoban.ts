@@ -3,7 +3,7 @@ import {copyTemplateDirectory, findLaoban, laobanFile, ProjectDetailFiles} from 
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import {configProcessor} from "./configProcessor";
-import {Config, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory} from "./config";
+import {Config, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream} from "./config";
 import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
@@ -12,26 +12,29 @@ import * as os from "os";
 import {reportValidation, validateConfigOnHardDrive, validateLaobanJson} from "./validation";
 import {
     AppendToFileIf,
-    consoleOutputFor,
     defaultExecutor,
     executeAllGenerations,
-    ExecuteGenerations,
     ExecuteCommand,
+    ExecuteGenerations,
     ExecuteOneGeneration,
     executeOneGeneration,
     ExecuteScript,
     executeScript,
-    Generation, GenerationDecorators,
+    Generation,
+    GenerationDecorators,
     GenerationResult,
     Generations,
-    GenerationsDecorators, ScriptDecorators, ScriptResult, ShellResult, streamName
+    GenerationsDecorators,
+    ScriptDecorators,
+    streamName
 } from "./executors";
 import {Strings} from "./utils";
-import {createWriteStream} from "fs";
-import {log} from "util";
 
-function makeSessionId(d: Date, clashAvoider: any) {
-    return [d.getFullYear(), (d.getMonth() + 1), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), clashAvoider].join('.')
+const makeSessionId = (d: Date, suffix: any) => d.toISOString().replace(/:/g, '.') + '.' + suffix;
+
+function openStream(sc: ScriptInContextAndDirectoryWithoutStream): ScriptInContextAndDirectory {
+    let logStream = fs.createWriteStream(streamName(sc));
+    return {...sc, logStream, streams: [logStream]}
 }
 export class Cli {
     private executeGenerations: ExecuteGenerations;
@@ -86,7 +89,7 @@ export class Cli {
                 return
             }
         }
-        let sessionId = makeSessionId(new Date(), Math.random().toPrecision(3));
+        let sessionId = makeSessionId(new Date(),script.name);
         fse.mkdirp(path.join(this.config.sessionDir, sessionId)).then(() => {
             ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
                 let allDirectorys = details.map(d => d.directory)
@@ -100,10 +103,9 @@ export class Cli {
                     throttle: cmd.throttle,
                     context: {shellDebug: cmd.shellDebug, directories: details}
                 }
-                let scds: Generation = details.map(d => ({
+                let scds: Generation = details.map(d => openStream({
                     detailsAndDirectory: d,
-                    scriptInContext: sc,
-                    logStream: fs.createWriteStream(streamName(this.config.sessionDir, sessionId, d.directory))
+                    scriptInContext: sc
                 }))
                 let gens: Generations = [scds]
                 // console.log('here goes nothing-0')
@@ -221,34 +223,43 @@ if (issues.length > 0) {
     process.exit(2)
 }
 
-function reporter(gen: GenerationResult, enrich: (sr: ScriptResult[], text: string) => string) {
+function reporter(gen: GenerationResult, reportDecorator: ReportDecorator) {
     Promise.all(gen.map((sr, i) => {
-        let logFile = streamName(sr.scd.scriptInContext.config.sessionDir, sr.scd.scriptInContext.sessionId, sr.scd.detailsAndDirectory.directory);
+        let logFile = streamName(sr.scd);
         return new Promise<string>((resolve, reject) => {
             sr.scd.logStream.on('finish', () => resolve(logFile))
         })
     })).then(fileNames => fileNames.map(logFile => {
-        let text = fse.readFileSync(logFile).toString()
-        console.log(enrich(gen, text))
+        if (gen.length > 0) {
+            let report = {scd: gen[0].scd, text: fse.readFileSync(logFile).toString()}
+            let message = reportDecorator(report).text;
+            if (message.length > 0) console.log(message.trimRight())
+        }
     }))
-    gen.forEach(sr => sr.scd.logStream.end())
+    gen.forEach(sr => sr.scd.streams.forEach(s => s.end()))
 }
 
-function shellReporter(gen: GenerationResult) {
-    if (gen.length > 0) {
-        let scd: ScriptInContextAndDirectory = gen[0].scd;
-        if (scd.scriptInContext.shell && !scd.scriptInContext.dryrun) {
-            gen.forEach((sr, i) => {
-                console.log(sr.scd.detailsAndDirectory.directory)
-                sr.results.forEach((r, i) => {
-                    console.log('   ', r.details.details.commandString, r.details.details.directory.substring(sr.scd.detailsAndDirectory.directory.length))
-                    let out = consoleOutputFor(r);
-                    if (out.length > 0) {console.log(Strings.indentEachLine('        ', out))}
-                })
-            })
+interface Report {
+    scd: ScriptInContextAndDirectory,
+    text: string
+}
 
-        } else reporter(gen, (sr, text) => text)
-    }
+type ReportDecorator = (report: Report) => Report
+
+const prefixLinesThatDontStartWithStar = (s: string) => s.split('\n').map(s => s.startsWith('*') ? s : '        ' + s).join('\n');
+
+const shellReportDecorator: ReportDecorator = report =>
+    report.scd.scriptInContext.shell ?
+        {...report, text: prefixLinesThatDontStartWithStar(report.text)} :
+        report;
+
+const quietDecorator: ReportDecorator = report => report.scd.scriptInContext.quiet ? {...report, text: ''} : report
+
+function chainReports(decorators: ReportDecorator[]): ReportDecorator {return report => decorators.reduce((acc, r) => r(acc), report)}
+const reportDecorators: ReportDecorator = chainReports([shellReportDecorator, quietDecorator])
+
+function shellReporter(gen: GenerationResult) {
+    reporter(gen, reportDecorators)
 }
 
 let config = configProcessor(laoban, rawConfig)

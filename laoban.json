@@ -16,11 +16,28 @@
       ]
     },
     "ls"         : {"description": "lists all the projects", "commands": ["js:process.cwd()"]},
-    "slow": {
+    "slow"       : {
       "description": "prints something, delays 2s, prints something",
-      "commands": ["echo `pwd` 'start'", "sleep 2s", "echo `pwd` 'stop'"]
+      "commands"   : [
+        "echo `pwd` 'start'",
+        "sleep 2s",
+        "echo `pwd` 'one'",
+        "sleep 2s",
+        "echo `pwd` 'two'",
+        "sleep 2s",
+        "echo `pwd` 'three'",
+        "sleep 2s",
+        "echo `pwd` 'four'",
+        "sleep 2s",
+        "echo `pwd` 'five'",
+        "sleep 2s",
+        "echo `pwd` 'six'",
+        "sleep 2s",
+        "echo `pwd` 'seven'",
+        "sleep 2s",
+        "echo `pwd` 'eight'"
+      ]
     },
-
     "lsDist"     : {
       "description": "check that the directory option works", "commands": [
         {"command": "js:process.cwd()", "directory": "dist"},
