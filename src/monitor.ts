@@ -2,7 +2,6 @@ import * as readline from "readline";
 import {CommandDecorator, GenerationDecorator, ScriptDecorator} from "./decorators";
 import * as fs from "fs";
 import {Config} from "./config";
-import * as path from "path";
 
 let ch = '0123456789abcdefghijklmnopqrstuvwxyz'
 
@@ -47,11 +46,11 @@ export class Status {
     }
     dumpStatus() {
         console.clear()
-        this.generations.forEach((gen, i) => {
-            console.log("generation", i);
+        this.generations.forEach((gen, geni) => {
+            console.log("generation", geni);
             [...gen.directories.keys()].sort().forEach((dir, i) => {
                 let status = gen.directories.get(dir);
-                console.log('  ', `(${ch.charAt(i)}`, dir + (status.finished ? ' finished' : ''))
+                console.log('  ', this.getPrefix(geni, i), dir + (status.finished ? ' finished' : ''))
                 console.log('    ', this.commandStatusString(status.commands))
             })
         })
@@ -59,14 +58,16 @@ export class Status {
 
     logStatus() {
         console.clear()
-        this.generations.forEach((gen, i) => {
-            console.log("generation", i);
+        this.generations.forEach((gen, geni) => {
+            console.log("generation", geni);
             [...gen.directories.keys()].sort().forEach((dir, i) => {
-                let prefix = i == this.gen ? `(${i}` : '';
                 let status = gen.directories.get(dir);
-                console.log('  ' + prefix, this.directoryToLogName(dir) + (status.finished ? ' finished' : ''))
+                console.log('  ' + this.getPrefix(geni, i), this.directoryToLogName(dir) + (status.finished ? ' finished' : ''))
             })
         })
+    }
+    private getPrefix(geni: number, i: number) {
+        return geni == this.gen ? `(${i})` : '';
     }
     help() {
         console.log('Welcome to the status screen for Laoban')
