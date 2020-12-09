@@ -1,4 +1,3 @@
-
 import {StringAndWidth, Strings} from "./utils";
 import * as fs from "fs";
 
@@ -12,11 +11,7 @@ export function compactStatus(statusFile: string): Map<string, string> {
     let map = new Map<string, string>()
     lines.split("\n").forEach(line => {
         let groups = line.split(" ")
-        if (groups && groups[2])
-            // console.log('compact', groups)
-            map.set(groups[2], line)
-
-
+        if (groups && groups[2]) map.set(groups[2], line)
     })
     return map
 }

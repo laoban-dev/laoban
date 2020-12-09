@@ -109,8 +109,6 @@ export class Cli {
                     scriptInContext: sc
                 }))
                 let gens: Generations = [scds]
-                // console.log('here goes nothing-0')
-                // scds.forEach(summariseCommandDetails)
                 return this.executeGenerations(gens).catch(e => {
                     console.error('had error in execution')
                     console.error(e)
@@ -130,7 +128,6 @@ export class Cli {
         this.command('run', 'runs an arbitary command (the rest of the command line).', this.defaultOptions).//
             action((cmd: any) => {
                 let command = this.program.args.slice(0).filter(n => !n.startsWith('-')).join(' ')
-                // console.log(command)
                 let s: ScriptDetails = {name: '', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
                 this.executeCommand(cmd, s)
             })

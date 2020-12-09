@@ -28,7 +28,6 @@ export function validateScript(context: string, scriptName: string, json: any): 
 }
 
 export function validateLaobanJson(json: any): string[] {
-    // console.log('validate', JSON.stringify(json))
     let context = 'laoban.json';
     let cs = check(context, 'string', json)
     return [].concat(...[

@@ -5,16 +5,7 @@ import {Promise} from "core-js";
 import {chain, partition, writeTo} from "./utils";
 import {splitGenerationsByLinks} from "./generations";
 import * as fs from "fs";
-import {
-    CommandDetails,
-    ExecuteCommand,
-    ExecuteGeneration,
-    ExecuteGenerations,
-    ExecuteScript,
-    Generations,
-    ShellCommandDetails,
-    ShellResult
-} from "./executors";
+import {CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult} from "./executors";
 
 export type CommandDecorator = (e: ExecuteCommand) => ExecuteCommand
 export type ScriptDecorator = (e: ExecuteScript) => ExecuteScript
@@ -174,7 +165,6 @@ export class CommandDecorators {
     static dryRun: CommandDecorator = e => d => {
         if (d.scriptInContext.dryrun) {
             let value = dryRunContents(d);
-            // console.log('dryRun', value)
             writeTo(d.streams, value + '\n')
             return Promise.resolve([{duration: 0, details: d, stdout: value, err: null, stderr: ""}])
         } else return e(d)
@@ -215,11 +205,6 @@ export class CommandDecorators {
 
     static guard: GuardDecorator = {
         guard: d => d.scriptInContext.details.guard,
-        valid: (g, d) => {
-            let value = derefenceToUndefined(d.details.dic, g);
-            let result = value != ''
-            // console.log('guard', d.details.commandString, value, typeof value, result)
-            return result
-        }
+        valid: (g, d) => derefenceToUndefined(d.details.dic, g) != ''
     }
 }

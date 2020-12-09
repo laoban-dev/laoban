@@ -14,8 +14,6 @@ function replaceVar(dic: any, ref: string): string {
     if (ref === undefined) return undefined
     let i = ref.slice(2, ref.length - 1);
     let parts = i.split('.')
-    // console.log('dic', dic)
-    // console.log('parts', parts)
     try {
         let result = parts.reduce((acc, part) => acc[part], dic)
         return result !== undefined ? result : ref
@@ -25,21 +23,13 @@ function replaceVar(dic: any, ref: string): string {
 export function derefence(dic: any, s: string) {
     const regex = /(\$\{[^}]*\})/g
     let groups = s.match(regex)
-    if (groups) {
-        // console.log("    deref", s, groups)
-        let result = groups.reduce((acc, v) => acc.replace(v, replaceVar(dic, v)), s)
-        // console.log("      result", result)
-        return result
-    }
-    return s
+    return groups ? groups.reduce((acc, v) => acc.replace(v, replaceVar(dic, v)), s) : s;
 }
 
 export function replaceVarToUndefined(dic: any, ref: string): string | undefined {
     if (ref === undefined) return undefined
     let i = ref.slice(2, ref.length - 1);
     let parts = i.split('.')
-    // console.log('dic', dic)
-    // console.log('parts', parts)
     try {
         return parts.reduce((acc, part) => acc[part], dic)
     } catch (e) {return undefined}
@@ -48,20 +38,17 @@ export function derefenceToUndefined(dic: any, s: string) {
     const regex = /(\$\{[^}]*\})/g
     let groups = s.match(regex)
     if (groups) {
-        // console.log("    deref", s, groups)
-        let result = groups.reduce((acc, v) => {
+        return groups.reduce((acc, v) => {
             let repl = replaceVarToUndefined(dic, v)
             return acc.replace(v, repl ? repl : "")
         }, s)
-        // console.log("      result", result)
-        return result
     }
     return undefined
 }
 
-function cleanUpCommandString(dic: any): (s: string) => string {
-    return s => derefence(dic, s)
-}
+// function cleanUpCommandString(dic: any): (s: string) => string {
+//     return s => derefence(dic, s)
+// }
 function isCommand(x: (string | CommandDefn)): x is CommandDefn {
     return typeof x === 'object'
 }

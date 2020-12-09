@@ -52,7 +52,7 @@ export function streamName(scd: ScriptInContextAndDirectoryWithoutStream) {
 
 
 export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): ShellCommandDetails<CommandDetails>[] {
-    let result = scd.scriptInContext.details.commands.map(cmd => {
+    return scd.scriptInContext.details.commands.map(cmd => {
         let directory = calculateDirectory(scd.detailsAndDirectory.directory, cmd)
         let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
         let env = cleanUpEnv(dic, scd.scriptInContext.details.env);
@@ -67,9 +67,7 @@ export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): Shel
             })
         };
         return result
-    });
-    // console.log('buildShellCommandDetails', result)
-    return result
+    })
 }
 
 export let executeOneGeneration: (e: ExecuteScript) => ExecuteOneGeneration = e => gen => Promise.all(gen.map(x => e(x)))

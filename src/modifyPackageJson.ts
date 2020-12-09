@@ -7,7 +7,6 @@ export function loadPackageJsonInTemplateDirectory(config: Config, projectDetail
     return new Promise<any>((resolve, reject) => fs.readFile(file, (err, data) => {
         if (err) reject(err)
         if (data == undefined) {return reject(Error("Could not find template file" + file))}
-        // console.log(file, data, data == undefined)
         resolve(JSON.parse(data.toString()))
     }))
 }
@@ -49,15 +48,4 @@ function add(a: any, name: string, b: any) {
     let result = {...cleanExisting, ...cleanB};
     if (Object.keys(result).length === 0) delete a['name']
     else a[name] = result
-    // console.log("add", a, name, b)
 }
-
-//  jq --sort-keys --argjson details "$(cat $detailsFile)" '
-//       (. + $details) +
-//       ({dependencies:
-//          (.dependencies +        ($details.projectDetails.extraDeps)   +
-//          (reduce $details.projectDetails.links[]? as $i ({}; .[$i] = "<version>" )))
-//       }) +
-//       ({devDependencies: (.devDependencies + $details.projectDetails.extraDevDeps)}) +
-//       ({bin: ((if has("bin") then .bin else {} end) + $details.projectDetails.extraBins )})
-//        ' < "$templateDirectory/package.json"
