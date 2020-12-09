@@ -178,7 +178,7 @@ function trimmedDirectory(sc: ScriptInContext) {
 //export type ExecuteOneScript = (s: ScriptInContextAndDirectory) => Promise<ScriptResult>
 export class ScriptDecorators {
     static normalDecorators(): ScriptDecorator {
-        return e => e
+        return chain([this.shellDecoratorForScript])
     }
     static shellDecoratorForScript: ScriptDecorator = e => scd => {
         console.log('in script decorator')
