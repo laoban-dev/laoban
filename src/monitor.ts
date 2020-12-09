@@ -1,14 +1,20 @@
 import * as readline from "readline";
 import {CommandDecorator, GenerationDecorator, ScriptDecorator} from "./decorators";
+import * as fs from "fs";
+import {Config} from "./config";
+import * as path from "path";
+
+let ch = '0123456789abcdefghijklmnopqrstuvwxyz'
 
 
 export class Status {
 
-    directoryToLogName: (dir: string)=> string
+    directoryToLogName: (dir: string) => string
     generations: GenerationStatus[] = []
     gen: number = -1
+    config: Config;
 
-        constructor(directoryToLogName: (dir: string) => string) {this.directoryToLogName = directoryToLogName;}
+    constructor(config: Config, directoryToLogName: (dir: string) => string) {this.config = config, this.directoryToLogName = directoryToLogName;}
     genStatus() {return this.generations[this.gen]}
     dirStatus(dir: string) {return this.genStatus().directories.get(dir)}
 
@@ -32,24 +38,63 @@ export class Status {
     commandFinished(directory: string, command: string) {
     }
     dumpStatus() {
+        console.clear()
         this.generations.forEach((gen, i) => {
             console.log("generation", i);
             [...gen.directories.keys()].sort().forEach((dir, i) => {
                 let status = gen.directories.get(dir);
-                console.log('  ', `(${i}`, dir + (status.finished ? ' finished' : ''))
+                console.log('  ', `(${ch.charAt(i)}`, dir + (status.finished ? ' finished' : ''))
                 console.log('    ', status.commands.join(','))
             })
         })
     }
+
     logStatus() {
+        console.clear()
         this.generations.forEach((gen, i) => {
             console.log("generation", i);
             [...gen.directories.keys()].sort().forEach((dir, i) => {
+                let prefix = i == this.gen ? `(${i}` : '';
                 let status = gen.directories.get(dir);
-                console.log('  ', `(${i}`, this.directoryToLogName(dir) + (status.finished ? ' finished' : ''))
+                console.log('  ' + prefix, this.directoryToLogName(dir) + (status.finished ? ' finished' : ''))
             })
         })
     }
+    help() {
+        console.log('Welcome to the status screen for Laoban')
+        console.log('   Press ? for this help')
+        console.log('   Press (capital) S for overall status')
+        console.log('   Press (capital) L for information about where the logs are');
+        console.log('   Press a number or letter to get the tail of the log file which has that number or letter in the status')
+        let directories = this.genStatus().directories;
+        [...directories.keys()].sort().forEach((dir, i) => console.log('       ', ch.charAt(i), 'tail of the log for ', dir))
+    }
+    tailLog(index: number) {
+        console.clear()
+        let gen = this.genStatus();
+        let directories = gen.directories;
+        let keys = [...directories.keys()].sort()
+        let dir = keys[index]
+        if (dir) {
+            let status = gen.directories.get(dir);
+            console.log(dir + (status.finished ? ' finished' : ''))
+            console.log('  ', status.commands.join(','))
+            console.log()
+            console.log(this.directoryToLogName(dir))
+            console.log(''.padStart(this.directoryToLogName(dir).length, '-'))
+            fs.readFile(this.directoryToLogName(dir), (err, data) => {
+                if (err) console.error(err)
+                let slicedText = data.toString().split('\n').slice(-10).join('\n');
+                console.log(slicedText)
+            })
+
+        } else {
+            console.log('cannot find tail of', index)
+            console.log()
+            this.help()
+        }
+    }
+
 }
 
 interface GenerationStatus {
@@ -60,12 +105,6 @@ interface DirectoryStatus {
     finished: boolean
 }
 
-function help() {
-    console.log('Welcome to the status screen for Laoban')
-    console.log('   Press ? for this help')
-    console.log('   Press s for overall status')
-    console.log('   Press l for information about where the logs are')
-}
 
 export let monitorGenerationDecorator: GenerationDecorator = e => d => {
     if (d.length > 0) {
@@ -101,21 +140,34 @@ export function monitor(status: Status, promise: Promise<void>) {
     process.stdin.setRawMode(true);
     process.stdin.resume()
     process.stdin.on('keypress', (str, key) => {
-        switch (str) {
-            case '?':
-                help();
-                break
-            case 's':
-                console.clear()
-                status.dumpStatus();
-                break;
-            case 'l':
-                console.clear()
-                status.logStatus();
-                break;
-        }
-        if (key.sequence == '\x03') {
-            process.kill(process.pid, 'SIGINT')
+        try {
+            switch (str) {
+                case '?':
+                    console.clear()
+                    status.help();
+                    break
+                case 'S':
+                    console.clear()
+                    status.dumpStatus();
+                    break;
+                case 'L':
+                    console.clear()
+                    status.logStatus();
+                    break;
+
+            }
+            let index = ch.indexOf(str)
+            if (index >= 0) {
+                status.tailLog(index)
+            }
+            if (key.sequence == '\x03') {
+                process.kill(process.pid, 'SIGINT')
+            }
+        } catch (e) {
+            console.clear()
+            console.error('unexpected error. Press ? for help')
+            console.error()
+            console.error(e)
         }
     })
 }

@@ -96,7 +96,7 @@ export class Cli {
             ProjectDetailFiles.workOutProjectDetails(laoban, cmd).then(details => {
                 let allDirectorys = details.map(d => d.directory)
                 let dirWidth = Strings.maxLength(allDirectorys) - laoban.length
-                let status = new Status(dir => streamNamefn(this.config.sessionDir, sessionId, sc.details.name, dir))
+                let status = new Status(this.config, dir => streamNamefn(this.config.sessionDir, sessionId, sc.details.name, dir))
                 let sc: ScriptInContext = {
                     sessionId,
                     status,
@@ -181,7 +181,7 @@ export class Cli {
         this.addScripts(config.scripts, this.defaultOptions)
         this.program.on('--help', () => {
             console.log('');
-            console.log("Press ? while running for list of 'status'comments")
+            console.log("Press ? while running for list of 'status' commands. S is the most useful")
             console.log()
             console.log('Notes');
             console.log("  If you are 'in' a project (the current directory has a project.details.json') then commands are executed by default just for the current project ");
