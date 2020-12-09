@@ -59,7 +59,7 @@ export class Cli {
             option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "").//
             option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
             option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", config.throttle).//
-            option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet)", false)
+            option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false)
     }
 
     program = require('commander').//

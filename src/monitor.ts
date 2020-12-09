@@ -33,9 +33,17 @@ export class Status {
 
     commandStart(directory: string, command: string) {
         let status = this.dirStatus(directory)
-        status.commands.push(command)
+        status.commands.push({name: command, startTime: new Date()})
     }
     commandFinished(directory: string, command: string) {
+        let status = this.dirStatus(directory)
+        status.commands[status.commands.length - 1].endTime = new Date()
+        
+    }
+    commandStatusString(s: CommandStatus[]) {
+        let now = new Date()
+        function duration(s: CommandStatus) {return Math.round(((s.endTime ? s.endTime : now).getTime() - s.startTime.getTime()) / 1000)}
+        return s.map(s => `${s.name}(${duration(s)})`).join(', ')
     }
     dumpStatus() {
         console.clear()
@@ -44,7 +52,7 @@ export class Status {
             [...gen.directories.keys()].sort().forEach((dir, i) => {
                 let status = gen.directories.get(dir);
                 console.log('  ', `(${ch.charAt(i)}`, dir + (status.finished ? ' finished' : ''))
-                console.log('    ', status.commands.join(','))
+                console.log('    ', this.commandStatusString(status.commands))
             })
         })
     }
@@ -78,7 +86,7 @@ export class Status {
         if (dir) {
             let status = gen.directories.get(dir);
             console.log(dir + (status.finished ? ' finished' : ''))
-            console.log('  ', status.commands.join(','))
+            console.log('  ', this.commandStatusString(status.commands))
             console.log()
             console.log(this.directoryToLogName(dir))
             console.log(''.padStart(this.directoryToLogName(dir).length, '-'))
@@ -101,8 +109,14 @@ interface GenerationStatus {
     directories: Map<string, DirectoryStatus>
 }
 interface DirectoryStatus {
-    commands: string[]
+    commands: CommandStatus[]
     finished: boolean
+}
+
+interface CommandStatus {
+    name: string,
+    startTime: Date,
+    endTime?: Date
 }
 
 
