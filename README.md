@@ -41,7 +41,8 @@ If you want to use it with maven or sbt or... it works fine (although those tool
      * Now you know how all the projects have responded to the upgrade: they are all using it, and they have been compiled and tested
 * Updating a global version number
      * If the projects are tightly coupled, I like them to share a version number.
-
+* When the commands take a long time you can see the tail of the logs of the commands easily
+     * Press ? while the commands are running for a menu
 
 # Typical usage
 
@@ -198,6 +199,14 @@ not uncommon to have a guard condition on the command. For example:
       "env"        : {"PORT": "${projectDetails.details.port}"}
     },
 ```
+
+## Monitoring
+While laoban is running you can press ? to get an interactive menu. 
+* You can press (capital) S to see the status of all your scripts as they are executed in different directories
+    * The status includes 'which commands have finished', 'how long they ran for'
+* You can press (capital) L for the names of the log files if you want to do something like `tail -f`
+* You can press a number (or letter if there are more than 10 directory) to see the tail of the log for that log 
+
 
 ## options
 

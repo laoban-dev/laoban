@@ -38,7 +38,7 @@ export class Status {
     commandFinished(directory: string, command: string) {
         let status = this.dirStatus(directory)
         status.commands[status.commands.length - 1].endTime = new Date()
-        
+
     }
     commandStatusString(s: CommandStatus[]) {
         let now = new Date()
