@@ -7,7 +7,6 @@ let ch = '0123456789abcdefghijklmnopqrstuvwxyz'
 
 
 export class Status {
-
     directoryToLogName: (dir: string) => string
     generations: GenerationStatus[] = []
     gen: number = -1
@@ -150,41 +149,39 @@ export let monitorCommandDecorator: CommandDecorator = e => d => {
     })
 }
 export function monitor(status: Status, promise: Promise<void>) {
-    if (process.stdin.isTTY) {
-        readline.emitKeypressEvents(process.stdin);
-        promise.then(() => process.exit(0))
-        process.stdin.setRawMode(true);
-        process.stdin.resume()
-        process.stdin.on('keypress', (str, key) => {
-            try {
-                switch (str) {
-                    case '?':
-                        console.clear()
-                        status.help();
-                        break
-                    case 'S':
-                        console.clear()
-                        status.dumpStatus();
-                        break;
-                    case 'L':
-                        console.clear()
-                        status.logStatus();
-                        break;
+    readline.emitKeypressEvents(process.stdin);
+    promise.then(() => process.exit(0))
+    process.stdin.setRawMode(true);
+    process.stdin.resume()
+    process.stdin.on('keypress', (str, key) => {
+        try {
+            switch (str) {
+                case '?':
+                    console.clear()
+                    status.help();
+                    break
+                case 'S':
+                    console.clear()
+                    status.dumpStatus();
+                    break;
+                case 'L':
+                    console.clear()
+                    status.logStatus();
+                    break;
 
-                }
-                let index = ch.indexOf(str)
-                if (index >= 0) {
-                    status.tailLog(index)
-                }
-                if (key.sequence == '\x03') {
-                    process.kill(process.pid, 'SIGINT')
-                }
-            } catch (e) {
-                console.clear()
-                console.error('unexpected error. Press ? for help')
-                console.error()
-                console.error(e)
             }
-        })
-    }
+            let index = ch.indexOf(str)
+            if (index >= 0) {
+                status.tailLog(index)
+            }
+            if (key.sequence == '\x03') {
+                process.kill(process.pid, 'SIGINT')
+            }
+        } catch (e) {
+            console.clear()
+            console.error('unexpected error. Press ? for help')
+            console.error()
+            console.error(e)
+        }
+    })
 }

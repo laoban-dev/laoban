@@ -254,29 +254,17 @@ The idea of `status` is to give a way to visualise what is happening across all 
 
 # TODO
 
-## Validation on laoban.json / project.details.json
-Now we have some... but it bombs out at the first error. Would like nicer message
-
-## Improve the 'shelling out'. 
-Currently we shell out and wait for it to finish. It would be better to use spawn and be able to 
-process the logs as the commands execute. This will reduce memory load and give a better experience
-
 # Nicer directory names so that we can see 'offset from the root'
 This is just a 'nicer looking output'. 
 
-# Nicer progress reporting
+# Make easily available on npmjs with name laoban
+* Have reserved name
 
+# Monitor improvements
+* Had a situation where everything was finished but one thing that was hanging
+* It would be nice to be able to 'kill' the one thing that is hanging
 
-### what should the 'gui' look like?
-Mostly we want to know that each is going ok. It would be cool if we could have an interactive gui, 
-and flip between the outputs... A bit like top
-
-Use cases:
-* npm start... (ctrl c kills the log... so bad)
-* npm install... takes ages. We just want to see what is happening
-* npm test... can be the same
-
-So 
+# Move to the ts project so we can easily dogfood
 
 
 
