@@ -1,4 +1,4 @@
-
+#!/usr/bin/env node
 import {copyTemplateDirectory, findLaoban, laobanFile, ProjectDetailFiles} from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
@@ -31,7 +31,6 @@ import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDeco
 import {shellReporter} from "./report";
 import * as readline from "readline";
 import {monitor, Status} from "./monitor";
-const pkg = require('../package.json');
 
 const makeSessionId = (d: Date, suffix: any) => d.toISOString().replace(/:/g, '.') + '.' + suffix;
 
@@ -42,7 +41,6 @@ function openStream(sc: ScriptInContextAndDirectoryWithoutStream): ScriptInConte
 export class Cli {
     private executeGenerations: ExecuteGenerations;
     private config: Config;
-    private laoban: string;
 
     command(cmd: string, description: string, ...fns: ((a: any) => any)[]) {
         var p = this.program.command(cmd).description(description)
@@ -60,13 +58,13 @@ export class Cli {
             option('-a, --all', "executes this in all projects, even if 'ín' a project", false).//
             option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "").//
             option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
-            option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel").//
+            option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", config.throttle).//
             option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false)
     }
 
     program = require('commander').//
         arguments('').//
-        version(pkg.version)//
+        version('0.1.0')//
 
 
     addScripts(scripts: ScriptDetails[], options: (program: any) => any) {
@@ -87,17 +85,17 @@ export class Cli {
             }
         }
         if (script.pmGuard) {
-            if (!this.config.packageManager.match(script.pmGuard)) {
-                console.error('Package Manager is ', this.config.packageManager, `and this command has an pmGuard of  [${script.pmGuard}]`)
+            if (!config.packageManager.match(script.pmGuard)) {
+                console.error('Package Manager is ', config.packageManager, `and this command has an pmGuard of  [${script.pmGuard}]`)
                 if (script.guardReason) console.error(script.guardReason)
                 return
             }
         }
         let sessionId = makeSessionId(new Date(), script.name);
         fse.mkdirp(path.join(this.config.sessionDir, sessionId)).then(() => {
-            ProjectDetailFiles.workOutProjectDetails(this.laoban, cmd).then(details => {
+            ProjectDetailFiles.workOutProjectDetails(index, cmd).then(details => {
                 let allDirectorys = details.map(d => d.directory)
-                let dirWidth = Strings.maxLength(allDirectorys) - this.laoban.length
+                let dirWidth = Strings.maxLength(allDirectorys) - index.length
                 let status = new Status(this.config, dir => streamNamefn(this.config.sessionDir, sessionId, sc.details.name, dir))
                 let sc: ScriptInContext = {
                     sessionId,
@@ -127,12 +125,11 @@ export class Cli {
     constructor(config: Config, executeGenerations: ExecuteGenerations) {
         this.executeGenerations = executeGenerations;
         this.config = config
-        this.laoban = config.laobanDirectory
         this.command('config', 'displays the config', this.defaultOptions).//
             action((cmd: any) => {
                 let simpleConfig = {...config}
                 delete simpleConfig.scripts
-                console.log(this.laoban, JSON.stringify(simpleConfig, null, 2))
+                console.log(index, JSON.stringify(simpleConfig, null, 2))
             })
         this.command('run', 'runs an arbitary command (the rest of the command line).', this.defaultOptions).//
             action((cmd: any) => {
@@ -143,7 +140,7 @@ export class Cli {
 
         this.command('status', 'shows the status of the project in the current directory', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.workOutProjectDetails(this.laoban, cmd).then(ds => {
+                ProjectDetailFiles.workOutProjectDetails(index, cmd).then(ds => {
                     let compactedStatusMap: DirectoryAndCompactedStatusMap[] = ds.map(d =>
                         ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, this.config.status))}))
                     let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
@@ -152,18 +149,18 @@ export class Cli {
             })
         this.command('compactStatus', 'crunches the status', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.workOutProjectDetails(this.laoban, cmd).then(ds => {
+                ProjectDetailFiles.workOutProjectDetails(index, cmd).then(ds => {
                     ds.forEach(d => writeCompactedStatus(path.join(d.directory, this.config.status), compactStatus(path.join(d.directory, this.config.status))))
                 })
             })
         this.command('validate', 'checks the laoban.json and the project.details.json', this.defaultOptions).//
             action((cmd: any) => {
-                ProjectDetailFiles.workOutProjectDetails(this.laoban, cmd).then(ds => validateConfigOnHardDrive(this.config, ds)).//
+                ProjectDetailFiles.workOutProjectDetails(index, cmd).then(ds => validateConfigOnHardDrive(this.config, ds)).//
                     then(v => reportValidation(v)).catch(e => console.error(e.message))
             })
         this.command('profile', 'shows the time taken by named steps of commands', this.defaultOptions).//
             action((cmd: any) => {
-                let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.workOutProjectDetails(this.laoban, cmd).then(ds => Promise.all(ds.map(d =>
+                let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.workOutProjectDetails(index, cmd).then(ds => Promise.all(ds.map(d =>
                     loadProfile(this.config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))))
                 x.then(p => {
                     let data = prettyPrintProfileData(p);
@@ -174,10 +171,10 @@ export class Cli {
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>
-                ProjectDetailFiles.findAndLoadSortedProjectDetails(this.laoban, true).then(ds => ds.forEach(p => console.log(p.directory))))
+                ProjectDetailFiles.findAndLoadSortedProjectDetails(index, true).then(ds => ds.forEach(p => console.log(p.directory))))
         this.command('updateConfigFilesFromTemplates', "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", this.defaultOptions).//
             action((cmd: any) =>
-                ProjectDetailFiles.workOutProjectDetails(this.laoban, cmd).then(ds => ds.forEach(p =>
+                ProjectDetailFiles.workOutProjectDetails(index, cmd).then(ds => ds.forEach(p =>
                     copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
                         loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
                             loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))))
@@ -215,4 +212,26 @@ export class Cli {
     }
 }
 
+let index = findLaoban(process.cwd())
+let rawConfig = JSON.parse(fs.readFileSync(laobanFile(index)).toString())
+let issues = validateLaobanJson(rawConfig);
+if (issues.length > 0) {
+    issues.forEach(e => console.error(e))
+    process.exit(2)
+}
+
+export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
+
+let config = configProcessor(index, rawConfig)
+let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
+    condition ? fse.appendFile(name, contentGenerator()) : Promise.resolve()
+
+let executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
+let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
+let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
+let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter))
+
+let cli = new Cli(config, executeGenerations);
+
+cli.start(process.argv)
 
