@@ -1,0 +1,8 @@
+{
+  "template"      : "noreact",
+  "name"          : "@phil-rice/variables",
+  "description"   : "A library that can dereference ${xxx} in strings",
+  "details": {
+    "publish"     : true
+  }
+}

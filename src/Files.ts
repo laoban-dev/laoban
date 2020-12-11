@@ -24,9 +24,9 @@ export function findLaoban(directory: string) {
 }
 
 interface ProjectDetailOptions {
-    all: boolean,
-    one: boolean,
-    projects: string
+    all?: boolean,
+    one?: boolean,
+    projects?: string
 }
 export class ProjectDetailFiles {
 
@@ -39,22 +39,23 @@ export class ProjectDetailFiles {
             pd.projectDetails ? this.loadProjectDetails(process.cwd()).then(x => [x]) : this.findAndLoadProjectDetailsFromChildren(root))
     }
 
-    static findAndLoadSortedProjectDetails(root: string, all: boolean): Promise<ProjectDetailsAndDirectory[]> {
-        let unsorted = all ? this.findAndLoadProjectDetailsFromChildren(root) : this.loadProjectDetails(process.cwd()).then(x => [x])
-        return unsorted.then(raw => raw.sort((l, r) => {
-            try { return l.projectDetails.details.generation - r.projectDetails.details.generation} catch (e) {return 0}
-        }))
-    }
 
     static findAndLoadProjectDetailsFromChildren(root: string): Promise<ProjectDetailsAndDirectory[]> {return Promise.all(this.findProjectDirectories(root).map(this.loadProjectDetails))}
 
     static loadProjectDetails(root: string): Promise<ProjectDetailsAndDirectory> {
         let rootAndFileName = path.join(root, projectDetailsFile);
-        return new Promise<ProjectDetailsAndDirectory>((resolve) => {
+        return new Promise<ProjectDetailsAndDirectory>((resolve, reject) => {
             fs.readFile(rootAndFileName, (err, data) => {
-                if (err) {resolve({directory: root})} else
-                    resolve({directory: root, projectDetails: JSON.parse(data.toString())})
-            })
+                    if (err) {resolve({directory: root})} else {
+                        try {
+                            let projectDetails = JSON.parse(data.toString());
+                            resolve({directory: root, projectDetails: projectDetails})
+                        } catch (e) {
+                            return reject(new Error(`Cannot parse the file ${rootAndFileName}\n${e}`))
+                        }
+                    }
+                }
+            )
         })
     }
 

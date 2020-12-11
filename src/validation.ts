@@ -1,6 +1,7 @@
 import {CommandDefn, Config, ProjectDetailsAndDirectory, RawConfig, ScriptDefn} from "./config";
 import * as fs from "fs";
 import * as path from "path";
+import {flatten} from "./utils";
 
 function check(context: string, expectedType, json: any): (fieldName: string) => string[] {
     return fieldName => {
@@ -27,10 +28,12 @@ export function validateScript(context: string, scriptName: string, json: any): 
     ])
 }
 
+
+
 export function validateLaobanJson(json: any): string[] {
     let context = 'laoban.json';
     let cs = check(context, 'string', json)
-    return [].concat(...[
+    return flatten([
         cs('templateDir'),
         cs('versionFile'),
         cs('log'),
@@ -46,9 +49,27 @@ export function validateLaobanJson(json: any): string[] {
 export function validateTemplateFile(c: Config, d: ProjectDetailsAndDirectory): string[] {
     try {
         let templateDir = path.join(c.templateDir, d.projectDetails.template);
-        return checkDirectoryExists(`project.json.details in ${d.directory} has template ${d.projectDetails.template}. `, templateDir)
+        return flatten([
+            checkDirectoryExists(`project.json.details in ${d.directory} has template ${d.projectDetails.template}. `, templateDir),
+            validatePackageJsonInTemplateDir(`package.json in template directory ${templateDir}`, templateDir)])
     } catch (e) {return [`Could not access project.details.json. TemplateDir is [${c.templateDir}] template is [${d.projectDetails.template}]`]}
 }
+
+export function validatePackageJsonInTemplateDir(context: string, dir: string): string[] {
+    let filename = path.join(dir, 'package.json')
+    try {
+        let packageJson = JSON.parse(fs.readFileSync(filename).toString());
+
+        let co = check(context, 'object', packageJson)
+        let cs = check(context, 'string', packageJson)
+            return flatten([
+            co('dependencies')
+        ])
+    } catch (e) {
+        return [`${context} Error accessing, ${filename}\n${e}`]
+    }
+}
+
 export function validateProjectDetails(c: Config, d: ProjectDetailsAndDirectory): ProjectDetailsIssues {
     let context = `${d.directory}/project.details.json`;
     let cs = check(context, 'string', d.projectDetails)
@@ -97,6 +118,8 @@ interface ValidationIssues {
     laobanJsonIssues: string[],
     projectDetailsIssues: ProjectDetailsIssues[]
 }
+
+
 
 export function validateConfigOnHardDrive(c: Config, pds: ProjectDetailsAndDirectory[]): ValidationIssues {
     let laobanJsonIssues: string[] = [].concat(...[

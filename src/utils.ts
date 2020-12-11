@@ -1,7 +1,10 @@
 import {Writable} from "stream";
 
-export function flatten<T>(list: T[][]): T[]{
+export function flatten<T>(list: T[][]): T[] {
     return [].concat(...list)
+}
+export function removeDuplicates<T>(list: T[]): T[] {
+    return [...new Set(list)]
 }
 export class Strings {
     static maxLength = (ss: string[]) => Math.max(...(ss.map(s => s.length)));
@@ -21,6 +24,14 @@ export interface StringAndWidth {
     value: string,
     width: number
 }
+
+export function groupBy<T>(xs: T[], by: (t: T) => any): {[key: string]: T[]} {
+    return xs.reduce((rv, x) => {
+        (rv[by(x)] = rv[by(x)] || []).push(x);
+        return rv;
+    }, {});
+}
+
 
 export var partition = function (arr, length) {
     var result = [];

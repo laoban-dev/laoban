@@ -1,33 +1,39 @@
 {
-  "name": "laoban",
-  "version": "1.0.0",
-  "description": "Managing many javascript repositories",
-  "main": "laoban.js",
-  "scripts": {
-    "test": "mocha dist/test/**/*.js --timeout 5000 --exit"
+  "name"           : "laoban",
+  "version"        : "1.0.0",
+  "description"    : "Managing many javascript repositories",
+  "main"           : "laoban.js",
+  "scripts"        : {
+    "test"      : "jest --config jest.config.json",
+    "test:watch": "npm run test -- --watch"
   },
-  "author": "Phil <phil.rice@validoc.org>",
-  "license": "MIT",
-  "dependencies": {
-    "commander": "^4.1.1",
-    "core-js": "^3.6.4",
-    "fs-extra": "^9.0.1",
+  "author"         : "Phil <phil.rice@validoc.org>",
+  "license"        : "MIT",
+  "dependencies"   : {
+    "commander" : "^4.1.1",
+    "core-js"   : "^3.6.4",
+    "fs-extra"  : "^9.0.1",
     "typescript": "^3.7.5"
   },
-  "repository": {
+  "repository"     : {
     "type": "git",
-    "url": "git@github.com:phil-rice/laoban.git"
+    "url" : "git@github.com:phil-rice/laoban.git"
   },
   "devDependencies": {
-    "@types/commander": "^2.12.2",
-    "@types/core-js": "^2.5.2",
-    "@types/mocha": "^5.2.7",
-    "@types/node": "^12.12.38",
-    "@types/fs-extra": "^9.0.4",
-    "mocha": "^6.2.3",
-    "nyc": "^15.0.1"
+    "@types/commander"           : "^2.12.2",
+    "@types/core-js"             : "^2.5.2",
+    "@types/mocha"               : "^5.2.7",
+    "@types/node"                : "^12.12.38",
+    "@types/fs-extra"            : "^9.0.4",
+    "@testing-library/jest-dom"  : "^5.11.5",
+    "@testing-library/user-event": "^12.2.0",
+    "@types/jest"                : "^26.0.15",
+    "jest"                       : "^26.6.0",
+    "ts-jest"                    : "^26.4.4",
+    "mocha"                      : "^6.2.3",
+    "nyc"                        : "^15.0.1"
   },
-  "bin": {
+  "bin"            : {
     "laoban": "dist/index.js"
   }
 }

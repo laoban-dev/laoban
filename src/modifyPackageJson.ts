@@ -31,7 +31,8 @@ export function modifyPackageJson(raw: any, version: string, projectDetails: Pro
     let result = {...raw}
     Object.assign(result, projectDetails)
     add(result, 'dependencies', projectDetails.details.extraDeps)
-    projectDetails.details.links.map(l => result['dependencies'][l] = version)
+    let links = projectDetails.details.links ? projectDetails.details.links : [];
+    links.map(l => result['dependencies'][l] = version)
     add(result, 'devDependencies', projectDetails.details.extraDevDeps)
     add(result, 'bin', projectDetails.details.extraBins)
     delete result.projectDetails
@@ -42,10 +43,11 @@ export function modifyPackageJson(raw: any, version: string, projectDetails: Pro
 }
 
 function add(a: any, name: string, b: any) {
+    if (b){
     let existing = a[name]
     let cleanExisting = existing ? existing : {}
     let cleanB = b ? b : {}
     let result = {...cleanExisting, ...cleanB};
     if (Object.keys(result).length === 0) delete a['name']
     else a[name] = result
-}
+}}

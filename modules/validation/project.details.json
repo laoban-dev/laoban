@@ -1,0 +1,8 @@
+{
+  "template"      : "noreact",
+  "name"          : "@phil-rice/validation",
+  "description"   : "A library for validating json",
+  "details": {
+    "publish"     : true
+  }
+}

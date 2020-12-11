@@ -17,6 +17,9 @@ export interface RawConfig extends ConfigVariables {
     scripts?: ScriptDefns,
     projectScripts?: ScriptDefns
 }
+export interface PackageJson {
+    dependencies: { [key: string]: string }
+}
 
 export interface ScriptDetails {
     name: string,
@@ -43,6 +46,8 @@ export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectory
     logStream: Writable
     streams: Writable[]
 }
+
+
 export interface ScriptInContext {
     dirWidth: number,
     status: Status,
@@ -106,16 +111,16 @@ export interface ProjectDetailsAndDirectory {
     directory: string
     projectDetails?: ProjectDetails
 }
+export interface Details {
+    "publish": boolean,
+    "links": string[],
+    "extraDeps": any,
+    "extraDevDeps": any,
+    extraBins: any
+}
 export interface ProjectDetails {
     "name": string,
     "description": string,
     template: string,
-    "details": {
-        "generation": number,
-        "publish": boolean,
-        "links": string[],
-        "extraDeps": any,
-        "extraDevDeps": any,
-        extraBins: any
-    }
+    "details": Details
 }

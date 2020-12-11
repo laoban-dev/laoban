@@ -5,6 +5,36 @@ import {Config} from "./config";
 
 let ch = '0123456789abcdefghijklmnopqrstuvwxyz'
 
+;
+
+[1, 2, 3].map(b => fn(7, b));
+
+function fn(a: number, b: number): number {
+    return a + b
+}
+
+function addValue(a: number): (b: number) => number {
+    return b => a + b
+}
+[1, 2, 3].map(addValue(7));
+
+const fn3 = (a: number) => (b: number) => a + b;
+
+const fn4: (a: number) => (b: number) => number =
+    a => b => a + b;
+
+
+function option<T>(fnToDisplay: (t: T) => string, t: T) {
+    return fnToDisplay(t)
+}
+
+function option2<T>(fnToDisplay: (t: T) => string): (t: T) => string {
+    return t => fnToDisplay(t)
+}
+
+
+
+
 
 export class Status {
 

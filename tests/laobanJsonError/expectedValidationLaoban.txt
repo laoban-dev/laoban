@@ -1,0 +1,8 @@
+laobanJsonError.templateDir should be a string
+laobanJsonError.versionFile should be a string
+laobanJsonError.log should be a string
+laobanJsonError.status should be a string
+laobanJsonError.profile should be a string
+laobanJsonError.scripts.link.commands[0].command should be a string
+laobanJsonError.scripts.link.commands[1].command should be a string
+laobanJsonError.scripts.log.description should be a string

@@ -1,0 +1,12 @@
+{
+  "template"      : "noreact",
+  "name"          : "projectName",
+  "description"   : "A sample project",
+  "details": {
+    "publish"     : true,
+    "links"       : [],
+    "extraDeps"   : {},
+    "extraDevDeps": {},
+    "extraBins": {}
+  }
+}

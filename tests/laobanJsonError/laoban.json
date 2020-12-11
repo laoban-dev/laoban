@@ -1,0 +1,18 @@
+{
+  "templacteDir"  : "${laobanDirectory}/template",
+  "verscionFile"  : "${templateDir}/version.txt",
+  "loag"          : ".log",
+  "statsus"       : ".status",
+  "profcile"      : ".profile",
+  "packageManager": "yarn",
+  "scripts"       : {
+    "log" : {"notDescription": "displays the log file", "commands": ["cat ${log}"]},
+    "link": {
+      "description": "call '${packageManager} link' in each project directory",
+      "commands"   : [
+        {"name": "tsc", "not": "tsc --noEmit false --outDir dist", "status": true},
+        {"name": "link", "notCmd": "cd dist && ${packageManager} link", "status": true}
+      ]
+    }
+  }
+}
