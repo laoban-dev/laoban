@@ -5,12 +5,12 @@ import {Validate} from "./val";
 
 
 export function validateLaobanJson(v: Validate<RawConfig>): Validate<RawConfig> {
-    return v.isString('templateDir').//
-        isString('versionFile').//
-        isString('log').//
-        isString('status').//
-        isString('profile').//
-        isString('packageManager').//
+    return v.isString('templateDir', 'The template directory is where the templates that are used in project.details.json are used').//
+        isString('versionFile', `The versionFile is the location of the 'project version number', used during update`).//
+        isString('log', 'This is used to say what the name of the log file in the project directory. It is typically ".log". The output from commands is written here').//
+        isString('status', 'This is used to record the success or failure of commands (such as "test")').//
+        isString('profile', 'This is used to record how long things took to run').//
+        isString('packageManager', 'Typically npm or yarn').//
         isObjectofObjects<ScriptDefn>('scripts', validateScriptDefn)
 }
 
@@ -56,11 +56,11 @@ function validateProjectDetails(v: Validate<ProjectDetails>) {
 }
 
 function validateDetails(v: Validate<Details>) {
-    return v.isBoolean("publish").//
+    return v.isBoolean("publish", 'Should the project be published').//
         isArrayofObjects('links', v => v).//
-        optObject("extraDeps", v => v).//
-        optObject("extraDevDeps", v => v).//
-        optObject("extraBins", v => v)
+        optObject("extraDeps", v => v, 'These are added to package.json dependencies').//
+        optObject("extraDevDeps", v => v, 'These are added to package.json devDependencies').//
+        optObject("extraBins", v => v, 'These are added to package.json bin')
 }
 function validatePackageJson(v: Validate<PackageJson>) {
     return v.isObject('dependencies', v => v)

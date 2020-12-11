@@ -13,7 +13,8 @@ import {configProcessor} from "./configProcessor";
 import instantiateStreaming = WebAssembly.instantiateStreaming;
 
 function dirsIn(root: string) {
-    return fs.readdirSync('tests').map(testDirName => path.join('tests', testDirName)).filter(d => fs.statSync(d).isDirectory())
+    let testRoot = path.join('..', '..','tests')
+    return fs.readdirSync(testRoot).map(testDirName => path.join(testRoot, testDirName)).filter(d => fs.statSync(d).isDirectory())
 
 }
 describe("validate laoban json", () => {
@@ -37,7 +38,7 @@ describe("validate directories", () => {
             it(`should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
                 let expected = fs.readFileSync(path.join(testDir, 'expectedValidateProjectDetailsAndTemplate.txt')).toString().trim()
                 let config: Config = configProcessor(testDir, raw)
-                return ProjectDetailFiles.workOutProjectDetails(testDir, {}).//
+                return ProjectDetailFiles.workOutProjectDetails(config, {}).//
                     then(pds => validateProjectDetailsAndTemplates(config, pds)).//
                     then(actual => {
                             let expected = fs.readFileSync(path.join(testDir, 'expectedValidateProjectDetailsAndTemplate.txt')).toString().split('\n').map(s => s.trim()).filter(s => s.length > 0)

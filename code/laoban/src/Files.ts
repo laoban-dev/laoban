@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import * as path from "path";
-import {Config, ProjectDetailsAndDirectory} from "./config";
+import {Config, HasLaobanDirectory, ProjectDetailsAndDirectory} from "./config";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -30,7 +30,8 @@ interface ProjectDetailOptions {
 }
 export class ProjectDetailFiles {
 
-    static workOutProjectDetails(root: string, options: ProjectDetailOptions): Promise<ProjectDetailsAndDirectory[]> {
+    static workOutProjectDetails(hasRoot: HasLaobanDirectory, options: ProjectDetailOptions): Promise<ProjectDetailsAndDirectory[]> {
+        let root = hasRoot.laobanDirectory
         if (options.projects) return this.findAndLoadProjectDetailsFromChildren(root).then(pd => pd.filter(p => p.directory.match(options.projects)))
         if (options.all) return this.findAndLoadProjectDetailsFromChildren(root);
         if (options.one) return this.loadProjectDetails(process.cwd()).then(x => [x])
@@ -40,7 +41,9 @@ export class ProjectDetailFiles {
     }
 
 
-    static findAndLoadProjectDetailsFromChildren(root: string): Promise<ProjectDetailsAndDirectory[]> {return Promise.all(this.findProjectDirectories(root).map(this.loadProjectDetails))}
+    static findAndLoadProjectDetailsFromChildren(root: string): Promise<ProjectDetailsAndDirectory[]> {
+        return Promise.all(this.findProjectDirectories(root).map(this.loadProjectDetails))
+    }
 
     static loadProjectDetails(root: string): Promise<ProjectDetailsAndDirectory> {
         let rootAndFileName = path.join(root, projectDetailsFile);

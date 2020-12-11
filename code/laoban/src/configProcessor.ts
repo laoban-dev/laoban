@@ -1,11 +1,40 @@
 import {CommandDefn, Config, Envs, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails} from "./config";
 import * as path from "path";
-import {loabanConfigName} from "./Files";
+import {findLaoban, laobanFile, loabanConfigName} from "./Files";
 import * as os from "os";
+import fs from "fs";
+import {validateLaobanJson} from "./validation2";
+import {Validate} from "./val";
 
-/** if dic has a.b.c, then if s is a.b.c, this return dic.a.b.c. Or undefined */
-function find(dic: any, s: string) {
-    return dic[s]
+
+export interface RawConfigAndIssues {
+    rawConfig: RawConfig,
+    issues: string[]
+}
+export interface ConfigAndIssues {
+    config?: Config,
+    issues: string[]
+}
+
+export function loadLoabanJsonAndValidate(laobanDirectory: string): RawConfigAndIssues {
+    let rawConfig = JSON.parse(fs.readFileSync(laobanFile(laobanDirectory)).toString())
+    let issues = validateLaobanJson(Validate.validate(`In directory ${laobanDirectory}, ${loabanConfigName}`, rawConfig)).errors;
+    return {rawConfig, issues}
+}
+
+export function abortWithReportIfAny(issues: string[]) {
+    if (issues.length > 0) {
+        console.error('Validation errors prevent loaban from running correctly')
+        issues.forEach(e => console.error('  ', e))
+        process.exit(2)
+    }
+}
+
+export function loadConfigOrIssues(fn: (dir: string) => RawConfigAndIssues): (laoban: string) =>ConfigAndIssues {
+    return laoban => {
+        let {rawConfig, issues} = loadLoabanJsonAndValidate(laoban)
+        return {issues, config: issues.length > 0 ? undefined : configProcessor(laoban, rawConfig)};
+    }
 }
 
 

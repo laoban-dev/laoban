@@ -1,6 +1,9 @@
 import * as fs from "fs";
 
 function isType<T>(t: T, expected: string) { return typeof t == expected}
+function reasonString(reason: string) {
+    return reason ? ' ' + reason : '';
+}
 /** Usage
  * Validate(x).isString('name').isString('otherField').errors   // returns a string[]  with the result of validating that name is a string field on x, as is otherField
  * Validate(x).isObject('y', vy => vy.isString('yname1').isString('yName2')).errors // checks that x has an object y, and that y has two string fields yname1 and ynames2
@@ -62,21 +65,21 @@ export class Validate<T> {
     }
     private _checkIs<K extends keyof T>(type: string, fieldName: K): boolean {return this.t[fieldName] ? typeof this.t[fieldName] == type : false;}
 
-    checkIs(type: string): <K extends keyof T>(fieldName: K) => Validate<T> {
-        return fieldName => {
-            if (!this._checkIs(type, fieldName)) this.error(`${this.context}.${fieldName} should be a ${type}`)
+    checkIs(type: string): <K extends keyof T>(fieldName: K, reason?: string) => Validate<T> {
+        return (fieldName, reason) => {
+            if (!this._checkIs(type, fieldName)) this.error(`${this.context}.${fieldName} should be a ${type}.${reasonString(reason)}`)
             return this
         }
     }
 
-    isObject<K extends keyof T>(fieldName: K, fn: (v: Validate<T[K]>) => void): Validate<T> {
+    isObject<K extends keyof T>(fieldName: K, fn: (v: Validate<T[K]>) => void, reason? : string): Validate<T> {
         let element: any = this.t[fieldName]
         if (this._checkIs('object', fieldName)) this.checkChildObject(this.context + '.' + fieldName, element, fn);
-        else this.error(`${this.context}.${fieldName} should be an object`)
+        else this.error(`${this.context}.${fieldName} should be an object.${reasonString(reason)}`)
         return this
     }
-    optObject = <K extends keyof T>(fieldName: K, fn: (v: Validate<T[K]>) => void): Validate<T> =>
-        this.t[fieldName] ? this.isObject(fieldName, fn) : this;
+    optObject = <K extends keyof T>(fieldName: K, fn: (v: Validate<T[K]>) => void, reason?: string): Validate<T> =>
+        this.t[fieldName] ? this.isObject(fieldName, fn, reason) : this;
 
     private checkChildObject<T1>(newContext: string, newT: T1, fn: (v: Validate<T1>) => void): Validate<T> {
         let validationObject = new Validate<T1>(newContext, newT, [], this.validationDebug);

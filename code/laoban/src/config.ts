@@ -71,9 +71,10 @@ export interface DirectoryAndResults {
 }
 export type ScriptProcessor = (sc: ScriptInContext) => Promise<DirectoryAndResults[]>
 
-
-export interface Config extends ConfigVariables {
+export interface HasLaobanDirectory {
     laobanDirectory: string,
+}
+export interface Config extends ConfigVariables,HasLaobanDirectory {
     laobanConfig: string,
     sessionDir: string,
     variables: { [name: string]: string },

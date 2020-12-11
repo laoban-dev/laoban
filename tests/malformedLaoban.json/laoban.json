@@ -1,0 +1,8 @@
+{
+  "templateDir"   : "${laobanDirectory}/template",
+  "versionFile"   : "${
+  "packageManager": "yarn",
+  "scripts"       : {
+    "log"       : {"description": "displays the log file", "commands": ["cat ${log}"]},
+    "link"      : {
+      "description
