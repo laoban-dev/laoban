@@ -1,0 +1,2 @@
+Validation errors prevent loaban from running correctly
+Could not load laoban.json

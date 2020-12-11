@@ -1,131 +1,67 @@
-import {CommandDefn, Config, ProjectDetailsAndDirectory, RawConfig, ScriptDefn} from "./config";
-import * as fs from "fs";
+import {CommandDefn, Config, Details, PackageJson, ProjectDetails, ProjectDetailsAndDirectory, RawConfig, ScriptDefn} from "./config";
 import * as path from "path";
-import {flatten} from "./utils";
+import {flatten, groupBy, removeDuplicates} from "./utils";
+import {Validate} from "./val";
 
-function check(context: string, expectedType, json: any): (fieldName: string) => string[] {
-    return fieldName => {
-        if (!(json[fieldName])) return [`${context} ${fieldName} not found`]
-        if (typeof json[fieldName] !== expectedType) return [`${context} ${fieldName} is a ${typeof [json[fieldName]]} and not ${expectedType}`]
-        return []
-    }
+
+export function validateLaobanJson(v: Validate<RawConfig>): Validate<RawConfig> {
+    return v.isString('templateDir', 'The template directory is where the templates that are used in project.details.json are used').//
+        isString('versionFile', `The versionFile is the location of the 'project version number', used during update`).//
+        isString('log', `This is used to say what the name of the log file in the project directory. It is typically '.log'. The output from commands is written here`).//
+        isString('status', `This is used to record the success or failure of commands (such as 'test')`).//
+        isString('profile', 'This is used to record how long things took to run').//
+        isString('packageManager', 'Typically npm or yarn').//
+        isObjectofObjects<ScriptDefn>('scripts', validateScriptDefn)
 }
 
-export function validateCommand(context: string, scriptName, command: any): string[] {
-    if (typeof command === 'string') return []
-    if (typeof command !== 'object') return [`${context} ${scriptName} comamnds is not object or a string`]
-    let cont = context + " " + scriptName;
-    return check(cont, 'string', command)('command')
+function validateScriptDefn(v: Validate<ScriptDefn>) {
+    return v.isString('description').//
+        isArrayofObjects('commands', validateCommand)
 }
 
-export function validateScript(context: string, scriptName: string, json: any): string[] {
-    let cont = context + " scripts " + scriptName
-    return [].concat(...[
-        check(cont, 'string', json)('description'),
-        check(cont, 'object', json)('commands'),
-        Array.isArray(json.commands) ? [] : [`${cont} commands is not an array`],
-        ...(json.commands ? json.commands.map(c => validateCommand(context, scriptName, c)) : [])
-    ])
-}
-
-
-
-export function validateLaobanJson(json: any): string[] {
-    let context = 'laoban.json';
-    let cs = check(context, 'string', json)
-    return flatten([
-        cs('templateDir'),
-        cs('versionFile'),
-        cs('log'),
-        cs('status'),
-        cs('profile'),
-        cs('packageManager'),
-        check(context, 'object', json)('scripts'),
-        ...(json.scripts ? Object.keys(json.scripts).map(k => validateScript(context, k, json.scripts[k])) : [])
-    ])
+function validateCommand(v: Validate<CommandDefn | string>) {
+    if (typeof v.t === 'string') return v;
+    let vdefn: Validate<CommandDefn> = <any>v
+    return vdefn.isString('command')
 }
 
 
-export function validateTemplateFile(c: Config, d: ProjectDetailsAndDirectory): string[] {
-    try {
-        let templateDir = path.join(c.templateDir, d.projectDetails.template);
-        return flatten([
-            checkDirectoryExists(`project.json.details in ${d.directory} has template ${d.projectDetails.template}. `, templateDir),
-            validatePackageJsonInTemplateDir(`package.json in template directory ${templateDir}`, templateDir)])
-    } catch (e) {return [`Could not access project.details.json. TemplateDir is [${c.templateDir}] template is [${d.projectDetails.template}]`]}
+export function validateProjectDetailsAndTemplates(c: Config, pds: ProjectDetailsAndDirectory[]): Promise<string[]> {
+    let nameAndDirectories = pds.map(pd => ({name: pd.projectDetails.name, directory: pd.directory}))
+    let grouped = groupBy(nameAndDirectories, nd => nd.name)
+    let duplicateErrors = flatten(Object.keys(grouped).map(key =>
+        grouped[key].length > 1 ?
+            [`Have multiple projects with same mame`, ...grouped[key].map(g => `${g.name} ${g.directory}`)] :
+            []))
+    if (duplicateErrors.length > 0) return Promise.resolve(duplicateErrors)
+    let pdsIssues = flatten(pds.map(pd => validateProjectDetails(Validate.validate(`Project details in ${pd.directory}`, pd.projectDetails)).errors))
+    return pdsIssues.length > 0 ?
+        Promise.resolve(pdsIssues) :
+        Promise.all(removeDuplicates(pds.map(d => d.projectDetails.template)).sort().map(template =>
+            validateTemplateDirectory(`Template Directory`, c, template))).then(flatten);
 }
 
-export function validatePackageJsonInTemplateDir(context: string, dir: string): string[] {
-    let filename = path.join(dir, 'package.json')
-    try {
-        let packageJson = JSON.parse(fs.readFileSync(filename).toString());
-
-        let co = check(context, 'object', packageJson)
-        let cs = check(context, 'string', packageJson)
-            return flatten([
-            co('dependencies')
-        ])
-    } catch (e) {
-        return [`${context} Error accessing, ${filename}\n${e}`]
-    }
+function validateTemplateDirectory(context: string, c: Config, templateDir: string): Promise<string[]> {
+    let dir = path.join(c.templateDir, templateDir);
+    return Validate.validateDirectoryExists(context, dir).then(dirErrors => dirErrors.length === 0 ?
+        Validate.validateFile(`package.json in template directory ${templateDir}`, path.join(dir, 'package.json'), validatePackageJson) :
+        dirErrors)
 }
 
-export function validateProjectDetails(c: Config, d: ProjectDetailsAndDirectory): ProjectDetailsIssues {
-    let context = `${d.directory}/project.details.json`;
-    let cs = check(context, 'string', d.projectDetails)
-    let templateFileIssues = validateTemplateFile(c, d);
-
-    let issues: string[] = templateFileIssues.length > 0 ? templateFileIssues : [].concat(...[
-        templateFileIssues,
-        cs('name'),
-        cs('description'),
-        cs('template'),
-        check(context, 'object', d.projectDetails)('details')
-    ])
-    return {
-        directory: d.directory,
-        issues: issues
-    }
+function validateProjectDetails(v: Validate<ProjectDetails>) {
+    return v.isString("name").//
+        isString("description").//
+        isString("template").//
+        isObject("details", validateDetails)
 }
 
-export function reportValidation(p: ValidationIssues) {
-    if (p.laobanJsonIssues.length > 0) {
-        console.log('Issues in laoban.json')
-        p.laobanJsonIssues.forEach(i => console.log('  ', i))
-    }
-    p.projectDetailsIssues.forEach(i => {
-        if (i.issues.length > 0) {
-            console.log('Issues in project.details.json for ', i.directory)
-            i.issues.forEach(x => console.log('   ', x))
-        }
-    })
-
+function validateDetails(v: Validate<Details>) {
+    return v.isBoolean("publish", 'Should the project be published').//
+        // isArrayofObjects('links', v => v).//
+        optObject("extraDeps", v => v, 'These are added to package.json dependencies').//
+        optObject("extraDevDeps", v => v, 'These are added to package.json devDependencies').//
+        optObject("extraBins", v => v, 'These are added to package.json bin')
 }
-
-function checkDirectoryExists(context: string, dir: string): string[] {
-    function error() { return [`${context} ${dir} does not exist`]}
-    try {
-        if (!fs.lstatSync(dir).isDirectory()) return error();
-        return []
-    } catch (e) { return error()}
-}
-
-interface ProjectDetailsIssues {
-    directory: string,
-    issues: string[]
-}
-interface ValidationIssues {
-    laobanJsonIssues: string[],
-    projectDetailsIssues: ProjectDetailsIssues[]
-}
-
-
-
-export function validateConfigOnHardDrive(c: Config, pds: ProjectDetailsAndDirectory[]): ValidationIssues {
-    let laobanJsonIssues: string[] = [].concat(...[
-        checkDirectoryExists('Laoban directory', c.laobanDirectory),
-        checkDirectoryExists('template directory', c.templateDir)
-    ])
-    let projectDetailsIssues: ProjectDetailsIssues[] = pds.map(pd => validateProjectDetails(c, pd))
-    return {laobanJsonIssues: laobanJsonIssues, projectDetailsIssues: projectDetailsIssues}
+function validatePackageJson(v: Validate<PackageJson>) {
+    return v.isObject('dependencies', v => v)
 }

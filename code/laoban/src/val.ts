@@ -1,3 +1,5 @@
+//This will vanish to the validation project as soon as I work out how to do the linking properly
+
 import * as fs from "fs";
 
 function isType<T>(t: T, expected: string) { return typeof t == expected}

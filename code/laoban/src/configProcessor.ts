@@ -1,10 +1,10 @@
 import {CommandDefn, Config, Envs, RawConfig, ScriptDefn, ScriptDefns, ScriptDetails} from "./config";
 import * as path from "path";
-import {findLaoban, laobanFile, loabanConfigName} from "./Files";
+import {laobanFile, loabanConfigName} from "./Files";
 import * as os from "os";
 import fs from "fs";
-import {validateLaobanJson} from "./validation2";
 import {Validate} from "./val";
+import {validateLaobanJson} from "./validation";
 
 
 export interface RawConfigAndIssues {
@@ -21,10 +21,10 @@ export function loadLoabanJsonAndValidate(laobanDirectory: string): RawConfigAnd
     let laobanConfigFileName = laobanFile(laobanDirectory);
     try {
         let rawConfig = JSON.parse(fs.readFileSync(laobanConfigFileName).toString())
-        let issues = validateLaobanJson(Validate.validate(`In directory ${laobanDirectory}, ${loabanConfigName}`, rawConfig)).errors;
+        let issues = validateLaobanJson(Validate.validate(`In directory ${path.parse(laobanDirectory).name}, ${loabanConfigName}`, rawConfig)).errors;
         return {rawConfig, issues}
     } catch (e) {
-        return {issues: [`Could not load file ${laobanConfigFileName}`]}
+        return {issues: [`Could not load laoban.json`]}
     }
 }
 

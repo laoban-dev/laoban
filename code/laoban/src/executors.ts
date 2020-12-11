@@ -2,7 +2,7 @@ import * as cp from 'child_process'
 import {CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream} from "./config";
 import {cleanUpEnv, derefence} from "./configProcessor";
 import * as path from "path";
-import {Promise} from "core-js";
+
 import {chain, writeTo} from "./utils";
 import {Writable} from "stream";
 import {CommandDecorator} from "./decorators";
@@ -131,6 +131,7 @@ export function make(shell: RawCommandExecutor, js: RawCommandExecutor, timeIt: 
 }
 
 export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => {
+    // console.log('in execInSpawn', d.details)
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) => {
         let child = cp.spawn(d.details.commandString, {...options, shell: true})
@@ -159,6 +160,7 @@ function executeInChangedEnv<To>(env: Envs, block: () => To): To {
 
 
 export let execJS: RawCommandExecutor = d => {
+    // console.log('in execJs', d.details)
     try {
         let res = executeInChangedEnv<any>(d.details.env, () => executeInChangedDir(d.details.directory,
             () => Function("return  " + d.details.commandString.substring(3))().toString()))

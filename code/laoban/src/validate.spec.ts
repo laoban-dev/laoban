@@ -5,29 +5,25 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import {loabanConfigName, ProjectDetailFiles} from "./Files";
-import {validateLaobanJson, validateProjectDetailsAndTemplates} from "./validation2";
-import {Config, RawConfig} from "./config";
-import {Validate} from "./val";
-import {configProcessor, loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
+import {ProjectDetailFiles} from "./Files";
+import {validateProjectDetailsAndTemplates} from "./validation";
+import {Config} from "./config";
+import {loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
+import {dirsIn, testRoot} from "./fixture";
 
-function dirsIn(root: string) {
-    let testRoot = path.join('..', '..', 'tests')
-    return fs.readdirSync(testRoot).map(testDirName => path.join(testRoot, testDirName)).filter(d => fs.statSync(d).isDirectory())
-
-}
 describe("validate laoban json", () => {
-    dirsIn('tests').forEach(testDir =>
+    dirsIn(testRoot).forEach(testDir => {
         it(`should check the laobon.json validation for ${testDir}`, () => {
             let parsed = path.parse(testDir)
-            let expected = fs.readFileSync(path.join(testDir, 'expectedValidationLaoban.txt')).toString().split('\n').map(s => s.trim()).filter(s => s.length > 0)
-            let configOrIssues = loadConfigOrIssues(loadLoabanJsonAndValidate)(testDir)
+            let expected = fs.readFileSync(path.join(testRoot, testDir, 'expectedValidationLaoban.txt')).toString().split('\n').map(s => s.trim()).filter(s => s.length > 0)
+            let configOrIssues = loadConfigOrIssues(loadLoabanJsonAndValidate)(path.join(testRoot, testDir))
             expect(configOrIssues.issues).toEqual(expected)
-        }))
+        })
+    })
 })
 
 describe("validate directories", () => {
-    dirsIn('tests').forEach(testDir => {
+    dirsIn(testRoot).forEach(testDir => {
         let parsed = path.parse(testDir)
         let configOrIssues = loadConfigOrIssues(loadLoabanJsonAndValidate)(testDir)
         if (configOrIssues.issues.length == 0) {

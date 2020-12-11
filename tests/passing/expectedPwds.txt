@@ -1,0 +1,2 @@
+<root>/passing/projects/project1
+<root>/passing/projects/project2

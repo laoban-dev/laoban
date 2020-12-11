@@ -16,11 +16,14 @@ export function isProjectDirectory(directory: string) {
     return fs.existsSync(path.join(directory, projectDetailsFile))
 }
 export function findLaoban(directory: string) {
-    let fullName = path.join(directory, loabanConfigName);
-    if (fs.existsSync(fullName)) return directory
-    let parse = path.parse(directory)
-    if (parse.dir === parse.root) {throw Error('Cannot find laoban.json')}
-    return findLaoban(parse.dir)
+    function find(dir: string) {
+        let fullName = path.join(dir, loabanConfigName);
+        if (fs.existsSync(fullName)) return dir
+        let parse = path.parse(dir)
+        if (parse.dir === parse.root) {throw Error(`Cannot find laoban.json. Started looking in ${directory}`)}
+        return find(parse.dir)
+    }
+    return find(directory)
 }
 
 interface ProjectDetailOptions {
