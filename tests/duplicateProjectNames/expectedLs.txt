@@ -1,0 +1,2 @@
+<root>/duplicateProjectNames/projects/project1
+<root>/duplicateProjectNames/projects/project2
