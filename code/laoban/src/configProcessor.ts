@@ -8,7 +8,7 @@ import {Validate} from "./val";
 
 
 export interface RawConfigAndIssues {
-    rawConfig: RawConfig,
+    rawConfig?: RawConfig,
     issues: string[]
 }
 export interface ConfigAndIssues {
@@ -16,10 +16,16 @@ export interface ConfigAndIssues {
     issues: string[]
 }
 
+
 export function loadLoabanJsonAndValidate(laobanDirectory: string): RawConfigAndIssues {
-    let rawConfig = JSON.parse(fs.readFileSync(laobanFile(laobanDirectory)).toString())
-    let issues = validateLaobanJson(Validate.validate(`In directory ${laobanDirectory}, ${loabanConfigName}`, rawConfig)).errors;
-    return {rawConfig, issues}
+    let laobanConfigFileName = laobanFile(laobanDirectory);
+    try {
+        let rawConfig = JSON.parse(fs.readFileSync(laobanConfigFileName).toString())
+        let issues = validateLaobanJson(Validate.validate(`In directory ${laobanDirectory}, ${loabanConfigName}`, rawConfig)).errors;
+        return {rawConfig, issues}
+    } catch (e) {
+        return {issues: [`Could not load file ${laobanConfigFileName}`]}
+    }
 }
 
 export function abortWithReportIfAny(issues: string[]) {
@@ -30,7 +36,7 @@ export function abortWithReportIfAny(issues: string[]) {
     }
 }
 
-export function loadConfigOrIssues(fn: (dir: string) => RawConfigAndIssues): (laoban: string) =>ConfigAndIssues {
+export function loadConfigOrIssues(fn: (dir: string) => RawConfigAndIssues): (laoban: string) => ConfigAndIssues {
     return laoban => {
         let {rawConfig, issues} = loadLoabanJsonAndValidate(laoban)
         return {issues, config: issues.length > 0 ? undefined : configProcessor(laoban, rawConfig)};

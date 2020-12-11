@@ -12,7 +12,7 @@ import {Validate} from "./val";
 import {configProcessor, loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
 
 function dirsIn(root: string) {
-    let testRoot = path.join('..', '..','tests')
+    let testRoot = path.join('..', '..', 'tests')
     return fs.readdirSync(testRoot).map(testDirName => path.join(testRoot, testDirName)).filter(d => fs.statSync(d).isDirectory())
 
 }
@@ -21,7 +21,7 @@ describe("validate laoban json", () => {
         it(`should check the laobon.json validation for ${testDir}`, () => {
             let parsed = path.parse(testDir)
             let expected = fs.readFileSync(path.join(testDir, 'expectedValidationLaoban.txt')).toString().split('\n').map(s => s.trim()).filter(s => s.length > 0)
-            let configOrIssues=loadConfigOrIssues(loadLoabanJsonAndValidate)(testDir)
+            let configOrIssues = loadConfigOrIssues(loadLoabanJsonAndValidate)(testDir)
             expect(configOrIssues.issues).toEqual(expected)
         }))
 })
@@ -29,12 +29,11 @@ describe("validate laoban json", () => {
 describe("validate directories", () => {
     dirsIn('tests').forEach(testDir => {
         let parsed = path.parse(testDir)
-        let raw = JSON.parse(fs.readFileSync(path.join(testDir, loabanConfigName)).toString())
-        let check = validateLaobanJson(Validate.validate<RawConfig>(parsed.name, raw, false)).errors
-        if (check.length == 0) {
+        let configOrIssues = loadConfigOrIssues(loadLoabanJsonAndValidate)(testDir)
+        if (configOrIssues.issues.length == 0) {
             it(`should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
                 let expected = fs.readFileSync(path.join(testDir, 'expectedValidateProjectDetailsAndTemplate.txt')).toString().trim()
-                let config: Config = configProcessor(testDir, raw)
+                let config: Config = configOrIssues.config
                 return ProjectDetailFiles.workOutProjectDetails(config, {}).//
                     then(pds => validateProjectDetailsAndTemplates(config, pds)).//
                     then(actual => {
