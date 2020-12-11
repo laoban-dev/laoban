@@ -1,7 +1,6 @@
 import {ScriptInContext} from "./config";
 import {derefenceToUndefined} from "./configProcessor";
 import * as path from "path";
-import {Promise} from "core-js";
 import {chain, partition, writeTo} from "./utils";
 import {splitGenerationsByLinks} from "./generations";
 import * as fs from "fs";

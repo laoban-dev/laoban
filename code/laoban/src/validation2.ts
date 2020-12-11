@@ -7,8 +7,8 @@ import {Validate} from "./val";
 export function validateLaobanJson(v: Validate<RawConfig>): Validate<RawConfig> {
     return v.isString('templateDir', 'The template directory is where the templates that are used in project.details.json are used').//
         isString('versionFile', `The versionFile is the location of the 'project version number', used during update`).//
-        isString('log', 'This is used to say what the name of the log file in the project directory. It is typically ".log". The output from commands is written here').//
-        isString('status', 'This is used to record the success or failure of commands (such as "test")').//
+        isString('log', `This is used to say what the name of the log file in the project directory. It is typically '.log'. The output from commands is written here`).//
+        isString('status', `This is used to record the success or failure of commands (such as 'test')`).//
         isString('profile', 'This is used to record how long things took to run').//
         isString('packageManager', 'Typically npm or yarn').//
         isObjectofObjects<ScriptDefn>('scripts', validateScriptDefn)

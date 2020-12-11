@@ -9,8 +9,7 @@ import {loabanConfigName, ProjectDetailFiles} from "./Files";
 import {validateLaobanJson, validateProjectDetailsAndTemplates} from "./validation2";
 import {Config, RawConfig} from "./config";
 import {Validate} from "./val";
-import {configProcessor} from "./configProcessor";
-import instantiateStreaming = WebAssembly.instantiateStreaming;
+import {configProcessor, loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
 
 function dirsIn(root: string) {
     let testRoot = path.join('..', '..','tests')
@@ -22,10 +21,8 @@ describe("validate laoban json", () => {
         it(`should check the laobon.json validation for ${testDir}`, () => {
             let parsed = path.parse(testDir)
             let expected = fs.readFileSync(path.join(testDir, 'expectedValidationLaoban.txt')).toString().split('\n').map(s => s.trim()).filter(s => s.length > 0)
-            let json = JSON.parse(fs.readFileSync(path.join(testDir, loabanConfigName)).toString())
-            let actual = validateLaobanJson(Validate.validate<RawConfig>(parsed.name, json, false)).errors
-            // console.log(testDir, expected, actual)
-            expect(actual).toEqual(expected)
+            let configOrIssues=loadConfigOrIssues(loadLoabanJsonAndValidate)(testDir)
+            expect(configOrIssues.issues).toEqual(expected)
         }))
 })
 
