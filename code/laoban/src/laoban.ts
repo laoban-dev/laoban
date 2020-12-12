@@ -42,6 +42,7 @@ import {validateProjectDetailsAndTemplates} from "./validation";
 import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
 import {shellReporter} from "./report";
 import {Writable} from "stream";
+import {Script} from "vm";
 
 const displayError = (outputStream: Writable) => (e: Error) =>
     outputStream.write(e.message.split('\n').slice(0, 2).join('\n') + "\n");
@@ -64,6 +65,14 @@ function makeSc(config: Config, sessionId: string, details: ProjectDetailsAndDir
         context: {shellDebug: cmd.shellDebug, directories: details}
     }
     return sc;
+}
+function checkGuard(config: Config, script: ScriptDetails): Promise<void> {
+    const makeErrorPromise = (error: string) => Promise.reject(script.guardReason ? error + "\n" + script.guardReason : error)
+    if (script.osGuard && !os.type().match(script.osGuard))
+        return makeErrorPromise(`os is  ${os.type()}, and this command has an osGuard of  [${script.osGuard}]`)
+    if (script.pmGuard && !config.packageManager.match(script.pmGuard))
+        return makeErrorPromise(`Package Manager is ${config.packageManager} and this command has an pmGuard of  [${script.pmGuard}]`)
+    return Promise.resolve()
 }
 
 export class Cli {
@@ -101,26 +110,13 @@ export class Cli {
         let scripts = config.scripts
         scripts.forEach(script =>
             this.command(script.name, script.description, options).//
-                action((cmd: any) => this.executeCommand(cmd, config, script)))
+                action(this.executeCommand(config, script)))
     }
 
-    executeCommand(cmd: any, config: Config, script: ScriptDetails): Promise<GenerationsResult> {
-        if (script.osGuard) {
-            if (!os.type().match(script.osGuard)) {
-                console.error('os is ', os.type(), `and this command has an osGuard of  [${script.osGuard}]`)
-                if (script.guardReason) console.error(script.guardReason)
-                return
-            }
-        }
-        if (script.pmGuard) {
-            if (!config.packageManager.match(script.pmGuard)) {
-                console.error('Package Manager is ', config.packageManager, `and this command has an pmGuard of  [${script.pmGuard}]`)
-                if (script.guardReason) console.error(script.guardReason)
-                return
-            }
-        }
+
+    executeCommand(config: Config, script: ScriptDetails) {
         let sessionId = makeSessionId(new Date(), script.name);
-        return fse.mkdirp(path.join(config.sessionDir, sessionId)).then(() =>
+        return (cmd: any) => checkGuard(config, script).then(() => fse.mkdirp(path.join(config.sessionDir, sessionId)).then(() =>
             ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
                 let sc = makeSc(config, sessionId, details, script, cmd);
                 let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
@@ -132,8 +128,9 @@ export class Cli {
                 })
                 monitor(sc.status, promiseGensResult.then(() => {}))
                 return promiseGensResult
-            }))
+            })))
     }
+
 
     configAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void> {
         return (cmd: any) => configOrReportIssues(configAndIssues).then(config => {
@@ -144,10 +141,10 @@ export class Cli {
     }
     runAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<GenerationsResult> {
         return (cmd: any) => configOrReportIssues(configAndIssues).then(config => {
-            let command = this.program.args.slice(1).filter(n => !n.startsWith('-')).join(' ')
-            // console.log('command.run', command)
+            let command = this.program.args.slice(1).filter(n => !n.startsWith('-')).join(' ') //TODO this should be acquired from cmd
             let s: ScriptDetails = {name: '', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
-            return this.executeCommand(cmd, config, s)
+            // console.log('command.run', command)
+            return this.executeCommand(config, s)(cmd)
         })
     }
     statusAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void> {
@@ -205,10 +202,8 @@ export class Cli {
 
         this.command('config', 'displays the config', defaultOptions).//
             action(this.configAction(configOrReportIssues, configAndIssues))
-
         this.command('run', 'runs an arbitary command (the rest of the command line).', defaultOptions).//
             action(this.runAction(configOrReportIssues, configAndIssues))
-
         this.command('status', 'shows the status of the project in the current directory', defaultOptions).//
             action(this.statusAction(configOrReportIssues, configAndIssues))
         this.command('compactStatus', 'crunches the status', defaultOptions).//
@@ -219,7 +214,6 @@ export class Cli {
             action(this.profileAction(configOrReportIssues, configAndIssues))
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action(this.projectsAction(configOrReportIssues, configAndIssues))
-
         this.command('updateConfigFilesFromTemplates', "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions).//
             action(this.updateConfigFilesFromTemplates(configOrReportIssues, configAndIssues))
 
