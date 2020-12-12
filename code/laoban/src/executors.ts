@@ -166,12 +166,10 @@ export let execJS: RawCommandExecutor = d => {
             () => Function("return  " + d.details.commandString.substring(3))().toString()))
         let result = res.toString();
         writeTo(d.streams, result + '\n')
-        return Promise.resolve({err: null, stdout: result, stderr: ""})
+        return Promise.resolve({err: null})
     } catch (e) {
-        let result =
-            `Error: ${e} Command was [${d.details.commandString}]`
-        ;
+        let result = `Error: ${e} Command was [${d.details.commandString}]`;
         writeTo(d.streams, result + '\n')
-        return Promise.resolve({err: e, stdout: result, stderr: ""})
+        return Promise.resolve({err: e})
     }
 }

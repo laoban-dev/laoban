@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as fse from "fs-extra";
 import * as path from "path";
 import {Config, HasLaobanDirectory, ProjectDetailsAndDirectory} from "./config";
+import {flatten} from "./utils";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -76,7 +77,7 @@ export class ProjectDetailFiles {
             }
             return []
         });
-        return [].concat.apply(result, children)
+        return flatten([result, ...children])
     }
 }
 

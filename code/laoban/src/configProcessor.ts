@@ -7,6 +7,7 @@ import {Validate} from "./val";
 import {validateLaobanJson} from "./validation";
 import {Writable} from "stream";
 import WritableStream = NodeJS.WritableStream;
+import {output} from "./utils";
 
 
 export function loadLoabanJsonAndValidate(laobanDirectory: string): RawConfigAndIssues {
@@ -22,9 +23,10 @@ export function loadLoabanJsonAndValidate(laobanDirectory: string): RawConfigAnd
 
 export let abortWithReportIfAnyIssues: ConfigOrReportIssues = configAndIssues => {
     let issues = configAndIssues.issues
+    let log = output(configAndIssues)
     if (issues.length > 0) {
-        console.error('Validation errors prevent loaban from running correctly')
-        issues.forEach(e => console.error('  ', e))
+        log('Validation errors prevent loaban from running correctly')
+        issues.forEach(e => log('  ' + e))
         process.exit(2)
     } else return Promise.resolve(configAndIssues.config)
 }

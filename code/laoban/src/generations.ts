@@ -1,4 +1,5 @@
-import {ProjectDetailsAndDirectory, ScriptInContextAndDirectory} from "./config";
+import {HasOutputStream, ProjectDetailsAndDirectory, ScriptInContextAndDirectory} from "./config";
+import {output} from "./utils";
 
 interface Tree {
     [name: string]: Set<string>
@@ -35,18 +36,19 @@ export function calcAllGenerationRecurse(scds: ScriptInContextAndDirectory[], st
     if (newGen.length == 0) return start;
     return calcAllGenerationRecurse(scds, {existing: [...start.existing, ...newGen], generations: [...start.generations, newGen]})
 }
-export function prettyPrintGenerations(scds: ScriptInContextAndDirectory[], gen: GenerationCalc) {
+export function prettyPrintGenerations(hasStream: HasOutputStream, scds: ScriptInContextAndDirectory[], gen: GenerationCalc) {
+    let log = output(hasStream)
     gen.generations.forEach((g, i) => {
-        console.log('Generation', i)
-        console.log('  ', g.join(", "))
+        log(`Generation ${i}`)
+        log('  ' + g.join(", "))
     })
     let thisTree = {}
     let missing = new Set(scds.map(p => p.detailsAndDirectory.projectDetails.name))
     gen.generations.forEach(g => g.forEach(n => missing.delete(n)))
     if (missing.size > 0) {
-        console.log()
-        console.log("Missing: can't put in a generation")
-        console.log(missing)
+        log('')
+        log("Missing: can't put in a generation")
+        log('  ' + [...missing].sort().join(","))
     }
 }
 

@@ -133,7 +133,6 @@ export class CommandDecorators {
             CommandDecorators.log,
             monitorCommandDecorator,
             ...[CommandDecorators.status, CommandDecorators.profile].map(CommandDecorators.fileDecorate(a)),
-            CommandDecorators.quietDisplay,
             ...[CommandDecorators.variablesDisplay, CommandDecorators.shellDisplay].map(CommandDecorators.stdOutDecorator)
         ])
     }
@@ -194,8 +193,8 @@ export class CommandDecorators {
         posttext: (d, sr) => ''
     }
 
-    static quietDisplay: CommandDecorator = e => d =>//TODO Do we still need this
-        d.scriptInContext.quiet ? e(d).then(sr => sr.map(r => ({...r, stdout: ''}))) : e(d)
+    // static quietDisplay: CommandDecorator = e => d =>//TODO Do we still need this
+    //     d.scriptInContext.quiet ? e(d).then(sr => sr.map(r => ({...r, stdout: ''}))) : e(d)
 
 
     static guardDecorate: (guardDecorator: GuardDecorator) => CommandDecorator = dec => e =>

@@ -231,7 +231,7 @@ export class Cli {
         var p = this.program
         this.program.on('command:*',
             function () {
-                output(configAndIssues)('Invalid command: %s\nSee --help for a list of available commands. ' + p.args.join(' '));
+                output(configAndIssues)(`Invalid command: ${p.args.join(' ')}\nSee --help for a list of available commands.`);
                 abortWithReportIfAnyIssues(configAndIssues)
                 process.exit(1);
             }
@@ -249,7 +249,6 @@ export class Cli {
     }
 }
 
-
 export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
 let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
     condition ? fse.appendFile(name, contentGenerator()) : Promise.resolve()
@@ -257,5 +256,11 @@ let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
 let executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
 let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
 let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
-export let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter))
-
+export function executeGenerations(outputStream: Writable): ExecuteGenerations {
+    return GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter(outputStream)))
+}
+export function makeStandardCli(outputStream: Writable) {
+    let laoban = findLaoban(process.cwd())
+    let configAndIssues = loadConfigOrIssues(outputStream, loadLoabanJsonAndValidate)(laoban);
+    return  new Cli(configAndIssues, executeGenerations(outputStream), abortWithReportIfAnyIssues);
+}
