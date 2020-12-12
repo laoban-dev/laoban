@@ -1,6 +1,7 @@
 import {ShellResult} from "./executors";
 import {Writable} from "stream";
 import {Status} from "./monitor";
+import WritableStream = NodeJS.WritableStream;
 
 export interface ConfigVariables {
     templateDir: string,
@@ -74,13 +75,13 @@ export type ScriptProcessor = (sc: ScriptInContext) => Promise<DirectoryAndResul
 export interface HasLaobanDirectory {
     laobanDirectory: string,
 }
-export interface Config extends ConfigVariables,HasLaobanDirectory {
+export interface Config extends ConfigVariables, HasLaobanDirectory {
     laobanConfig: string,
     sessionDir: string,
     variables: { [name: string]: string },
     scripts: ScriptDetails[],
-    os: string
-
+    os: string,
+    outputStream: WritableStream
 }
 
 export interface ScriptDefns {

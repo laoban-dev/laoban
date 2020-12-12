@@ -5,6 +5,8 @@ import * as os from "os";
 import fs from "fs";
 import {Validate} from "./val";
 import {validateLaobanJson} from "./validation";
+import {Writable} from "stream";
+import WritableStream = NodeJS.WritableStream;
 
 
 export function loadLoabanJsonAndValidate(laobanDirectory: string): RawConfigAndIssues {
@@ -27,10 +29,10 @@ export let abortWithReportIfAnyIssues: ConfigOrReportIssues = configAndIssues =>
     } else return Promise.resolve(configAndIssues.config)
 }
 
-export function loadConfigOrIssues(fn: (dir: string) => RawConfigAndIssues): (laoban: string) => ConfigAndIssues {
+export function loadConfigOrIssues(outputStream: WritableStream, fn: (dir: string) => RawConfigAndIssues): (laoban: string) => ConfigAndIssues {
     return laoban => {
         let {rawConfig, issues} = loadLoabanJsonAndValidate(laoban)
-        return {issues, config: issues.length > 0 ? undefined : configProcessor(laoban, rawConfig)};
+        return {issues, config: issues.length > 0 ? undefined : configProcessor(laoban, outputStream, rawConfig)};
     }
 }
 
@@ -110,8 +112,8 @@ function addScripts(dic: any, scripts: ScriptDefns) {
         result.push(cleanUpScript(dic)(scriptName, scripts[scriptName]))
     return result;
 }
-export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
-    var result: any = {laobanDirectory: laoban, laobanConfig: path.join(laoban, loabanConfigName)}
+export function configProcessor(laoban: string, outputStream: WritableStream, rawConfig: RawConfig): Config {
+    var result: any = {laobanDirectory: laoban, outputStream, laobanConfig: path.join(laoban, loabanConfigName)}
     function add(name: string, raw: any) {
         result[name] = derefence(result, raw[name])
     }
@@ -127,6 +129,4 @@ export function configProcessor(laoban: string, rawConfig: RawConfig): Config {
     result.scripts = addScripts(result, rawConfig.scripts);
     result.os = os.type()
     return result
-
 }
-

@@ -5,7 +5,7 @@ import {findLaoban} from "./src/Files";
 
 // console.log(process.argv)
 let laoban = findLaoban(process.cwd())
-let configAndIssues = loadConfigOrIssues(loadLoabanJsonAndValidate)(laoban);
+let configAndIssues = loadConfigOrIssues(process.stdout, loadLoabanJsonAndValidate)(laoban);
 
-let cli = new Cli(configAndIssues, executeGenerations,abortWithReportIfAnyIssues);
+let cli = new Cli(configAndIssues, executeGenerations, abortWithReportIfAnyIssues);
 cli.start(process.argv)
