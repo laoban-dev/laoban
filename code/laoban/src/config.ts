@@ -125,3 +125,15 @@ export interface ProjectDetails {
     template: string,
     "details": Details
 }
+
+
+export interface RawConfigAndIssues {
+    rawConfig?: RawConfig,
+    issues: string[]
+}
+export interface ConfigAndIssues {
+    config?: Config,
+    issues: string[]
+}
+
+export type ConfigOrReportIssues = (c: ConfigAndIssues) => Promise<Config>

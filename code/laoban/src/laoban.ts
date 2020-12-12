@@ -1,8 +1,8 @@
 import {copyTemplateDirectory, findLaoban, ProjectDetailFiles} from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
-import {abortWithReportIfAny, ConfigAndIssues, loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
-import {Config, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream} from "./config";
+import {abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
+import {Config, ConfigAndIssues, ConfigOrReportIssues, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream} from "./config";
 import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
@@ -124,79 +124,84 @@ export class Cli {
         }).catch(displayError)
     }
 
-    constructor(configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations) {
+    constructor(configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues) {
         this.executeGenerations = executeGenerations;
-        function configOrAbort() {
-            if (configAndIssues.config) return configAndIssues.config; else {
-                // throw new Error(configAndIssues.issues.join(','))
-                abortWithReportIfAny(configAndIssues.issues)
-            }
-        }
 
         let defaultOptions = this.defaultOptions(configAndIssues)
+
         this.command('config', 'displays the config', defaultOptions).//
             action((cmd: any) => {
-                let simpleConfig = {...configOrAbort()}
-                delete simpleConfig.scripts
-                console.log(JSON.stringify(simpleConfig, null, 2))
+                configOrReportIssues(configAndIssues).then(config => {
+                    let simpleConfig = {...config}
+                    delete simpleConfig.scripts
+                    console.log(JSON.stringify(simpleConfig, null, 2))
+                })
             })
         this.command('run', 'runs an arbitary command (the rest of the command line).', defaultOptions).//
             action((cmd: any) => {
-                let config = configOrAbort()
-                let command = this.program.args.slice(1).filter(n => !n.startsWith('-')).join(' ')
-                // console.log('command.run', command)
-                let s: ScriptDetails = {name: '', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
-                this.executeCommand(cmd, config, s)
+                configOrReportIssues(configAndIssues).then(config => {
+                    let command = this.program.args.slice(1).filter(n => !n.startsWith('-')).join(' ')
+                    // console.log('command.run', command)
+                    let s: ScriptDetails = {name: '', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
+                    this.executeCommand(cmd, config, s)
+                })
             })
 
         this.command('status', 'shows the status of the project in the current directory', defaultOptions).//
             action((cmd: any) => {
-                let config = configOrAbort()
-                ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
-                    let compactedStatusMap: DirectoryAndCompactedStatusMap[] = ds.map(d =>
-                        ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
-                    let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
-                    prettyPrintData(prettyPrintStatusData)
+                configOrReportIssues(configAndIssues).then(config => {
+                    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
+                        let compactedStatusMap: DirectoryAndCompactedStatusMap[] = ds.map(d =>
+                            ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
+                        let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
+                        prettyPrintData(prettyPrintStatusData)
+                    })
                 })
             })
         this.command('compactStatus', 'crunches the status', defaultOptions).//
             action((cmd: any) => {
-                let config = configOrAbort()
-                ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
-                    ds.forEach(d => writeCompactedStatus(path.join(d.directory, config.status), compactStatus(path.join(d.directory, config.status))))
-                }).catch(displayError)
+                configOrReportIssues(configAndIssues).then(config => {
+                    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
+                        ds.forEach(d => writeCompactedStatus(path.join(d.directory, config.status), compactStatus(path.join(d.directory, config.status))))
+                    }).catch(displayError)
+                })
             })
         this.command('validate', 'checks the laoban.json and the project.details.json', defaultOptions).//
             action((cmd: any) => {
-                let config = configOrAbort()
-                ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => validateProjectDetailsAndTemplates(config, ds)).//
-                    then(abortWithReportIfAny, displayError)
+                configOrReportIssues(configAndIssues).then(config => {
+                    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => validateProjectDetailsAndTemplates(config, ds)).//
+                        then(issues => abortWithReportIfAnyIssues({issues}), displayError)
+                })
             })
         this.command('profile', 'shows the time taken by named steps of commands', defaultOptions).//
             action((cmd: any) => {
-                let config = configOrAbort()
-                let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => Promise.all(ds.map(d =>
-                    loadProfile(config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))))
-                x.then(p => {
-                    let data = prettyPrintProfileData(p);
-                    prettyPrintProfiles('latest', data, p => (p.latest / 1000).toFixed(3))
-                    console.log()
-                    prettyPrintProfiles('average', data, p => (p.average / 1000).toFixed(3))
-                }).catch(displayError)
+                configOrReportIssues(configAndIssues).then(config => {
+                    let x: Promise<ProfileAndDirectory[]> = ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => Promise.all(ds.map(d =>
+                        loadProfile(config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))))
+                    x.then(p => {
+                        let data = prettyPrintProfileData(p);
+                        prettyPrintProfiles('latest', data, p => (p.latest / 1000).toFixed(3))
+                        console.log()
+                        prettyPrintProfiles('average', data, p => (p.average / 1000).toFixed(3))
+                    }).catch(displayError)
+                })
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>
-                ProjectDetailFiles.workOutProjectDetails(configOrAbort(), {}).then(ds => Promise.all(ds.map(p => console.log(p.directory)))).catch(displayError))
+                configOrReportIssues(configAndIssues).then(config =>
+                    ProjectDetailFiles.workOutProjectDetails(config, {}).then(ds => Promise.all(ds.map(p => console.log(p.directory)))).catch(displayError)))
+
         this.command('updateConfigFilesFromTemplates', "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions).//
             action((cmd: any) => {
-                let config = configOrAbort()
-                ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p =>
-                    copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
-                        loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
-                            loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))).//
-                catch(displayError)
+                configOrReportIssues(configAndIssues).then(config =>
+                    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p =>
+                        copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
+                            loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
+                                loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))
+                            ))))).//
+                    catch(displayError)
             })
-        if (configAndIssues.issues.length == 0) this.addScripts(configOrAbort(), defaultOptions)
+        if (configAndIssues.issues.length == 0) this.addScripts(configAndIssues.config, defaultOptions)
         this.program.on('--help', () => {
             console.log('');
             console.log("Press ? while running for list of 'status' commands. S is the most useful")
@@ -220,7 +225,7 @@ export class Cli {
         this.program.on('command:*',
             function () {
                 console.error('Invalid command: %s\nSee --help for a list of available commands.', p.args.join(' '));
-                abortWithReportIfAny(configAndIssues.issues)
+                abortWithReportIfAnyIssues(configAndIssues)
                 process.exit(1);
             }
         );
@@ -238,10 +243,6 @@ export class Cli {
 }
 
 
-let laoban = findLaoban(process.cwd())
-let configAndIssues = loadConfigOrIssues(loadLoabanJsonAndValidate)(laoban);
-
-
 export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
 let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
     condition ? fse.appendFile(name, contentGenerator()) : Promise.resolve()
@@ -249,6 +250,5 @@ let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
 let executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
 let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
 let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
-let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter))
+export let executeGenerations: ExecuteGenerations = GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter))
 
-export let cli = new Cli(configAndIssues, executeGenerations);

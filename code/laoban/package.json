@@ -41,6 +41,7 @@
   "scripts"        : {
     "qtest"      : "jest --config jest.config.json",
     "test"      : "jest --verbose --config jest.config.json",
+    "coverage"      : "jest --verbose ----collect-coverage --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
   "name": "laoban",
