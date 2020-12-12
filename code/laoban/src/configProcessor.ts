@@ -29,10 +29,10 @@ export let abortWithReportIfAnyIssues: ConfigOrReportIssues = configAndIssues =>
     } else return Promise.resolve(configAndIssues.config)
 }
 
-export function loadConfigOrIssues(outputStream: WritableStream, fn: (dir: string) => RawConfigAndIssues): (laoban: string) => ConfigAndIssues {
+export function loadConfigOrIssues(outputStream: Writable, fn: (dir: string) => RawConfigAndIssues): (laoban: string) => ConfigAndIssues {
     return laoban => {
         let {rawConfig, issues} = loadLoabanJsonAndValidate(laoban)
-        return {issues, config: issues.length > 0 ? undefined : configProcessor(laoban, outputStream, rawConfig)};
+        return {issues, outputStream, config: issues.length > 0 ? undefined : configProcessor(laoban, outputStream, rawConfig)};
     }
 }
 

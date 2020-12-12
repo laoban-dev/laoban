@@ -1,7 +1,7 @@
 import {ScriptInContext} from "./config";
 import {derefenceToUndefined} from "./configProcessor";
 import * as path from "path";
-import {chain, partition, writeTo} from "./utils";
+import {chain, flatten, output, partition, writeTo} from "./utils";
 import {splitGenerationsByLinks} from "./generations";
 import * as fs from "fs";
 import {CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult} from "./executors";
@@ -36,7 +36,6 @@ const dryRunContents = (d: ShellCommandDetails<CommandDetails>) => {
     let trim = trimmedDirectory(d.scriptInContext)
     return `${trim(d.details.directory).padEnd(d.scriptInContext.dirWidth)} ${d.details.commandString}`;
 }
-
 
 
 function calculateVariableText(d: ShellCommandDetails<CommandDetails>): string {
@@ -86,30 +85,31 @@ export class GenerationsDecorators {
         },
         transform: (sc, gens) => {
             let trim = trimmedDirectory(sc)
+            function log(...s: any[]) {return output(sc.config)(s.join(' ') + "\n")}
             if (sc.dryrun) {
                 gens.forEach((gen, i) => {
-                    console.log("Generation", i)
+                    log("Generation", i)
                     gen.forEach(scd => {
                         if (scd.scriptInContext.details.commands.length == 1)
-                            console.log('   ', trim(scd.detailsAndDirectory.directory), scd.scriptInContext.details.commands[0].command)
+                            log('   ', trim(scd.detailsAndDirectory.directory), scd.scriptInContext.details.commands[0].command)
                         else {
-                            console.log('   ', trim(scd.detailsAndDirectory.directory))
-                            scd.scriptInContext.details.commands.forEach(c => console.log('       ', c.command))
+                            log('   ', trim(scd.detailsAndDirectory.directory))
+                            scd.scriptInContext.details.commands.forEach(c => log('       ', c.command))
                         }
                     })
                 })
-            } else gens.forEach((gen, i) => console.log("Generation", i, gen.map(scd => trim(scd.detailsAndDirectory.directory)).join(", ")))
+            } else gens.forEach((gen, i) => log("Generation", i, gen.map(scd => trim(scd.detailsAndDirectory.directory)).join(", ")))
             return []
         }
     }
     static ThrottlePlanDecorator: GenerationsDecoratorTemplate = {
         condition: scd => scd.throttle > 0,
-        transform: (scd, gens) => [].concat(...(gens.map(gen => partition(gen, scd.throttle))))
+        transform: (scd, gens) => flatten(gens.map(gen => partition(gen, scd.throttle)))
     }
 
     static LinkPlanDecorator: GenerationsDecoratorTemplate = {
         condition: scd => scd.links || scd.details.inLinksOrder,
-        transform: (scd, g) => [].concat(...g.map(splitGenerationsByLinks))
+        transform: (scd, g) => flatten(g.map(splitGenerationsByLinks))
     }
 
     static applyTemplate: (t: GenerationsDecoratorTemplate) => GenerationsDecorator = t => e => gens => {
@@ -194,7 +194,7 @@ export class CommandDecorators {
         posttext: (d, sr) => ''
     }
 
-    static quietDisplay: CommandDecorator = e => d =>
+    static quietDisplay: CommandDecorator = e => d =>//TODO Do we still need this
         d.scriptInContext.quiet ? e(d).then(sr => sr.map(r => ({...r, stdout: ''}))) : e(d)
 
 

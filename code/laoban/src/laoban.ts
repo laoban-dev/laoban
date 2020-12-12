@@ -2,7 +2,7 @@ import {copyTemplateDirectory, findLaoban, ProjectDetailFiles} from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import {abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
-import {Config, ConfigAndIssues, ConfigOrReportIssues, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream} from "./config";
+import {Config, ConfigAndIssues, ConfigOrReportIssues, HasOutputStream, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream} from "./config";
 import * as path from "path";
 import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
@@ -23,7 +23,7 @@ import {
     streamNamefn,
     timeIt
 } from "./executors";
-import {Strings} from "./utils";
+import {output, Strings} from "./utils";
 import {monitor, Status} from "./monitor";
 import {validateProjectDetailsAndTemplates} from "./validation";
 import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
@@ -39,6 +39,7 @@ function openStream(sc: ScriptInContextAndDirectoryWithoutStream): ScriptInConte
     let logStream = fs.createWriteStream(streamName(sc));
     return {...sc, logStream, streams: [logStream]}
 }
+
 export class Cli {
     private executeGenerations: ExecuteGenerations;
 
@@ -136,7 +137,7 @@ export class Cli {
                 configOrReportIssues(configAndIssues).then(config => {
                     let simpleConfig = {...config}
                     delete simpleConfig.scripts
-                    console.log(JSON.stringify(simpleConfig, null, 2))
+                    output((config))(JSON.stringify(simpleConfig, null, 2))
                 })
             })
         this.command('run', 'runs an arbitary command (the rest of the command line).', defaultOptions).//
@@ -157,7 +158,7 @@ export class Cli {
                             ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
                         let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
                         prettyPrintData(prettyPrintStatusData)
-                    })
+                    }).catch(displayError(config.outputStream))
                 })
             })
         this.command('compactStatus', 'crunches the status', defaultOptions).//
@@ -172,7 +173,7 @@ export class Cli {
             action((cmd: any) => {
                 configOrReportIssues(configAndIssues).then(config => {
                     ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => validateProjectDetailsAndTemplates(config, ds)).//
-                        then(issues => abortWithReportIfAnyIssues({issues}), displayError(config.outputStream))
+                        then(issues => abortWithReportIfAnyIssues(configAndIssues), displayError(config.outputStream))
                 })
             })
         this.command('profile', 'shows the time taken by named steps of commands', defaultOptions).//
@@ -182,9 +183,9 @@ export class Cli {
                         loadProfile(config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))))
                     x.then(p => {
                         let data = prettyPrintProfileData(p);
-                        prettyPrintProfiles('latest', data, p => (p.latest / 1000).toFixed(3))
-                        console.log()
-                        prettyPrintProfiles('average', data, p => (p.average / 1000).toFixed(3))
+                        prettyPrintProfiles(output(config), 'latest', data, p => (p.latest / 1000).toFixed(3))
+                        output(config)('')
+                        prettyPrintProfiles(output(config), 'average', data, p => (p.average / 1000).toFixed(3))
                     }).catch(displayError(config.outputStream))
                 })
             })
@@ -192,7 +193,7 @@ export class Cli {
             action((cmd: any) =>
                 configOrReportIssues(configAndIssues).then(config =>
                     ProjectDetailFiles.workOutProjectDetails(config, {}).//
-                        then(ds => Promise.all(ds.map(p => console.log(p.directory)))).//
+                        then(ds => Promise.all(ds.map(p => output(config)(p.directory)))).//
                         catch(displayError(config.outputStream))))
 
         this.command('updateConfigFilesFromTemplates', "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions).//
@@ -201,35 +202,36 @@ export class Cli {
                     ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p =>
                         copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
                             loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
-                                loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))
+                                loadVersionFile(config).//
+                                    then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))
                             )))).//
                         catch(displayError(config.outputStream)))
             })
         if (configAndIssues.issues.length == 0) this.addScripts(configAndIssues.config, defaultOptions)
         this.program.on('--help', () => {
-            function log(s: string) {}
-            console.log('');
-            console.log("Press ? while running for list of 'status' commands. S is the most useful")
-            console.log()
-            console.log('Notes');
-            console.log("  If you are 'in' a project (the current directory has a project.details.json') then commands are executed by default just for the current project ");
-            console.log("     but if you are not 'in' a project, the commands are executed for all projects");
-            console.log('  You can ask for help for a command by "laoban <cmd> --help"');
-            console.log('');
-            console.log('Common command options (not every command)');
-            console.log('  -a    do it in all projects (default is to execute the command in the current project');
-            console.log('  -d    do a dryrun and only print what would be executed, rather than executing it');
-            console.log()
+            let log = output(configAndIssues)
+            log('');
+            log("Press ? while running for list of 'status' commands. S is the most useful")
+            log('')
+            log('Notes');
+            log("  If you are 'in' a project (the current directory has a project.details.json') then commands are executed by default just for the current project ");
+            log("     but if you are not 'in' a project, the commands are executed for all projects");
+            log('  You can ask for help for a command by "laoban <cmd> --help"');
+            log('');
+            log('Common command options (not every command)');
+            log('  -a    do it in all projects (default is to execute the command in the current project');
+            log('  -d    do a dryrun and only print what would be executed, rather than executing it');
+            log('')
             if (configAndIssues.issues.length > 0) {
-                console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                console.log(`There are issues preventing the program working. Type 'laoban validate' for details`)
-                console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                log(`There are issues preventing the program working. Type 'laoban validate' for details`)
+                log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             }
         });
         var p = this.program
         this.program.on('command:*',
             function () {
-                console.error('Invalid command: %s\nSee --help for a list of available commands.', p.args.join(' '));
+                output(configAndIssues)('Invalid command: %s\nSee --help for a list of available commands. ' + p.args.join(' '));
                 abortWithReportIfAnyIssues(configAndIssues)
                 process.exit(1);
             }

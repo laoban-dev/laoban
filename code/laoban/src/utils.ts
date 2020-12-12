@@ -1,4 +1,5 @@
 import {Writable} from "stream";
+import {HasOutputStream} from "./config";
 
 export function flatten<T>(list: T[][]): T[] {
     return [].concat(...list)
@@ -12,6 +13,9 @@ export class Strings {
         return lines.split('\n').map(s => indent + s).join('\n')
     }
 }
+export const output = (c: HasOutputStream): (s: string) => void =>
+    s => c.outputStream.write(s + "\n");
+
 export function chain<From, To>(decorators: ((fn: (f: From) => To) => ((f: From) => To))[]): ((fn: (f: From) => To) => ((f: From) => To)) {
     return raw => decorators.reduce((acc, v) => v(acc), raw)
 }

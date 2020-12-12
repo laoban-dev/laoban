@@ -1,4 +1,4 @@
-import {Config} from "./config";
+import {Config, HasOutputStream} from "./config";
 import * as fs from "fs";
 import * as path from "path";
 import {StringAndWidth, Strings} from "./utils";
@@ -78,16 +78,16 @@ export function prettyPrintProfileData(profiles: ProfileAndDirectory[]): PrettyP
 
 
 function getValueToDisplay(fn: (s: ProfileStats) => any, pd: ProfileAndDirectory, cw: StringAndWidth) {
-    if (cw) if (pd.profile[cw.value])return fn(pd.profile[cw.value])
+    if (cw) if (pd.profile[cw.value]) return fn(pd.profile[cw.value])
     return ""
 }
-export function prettyPrintProfiles(title: string, p: PrettyProfleData, fn: (s: ProfileStats) => any) {
+export function prettyPrintProfiles(print: (s: string) => void, title: string, p: PrettyProfleData, fn: (s: ProfileStats) => any) {
     if (p.commandTitlesAndWidths.length == 0)
-        console.log(title.padEnd(p.directoryWidth), "no profile data available")
+        print(title.padEnd(p.directoryWidth) + " no profile data available")
     else
-        console.log([[title.padEnd(p.directoryWidth), ...p.commandTitlesAndWidths.map(ct => ct.value.padStart(ct.width))].join(' '),
+        print([[title.padEnd(p.directoryWidth), ...p.commandTitlesAndWidths.map(ct => ct.value.padStart(ct.width))].join(' '),
             ...p.data.map(pd => [pd.directory.padEnd(p.directoryWidth),
                 ...p.commandTitlesAndWidths.map(cw => getValueToDisplay(fn, pd, cw).toString().padStart(cw.width))].join(' '))
-        ].join('\n'))
+        ].map(s => s + '\n').join())
 
 }
