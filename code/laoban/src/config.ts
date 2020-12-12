@@ -77,8 +77,10 @@ export interface HasLaobanDirectory {
 }
 export interface HasOutputStream{
     outputStream: Writable
-
 }
+
+export type Action<T>= (cmd: any)=> Promise<T>
+
 export interface Config extends ConfigVariables, HasLaobanDirectory , HasOutputStream{
     laobanConfig: string,
     sessionDir: string,

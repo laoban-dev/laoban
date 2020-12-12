@@ -149,10 +149,9 @@ export let monitorCommandDecorator: CommandDecorator = e => d => {
         return r
     })
 }
-export function monitor(status: Status, promise: Promise<void>) {
+export function monitor<T>(status: Status, promise: Promise<T>): Promise<T> {
     if (process.stdin.isTTY) {
         readline.emitKeypressEvents(process.stdin);
-        promise.then(() => process.exit(0))
         process.stdin.setRawMode(true);
         process.stdin.resume()
         process.stdin.on('keypress', (str, key) => {
@@ -187,4 +186,5 @@ export function monitor(status: Status, promise: Promise<void>) {
             }
         })
     }
+    return promise
 }

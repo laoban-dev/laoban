@@ -15,14 +15,16 @@
     "@types/node"      : "^14.14.7",
     "npm-check-updates": "^10.0.0",
     "typescript"       : "^4.0.5",
-    "fs-extra"         : "^9.0.1"
+    "fs-extra"         : "^9.0.1",
+    "commander"        : "^6.2.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom"  : "^5.11.5",
     "@testing-library/user-event": "^12.2.0",
     "@types/jest"                : "^26.0.15",
     "jest"                       : "^26.6.0",
-    "ts-jest"                    : "^26.4.4"
+    "ts-jest"                    : "^26.4.4",
+    "@types/fs-extra": "^9.0.5"
   },
   "files"          : [
     "README.md",
@@ -39,12 +41,12 @@
   "main"           : "index",
   "repository"     : "git@github.com:phil-rice/ts-lens.git",
   "scripts"        : {
-    "qtest"      : "jest --config jest.config.json",
+    "qtest"     : "jest --config jest.config.json",
     "test"      : "jest --verbose --config jest.config.json",
-    "coverage"      : "jest --verbose ----collect-coverage --config jest.config.json",
+    "coverage"  : "jest --verbose ----collect-coverage --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "name": "laoban",
+  "name"           : "laoban",
   "types"          : "index",
   "version"        : "<version>",
   "bin"            : {"laoban": "dist/index.js"}
