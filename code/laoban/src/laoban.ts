@@ -14,7 +14,7 @@ import {
     ScriptInContextAndDirectoryWithoutStream
 } from "./config";
 import * as path from "path";
-import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles, ProfileAndDirectory} from "./profiling";
+import {findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles} from "./profiling";
 import {loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile} from "./modifyPackageJson";
 import {compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus} from "./status";
 import * as os from "os";
@@ -42,7 +42,6 @@ import {validateProjectDetailsAndTemplates} from "./validation";
 import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
 import {shellReporter} from "./report";
 import {Writable} from "stream";
-import {Script} from "vm";
 
 const displayError = (outputStream: Writable) => (e: Error) =>
     outputStream.write(e.message.split('\n').slice(0, 2).join('\n') + "\n");
@@ -75,14 +74,76 @@ function checkGuard(config: Config, script: ScriptDetails): Promise<void> {
     return Promise.resolve()
 }
 
-export class Cli {
-    private executeGenerations: ExecuteGenerations;
 
-    command(cmd: string, description: string, ...fns: ((a: any) => any)[]) {
-        var p = this.program.command(cmd).description(description)
-        fns.forEach(fn => p = fn(p))
-        return p
+let configAction: Action<void> = (config: Config, cmd: any) => {
+    let simpleConfig = {...config}
+    delete simpleConfig.scripts
+    return Promise.resolve(output(config)(JSON.stringify(simpleConfig, null, 2)))
+}
+//TODO sort out type signature.. and it's just messy
+function runAction(executeCommand: any, command: () => string, executeGenerations: ExecuteGenerations): Action<GenerationsResult> {
+    return (config: Config, cmd: any) => {
+        // console.log('runAction', command())
+        let s: ScriptDetails = {name: '', description: `run ${command}`, commands: [{name: 'run', command: command(), status: false}]}
+        // console.log('command.run', command)
+        return executeCommand(config, s, executeGenerations)(cmd)
     }
+}
+
+let statusAction: Action<void> = (config: Config, cmd: any) =>
+    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
+        let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
+            ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
+        let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
+        prettyPrintData(prettyPrintStatusData)
+    })
+
+let compactStatusAction: Action<void> = (config: Config, cmd: any) =>
+    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds =>
+        ds.forEach(d => writeCompactedStatus(path.join(d.directory, config.status), compactStatus(path.join(d.directory, config.status)))))
+
+let profileAction: Action<void> = (config: Config, cmd: any) =>
+    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => Promise.all(ds.map(d =>
+        loadProfile(config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)}))))).then(p => {
+        let data = prettyPrintProfileData(p);
+        prettyPrintProfiles(output(config), 'latest', data, p => (p.latest / 1000).toFixed(3))
+        output(config)('')
+        prettyPrintProfiles(output(config), 'average', data, p => (p.average / 1000).toFixed(3))
+    })
+
+let validationAction: Action<boolean | Config> = (config: Config, cmd: any) =>
+    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => validateProjectDetailsAndTemplates(config, ds)).//
+        then(issues => abortWithReportIfAnyIssues({config, outputStream: config.outputStream, issues}), displayError(config.outputStream))
+//TODO This looks like it needs a clean up. It has abort logic and display error logic. the signature sucks...
+
+
+let projectsAction: Action<void[]> = (config: Config, cmd: any) => {
+    return ProjectDetailFiles.workOutProjectDetails(config, {}).//
+        then(ds => {
+            return Promise.all(ds.map(p => {
+                output(config)(p.directory)
+            }))
+        })
+
+}
+let updateConfigFilesFromTemplates: Action<void> = (config: Config, cmd: any) =>
+    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p =>
+        copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
+            loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
+                loadVersionFile(config).//
+                    then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))))))
+
+// function command<T>(p: commander.CconfigOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues) => (cmd: string,a: Action<T>, description: string, ...fns: ((a: any) => any)[]) {
+//     function action<T>(a: Action<T>): (cmd: any) => Promise<T> {
+//         return cmd => configOrReportIssues(configAndIssues).then(config => a(config, cmd))
+//     }
+//     var p = this.program.command(cmd).description(description)
+//     fns.forEach(fn => p = fn(p))
+//     return p.action(action(a))
+// }
+
+export class Cli {
+    private program: any;
 
     defaultOptions(configAndIssues: ConfigAndIssues): (program: any) => any {
         return program => {
@@ -101,27 +162,15 @@ export class Cli {
         }
     }
 
-    program = require('commander').//
-        arguments('').//
-        version('0.1.0')//
 
-
-    addScripts(config: Config, options: (program: any) => any) {
-        let scripts = config.scripts
-        scripts.forEach(script =>
-            this.command(script.name, script.description, options).//
-                action(this.executeCommand(config, script)))
-    }
-
-
-    executeCommand(config: Config, script: ScriptDetails) {
+    executeCommand(config: Config, script: ScriptDetails, executeGenerations: ExecuteGenerations) {
         let sessionId = makeSessionId(new Date(), script.name);
         return (cmd: any) => checkGuard(config, script).then(() => fse.mkdirp(path.join(config.sessionDir, sessionId)).then(() =>
             ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
                 let sc = makeSc(config, sessionId, details, script, cmd);
                 let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
                 let gens: Generations = [scds]
-                let promiseGensResult: Promise<GenerationsResult> = this.executeGenerations(gens).catch(e => {
+                let promiseGensResult: Promise<GenerationsResult> = executeGenerations(gens).catch(e => {
                     config.outputStream.write('had error in execution\n')
                     displayError(config.outputStream)(e)
                     return []
@@ -132,94 +181,39 @@ export class Cli {
     }
 
 
-    configAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void> {
-        return (cmd: any) => configOrReportIssues(configAndIssues).then(config => {
-            let simpleConfig = {...config}
-            delete simpleConfig.scripts
-            return output(config)(JSON.stringify(simpleConfig, null, 2))
-        });
-    }
-    runAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<GenerationsResult> {
-        return (cmd: any) => configOrReportIssues(configAndIssues).then(config => {
-            let command = this.program.args.slice(1).filter(n => !n.startsWith('-')).join(' ') //TODO this should be acquired from cmd
-            let s: ScriptDetails = {name: '', description: `run ${command}`, commands: [{name: 'run', command: command, status: false}]}
-            // console.log('command.run', command)
-            return this.executeCommand(config, s)(cmd)
-        })
-    }
-    statusAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void> {
-        return (cmd: any) => configOrReportIssues(configAndIssues).then(config =>
-            ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
-                let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
-                    ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
-                let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
-                prettyPrintData(prettyPrintStatusData)
-            }));
-    }
-    compactStatusAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void> {
-        return (cmd: any) =>
-            configOrReportIssues(configAndIssues).then(config =>
-                ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds =>
-                    ds.forEach(d => writeCompactedStatus(path.join(d.directory, config.status), compactStatus(path.join(d.directory, config.status))))))
-    }
-    profileAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void> {
-        return (cmd: any) => configOrReportIssues(configAndIssues).then(config =>
-            ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => Promise.all(ds.map(d =>
-                loadProfile(config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)}))))).then(p => {
-                let data = prettyPrintProfileData(p);
-                prettyPrintProfiles(output(config), 'latest', data, p => (p.latest / 1000).toFixed(3))
-                output(config)('')
-                prettyPrintProfiles(output(config), 'average', data, p => (p.average / 1000).toFixed(3))
-            }))
-    }
-    validationAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void> {
-        return (cmd: any) => configOrReportIssues(configAndIssues).then(config => {
-            ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => validateProjectDetailsAndTemplates(config, ds)).//
-                then(issues => abortWithReportIfAnyIssues(configAndIssues), displayError(config.outputStream))
-            //TODO This looks like it needs a clean up. It has abort logic and display error logic.
-        });
-    }
-    projectsAction(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void[]> {
-        return (cmd: any) => configOrReportIssues(configAndIssues).then(config =>
-            ProjectDetailFiles.workOutProjectDetails(config, {}).//
-                then(ds => Promise.all(ds.map(p => output(config)(p.directory)))))
-    }
-    updateConfigFilesFromTemplates(configOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues): Action<void> {
-        return (cmd: any) =>
-            configOrReportIssues(configAndIssues).then(config =>
-                ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p =>
-                    copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
-                        loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
-                            loadVersionFile(config).//
-                                then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))))))
-    };
-
-
     constructor(configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues) {
-        this.executeGenerations = executeGenerations;
+        var program = require('commander').//
+            arguments('').//
+            version('0.1.0')//
 
         let defaultOptions = this.defaultOptions(configAndIssues)
+        function command(cmd: string, description: string, fns: ((a: any) => any)[]) {
+            let p = program.command(cmd).description(description)
+            fns.forEach(fn => p = fn(p))
+            return p
+        }
+        function action<T>(name: string, a: Action<T>, description: string, ...options: ((a: any) => any)[]) {
+            // console.log(name)
+            command(name, description, options).action(cmd => configOrReportIssues(configAndIssues).then(config => a(config, cmd).catch(displayError(config.outputStream))))
+        }
+        let exCommand = this.executeCommand
+        function addScripts(config: Config, ...options: ((program: any) => any)[]) {
+            let scripts = config.scripts
+            scripts.forEach(script => action(script.name, exCommand(config, script, executeGenerations), script.description, ...options))
+        }
 
-        this.command('config', 'displays the config', defaultOptions).//
-            action(this.configAction(configOrReportIssues, configAndIssues))
-        this.command('run', 'runs an arbitary command (the rest of the command line).', defaultOptions).//
-            action(this.runAction(configOrReportIssues, configAndIssues))
-        this.command('status', 'shows the status of the project in the current directory', defaultOptions).//
-            action(this.statusAction(configOrReportIssues, configAndIssues))
-        this.command('compactStatus', 'crunches the status', defaultOptions).//
-            action(this.compactStatusAction(configOrReportIssues, configAndIssues))
-        this.command('validate', 'checks the laoban.json and the project.details.json', defaultOptions).//
-            action(this.validationAction(configOrReportIssues, configAndIssues))
-        this.command('profile', 'shows the time taken by named steps of commands', defaultOptions).//
-            action(this.profileAction(configOrReportIssues, configAndIssues))
-        this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
-            action(this.projectsAction(configOrReportIssues, configAndIssues))
-        this.command('updateConfigFilesFromTemplates', "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions).//
-            action(this.updateConfigFilesFromTemplates(configOrReportIssues, configAndIssues))
+        action('config', configAction, 'displays the config', defaultOptions)
+        action('run', runAction(exCommand, () => program.args.slice(1).filter(n => !n.startsWith('-')).join(' '),executeGenerations), 'runs an arbitary command (the rest of the command line).', defaultOptions)
+        action('status', statusAction, 'shows the status of the project in the current directory', defaultOptions)
+        action('compactStatus', compactStatusAction, 'crunches the status', defaultOptions)
+        action('validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions)
+        action('profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions)
+        action('projects', projectsAction, 'lists the projects under the laoban directory')
+        action('updateConfigFilesFromTemplates', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions)
 
-        if (configAndIssues.issues.length == 0) this.addScripts(configAndIssues.config, defaultOptions)
+        if (configAndIssues.issues.length == 0) addScripts(configAndIssues.config, defaultOptions)
 
-        this.program.on('--help', () => {
+        program.on('--help', () => {
             let log = output(configAndIssues)
             log('');
             log("Press ? while running for list of 'status' commands. S is the most useful")
@@ -239,16 +233,15 @@ export class Cli {
                 log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             }
         });
-        var p = this.program
-        this.program.on('command:*',
+        program.on('command:*',
             function () {
-                output(configAndIssues)(`Invalid command: ${p.args.join(' ')}\nSee --help for a list of available commands.`);
+                output(configAndIssues)(`Invalid command: ${this.program.args.join(' ')}\nSee --help for a list of available commands.`);
                 abortWithReportIfAnyIssues(configAndIssues)
                 process.exit(1);
             }
         );
-        this.program.allowUnknownOption(false);
-
+        program.allowUnknownOption(false);
+        this.program = program
     }
 
 

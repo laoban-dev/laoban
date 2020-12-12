@@ -40,8 +40,10 @@ export class ProjectDetailFiles {
         if (options.all) return this.findAndLoadProjectDetailsFromChildren(root);
         if (options.one) return this.loadProjectDetails(process.cwd()).then(x => [x])
 
-        return this.loadProjectDetails(process.cwd()).then(pd =>
-            pd.projectDetails ? this.loadProjectDetails(process.cwd()).then(x => [x]) : this.findAndLoadProjectDetailsFromChildren(root))
+        return this.loadProjectDetails(process.cwd()).then(pd => {
+                return pd.projectDetails ? this.loadProjectDetails(process.cwd()).then(x => [x]) : this.findAndLoadProjectDetailsFromChildren(root)
+            }
+        )
     }
 
 
