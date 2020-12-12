@@ -28,8 +28,10 @@ import {monitor, Status} from "./monitor";
 import {validateProjectDetailsAndTemplates} from "./validation";
 import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
 import {shellReporter} from "./report";
+import {Writable} from "stream";
 
-const displayError = (e: Error) => console.error(e.message.split('\n').slice(0, 2).join('\n'));
+const displayError = (outputStream: Writable) => (e: Error) =>
+    outputStream.write(e.message.split('\n').slice(0, 2).join('\n') + "\n");
 
 const makeSessionId = (d: Date, suffix: any) => d.toISOString().replace(/:/g, '.') + '.' + suffix;
 
@@ -115,13 +117,13 @@ export class Cli {
                 }))
                 let gens: Generations = [scds]
                 let promises = this.executeGenerations(gens).catch(e => {
-                    console.error('had error in execution')
-                    displayError(e)
+                    config.outputStream.write('had error in execution\n')
+                    displayError(config.outputStream)(e)
                 })//.catch(e => console.error(e));
                 monitor(status, promises.then(() => {}))
                 return promises
             })
-        }).catch(displayError)
+        }).catch(displayError(config.outputStream))
     }
 
     constructor(configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues) {
@@ -163,14 +165,14 @@ export class Cli {
                 configOrReportIssues(configAndIssues).then(config => {
                     ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
                         ds.forEach(d => writeCompactedStatus(path.join(d.directory, config.status), compactStatus(path.join(d.directory, config.status))))
-                    }).catch(displayError)
+                    }).catch(displayError(config.outputStream))
                 })
             })
         this.command('validate', 'checks the laoban.json and the project.details.json', defaultOptions).//
             action((cmd: any) => {
                 configOrReportIssues(configAndIssues).then(config => {
                     ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => validateProjectDetailsAndTemplates(config, ds)).//
-                        then(issues => abortWithReportIfAnyIssues({issues}), displayError)
+                        then(issues => abortWithReportIfAnyIssues({issues}), displayError(config.outputStream))
                 })
             })
         this.command('profile', 'shows the time taken by named steps of commands', defaultOptions).//
@@ -183,13 +185,15 @@ export class Cli {
                         prettyPrintProfiles('latest', data, p => (p.latest / 1000).toFixed(3))
                         console.log()
                         prettyPrintProfiles('average', data, p => (p.average / 1000).toFixed(3))
-                    }).catch(displayError)
+                    }).catch(displayError(config.outputStream))
                 })
             })
         this.command('projects', 'lists the projects under the laoban directory', (p: any) => p).//
             action((cmd: any) =>
                 configOrReportIssues(configAndIssues).then(config =>
-                    ProjectDetailFiles.workOutProjectDetails(config, {}).then(ds => Promise.all(ds.map(p => console.log(p.directory)))).catch(displayError)))
+                    ProjectDetailFiles.workOutProjectDetails(config, {}).//
+                        then(ds => Promise.all(ds.map(p => console.log(p.directory)))).//
+                        catch(displayError(config.outputStream))))
 
         this.command('updateConfigFilesFromTemplates', "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions).//
             action((cmd: any) => {
@@ -198,11 +202,12 @@ export class Cli {
                         copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
                             loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
                                 loadVersionFile(config).then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))
-                            ))))).//
-                    catch(displayError)
+                            )))).//
+                        catch(displayError(config.outputStream)))
             })
         if (configAndIssues.issues.length == 0) this.addScripts(configAndIssues.config, defaultOptions)
         this.program.on('--help', () => {
+            function log(s: string) {}
             console.log('');
             console.log("Press ? while running for list of 'status' commands. S is the most useful")
             console.log()

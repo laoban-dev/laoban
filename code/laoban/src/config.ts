@@ -1,7 +1,7 @@
 import {ShellResult} from "./executors";
 import {Writable} from "stream";
 import {Status} from "./monitor";
-import WritableStream = NodeJS.WritableStream;
+
 
 export interface ConfigVariables {
     templateDir: string,
@@ -81,7 +81,7 @@ export interface Config extends ConfigVariables, HasLaobanDirectory {
     variables: { [name: string]: string },
     scripts: ScriptDetails[],
     os: string,
-    outputStream: WritableStream
+    outputStream: Writable
 }
 
 export interface ScriptDefns {
