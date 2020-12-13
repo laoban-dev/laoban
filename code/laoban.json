@@ -6,7 +6,7 @@
   "profile"       : ".profile",
   "packageManager": "yarn",
   "scripts"       : {
-    "log"       : {"description": "displays the log file", "commands": ["cat ${log}"]},
+    "log"       : {"description": "displays the tail of  log file. Best used with -s option", "commands": ["tail -5 ${log} "]},
     "link"      : {
       "description": "call '${packageManager} link' in each project directory",
       "commands"   : [
