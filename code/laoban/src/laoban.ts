@@ -90,7 +90,7 @@ function runAction(executeCommand: any, command: () => string, executeGeneration
         // console.log('runAction', command())
         let s: ScriptDetails = {name: '', description: `run ${command}`, commands: [{name: 'run', command: command(), status: false}]}
         // console.log('command.run', command)
-        return executeCommand(config, s, executeGenerations)(cmd)
+        return executeCommand(config, s, executeGenerations)(config, cmd)
     }
 }
 
