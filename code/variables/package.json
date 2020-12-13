@@ -36,13 +36,13 @@
   ],
   "license": "MIT",
   "main": "index",
-  "repository": "git@github.com:phil-rice/ts-lens.git",
+  "repository": "git@github.com:phil-rice/laoban.git",
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
   "types": "index",
-  "version": "0.1.24",
+  "version": "0.2.0",
   "template": "noreact",
   "name": "@phil-rice/variables",
   "description": "A library that can dereference ${xxx} in strings",

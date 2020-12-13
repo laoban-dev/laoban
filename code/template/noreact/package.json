@@ -36,7 +36,7 @@
   ],
   "license": "MIT",
   "main": "index",
-  "repository": "git@github.com:phil-rice/ts-lens.git",
+  "repository": "git@github.com:phil-rice/laoban.git",
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"

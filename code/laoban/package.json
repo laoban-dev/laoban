@@ -1,53 +1,63 @@
 {
-  "browserslist"   : {
+  "browserslist": {
     "development": [
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
     ],
-    "production" : [
+    "production": [
       ">0.2%",
       "not dead",
       "not op_mini all"
     ]
   },
-  "dependencies"   : {
-    "@types/node"      : "^14.14.7",
+  "dependencies": {
+    "@types/node": "^14.14.7",
     "npm-check-updates": "^10.0.0",
-    "typescript"       : "^4.0.5",
-    "fs-extra"         : "^9.0.1",
-    "commander"        : "^6.2.0"
+    "typescript": "^4.0.5"
   },
   "devDependencies": {
-    "@testing-library/jest-dom"  : "^5.11.5",
+    "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/user-event": "^12.2.0",
-    "@types/jest"                : "^26.0.15",
-    "jest"                       : "^26.6.0",
-    "ts-jest"                    : "^26.4.4",
-    "@types/fs-extra": "^9.0.5"
+    "@types/jest": "^26.0.15",
+    "jest": "^26.6.0",
+    "ts-jest": "^26.4.4"
   },
-  "files"          : [
+  "files": [
     "README.md",
     "index.js",
     "index.d.ts",
     "src/"
   ],
-  "keywords"       : [
+  "keywords": [
     "functionalprogramming",
     "lens",
     "optics"
   ],
-  "license"        : "MIT",
-  "main"           : "index",
-  "repository"     : "git@github.com:phil-rice/ts-lens.git",
-  "scripts"        : {
-    "qtest"     : "jest --config jest.config.json",
-    "test"      : "jest --verbose --config jest.config.json",
-    "coverage"  : "jest --verbose ----collect-coverage --config jest.config.json",
+  "license": "MIT",
+  "main": "index",
+  "repository": "git@github.com:phil-rice/laoban.git",
+  "scripts": {
+    "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "name"           : "laoban",
-  "types"          : "index",
-  "version"        : "<version>",
-  "bin"            : {"laoban": "dist/index.js"}
+  "types": "index",
+  "version": "0.2.0",
+  "template": "noreact",
+  "name": "laoban",
+  "description": "A cli for managing projects that have many npm packages",
+  "details": {
+    "publish": true
+  },
+  "links": [
+    "@phil-rice/variables",
+    "@phil-rice/validation"
+  ],
+  "extraDeps": {
+    "fs-extra": "^9.0.1",
+    "commander": "^6.2.0"
+  },
+  "extraDevDeps": {
+    "@types/fs-extra": "^9.0.5"
+  }
 }

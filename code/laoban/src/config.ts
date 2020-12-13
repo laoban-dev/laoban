@@ -77,13 +77,13 @@ export type ScriptProcessor = (sc: ScriptInContext) => Promise<DirectoryAndResul
 export interface HasLaobanDirectory {
     laobanDirectory: string,
 }
-export interface HasOutputStream{
+export interface HasOutputStream {
     outputStream: Writable
 }
 
-export type Action<T>= (config: Config, cmd: any)=> Promise<T>
+export type Action<T> = (config: Config, cmd: any) => Promise<T>
 
-export interface Config extends ConfigVariables, HasLaobanDirectory , HasOutputStream{
+export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputStream {
     laobanConfig: string,
     sessionDir: string,
     variables: { [name: string]: string },
@@ -139,7 +139,7 @@ export interface RawConfigAndIssues {
     rawConfig?: RawConfig,
     issues: string[]
 }
-export interface ConfigAndIssues extends HasOutputStream{
+export interface ConfigAndIssues extends HasOutputStream {
     config?: Config,
     issues: string[]
 }

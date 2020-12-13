@@ -125,7 +125,7 @@ let validationAction: Action<boolean | Config> = (config: Config, cmd: any) =>
 
 let projectsAction: Action<void[]> = (config: Config, cmd: any) => {
 
-    return ProjectDetailFiles.workOutProjectDetails(config, {}).//
+    return ProjectDetailFiles.workOutProjectDetails(config, {all: true}).//
         then(ds => {
             // console.log('details are', ds.map(s => s.directory))
             return Promise.all(ds.map(p => {
@@ -135,12 +135,25 @@ let projectsAction: Action<void[]> = (config: Config, cmd: any) => {
         })
 
 }
-let updateConfigFilesFromTemplates: Action<void> = (config: Config, cmd: any) =>
-    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p =>
-        copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() =>
-            loadPackageJsonInTemplateDirectory(config, p.projectDetails).then(raw =>
-                loadVersionFile(config).//
-                    then(version => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))))))
+let updateConfigFilesFromTemplates: Action<void> = (config: Config, cmd: any) => {
+    let debug = new Debug(cmd.debug, x => console.log(x))
+    return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p => {
+        debug.debug('update', () => `updating in ${p.directory}. Template is ${p.projectDetails.template}`)
+        copyTemplateDirectory(config, debug, p.projectDetails.template, p.directory).then(() => {
+            debug.debug('update', () => '    copyTemplateDirectory')
+            loadPackageJsonInTemplateDirectory(config,debug, p.projectDetails).then(raw => {
+                debug.debug('update', () => '  loaded template')
+                return loadVersionFile(config).//
+                    then(version => {
+                        debug.debug('update', () => `  version is ${version}`)
+                        return saveProjectJsonFile(debug,p.directory, modifyPackageJson(raw, version, p.projectDetails))
+                    })
+            })
+        }, error => {
+            console.error(`failed to copy template directory for ${p.projectDetails.name}`, error)
+        })
+    }))
+}
 
 // function command<T>(p: commander.CconfigOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues) => (cmd: string,a: Action<T>, description: string, ...fns: ((a: any) => any)[]) {
 //     function action<T>(a: Action<T>): (cmd: any) => Promise<T> {
@@ -168,7 +181,7 @@ export class Cli {
                 option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
                 option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle.toString()).//
                 option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false).//
-                option('--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session]").//
+                option('--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update]").//
                 option('--sessionId <sessionId>', "specifies the session id, which is mainly used for logging")
         }
     }
@@ -226,7 +239,7 @@ export class Cli {
         action('validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions)
         action('profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions)
         action('projects', projectsAction, 'lists the projects under the laoban directory')
-        action('updateConfigFilesFromTemplates', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions)
+        action('update', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions)
 
         if (configAndIssues.issues.length == 0) addScripts(configAndIssues.config, defaultOptions)
 
