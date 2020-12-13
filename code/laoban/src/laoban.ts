@@ -42,6 +42,8 @@ import {validateProjectDetailsAndTemplates} from "./validation";
 import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
 import {shellReporter} from "./report";
 import {Writable} from "stream";
+import {Debug} from "./debug";
+import {CommanderStatic} from "commander";
 
 const displayError = (outputStream: Writable) => (e: Error) =>
     outputStream.write(e.message.split('\n').slice(0, 2).join('\n') + "\n");
@@ -52,10 +54,11 @@ function openStream(sc: ScriptInContextAndDirectoryWithoutStream): ScriptInConte
     let logStream = fs.createWriteStream(streamName(sc));
     return {...sc, logStream, streams: [logStream]}
 }
-function makeSc(config: Config, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, cmd: any) {
+function makeSc(config: Config, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, debug: Debug, cmd: any) {
     let status = new Status(config, dir => streamNamefn(config.sessionDir, sessionId, sc.details.name, dir))
     let allDirectorys = details.map(d => d.directory)
     let sc: ScriptInContext = {
+        debug,
         sessionId,
         status,
         dirWidth: Strings.maxLength(allDirectorys) - config.laobanDirectory.length,
@@ -91,13 +94,15 @@ function runAction(executeCommand: any, command: () => string, executeGeneration
     }
 }
 
-let statusAction: Action<void> = (config: Config, cmd: any) =>
-    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
+let statusAction: Action<void> = (config: Config, cmd: any) => {
+
+    return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
         let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
             ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
         let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
         prettyPrintData(prettyPrintStatusData)
     })
+}
 
 let compactStatusAction: Action<void> = (config: Config, cmd: any) =>
     ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds =>
@@ -119,7 +124,7 @@ let validationAction: Action<boolean | Config> = (config: Config, cmd: any) =>
 
 
 let projectsAction: Action<void[]> = (config: Config, cmd: any) => {
-    // console.log('projects actions', process.cwd())
+
     return ProjectDetailFiles.workOutProjectDetails(config, {}).//
         then(ds => {
             // console.log('details are', ds.map(s => s.directory))
@@ -149,7 +154,7 @@ let updateConfigFilesFromTemplates: Action<void> = (config: Config, cmd: any) =>
 export class Cli {
     private program: any;
 
-    defaultOptions(configAndIssues: ConfigAndIssues): (program: any) => any {
+    defaultOptions(configAndIssues: ConfigAndIssues): (program: CommanderStatic) => any {
         return program => {
             let defaultThrottle = configAndIssues.config ? configAndIssues.config.throttle : 0
             return program.//
@@ -160,28 +165,36 @@ export class Cli {
                 option('-1, --one', "executes in this project directory (opposite of --all)", false).//
                 option('-a, --all', "executes this in all projects, even if 'ín' a project", false).//
                 option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "").//
-                option('-g, --generationPlan', "instead of executing shows the generation plan", false)//
-                // option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle).//
-                // option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false)
+                option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
+                option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle.toString()).//
+                option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false).//
+                option('--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session]").//
+                option('--sessionId <sessionId>', "specifies the session id, which is mainly used for logging")
         }
     }
 
 
     executeCommand(config: Config, script: ScriptDetails, executeGenerations: ExecuteGenerations) {
-        let sessionId = makeSessionId(new Date(), script.name);
-        return (cmd: any) => checkGuard(config, script).then(() => fse.mkdirp(path.join(config.sessionDir, sessionId)).then(() =>
-            ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
-                let sc = makeSc(config, sessionId, details, script, cmd);
-                let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
-                let gens: Generations = [scds]
-                let promiseGensResult: Promise<GenerationsResult> = executeGenerations(gens).catch(e => {
-                    config.outputStream.write('had error in execution\n')
-                    displayError(config.outputStream)(e)
-                    return []
-                })
-                monitor(sc.status, promiseGensResult.then(() => {}))
-                return promiseGensResult
-            })))
+        return (config: Config, cmd: any) => {
+
+            let debug = new Debug(cmd.debug, s => console.log(s))
+            let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
+            let sessionDir = path.join(config.sessionDir, sessionId);
+            debug.debug('session', () => `cmd.session [${cmd.sessionId}] sessionId actually [${sessionId}]. SessionDir is [${sessionDir}]`)
+            return checkGuard(config, script).then(() => fse.mkdirp(sessionDir).then(() =>
+                ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
+                    let sc = makeSc(config, sessionId, details, script, debug, cmd);
+                    let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
+                    let gens: Generations = [scds]
+                    let promiseGensResult: Promise<GenerationsResult> = executeGenerations(gens).catch(e => {
+                        config.outputStream.write('had error in execution\n')
+                        displayError(config.outputStream)(e)
+                        return []
+                    })
+                    monitor(sc.status, promiseGensResult.then(() => {}))
+                    return promiseGensResult
+                })))
+        }
     }
 
 
@@ -196,7 +209,7 @@ export class Cli {
             fns.forEach(fn => p = fn(p))
             return p
         }
-        function action<T>(name: string, a: Action<T>, description: string, ...options: ((a: any) => any)[]) {
+        function action<T>(name: string, a: Action<T>, description: string, ...options: ((p: any) => any)[]) {
             // console.log(name)
             command(name, description, options).action(cmd => configOrReportIssues(configAndIssues).then(config => a(config, cmd).catch(displayError(config.outputStream))))
         }

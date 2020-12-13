@@ -1,6 +1,7 @@
 import {ShellResult} from "./executors";
 import {Writable} from "stream";
 import {Status} from "./monitor";
+import {Debug} from "./debug";
 
 
 export interface ConfigVariables {
@@ -51,6 +52,7 @@ export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectory
 
 export interface ScriptInContext {
     dirWidth: number,
+    debug: Debug,
     status: Status,
     dryrun: boolean,
     shell: boolean,

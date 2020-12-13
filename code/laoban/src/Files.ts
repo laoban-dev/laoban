@@ -30,7 +30,7 @@ export function findLaoban(directory: string) {
 interface ProjectDetailOptions {
     all?: boolean,
     one?: boolean,
-    projects?: string
+    projects?: string,
 }
 export class ProjectDetailFiles {
 
