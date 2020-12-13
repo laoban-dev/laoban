@@ -78,6 +78,7 @@ function checkGuard(config: Config, script: ScriptDetails): Promise<void> {
 let configAction: Action<void> = (config: Config, cmd: any) => {
     let simpleConfig = {...config}
     delete simpleConfig.scripts
+    delete simpleConfig.outputStream
     return Promise.resolve(output(config)(JSON.stringify(simpleConfig, null, 2)))
 }
 //TODO sort out type signature.. and it's just messy
@@ -118,9 +119,12 @@ let validationAction: Action<boolean | Config> = (config: Config, cmd: any) =>
 
 
 let projectsAction: Action<void[]> = (config: Config, cmd: any) => {
+    // console.log('projects actions', process.cwd())
     return ProjectDetailFiles.workOutProjectDetails(config, {}).//
         then(ds => {
+            // console.log('details are', ds.map(s => s.directory))
             return Promise.all(ds.map(p => {
+                // console.log('project', p.directory                )
                 output(config)(p.directory)
             }))
         })
@@ -156,9 +160,9 @@ export class Cli {
                 option('-1, --one', "executes in this project directory (opposite of --all)", false).//
                 option('-a, --all', "executes this in all projects, even if 'ín' a project", false).//
                 option('-p, --projects <projects>', "executes this in the projects matching the regex. e.g. -p 'name'", "").//
-                option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
-                option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle).//
-                option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false)
+                option('-g, --generationPlan', "instead of executing shows the generation plan", false)//
+                // option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle).//
+                // option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false)
         }
     }
 
@@ -203,7 +207,7 @@ export class Cli {
         }
 
         action('config', configAction, 'displays the config', defaultOptions)
-        action('run', runAction(exCommand, () => program.args.slice(1).filter(n => !n.startsWith('-')).join(' '),executeGenerations), 'runs an arbitary command (the rest of the command line).', defaultOptions)
+        action('run', runAction(exCommand, () => program.args.slice(1).filter(n => !n.startsWith('-')).join(' '), executeGenerations), 'runs an arbitary command (the rest of the command line).', defaultOptions)
         action('status', statusAction, 'shows the status of the project in the current directory', defaultOptions)
         action('compactStatus', compactStatusAction, 'crunches the status', defaultOptions)
         action('validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions)
@@ -229,7 +233,7 @@ export class Cli {
             log('')
             if (configAndIssues.issues.length > 0) {
                 log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                log(`There are issues preventing the program working. Type 'laoban validate' for details`)
+                log(`There are issues preventing the program w. Type 'laoban validate' for details`)
                 log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             }
         });
@@ -247,9 +251,10 @@ export class Cli {
 
     parsed: any;
     start(argv: string[]) {
-        if (process.argv.length == 2) {
+        // console.log('starting', argv)
+        if (argv.length == 2) {
             this.program.outputHelp();
-            return
+            return Promise.resolve()
         }
         this.parsed = this.program.parseAsync(argv); // notice that we have to parse in a new statement.
         return this.parsed

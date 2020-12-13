@@ -135,7 +135,7 @@ export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDeta
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) => {
         let child = cp.spawn(d.details.commandString, {...options, shell: true})
-        child.stdout.on('data', data => writeTo(d.streams, data))
+        child.stdout.on('data', data => writeTo(d.streams, data))//Why not pipe? because the lifecycle of the streams are different
         child.stderr.on('data', data => writeTo(d.streams, data))
         child.on('close', (code) => {resolve({err: code == 0 ? null : code})})
     })
@@ -160,7 +160,7 @@ function executeInChangedEnv<To>(env: Envs, block: () => To): To {
 
 
 export let execJS: RawCommandExecutor = d => {
-    // console.log('in execJs', d.details)
+    // console.log('in execJs',process.cwd(),d.details.directory, d.details.commandString)
     try {
         let res = executeInChangedEnv<any>(d.details.env, () => executeInChangedDir(d.details.directory,
             () => Function("return  " + d.details.commandString.substring(3))().toString()))
