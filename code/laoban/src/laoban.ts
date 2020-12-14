@@ -84,6 +84,7 @@ let configAction: Action<void> = (config: Config, cmd: any) => {
     delete simpleConfig.outputStream
     return Promise.resolve(output(config)(JSON.stringify(simpleConfig, null, 2)))
 }
+
 //TODO sort out type signature.. and it's just messy
 function runAction(executeCommand: any, command: () => string, executeGenerations: ExecuteGenerations): Action<GenerationsResult> {
     return (config: Config, cmd: any) => {
@@ -95,14 +96,14 @@ function runAction(executeCommand: any, command: () => string, executeGeneration
 }
 
 
-let statusAction: Action<void> = (config: Config, cmd: any) => {
-    return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
-        let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
-            ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
-        let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
-        prettyPrintData(prettyPrintStatusData)
-    })
-}
+    let statusAction: Action<void> = (config: Config, cmd: any) => {
+        return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
+            let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
+                ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
+            let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
+            prettyPrintData(prettyPrintStatusData)
+        })
+    }
 let remoteLinkAction: Action<void> = (config: Config, cmd: any) => {
     let debug = new Debug(cmd.debug, x => console.log(x))
     return ProjectDetailFiles.workOutProjectDetails(config, {all: true}).then(ds => {

@@ -113,7 +113,7 @@
         "find dist -type f -name 'enzymeAdapterSetup.*' -delete",
         "cp package.json dist",
         "cp README.* dist",
-        {"name": "publish", "command": "${packageManager} publish", "status": true, "directory": "dist"}
+        {"name": "publish", "command": "${packageManager} publish --access public", "status": true, "directory": "dist"}
       ],
       "inLinksOrder": true
     }
