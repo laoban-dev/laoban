@@ -113,6 +113,7 @@ export interface CommandDefn {
     name?: string,
     command: string,
     status?: boolean,
+    eachLink?: boolean,
     directory?: string
 }
 

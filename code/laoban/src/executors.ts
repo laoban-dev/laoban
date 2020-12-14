@@ -3,7 +3,7 @@ import {CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptIn
 import {cleanUpEnv, derefence} from "./configProcessor";
 import * as path from "path";
 
-import {chain, writeTo} from "./utils";
+import {chain, flatten, writeTo} from "./utils";
 import {Writable} from "stream";
 import {CommandDecorator} from "./decorators";
 
@@ -55,22 +55,28 @@ export function streamName(scd: ScriptInContextAndDirectoryWithoutStream) {
 
 
 export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): ShellCommandDetails<CommandDetails>[] {
-    return scd.scriptInContext.details.commands.map(cmd => {
+    return flatten(scd.scriptInContext.details.commands.map(cmd => {
         let directory = calculateDirectory(scd.detailsAndDirectory.directory, cmd)
-        let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails}
-        let env = cleanUpEnv(dic, scd.scriptInContext.details.env);
-        let result: ShellCommandDetails<CommandDetails> = {
-            ...scd,
-            details: ({
-                command: cmd,
-                commandString: derefence(dic, cmd.command),
-                dic: dic,
-                env: env,
-                directory: derefence(dic, directory),
-            })
-        };
-        return result
-    })
+        function makeShellDetails(link?: string) {
+            let dic = {...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails, link}
+            let env = cleanUpEnv(dic, scd.scriptInContext.details.env);
+            let resultForOneCommand: ShellCommandDetails<CommandDetails> = {
+                ...scd,
+                details: ({
+                    command: cmd,
+                    commandString: derefence(dic, cmd.command),
+                    dic: dic,
+                    env: env,
+                    directory: derefence(dic, directory),
+                })
+            };
+            return resultForOneCommand;
+        }
+        let rawlinks = scd.detailsAndDirectory.projectDetails.details.links;
+        let links = rawlinks?rawlinks:[]
+        // console.log('links are', links)
+        return cmd.eachLink ? links.map(makeShellDetails) : [makeShellDetails()]
+    }))
 }
 
 export let executeOneGeneration: (e: ExecuteScript) => ExecuteOneGeneration = e => gen => Promise.all(gen.map(x => e(x)))

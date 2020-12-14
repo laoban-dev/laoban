@@ -117,6 +117,68 @@ If this is present in a directory it tells laoban that the directory is a projec
       * See the 'TODO' section at the end: generations are only respected in display order at the moment
 * `throttle` sets the maximum number of parallel activites that will be executed. The default is 0 which doesn't limit things
 
+## Scripts
+Scripts are lists of commands (sometimes just one) that are executed when you type `laoban scriptName`. 
+* Scripts can be run in more than one directory at once. Most commands run in 'all projects' unless the current directory
+  is a project directory, in which case they run in the current
+          * -a means 'run in all project directories'
+          * -1 means 'just run in this directory'
+* Scripts have access to variables
+
+### OsGuard
+
+Commands can be marked so that they only run in a particularly OS. Examples can be seen in the laoban.json
+
+```
+    "pack"       : {
+       ...
+      "osGuard":  "Linux",
+      "commands"   : [
+          ....
+      ]
+    },
+```
+
+## pmGuard
+If a command requires a particular package manager (example `npm test` and `yarn test` are both OK but `yarn install` is not allowed),
+then a pmGuard can be set.
+
+## guard
+A command can be set to only execute if a guard is defined. The example of ls-ports here:
+```
+    "ls-ports"  : {
+      "description": "lists the projects that have a port defined in project.details.json",
+      "guard"      : "${projectDetails.details.port}",
+      "commands"   : ["js:process.cwd()"]
+    },
+```
+Another good example is 
+```
+    "start"     : {
+      "description": "${packageManager} start for all projects that have a port defined in project.details.json",
+      "guard"      : "${projectDetails.details.port}",
+      "commands"   : ["${packageManager} start"],
+      "env"        : {"PORT": "${projectDetails.details.port}"}
+    },
+```
+So by setting 'ports' to a numeric value in the  `project.details.json` we have  'marked' the directory in such a way that 
+executing `laoban start` will start up the project. This lets us spin up multiple react projects at once. It's a good idea
+if all the projects have different ports...
+
+
+
+## inLinksOrder
+Some scripts don't parallelise that well. For example if we are compiling projects, and some projects depend on other projects
+then we want to compile them in 'the right order'.
+
+Setting 'inLinksOrder' means that the links in the projectDetails are used to determine the order in which things are executed
+
+This can be seen using '-g | --generationPlan' as an option. This behavior can also be forced on any command by selecting  -l, --links
+
+## env
+If a command needs access to environment variables (for example a port) these can be added. It is
+not uncommon to have a guard condition on the command. For example:
+
 ## Commands
 
 These are added to laoban by means of the laoban.json file. An inspection of it should give you a good idea
@@ -141,10 +203,8 @@ executes `cat ${log}`.
 Here we can see that the command has one step with name `test`. Because status is true the 
 step results will be visible in the status
 
-## More Command features
-
 ### Javascript
-If the text of a command starts with js: then the command will be executed in javascript. 
+If the text of a command starts with js: then the command will be executed in javascript.
 
 Examples
 * js:process.cwd()
@@ -152,25 +212,8 @@ Examples
 
 This is primarily for `js:process.cwd()` so that we can run scripts on both windows and linux that want to show the current directory
 
-### OsGuard
 
-Commands can be marked so that they only run in a particularly OS. Examples can be seen in the laoban.json
-
-```
-    "pack"       : {
-       ...
-      "osGuard":  "Linux",
-      "commands"   : [
-          ....
-      ]
-    },
-```
-
-## pmGuard
-If a command requires a particular package manager (example `npm test` and `yarn test` are both OK but `yarn install` is not allowed),
-then a pmGuard can be set. 
-
-## directory
+### directory
 If a command needs to run in a different directory (typically a sub directory) the directory can be set 
 ``` 
    "install"    : {
@@ -179,26 +222,17 @@ If a command needs to run in a different directory (typically a sub directory) t
 ```             
 This link command is now executed in the `dist` sub directory
 
-## inLinksOrder
-Some commands don't parallelise that well. For example if we are compiling projects, and some projects depend on other projects
-then we want to compile them in 'the right order'.
+### eachLink
+Some commands need to be accessed once for each link defined in the projectDetails file.
 
-Setting 'inLinksOrder' means that the links in the projectDetails are used to determine the order in which things are executed
-
-This can be seen using '-g | --generationPlan' as an option. This behavior can also be forced on any command by selecting  -l, --links
-
-## env
-If a command needs access to environment variables (for example a port) these can be added. It is
-not uncommon to have a guard condition on the command. For example:
-
-``` 
-    "startServer": {
-      "description": "${packageManager} start for all projects that have a port defined in project.details.json",
-      "guard"      : "${projectDetails.details.port}",
-      "commands"   : ["${packageManager} start"],
-      "env"        : {"PORT": "${projectDetails.details.port}"}
-    },
 ```
+    "remoteLink"   : {
+...
+      "commands"       : [
+        {"name": "remoteLink", "command": "${packageManager} link ${link}", "eachLink": true, "status": true},
+```
+Here we can see that the command will be executed once for each link. The variable `${link}` holds the value of the link
+
 
 ## Monitoring
 While laoban is running you can press ? to get an interactive menu. 
@@ -254,19 +288,20 @@ The idea of `status` is to give a way to visualise what is happening across all 
 
 # TODO
 
-# Nicer directory names so that we can see 'offset from the root'
-This is just a 'nicer looking output'. 
-
 # Make easily available on npmjs with name laoban
 * Have reserved name
+* Need to make it so that we can just mention it and it gets installed.
 
 # Monitor improvements
 * Had a situation where everything was finished but one thing that was hanging
 * It would be nice to be able to 'kill' the one thing that is hanging
 
 # Move to the ts project so we can easily dogfood
+* Consider if this is a good idea
 
-
+# Make the `laoban.json` composible
+* Because it can get very big... 
+* and we want to be able to be able to reuse bits across projects
 
 ## Need a plugin story so that we don't have to shell out for common things
 * For example updating package json... only important for npm/yarn. Currently done by a script
