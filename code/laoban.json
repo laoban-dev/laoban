@@ -33,9 +33,9 @@
       "description": "runs tsc",
       "commands"   : [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
-    "unlink"       : {
+    "unlink"    : {
       "description": "runs ${packageManager} unlink",
-      "commands"   : [ "${packageManager} unlink"]
+      "commands"   : ["${packageManager} unlink"]
     },
     "test"      : {
       "description": "runs ${packageManager} test",
@@ -45,25 +45,14 @@
       "description": "prints something, delays 2s, prints something",
       "commands"   : ["echo `pwd` 'start'", "sleep 2s", "echo `pwd` 'stop' "]
     },
-    "install"   : {
-      "description"    : "does the initial updateConfigFilesFromTemplates/install/link/tsc/test... etc in each project",
-      "commands"       : [
-        "laoban update",
-        {"name": "install", "command": "${packageManager} install", "status": true},
-        {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
-        {"name": "test", "command": "${packageManager} test", "status": true}
-      ], "inLinksOrder": true
-    },
-    "newInstall"   : {
+    "install": {
       "description"    : "(not working yet ) doing the initial updateConfigFilesFromTemplates/install/link/tsc/test... etc in each project",
-      "osGuard"     : "Linux",
-      "guardReason" : "the file copy command only works on linux",
       "commands"       : [
         "laoban update",
         {"name": "install", "command": "${packageManager} install", "status": true},
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        {"name": "copyPackageJson", "command": "cp package.json dist"},
+        {"name": "copyPackageJsonLinux", "command": "cp package.json dist", "osGuard": "Linux"},
+        {"name": "copyPackageJsonWindows", "command": "copy package.json dist", "osGuard": "Windows"},
         {"name": "unlink", "command": "${packageManager} unlink", "status": true, "directory": "dist"},
         {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
         {"name": "remoteLink", "command": "${packageManager} link ${link}", "eachLink": true, "status": true},

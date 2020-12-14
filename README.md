@@ -126,13 +126,14 @@ Scripts are lists of commands (sometimes just one) that are executed when you ty
 * Scripts have access to variables
 
 ### OsGuard
-
-Commands can be marked so that they only run in a particularly OS. Examples can be seen in the laoban.json
+Scripts can be marked so that they only run in a particularly OS. Examples can be seen in the laoban.json. If
+called from the wrong os then an error is given. `guardReason` can be set to give an error message (and document why)
 
 ```
     "pack"       : {
        ...
       "osGuard":  "Linux",
+      "guardReason": "uses the linux 'cp' command",
       "commands"   : [
           ....
       ]
@@ -140,11 +141,13 @@ Commands can be marked so that they only run in a particularly OS. Examples can 
 ```
 
 ## pmGuard
-If a command requires a particular package manager (example `npm test` and `yarn test` are both OK but `yarn install` is not allowed),
-then a pmGuard can be set.
+If a script requires a particular package manager (example `npm test` and `yarn test` are both OK but `yarn install` is not allowed),
+then a pmGuard can be set. If the command is executed then it will give an error message. As with `osGuard`, `guardReason` can be set
+to document why
 
 ## guard
-A command can be set to only execute if a guard is defined. The example of ls-ports here:
+A command can be set to only execute if a guard is defined. Unlike the `osGuard` and `pmGuard` this does not cause
+an error message: only scripts that match are executed. The example of ls-ports here:
 ```
     "ls-ports"  : {
       "description": "lists the projects that have a port defined in project.details.json",
@@ -164,7 +167,6 @@ Another good example is
 So by setting 'ports' to a numeric value in the  `project.details.json` we have  'marked' the directory in such a way that 
 executing `laoban start` will start up the project. This lets us spin up multiple react projects at once. It's a good idea
 if all the projects have different ports...
-
 
 
 ## inLinksOrder
@@ -233,6 +235,21 @@ Some commands need to be accessed once for each link defined in the projectDetai
 ```
 Here we can see that the command will be executed once for each link. The variable `${link}` holds the value of the link
 
+### osGuard and pmGuard
+Scripts can also be set with these. If set at the script it is used to say 'this script will throw an error if you try and use it'.
+When set at the command level the command is ignored if the guard is not valid. This can be used
+to give multiple implementations for different operating systems / package managers
+
+```
+    "install": {
+      "description"    : "(not working yet ) doing the initial updateConfigFilesFromTemplates/install/link/tsc/test... etc in each project",
+      "commands"       : [
+...
+        {"name": "copyPackageJsonLinux", "command": "cp package.json dist", "osGuard": "Linux"},
+        {"name": "copyPackageJsonWindows", "command": "copy package.json dist", "osGuard": "Windows"},
+      ], "inLinksOrder": true
+```
+
 
 ## Monitoring
 While laoban is running you can press ? to get an interactive menu. 
@@ -240,7 +257,6 @@ While laoban is running you can press ? to get an interactive menu.
     * The status includes 'which commands have finished', 'how long they ran for'
 * You can press (capital) L for the names of the log files if you want to do something like `tail -f`
 * You can press a number (or letter if there are more than 10 directory) to see the tail of the log for that log 
-
 
 ## options
 

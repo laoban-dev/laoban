@@ -114,6 +114,8 @@ export interface CommandDefn {
     command: string,
     status?: boolean,
     eachLink?: boolean,
+    osGuard?: string,
+    pmGuard?: string,
     directory?: string
 }
 

@@ -128,7 +128,7 @@ export class CommandDecorators {
 
     static normalDecorator(a: AppendToFileIf): CommandDecorator {
         return chain([
-            ...[CommandDecorators.guard].map(CommandDecorators.guardDecorate),
+            ...[CommandDecorators.guard, CommandDecorators.pmGuard, CommandDecorators.osGuard].map(CommandDecorators.guardDecorate),
             CommandDecorators.dryRun,
             CommandDecorators.log,
             monitorCommandDecorator,
@@ -200,11 +200,19 @@ export class CommandDecorators {
     static guardDecorate: (guardDecorator: GuardDecorator) => CommandDecorator = dec => e =>
         d => {
             let guard = dec.guard(d)
-            return (!guard || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
+            return (guard === undefined || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
         }
 
     static guard: GuardDecorator = {
         guard: d => d.scriptInContext.details.guard,
         valid: (g, d) => derefenceToUndefined(d.details.dic, g) != ''
+    }
+    static osGuard: GuardDecorator = {
+        guard: d => d.details.command.osGuard,
+        valid: (g, d) => g === d.scriptInContext.config.os
+    }
+    static pmGuard: GuardDecorator = {
+        guard: d => d.details.command.pmGuard,
+        valid: (g, d) => g === d.scriptInContext.config.packageManager
     }
 }
