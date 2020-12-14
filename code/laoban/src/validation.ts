@@ -1,7 +1,7 @@
 import {CommandDefn, Config, Details, PackageJson, ProjectDetails, ProjectDetailsAndDirectory, RawConfig, ScriptDefn} from "./config";
 import * as path from "path";
 import {flatten, groupBy, removeDuplicates} from "./utils";
-import {Validate} from "./val";
+import {Validate} from "@phil-rice/validation";
 
 
 export function validateLaobanJson(v: Validate<RawConfig>): Validate<RawConfig> {
@@ -10,7 +10,7 @@ export function validateLaobanJson(v: Validate<RawConfig>): Validate<RawConfig> 
         isString('log', `This is used to say what the name of the log file in the project directory. It is typically '.log'. The output from commands is written here`).//
         isString('status', `This is used to record the success or failure of commands (such as 'test')`).//
         isString('profile', 'This is used to record how long things took to run').//
-        isString('packageManager', 'Typically npm or yarn').//
+        isString('packageManager', 'Typically npm or yarn').//1
         isObjectofObjects<ScriptDefn>('scripts', validateScriptDefn)
 }
 

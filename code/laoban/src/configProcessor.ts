@@ -3,7 +3,7 @@ import * as path from "path";
 import {laobanFile, loabanConfigName} from "./Files";
 import * as os from "os";
 import fs from "fs";
-import {Validate} from "./val";
+import {Validate} from "@phil-rice/validation";
 import {validateLaobanJson} from "./validation";
 import {Writable} from "stream";
 import WritableStream = NodeJS.WritableStream;

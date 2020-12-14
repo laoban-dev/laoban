@@ -94,8 +94,8 @@ function runAction(executeCommand: any, command: () => string, executeGeneration
     }
 }
 
-let statusAction: Action<void> = (config: Config, cmd: any) => {
 
+let statusAction: Action<void> = (config: Config, cmd: any) => {
     return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
         let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
             ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
@@ -103,6 +103,23 @@ let statusAction: Action<void> = (config: Config, cmd: any) => {
         prettyPrintData(prettyPrintStatusData)
     })
 }
+let remoteLinkAction: Action<void> = (config: Config, cmd: any) => {
+    let debug = new Debug(cmd.debug, x => console.log(x))
+    return ProjectDetailFiles.workOutProjectDetails(config, {all: true}).then(ds => {
+        debug.debug('link', () => 'linking ' + ds.map(d => d.directory).join())
+        ds.forEach(pd => {
+            debug.debug('link', () => `    ${config.packageManager} link in ${pd.directory}`)
+        })
+        return ds.forEach(pd => {
+            let pdLinks = pd.projectDetails.details.links
+            let links = pdLinks?pdLinks:[]
+            return links.forEach(link =>
+                console.log(`   ${config.packageManager} link ${link} in ${pd.directory}`)
+            )
+        })
+    })
+}
+
 
 let compactStatusAction: Action<void> = (config: Config, cmd: any) =>
     ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds =>
@@ -141,12 +158,12 @@ let updateConfigFilesFromTemplates: Action<void> = (config: Config, cmd: any) =>
         debug.debug('update', () => `updating in ${p.directory}. Template is ${p.projectDetails.template}`)
         copyTemplateDirectory(config, debug, p.projectDetails.template, p.directory).then(() => {
             debug.debug('update', () => '    copyTemplateDirectory')
-            loadPackageJsonInTemplateDirectory(config,debug, p.projectDetails).then(raw => {
+            loadPackageJsonInTemplateDirectory(config, debug, p.projectDetails).then(raw => {
                 debug.debug('update', () => '  loaded template')
                 return loadVersionFile(config).//
                     then(version => {
                         debug.debug('update', () => `  version is ${version}`)
-                        return saveProjectJsonFile(debug,p.directory, modifyPackageJson(raw, version, p.projectDetails))
+                        return saveProjectJsonFile(debug, p.directory, modifyPackageJson(raw, version, p.projectDetails))
                     })
             })
         }, error => {
@@ -181,7 +198,7 @@ export class Cli {
                 option('-g, --generationPlan', "instead of executing shows the generation plan", false).//
                 option('-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle.toString()).//
                 option('-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false).//
-                option('--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update]").//
+                option('--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]").//
                 option('--sessionId <sessionId>', "specifies the session id, which is mainly used for logging")
         }
     }
@@ -240,6 +257,7 @@ export class Cli {
         action('profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions)
         action('projects', projectsAction, 'lists the projects under the laoban directory')
         action('update', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions)
+        action('remoteLink', remoteLinkAction, "does npm/yarn link ", defaultOptions)
 
         if (configAndIssues.issues.length == 0) addScripts(configAndIssues.config, defaultOptions)
 
