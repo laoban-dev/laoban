@@ -10,11 +10,15 @@
       "description": "displays the tail of  log file. Best used with -s option", "commands": ["tail -5 ${log} "]
     },
     "link"      : {
-      "description": "call '${packageManager} link' in each project directory",
+      "description": "Sets up the 'links'. ${packageManage} link in the directories that define a project, and then links to it in the using projects",
       "commands"   : [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        {"name": "link", "command": "cd dist && ${packageManager} link", "status": true}
-      ]
+        {"name": "copyPackageJsonLinux", "command": "cp package.json dist", "osGuard": "Linux"},
+        {"name": "copyPackageJsonWindows", "command": "copy package.json dist", "osGuard": "Windows"},
+        {"name": "unlink", "command": "${packageManager} unlink", "status": true, "directory": "dist"},
+        {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
+        {"name": "remoteLink", "command": "${packageManager} link ${link}", "eachLink": true, "status": true}
+      ], "inLinksOrder": true
     },
     "ls"        : {"description": "lists all the projects", "commands": ["js:process.cwd()"], "osGuard": "Linux"},
     "lsDist"    : {

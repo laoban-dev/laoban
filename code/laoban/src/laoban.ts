@@ -206,7 +206,6 @@ export class Cli {
 
     executeCommand(config: Config, script: ScriptDetails, executeGenerations: ExecuteGenerations) {
         return (config: Config, cmd: any) => {
-
             let debug = new Debug(cmd.debug, s => console.log(s))
             let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
             let sessionDir = path.join(config.sessionDir, sessionId);

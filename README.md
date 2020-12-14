@@ -323,3 +323,7 @@ The idea of `status` is to give a way to visualise what is happening across all 
 * For example updating package json... only important for npm/yarn. Currently done by a script
 * We want to be able to use other people's scripts easily
 
+
+
+# Bugs?
+check laoban pack and loaban pack -a. Not sure why isn't executing
