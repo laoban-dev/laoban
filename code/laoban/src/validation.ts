@@ -1,4 +1,4 @@
-import {CommandDefn, Config, Details, PackageJson, ProjectDetails, ProjectDetailsAndDirectory, RawConfig, ScriptDefn} from "./config";
+import {CommandDefn, Config, ConfigWithDebug, Details, PackageJson, ProjectDetails, ProjectDetailsAndDirectory, RawConfig, ScriptDefn} from "./config";
 import * as path from "path";
 import {flatten, groupBy, removeDuplicates} from "./utils";
 import {Validate} from "@phil-rice/validation";
@@ -34,7 +34,8 @@ export function validateProjectDetailsAndTemplates(c: Config, pds: ProjectDetail
             [`Have multiple projects with same mame`, ...grouped[key].map(g => `${g.name} ${g.directory}`)] :
             []))
     if (duplicateErrors.length > 0) return Promise.resolve(duplicateErrors)
-    let pdsIssues = flatten(pds.map(pd => validateProjectDetails(Validate.validate(`Project details in ${pd.directory}`, pd.projectDetails)).errors))
+    let pdsIssues: string[] = flatten(pds.map(pd => validateProjectDetails(Validate.validate(`Project details in ${pd.directory}`, pd.projectDetails)).errors))
+
     return pdsIssues.length > 0 ?
         Promise.resolve(pdsIssues) :
         Promise.all(removeDuplicates(pds.map(d => d.projectDetails.template)).sort().map(template =>

@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import * as path from "path";
-import {Config, HasLaobanDirectory, ProjectDetailsAndDirectory} from "./config";
+import {Config, ConfigWithDebug, HasLaobanDirectory, ProjectDetailsAndDirectory} from "./config";
 import {flatten} from "./utils";
 import {Debug} from "./debug";
 
@@ -11,11 +11,14 @@ export let projectDetailsFile = 'project.details.json'
 
 export function laobanFile(dir: string) { return path.join(dir, loabanConfigName)}
 
-export function copyTemplateDirectory(config: Config, debug: Debug, template: string, target: string): Promise<void> {
+export function copyTemplateDirectory(config: ConfigWithDebug, template: string, target: string): Promise<void> {
     let src = path.join(config.templateDir, template);
-    debug.debug('update', () => `    1copyTemplateDirectory directory from ${src}, to ${target}`)
-    fse.copySync(src, target) // no idea why the fse.copy doesn't work here... it just fails silently
-    return Promise.resolve()
+    let d = config.debug.debug('update');
+    return d(() => `copyTemplateDirectory directory from ${src}, to ${target}`, () => {
+        fse.copySync(src, target)
+        // no idea why the fse.copy doesn't work here... it just fails silently
+        return Promise.resolve()
+    })
 }
 export function isProjectDirectory(directory: string) {
     return fs.existsSync(path.join(directory, projectDetailsFile))

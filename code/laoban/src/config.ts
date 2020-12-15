@@ -81,7 +81,7 @@ export interface HasOutputStream {
     outputStream: Writable
 }
 
-export type Action<T> = (config: Config, cmd: any) => Promise<T>
+export type Action<T> = (config: ConfigWithDebug, cmd: any) => Promise<T>
 
 export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputStream {
     laobanConfig: string,
@@ -90,7 +90,9 @@ export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputSt
     scripts: ScriptDetails[],
     os: string
 }
-
+export interface ConfigWithDebug extends Config{
+    debug: Debug
+}
 export interface ScriptDefns {
     [name: string]: ScriptDefn
 

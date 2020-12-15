@@ -1,11 +1,10 @@
-import {Config, ProjectDetails} from "./config";
+import {Config, ConfigWithDebug, ProjectDetails} from "./config";
 import * as path from "path";
 import * as fs from "fs";
 import {Debug} from "./debug";
 
-export function loadPackageJsonInTemplateDirectory(config: Config, debug: Debug, projectDetails: ProjectDetails): Promise<any> {
+export function loadPackageJsonInTemplateDirectory(config: ConfigWithDebug, projectDetails: ProjectDetails): Promise<any> {
     let file = path.join(config.templateDir, projectDetails.template, 'package.json')
-    debug.debug('update', () => '           loadPackageJsonInTemplateDirectory' + file)
     try {
         let data = fs.readFileSync(file) // not sure why readFile async not working: silent fail
         return Promise.resolve(JSON.parse(data.toString()))
@@ -38,8 +37,7 @@ export function loadVersionFile(config: Config): Promise<string> {
 //         if (data) resolve(data.toString())
 //     }))
 // }
-export function saveProjectJsonFile(debug: Debug, directory: string, packageJson: any) {
-    debug.debug('update', () => '        saving packageJson into ' + directory )
+export function saveProjectJsonFile(directory: string, packageJson: any) {
     fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify(packageJson, null, 2) + "\n")
     return Promise.resolve()
 }

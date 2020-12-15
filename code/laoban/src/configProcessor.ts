@@ -1,4 +1,4 @@
-import {CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, Envs, RawConfig, RawConfigAndIssues, ScriptDefn, ScriptDefns, ScriptDetails} from "./config";
+import {CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, Envs, RawConfig, RawConfigAndIssues, ScriptDefn, ScriptDefns, ScriptDetails} from "./config";
 import * as path from "path";
 import {laobanFile, loabanConfigName} from "./Files";
 import * as os from "os";
@@ -8,6 +8,7 @@ import {validateLaobanJson} from "./validation";
 import {Writable} from "stream";
 import WritableStream = NodeJS.WritableStream;
 import {output} from "./utils";
+import {Debug} from "./debug";
 
 
 export function loadLoabanJsonAndValidate(laobanDirectory: string): RawConfigAndIssues {
@@ -21,14 +22,14 @@ export function loadLoabanJsonAndValidate(laobanDirectory: string): RawConfigAnd
     }
 }
 
-export let abortWithReportIfAnyIssues: ConfigOrReportIssues = configAndIssues => {
+export let abortWithReportIfAnyIssues: ConfigOrReportIssues = (configAndIssues) => {
     let issues = configAndIssues.issues
     let log = output(configAndIssues)
     if (issues.length > 0) {
         log('Validation errors prevent loaban from running correctly')
         issues.forEach(e => log('  ' + e))
         process.exit(2)
-    } else return Promise.resolve(configAndIssues.config)
+    } else return Promise.resolve({...configAndIssues.config})
 }
 
 export function loadConfigOrIssues(outputStream: Writable, fn: (dir: string) => RawConfigAndIssues): (laoban: string) => ConfigAndIssues {

@@ -7,6 +7,7 @@ import {
     Config,
     ConfigAndIssues,
     ConfigOrReportIssues,
+    ConfigWithDebug,
     ProjectDetailsAndDirectory,
     ScriptDetails,
     ScriptInContext,
@@ -54,11 +55,11 @@ function openStream(sc: ScriptInContextAndDirectoryWithoutStream): ScriptInConte
     let logStream = fs.createWriteStream(streamName(sc));
     return {...sc, logStream, streams: [logStream]}
 }
-function makeSc(config: Config, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, debug: Debug, cmd: any) {
+function makeSc(config: ConfigWithDebug, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, cmd: any) {
     let status = new Status(config, dir => streamNamefn(config.sessionDir, sessionId, sc.details.name, dir))
     let allDirectorys = details.map(d => d.directory)
     let sc: ScriptInContext = {
-        debug,
+        debug: config.debug,
         sessionId,
         status,
         dirWidth: Strings.maxLength(allDirectorys) - config.laobanDirectory.length,
@@ -96,26 +97,21 @@ function runAction(executeCommand: any, command: () => string, executeGeneration
 }
 
 
-    let statusAction: Action<void> = (config: Config, cmd: any) => {
-        return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
-            let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
-                ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
-            let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
-            prettyPrintData(prettyPrintStatusData)
-        })
-    }
-let remoteLinkAction: Action<void> = (config: Config, cmd: any) => {
-    let debug = new Debug(cmd.debug, x => console.log(x))
+let statusAction: Action<void> = (config: Config, cmd: any) => {
+    return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
+        let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
+            ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
+        let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
+        prettyPrintData(prettyPrintStatusData)
+    })
+}
+let remoteLinkAction: Action<void> = (config: ConfigWithDebug, cmd: any) => {
     return ProjectDetailFiles.workOutProjectDetails(config, {all: true}).then(ds => {
-        debug.debug('link', () => 'linking ' + ds.map(d => d.directory).join())
-        ds.forEach(pd => {
-            debug.debug('link', () => `    ${config.packageManager} link in ${pd.directory}`)
-        })
         return ds.forEach(pd => {
             let pdLinks = pd.projectDetails.details.links
-            let links = pdLinks?pdLinks:[]
+            let links = pdLinks ? pdLinks : []
             return links.forEach(link =>
-                console.log(`   ${config.packageManager} link ${link} in ${pd.directory}`)
+                output(config)(`   ${config.packageManager} link ${link} in ${pd.directory}`)
             )
         })
     })
@@ -135,9 +131,11 @@ let profileAction: Action<void> = (config: Config, cmd: any) =>
         prettyPrintProfiles(output(config), 'average', data, p => (p.average / 1000).toFixed(3))
     })
 
-let validationAction: Action<boolean | Config> = (config: Config, cmd: any) =>
-    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => validateProjectDetailsAndTemplates(config, ds)).//
+let validationAction: Action<Config | boolean> =
+    (config: ConfigWithDebug, cmd: any) => ProjectDetailFiles.workOutProjectDetails(config, cmd).//
+        then(ds => validateProjectDetailsAndTemplates(config, ds)).//
         then(issues => abortWithReportIfAnyIssues({config, outputStream: config.outputStream, issues}), displayError(config.outputStream))
+
 //TODO This looks like it needs a clean up. It has abort logic and display error logic. the signature sucks...
 
 
@@ -153,24 +151,16 @@ let projectsAction: Action<void[]> = (config: Config, cmd: any) => {
         })
 
 }
-let updateConfigFilesFromTemplates: Action<void> = (config: Config, cmd: any) => {
-    let debug = new Debug(cmd.debug, x => console.log(x))
-    return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p => {
-        debug.debug('update', () => `updating in ${p.directory}. Template is ${p.projectDetails.template}`)
-        copyTemplateDirectory(config, debug, p.projectDetails.template, p.directory).then(() => {
-            debug.debug('update', () => '    copyTemplateDirectory')
-            loadPackageJsonInTemplateDirectory(config, debug, p.projectDetails).then(raw => {
-                debug.debug('update', () => '  loaded template')
-                return loadVersionFile(config).//
-                    then(version => {
-                        debug.debug('update', () => `  version is ${version}`)
-                        return saveProjectJsonFile(debug, p.directory, modifyPackageJson(raw, version, p.projectDetails))
-                    })
+let updateConfigFilesFromTemplates: Action<void> = (config: ConfigWithDebug, cmd: any) => {
+    let d = config.debug.debug('update')
+    return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p =>
+        d(() => 'copyTemplateDirectory', () => copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() => {
+            d(() => 'loadPackageJson', () => loadPackageJsonInTemplateDirectory(config, p.projectDetails)).then(raw => {
+                return d(() => 'loadVersionFile', () => loadVersionFile(config)).//
+                    then(version => d(() => 'saveProjectJsonFile', () => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))
             })
-        }, error => {
-            console.error(`failed to copy template directory for ${p.projectDetails.name}`, error)
-        })
-    }))
+        }))
+    ))
 }
 
 // function command<T>(p: commander.CconfigOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues) => (cmd: string,a: Action<T>, description: string, ...fns: ((a: any) => any)[]) {
@@ -203,31 +193,6 @@ export class Cli {
                 option('--sessionId <sessionId>', "specifies the session id, which is mainly used for logging")
         }
     }
-
-
-    executeCommand(config: Config, script: ScriptDetails, executeGenerations: ExecuteGenerations) {
-        return (config: Config, cmd: any) => {
-            let debug = new Debug(cmd.debug, s => console.log(s))
-            let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
-            let sessionDir = path.join(config.sessionDir, sessionId);
-            debug.debug('session', () => `cmd.session [${cmd.sessionId}] sessionId actually [${sessionId}]. SessionDir is [${sessionDir}]`)
-            return checkGuard(config, script).then(() => fse.mkdirp(sessionDir).then(() =>
-                ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
-                    let sc = makeSc(config, sessionId, details, script, debug, cmd);
-                    let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
-                    let gens: Generations = [scds]
-                    let promiseGensResult: Promise<GenerationsResult> = executeGenerations(gens).catch(e => {
-                        config.outputStream.write('had error in execution\n')
-                        displayError(config.outputStream)(e)
-                        return []
-                    })
-                    monitor(sc.status, promiseGensResult.then(() => {}))
-                    return promiseGensResult
-                })))
-        }
-    }
-
-
     constructor(configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues) {
         var program = require('commander').//
             arguments('').//
@@ -240,17 +205,60 @@ export class Cli {
             return p
         }
         function action<T>(name: string, a: Action<T>, description: string, ...options: ((p: any) => any)[]) {
-            // console.log(name)
-            command(name, description, options).action(cmd => configOrReportIssues(configAndIssues).then(config => a(config, cmd).catch(displayError(config.outputStream))))
+            return command(name, description, options).//
+                action(cmd =>
+                    configOrReportIssues(configAndIssues).//
+                        then(config => a({...config, debug: new Debug(cmd.debug, x => console.log(x))}, cmd).//
+                            catch(displayError(config.outputStream))))
         }
-        let exCommand = this.executeCommand
         function addScripts(config: Config, ...options: ((program: any) => any)[]) {
             let scripts = config.scripts
-            scripts.forEach(script => action(script.name, exCommand(config, script, executeGenerations), script.description, ...options))
+            scripts.forEach(script => {
+                let a: Action<any> = (config: ConfigWithDebug, cmd: any) => {
+                    let d = config.debug.debug('session')
+                    let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
+                    let sessionDir = path.join(config.sessionDir, sessionId);
+                    return d(() => `cmd.session [${cmd.sessionId}] sessionId actually [${sessionId}]. SessionDir is [${sessionDir}]`,
+                        () => checkGuard(config, script)).then(() => fse.mkdirp(sessionDir).then(() =>
+                        ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
+                            let sc = makeSc(config, sessionId, details, script, cmd);
+                            let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
+                            let gens: Generations = [scds]
+                            let promiseGensResult: Promise<GenerationsResult> = executeGenerations(gens).catch(e => {
+                                config.outputStream.write('had error in execution\n')
+                                displayError(config.outputStream)(e)
+                                return []
+                            })
+                            monitor(sc.status, promiseGensResult.then(() => {}))
+                            return promiseGensResult
+                        })))
+                };
+                action(script.name, a, script.description, ...options)
+            })
         }
 
         action('config', configAction, 'displays the config', defaultOptions)
-        action('run', runAction(exCommand, () => program.args.slice(1).filter(n => !n.startsWith('-')).join(' '), executeGenerations), 'runs an arbitary command (the rest of the command line).', defaultOptions)
+        action('run', runAction(function (config: ConfigWithDebug, script: ScriptDetails, executeGenerations: ExecuteGenerations) {
+            return (config: ConfigWithDebug, cmd: any) => {
+                let d = config.debug.debug('session')
+                let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
+                let sessionDir = path.join(config.sessionDir, sessionId);
+                return d(() => `cmd.session [${cmd.sessionId}] sessionId actually [${sessionId}]. SessionDir is [${sessionDir}]`,
+                    () => checkGuard(config, script)).then(() => fse.mkdirp(sessionDir).then(() =>
+                    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
+                        let sc = makeSc(config, sessionId, details, script, cmd);
+                        let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
+                        let gens: Generations = [scds]
+                        let promiseGensResult: Promise<GenerationsResult> = executeGenerations(gens).catch(e => {
+                            config.outputStream.write('had error in execution\n')
+                            displayError(config.outputStream)(e)
+                            return []
+                        })
+                        monitor(sc.status, promiseGensResult.then(() => {}))
+                        return promiseGensResult
+                    })))
+            }
+        }, () => program.args.slice(1).filter(n => !n.startsWith('-')).join(' '), executeGenerations), 'runs an arbitary command (the rest of the command line).', defaultOptions)
         action('status', statusAction, 'shows the status of the project in the current directory', defaultOptions)
         action('compactStatus', compactStatusAction, 'crunches the status', defaultOptions)
         action('validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions)
