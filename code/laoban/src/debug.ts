@@ -6,17 +6,14 @@ export class Debug {
         this.printer = printer;
     }
 
-
-    debug(option: string): <To> (msg: () => string, raw: () => Promise<To>, fromFn?: () => any, toFn?: (t: To) => any, errFn?: (e: any) => any) => Promise<To> {
-        return <To>(msg, raw, toFn, errFn) =>
+    debug(option: string): <To> (msg: () => string, raw: () => Promise<To>) => Promise<To> {
+        return <To>(msg, raw) =>
             (this.options.has(option)) ?
                 raw().then(to => {
-                    let t = toFn ? toFn(to) : to
-                    this.printer(msg(), t)
+                    this.printer(msg())
                     return to
                 }, err => {
-                    let e = errFn ? errFn(err) : err
-                    if (err) this.printer(msg(), e)
+                    this.printer('error executing ' + msg(), err)
                     throw err
                 }) :
                 raw()

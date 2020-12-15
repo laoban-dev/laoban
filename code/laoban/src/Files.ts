@@ -40,7 +40,6 @@ interface ProjectDetailOptions {
     projects?: string,
 }
 export class ProjectDetailFiles {
-
     static workOutProjectDetails(hasRoot: HasLaobanDirectory, options: ProjectDetailOptions): Promise<ProjectDetailsAndDirectory[]> {
         let root = hasRoot.laobanDirectory
         if (options.projects) return this.findAndLoadProjectDetailsFromChildren(root).then(pd => pd.filter(p => p.directory.match(options.projects)))

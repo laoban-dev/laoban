@@ -37,7 +37,7 @@ export function loadVersionFile(config: Config): Promise<string> {
 //         if (data) resolve(data.toString())
 //     }))
 // }
-export function saveProjectJsonFile(directory: string, packageJson: any) {
+export function saveProjectJsonFile(directory: string, packageJson: any): Promise<void> {
     fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify(packageJson, null, 2) + "\n")
     return Promise.resolve()
 }

@@ -1,4 +1,4 @@
-import {ShellResult} from "./executors";
+import {Generations, ShellResult} from "./executors";
 import {Writable} from "stream";
 import {Status} from "./monitor";
 import {Debug} from "./debug";
@@ -82,6 +82,8 @@ export interface HasOutputStream {
 }
 
 export type Action<T> = (config: ConfigWithDebug, cmd: any) => Promise<T>
+export type ProjectAction<T> = (config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[]) => Promise<T>
+export type ScriptAction<T> = (config: ConfigWithDebug, cmd: any, generations: Generations) => Promise<T>
 
 export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputStream {
     laobanConfig: string,

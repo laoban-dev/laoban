@@ -8,6 +8,7 @@ import {
     ConfigAndIssues,
     ConfigOrReportIssues,
     ConfigWithDebug,
+    ProjectAction,
     ProjectDetailsAndDirectory,
     ScriptDetails,
     ScriptInContext,
@@ -29,7 +30,6 @@ import {
     ExecuteOneGeneration,
     executeScript,
     ExecuteScript,
-    Generation,
     Generations,
     GenerationsResult,
     make,
@@ -55,14 +55,12 @@ function openStream(sc: ScriptInContextAndDirectoryWithoutStream): ScriptInConte
     let logStream = fs.createWriteStream(streamName(sc));
     return {...sc, logStream, streams: [logStream]}
 }
-function makeSc(config: ConfigWithDebug, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, cmd: any) {
-    let status = new Status(config, dir => streamNamefn(config.sessionDir, sessionId, sc.details.name, dir))
-    let allDirectorys = details.map(d => d.directory)
+function makeSc(config: ConfigWithDebug, status: Status, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, cmd: any) {
     let sc: ScriptInContext = {
         debug: config.debug,
         sessionId,
         status,
-        dirWidth: Strings.maxLength(allDirectorys) - config.laobanDirectory.length,
+        dirWidth: Strings.maxLength(details.map(d => d.directory)) - config.laobanDirectory.length,
         dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet, links: cmd.links, throttle: cmd.throttle,
         config, details: script, timestamp: new Date(), genPlan: cmd.generationPlan,
         context: {shellDebug: cmd.shellDebug, directories: details}
@@ -97,39 +95,26 @@ function runAction(executeCommand: any, command: () => string, executeGeneration
 }
 
 
-let statusAction: Action<void> = (config: Config, cmd: any) => {
-    return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => {
-        let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
-            ds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
-        let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
-        prettyPrintData(prettyPrintStatusData)
-    })
+let statusAction: ProjectAction<void> = (config: Config, cmd: any, pds: ProjectDetailsAndDirectory[]) => {
+    let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
+        pds.map(d => ({directory: d.directory, compactedStatusMap: compactStatus(path.join(d.directory, config.status))}))
+    let prettyPrintStatusData = toPrettyPrintData(toStatusDetails(compactedStatusMap));
+    prettyPrintData(prettyPrintStatusData)
+    return Promise.resolve()
 }
-let remoteLinkAction: Action<void> = (config: ConfigWithDebug, cmd: any) => {
-    return ProjectDetailFiles.workOutProjectDetails(config, {all: true}).then(ds => {
-        return ds.forEach(pd => {
-            let pdLinks = pd.projectDetails.details.links
-            let links = pdLinks ? pdLinks : []
-            return links.forEach(link =>
-                output(config)(`   ${config.packageManager} link ${link} in ${pd.directory}`)
-            )
+
+let compactStatusAction: ProjectAction<void[]> = (config: Config, cmd: any, pds: ProjectDetailsAndDirectory[]) =>
+    Promise.all(pds.map(d =>
+        writeCompactedStatus(path.join(d.directory, config.status), compactStatus(path.join(d.directory, config.status)))))
+
+let profileAction: ProjectAction<void> = (config: Config, cmd: any, pds: ProjectDetailsAndDirectory[]) =>
+    Promise.all(pds.map(d => loadProfile(config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)})))).//
+        then(p => {
+            let data = prettyPrintProfileData(p);
+            prettyPrintProfiles(output(config), 'latest', data, p => (p.latest / 1000).toFixed(3))
+            output(config)('')
+            prettyPrintProfiles(output(config), 'average', data, p => (p.average / 1000).toFixed(3))
         })
-    })
-}
-
-
-let compactStatusAction: Action<void> = (config: Config, cmd: any) =>
-    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds =>
-        ds.forEach(d => writeCompactedStatus(path.join(d.directory, config.status), compactStatus(path.join(d.directory, config.status)))))
-
-let profileAction: Action<void> = (config: Config, cmd: any) =>
-    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => Promise.all(ds.map(d =>
-        loadProfile(config, d.directory).then(p => ({directory: d.directory, profile: findProfilesFromString(p)}))))).then(p => {
-        let data = prettyPrintProfileData(p);
-        prettyPrintProfiles(output(config), 'latest', data, p => (p.latest / 1000).toFixed(3))
-        output(config)('')
-        prettyPrintProfiles(output(config), 'average', data, p => (p.average / 1000).toFixed(3))
-    })
 
 let validationAction: Action<Config | boolean> =
     (config: ConfigWithDebug, cmd: any) => ProjectDetailFiles.workOutProjectDetails(config, cmd).//
@@ -139,26 +124,15 @@ let validationAction: Action<Config | boolean> =
 //TODO This looks like it needs a clean up. It has abort logic and display error logic. the signature sucks...
 
 
-let projectsAction: Action<void[]> = (config: Config, cmd: any) => {
+let projectsAction: ProjectAction<void[]> = (config: Config, cmd: any, pds: ProjectDetailsAndDirectory[]) => Promise.all(pds.map(p => output(config)(p.directory)))
 
-    return ProjectDetailFiles.workOutProjectDetails(config, {all: true}).//
-        then(ds => {
-            // console.log('details are', ds.map(s => s.directory))
-            return Promise.all(ds.map(p => {
-                // console.log('project', p.directory                )
-                output(config)(p.directory)
-            }))
-        })
-
-}
-let updateConfigFilesFromTemplates: Action<void> = (config: ConfigWithDebug, cmd: any) => {
+let updateConfigFilesFromTemplates: ProjectAction<void[]> = (config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[]) => {
     let d = config.debug.debug('update')
-    return ProjectDetailFiles.workOutProjectDetails(config, cmd).then(ds => ds.forEach(p =>
+    return Promise.all(pds.map(p =>
         d(() => 'copyTemplateDirectory', () => copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() => {
-            d(() => 'loadPackageJson', () => loadPackageJsonInTemplateDirectory(config, p.projectDetails)).then(raw => {
-                return d(() => 'loadVersionFile', () => loadVersionFile(config)).//
-                    then(version => d(() => 'saveProjectJsonFile', () => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails))))
-            })
+            d(() => 'loadPackageJson', () => loadPackageJsonInTemplateDirectory(config, p.projectDetails)).then(raw =>
+                d(() => 'loadVersionFile', () => loadVersionFile(config)).//
+                    then(version => d(() => 'saveProjectJsonFile', () => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))))
         }))
     ))
 }
@@ -211,63 +185,48 @@ export class Cli {
                         then(config => a({...config, debug: new Debug(cmd.debug, x => console.log(x))}, cmd).//
                             catch(displayError(config.outputStream))))
         }
-        function addScripts(config: Config, ...options: ((program: any) => any)[]) {
-            let scripts = config.scripts
-            scripts.forEach(script => {
-                let a: Action<any> = (config: ConfigWithDebug, cmd: any) => {
-                    let d = config.debug.debug('session')
-                    let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
-                    let sessionDir = path.join(config.sessionDir, sessionId);
-                    return d(() => `cmd.session [${cmd.sessionId}] sessionId actually [${sessionId}]. SessionDir is [${sessionDir}]`,
-                        () => checkGuard(config, script)).then(() => fse.mkdirp(sessionDir).then(() =>
-                        ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
-                            let sc = makeSc(config, sessionId, details, script, cmd);
-                            let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
-                            let gens: Generations = [scds]
-                            let promiseGensResult: Promise<GenerationsResult> = executeGenerations(gens).catch(e => {
-                                config.outputStream.write('had error in execution\n')
-                                displayError(config.outputStream)(e)
-                                return []
-                            })
-                            monitor(sc.status, promiseGensResult.then(() => {}))
-                            return promiseGensResult
-                        })))
-                };
-                action(script.name, a, script.description, ...options)
-            })
+        function projectAction<T>(name: string, a: ProjectAction<T>, description: string, ...options: ((p: any) => any)[]) {
+            return command(name, description, options).//
+                action(cmd => configOrReportIssues(configAndIssues).//
+                    then(config => {
+                            let configWithDebug = {...config, debug: new Debug(cmd.debug, x => console.log(x))};
+                            return ProjectDetailFiles.workOutProjectDetails(config, cmd).//
+                                then(pds => a(configWithDebug, cmd, pds)).catch(displayError(config.outputStream))
+                        }
+                    ))
+        }
+        function scriptAction<T>(name: string, description: string, scriptFn: () => ScriptDetails, fn: (gens: Generations) => Promise<T>, ...options: ((p: any) => any)[]) {
+            return projectAction(name, (config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[]) => {
+                let script = scriptFn()
+                let d = config.debug.debug('session')
+                let status = new Status(config, dir => streamNamefn(config.sessionDir, sessionId, script.name, dir))
+                let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
+                let sessionDir = path.join(config.sessionDir, sessionId);
+                return checkGuard(config, script).then(() => fse.mkdirp(sessionDir).then(() => {
+                    monitor(status)
+                    let scds: ScriptInContextAndDirectory[] = pds.map(d => openStream({detailsAndDirectory: d, scriptInContext: makeSc(config, status, sessionId, pds, script, cmd)}))
+                    return fn([scds])
+                }))
+
+
+            }, description, ...options)
         }
 
         action('config', configAction, 'displays the config', defaultOptions)
-        action('run', runAction(function (config: ConfigWithDebug, script: ScriptDetails, executeGenerations: ExecuteGenerations) {
-            return (config: ConfigWithDebug, cmd: any) => {
-                let d = config.debug.debug('session')
-                let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
-                let sessionDir = path.join(config.sessionDir, sessionId);
-                return d(() => `cmd.session [${cmd.sessionId}] sessionId actually [${sessionId}]. SessionDir is [${sessionDir}]`,
-                    () => checkGuard(config, script)).then(() => fse.mkdirp(sessionDir).then(() =>
-                    ProjectDetailFiles.workOutProjectDetails(config, cmd).then(details => {
-                        let sc = makeSc(config, sessionId, details, script, cmd);
-                        let scds: Generation = details.map(d => openStream({detailsAndDirectory: d, scriptInContext: sc}))
-                        let gens: Generations = [scds]
-                        let promiseGensResult: Promise<GenerationsResult> = executeGenerations(gens).catch(e => {
-                            config.outputStream.write('had error in execution\n')
-                            displayError(config.outputStream)(e)
-                            return []
-                        })
-                        monitor(sc.status, promiseGensResult.then(() => {}))
-                        return promiseGensResult
-                    })))
-            }
-        }, () => program.args.slice(1).filter(n => !n.startsWith('-')).join(' '), executeGenerations), 'runs an arbitary command (the rest of the command line).', defaultOptions)
-        action('status', statusAction, 'shows the status of the project in the current directory', defaultOptions)
-        action('compactStatus', compactStatusAction, 'crunches the status', defaultOptions)
         action('validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions)
-        action('profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions)
-        action('projects', projectsAction, 'lists the projects under the laoban directory')
-        action('update', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions)
-        action('remoteLink', remoteLinkAction, "does npm/yarn link ", defaultOptions)
+        scriptAction('run', 'runs an arbitary command (the rest of the command line).', () => ({
+            name: 'run', description: 'runs an arbitary command (the rest of the command line).',
+            commands: [{name: 'run', command: program.args.slice(1).filter(n => !n.startsWith('-')).join(' '), status: false}]
+        }), executeGenerations, defaultOptions)
 
-        if (configAndIssues.issues.length == 0) addScripts(configAndIssues.config, defaultOptions)
+        projectAction('status', statusAction, 'shows the status of the project in the current directory', defaultOptions)
+        projectAction('compactStatus', compactStatusAction, 'crunches the status', defaultOptions)
+        projectAction('profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions)
+        projectAction('projects', projectsAction, 'lists the projects under the laoban directory')
+        projectAction('update', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions)
+
+        if (configAndIssues.issues.length == 0)
+            configAndIssues.config.scripts.forEach(script => scriptAction(script.name, script.description, () => script, executeGenerations, defaultOptions))
 
         program.on('--help', () => {
             let log = output(configAndIssues)
