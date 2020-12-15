@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import * as path from "path";
-import {Config, ConfigWithDebug, HasLaobanDirectory, ProjectDetailsAndDirectory} from "./config";
+import {ConfigWithDebug, HasLaobanDirectory, ProjectDetailsAndDirectory} from "./config";
 import {flatten} from "./utils";
 import {Debug} from "./debug";
 
@@ -13,8 +13,8 @@ export function laobanFile(dir: string) { return path.join(dir, loabanConfigName
 
 export function copyTemplateDirectory(config: ConfigWithDebug, template: string, target: string): Promise<void> {
     let src = path.join(config.templateDir, template);
-    let d = config.debug.debug('update');
-    return d(() => `copyTemplateDirectory directory from ${src}, to ${target}`, () => {
+    let d = config.debug('update');
+    return d.k(() => `copyTemplateDirectory directory from ${src}, to ${target}`, () => {
         fse.copySync(src, target)
         // no idea why the fse.copy doesn't work here... it just fails silently
         return Promise.resolve()
@@ -40,14 +40,18 @@ interface ProjectDetailOptions {
     projects?: string,
 }
 export class ProjectDetailFiles {
-    static workOutProjectDetails(hasRoot: HasLaobanDirectory, options: ProjectDetailOptions): Promise<ProjectDetailsAndDirectory[]> {
+    static workOutProjectDetails(hasRoot: HasLaobanDirectory & { debug: Debug }, options: ProjectDetailOptions): Promise<ProjectDetailsAndDirectory[]> {
+        let p = hasRoot.debug('projects')
         let root = hasRoot.laobanDirectory
-        if (options.projects) return this.findAndLoadProjectDetailsFromChildren(root).then(pd => pd.filter(p => p.directory.match(options.projects)))
-        if (options.all) return this.findAndLoadProjectDetailsFromChildren(root);
-        if (options.one) return this.loadProjectDetails(process.cwd()).then(x => [x])
-// console.log('work out project details', root)
+        // p.message(() =>['p.message'])
+        if (options.projects) return p.k(() => `options.projects= [${options.projects}]`, () => this.findAndLoadProjectDetailsFromChildren(root).then(pd => pd.filter(p => p.directory.match(options.projects))))
+        if (options.all) return p.k(() => "options.allProjects", () => this.findAndLoadProjectDetailsFromChildren(root));
+        if (options.one) return p.k(() => "optionsOneProject", () => this.loadProjectDetails(process.cwd()).then(x => [x]))
         return this.loadProjectDetails(process.cwd()).then(pd => {
-                return pd.projectDetails ? this.loadProjectDetails(process.cwd()).then(x => [x]) : this.findAndLoadProjectDetailsFromChildren(root)
+                p.message(() => ["using default project rules. Looking in ", process.cwd(), 'pd.details', pd.projectDetails ? pd.projectDetails.name : 'No project.details.json found'])
+                return pd.projectDetails ?
+                    p.k(() => 'Using project details from process.cwd()', () => this.loadProjectDetails(process.cwd())).then(x => [x]) :
+                    p.k(() => 'Using project details under root', () => this.findAndLoadProjectDetailsFromChildren(root))
             }
         )
     }

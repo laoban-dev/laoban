@@ -10,6 +10,7 @@ import {validateProjectDetailsAndTemplates} from "./validation";
 import {Config} from "./config";
 import {loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
 import {dirsIn, testRoot} from "./fixture";
+import {addDebug} from "./debug";
 
 describe("validate laoban json", () => {
     dirsIn(testRoot).forEach(testDir => {
@@ -29,7 +30,7 @@ describe("validate directories", () => {
         if (configOrIssues.issues.length == 0) {
             it(`should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
                 let expected = fs.readFileSync(path.join(testDir, 'expectedValidateProjectDetailsAndTemplate.txt')).toString().trim()
-                let config: Config = configOrIssues.config
+                let config = addDebug(undefined, () => {})(configOrIssues.config)
                 return ProjectDetailFiles.workOutProjectDetails(config, {}).//
                     then(pds => validateProjectDetailsAndTemplates(config, pds)).//
                     then(actual => {

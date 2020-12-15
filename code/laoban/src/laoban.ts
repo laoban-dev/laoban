@@ -43,8 +43,9 @@ import {validateProjectDetailsAndTemplates} from "./validation";
 import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
 import {shellReporter} from "./report";
 import {Writable} from "stream";
-import {Debug} from "./debug";
+
 import {CommanderStatic} from "commander";
+import {addDebug} from "./debug";
 
 const displayError = (outputStream: Writable) => (e: Error) =>
     outputStream.write(e.message.split('\n').slice(0, 2).join('\n') + "\n");
@@ -127,12 +128,12 @@ let validationAction: Action<Config | boolean> =
 let projectsAction: ProjectAction<void[]> = (config: Config, cmd: any, pds: ProjectDetailsAndDirectory[]) => Promise.all(pds.map(p => output(config)(p.directory)))
 
 let updateConfigFilesFromTemplates: ProjectAction<void[]> = (config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[]) => {
-    let d = config.debug.debug('update')
+    let d = config.debug('update')
     return Promise.all(pds.map(p =>
-        d(() => 'copyTemplateDirectory', () => copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() => {
-            d(() => 'loadPackageJson', () => loadPackageJsonInTemplateDirectory(config, p.projectDetails)).then(raw =>
-                d(() => 'loadVersionFile', () => loadVersionFile(config)).//
-                    then(version => d(() => 'saveProjectJsonFile', () => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))))
+        d.k(() => 'copyTemplateDirectory', () => copyTemplateDirectory(config, p.projectDetails.template, p.directory).then(() => {
+            d.k(() => 'loadPackageJson', () => loadPackageJsonInTemplateDirectory(config, p.projectDetails)).then(raw =>
+                d.k(() => 'loadVersionFile', () => loadVersionFile(config)).//
+                    then(version => d.k(() => 'saveProjectJsonFile', () => saveProjectJsonFile(p.directory, modifyPackageJson(raw, version, p.projectDetails)))))
         }))
     ))
 }
@@ -181,34 +182,29 @@ export class Cli {
         function action<T>(name: string, a: Action<T>, description: string, ...options: ((p: any) => any)[]) {
             return command(name, description, options).//
                 action(cmd =>
-                    configOrReportIssues(configAndIssues).//
-                        then(config => a({...config, debug: new Debug(cmd.debug, x => console.log(x))}, cmd).//
-                            catch(displayError(config.outputStream))))
+                    configOrReportIssues(configAndIssues).then(addDebug(cmd.debug, x => console.log('#',...x))).then(configWithDebug =>
+                        a(configWithDebug, cmd).//
+                            catch(displayError(configWithDebug.outputStream))))
         }
         function projectAction<T>(name: string, a: ProjectAction<T>, description: string, ...options: ((p: any) => any)[]) {
-            return command(name, description, options).//
-                action(cmd => configOrReportIssues(configAndIssues).//
-                    then(config => {
-                            let configWithDebug = {...config, debug: new Debug(cmd.debug, x => console.log(x))};
-                            return ProjectDetailFiles.workOutProjectDetails(config, cmd).//
-                                then(pds => a(configWithDebug, cmd, pds)).catch(displayError(config.outputStream))
-                        }
-                    ))
+            return action(name, (config: ConfigWithDebug, cmd: any) =>
+                ProjectDetailFiles.workOutProjectDetails(config, cmd).//
+                    then(pds => a(config, cmd, pds)).//
+                    catch(displayError(config.outputStream)), description, ...options)
         }
+
         function scriptAction<T>(name: string, description: string, scriptFn: () => ScriptDetails, fn: (gens: Generations) => Promise<T>, ...options: ((p: any) => any)[]) {
             return projectAction(name, (config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[]) => {
                 let script = scriptFn()
-                let d = config.debug.debug('session')
                 let status = new Status(config, dir => streamNamefn(config.sessionDir, sessionId, script.name, dir))
                 let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
                 let sessionDir = path.join(config.sessionDir, sessionId);
+                config.debug('session').message(() => ['sessionId', sessionId, 'sessionDir', sessionDir])
                 return checkGuard(config, script).then(() => fse.mkdirp(sessionDir).then(() => {
                     monitor(status)
                     let scds: ScriptInContextAndDirectory[] = pds.map(d => openStream({detailsAndDirectory: d, scriptInContext: makeSc(config, status, sessionId, pds, script, cmd)}))
                     return fn([scds])
                 }))
-
-
             }, description, ...options)
         }
 
@@ -261,7 +257,11 @@ export class Cli {
 
 
     parsed: any;
-    start(argv: string[]) {
+    99
+    start(argv
+              :
+              string[]
+    ) {
         // console.log('starting', argv)
         if (argv.length == 2) {
             this.program.outputHelp();
@@ -272,17 +272,24 @@ export class Cli {
     }
 }
 
-export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
-let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
-    condition ? fse.appendFile(name, contentGenerator()) : Promise.resolve()
+export function
+defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
+let
+    appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
+        condition ? fse.appendFile(name, contentGenerator()) : Promise.resolve()
 
-let executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
-let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
-let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
-export function executeGenerations(outputStream: Writable): ExecuteGenerations {
+let
+    executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
+let
+    executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
+let
+    executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
+export function
+executeGenerations(outputStream: Writable): ExecuteGenerations {
     return GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter(outputStream)))
 }
-export function makeStandardCli(outputStream: Writable) {
+export function
+makeStandardCli(outputStream: Writable) {
     let laoban = findLaoban(process.cwd())
     let configAndIssues = loadConfigOrIssues(outputStream, loadLoabanJsonAndValidate)(laoban);
     return new Cli(configAndIssues, executeGenerations(outputStream), abortWithReportIfAnyIssues);

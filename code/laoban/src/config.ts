@@ -4,6 +4,7 @@ import {Status} from "./monitor";
 import {Debug} from "./debug";
 
 
+
 export interface ConfigVariables {
     templateDir: string,
     versionFile: string,
@@ -77,6 +78,7 @@ export type ScriptProcessor = (sc: ScriptInContext) => Promise<DirectoryAndResul
 export interface HasLaobanDirectory {
     laobanDirectory: string,
 }
+
 export interface HasOutputStream {
     outputStream: Writable
 }
