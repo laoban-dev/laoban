@@ -42,7 +42,7 @@
     "test:watch": "npm run test -- --watch"
   },
   "types": "index",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "template": "noreact",
   "name": "@phil-rice/variables",
   "description": "A library that can dereference ${xxx} in strings",

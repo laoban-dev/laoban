@@ -1,8 +1,8 @@
 import {Generations, ShellResult} from "./executors";
 import {Writable} from "stream";
 import {Status} from "./monitor";
-import {Debug} from "./debug";
-
+// @ts-ignore
+import {Debug} from "@phil-rice/debug";
 
 
 export interface ConfigVariables {
@@ -94,7 +94,7 @@ export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputSt
     scripts: ScriptDetails[],
     os: string
 }
-export interface ConfigWithDebug extends Config{
+export interface ConfigWithDebug extends Config {
     debug: Debug
 }
 export interface ScriptDefns {

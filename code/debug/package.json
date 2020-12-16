@@ -44,9 +44,12 @@
   "types": "index",
   "version": "0.2.1",
   "template": "noreact",
-  "name": "@phil-rice/validation",
-  "description": "A library for validating json",
+  "name": "@phil-rice/debug",
+  "description": "A general debug utility that allows debugs to be turned on and off easily and thus left in the code",
   "details": {
+    "links": [],
+    "extraDeps": {},
+    "extraDevDeps": {},
     "publish": true
   }
 }

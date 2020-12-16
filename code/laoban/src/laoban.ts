@@ -43,13 +43,12 @@ import {validateProjectDetailsAndTemplates} from "./validation";
 import {AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators} from "./decorators";
 import {shellReporter} from "./report";
 import {Writable} from "stream";
-
 import {CommanderStatic} from "commander";
-import {addDebug} from "./debug";
+// @ts-ignore
+import {addDebug} from "@phil-rice/debug";
 
-const displayError = (outputStream: Writable) => (e: Error) =>
-    outputStream.write(e.message.split('\n').slice(0, 2).join('\n') + "\n");
 
+const displayError = (outputStream: Writable) => (e: Error) => {outputStream.write(e.message.split('\n').slice(0, 2).join('\n') + "\n");}
 const makeSessionId = (d: Date, suffix: any) => d.toISOString().replace(/:/g, '.') + '.' + suffix;
 
 function openStream(sc: ScriptInContextAndDirectoryWithoutStream): ScriptInContextAndDirectory {
@@ -68,7 +67,9 @@ function makeSc(config: ConfigWithDebug, status: Status, sessionId: string, deta
     }
     return sc;
 }
-function checkGuard(config: Config, script: ScriptDetails): Promise<void> {
+function checkGuard(config: ConfigWithDebug, script: ScriptDetails): Promise<void> {
+    let s = config.debug('scripts')
+    s.message(() => ['osGuard', os.type(), script.osGuard, 'pmGuard', config.packageManager, script.pmGuard])
     const makeErrorPromise = (error: string) => Promise.reject(script.guardReason ? error + "\n" + script.guardReason : error)
     if (script.osGuard && !os.type().match(script.osGuard))
         return makeErrorPromise(`os is  ${os.type()}, and this command has an osGuard of  [${script.osGuard}]`)
@@ -117,15 +118,19 @@ let profileAction: ProjectAction<void> = (config: Config, cmd: any, pds: Project
             prettyPrintProfiles(output(config), 'average', data, p => (p.average / 1000).toFixed(3))
         })
 
-let validationAction: Action<Config | boolean> =
+let validationAction: Action<Config | void> =
     (config: ConfigWithDebug, cmd: any) => ProjectDetailFiles.workOutProjectDetails(config, cmd).//
         then(ds => validateProjectDetailsAndTemplates(config, ds)).//
         then(issues => abortWithReportIfAnyIssues({config, outputStream: config.outputStream, issues}), displayError(config.outputStream))
 
-//TODO This looks like it needs a clean up. It has abort logic and display error logic. the signature sucks...
+//TODO This looks like it needs a clean up. It has abort logic and display error logic.
 
 
-let projectsAction: ProjectAction<void[]> = (config: Config, cmd: any, pds: ProjectDetailsAndDirectory[]) => Promise.all(pds.map(p => output(config)(p.directory)))
+let projectsAction: Action<void> = (config: ConfigWithDebug, cmd: any) => {
+    return ProjectDetailFiles.workOutProjectDetails(config, cmd).//
+        then(pds => pds.forEach(p => output(config)(p.directory))).//
+        catch(displayError(config.outputStream))
+}
 
 let updateConfigFilesFromTemplates: ProjectAction<void[]> = (config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[]) => {
     let d = config.debug('update')
@@ -168,33 +173,39 @@ export class Cli {
                 option('--sessionId <sessionId>', "specifies the session id, which is mainly used for logging")
         }
     }
+
+    minimalOptions(configAndIssues: ConfigAndIssues): (program: CommanderStatic) => any {
+        return program => program.//
+            option('--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]")
+    }
+
     constructor(configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues) {
         var program = require('commander').//
             arguments('').//
             version('0.1.0')//
 
         let defaultOptions = this.defaultOptions(configAndIssues)
-        function command(cmd: string, description: string, fns: ((a: any) => any)[]) {
+        function command(program: any, cmd: string, description: string, fns: ((a: any) => any)[]) {
             let p = program.command(cmd).description(description)
             fns.forEach(fn => p = fn(p))
             return p
         }
-        function action<T>(name: string, a: Action<T>, description: string, ...options: ((p: any) => any)[]) {
-            return command(name, description, options).//
+        function action<T>(p: any, name: string, a: Action<T>, description: string, ...options: ((p: any) => any)[]) {
+            return command(p, name, description, options).//
                 action(cmd =>
-                    configOrReportIssues(configAndIssues).then(addDebug(cmd.debug, x => console.log('#',...x))).then(configWithDebug =>
+                    configOrReportIssues(configAndIssues).then(addDebug(cmd.debug, x => console.log('#', ...x))).then((configWithDebug: ConfigWithDebug) =>
                         a(configWithDebug, cmd).//
                             catch(displayError(configWithDebug.outputStream))))
         }
-        function projectAction<T>(name: string, a: ProjectAction<T>, description: string, ...options: ((p: any) => any)[]) {
-            return action(name, (config: ConfigWithDebug, cmd: any) =>
+        function projectAction<T>(p: any, name: string, a: ProjectAction<T>, description: string, ...options: ((p: any) => any)[]) {
+            return action(p, name, (config: ConfigWithDebug, cmd: any) =>
                 ProjectDetailFiles.workOutProjectDetails(config, cmd).//
                     then(pds => a(config, cmd, pds)).//
                     catch(displayError(config.outputStream)), description, ...options)
         }
 
-        function scriptAction<T>(name: string, description: string, scriptFn: () => ScriptDetails, fn: (gens: Generations) => Promise<T>, ...options: ((p: any) => any)[]) {
-            return projectAction(name, (config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[]) => {
+        function scriptAction<T>(p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: (gens: Generations) => Promise<T>, ...options: ((p: any) => any)[]) {
+            return projectAction(p, name, (config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[]) => {
                 let script = scriptFn()
                 let status = new Status(config, dir => streamNamefn(config.sessionDir, sessionId, script.name, dir))
                 let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId(new Date(), script.name);
@@ -203,26 +214,29 @@ export class Cli {
                 return checkGuard(config, script).then(() => fse.mkdirp(sessionDir).then(() => {
                     monitor(status)
                     let scds: ScriptInContextAndDirectory[] = pds.map(d => openStream({detailsAndDirectory: d, scriptInContext: makeSc(config, status, sessionId, pds, script, cmd)}))
+                    let s = config.debug('scripts');
+                    s.message(() => ['rawScriptCommands', ...script.commands.map(s => s.command)])
+                    s.message(() => ['directories', ...scds.map(s => s.detailsAndDirectory.directory)])
                     return fn([scds])
                 }))
             }, description, ...options)
         }
 
-        action('config', configAction, 'displays the config', defaultOptions)
-        action('validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions)
-        scriptAction('run', 'runs an arbitary command (the rest of the command line).', () => ({
+        action(program, 'config', configAction, 'displays the config', this.minimalOptions(configAndIssues))
+        action(program, 'validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions)
+        scriptAction(program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
             name: 'run', description: 'runs an arbitary command (the rest of the command line).',
             commands: [{name: 'run', command: program.args.slice(1).filter(n => !n.startsWith('-')).join(' '), status: false}]
         }), executeGenerations, defaultOptions)
 
-        projectAction('status', statusAction, 'shows the status of the project in the current directory', defaultOptions)
-        projectAction('compactStatus', compactStatusAction, 'crunches the status', defaultOptions)
-        projectAction('profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions)
-        projectAction('projects', projectsAction, 'lists the projects under the laoban directory')
-        projectAction('update', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions)
+        projectAction(program, 'status', statusAction, 'shows the status of the project in the current directory', defaultOptions)
+        projectAction(program, 'compactStatus', compactStatusAction, 'crunches the status', defaultOptions)
+        projectAction(program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions)
+        action(program, 'projects', projectsAction, 'lists the projects under the laoban directory', this.minimalOptions(configAndIssues))
+        projectAction(program, 'update', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions)
 
         if (configAndIssues.issues.length == 0)
-            configAndIssues.config.scripts.forEach(script => scriptAction(script.name, script.description, () => script, executeGenerations, defaultOptions))
+            configAndIssues.config.scripts.forEach(script => scriptAction(program, script.name, script.description, () => script, executeGenerations, defaultOptions))
 
         program.on('--help', () => {
             let log = output(configAndIssues)
@@ -240,7 +254,7 @@ export class Cli {
             log('')
             if (configAndIssues.issues.length > 0) {
                 log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                log(`There are issues preventing the program w. Type 'laoban validate' for details`)
+                log(`There are issues preventing the program working. Type 'laoban validate' for details`)
                 log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             }
         });
@@ -257,11 +271,8 @@ export class Cli {
 
 
     parsed: any;
-    99
-    start(argv
-              :
-              string[]
-    ) {
+
+    start(argv: string[]) {
         // console.log('starting', argv)
         if (argv.length == 2) {
             this.program.outputHelp();
@@ -272,24 +283,17 @@ export class Cli {
     }
 }
 
-export function
-defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
-let
-    appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
-        condition ? fse.appendFile(name, contentGenerator()) : Promise.resolve()
+export function defaultExecutor(a: AppendToFileIf) { return make(execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator(a))}
+let appendToFiles: AppendToFileIf = (condition, name, contentGenerator) =>
+    condition ? fse.appendFile(name, contentGenerator()) : Promise.resolve()
 
-let
-    executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
-let
-    executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
-let
-    executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
-export function
-executeGenerations(outputStream: Writable): ExecuteGenerations {
+let executeOne: ExecuteCommand = defaultExecutor(appendToFiles)
+let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators()(executeScript(executeOne))
+let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators()(executeOneGeneration(executeOneScript))
+export function executeGenerations(outputStream: Writable): ExecuteGenerations {
     return GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter(outputStream)))
 }
-export function
-makeStandardCli(outputStream: Writable) {
+export function makeStandardCli(outputStream: Writable) {
     let laoban = findLaoban(process.cwd())
     let configAndIssues = loadConfigOrIssues(outputStream, loadLoabanJsonAndValidate)(laoban);
     return new Cli(configAndIssues, executeGenerations(outputStream), abortWithReportIfAnyIssues);

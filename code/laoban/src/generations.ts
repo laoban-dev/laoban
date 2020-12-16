@@ -19,14 +19,23 @@ export function calculateAllGenerations(scds: ScriptInContextAndDirectory[]) {
 }
 
 export function splitGenerationsByLinks(scds: ScriptInContextAndDirectory[]): ScriptInContextAndDirectory[][] {
-    let map = new Map()
+    let map = new Map<string, ScriptInContextAndDirectory>()
+    function debug(msg: () => any[]) {
+        if (scds.length > 0)
+            scds[0].scriptInContext.debug('scripts').message(msg)
+    }
     scds.forEach(scd => {
         let projectDetails = scd.detailsAndDirectory.projectDetails;
         if (!projectDetails) throw new Error(`Cannot calculate generations as we have a directory without project.details.json [${scd.detailsAndDirectory.directory}]`)
-        return map.set(projectDetails.name, scd)
+        map.set(projectDetails.name, scd)
     })
+    debug(() => ['keys in the map of names to projects', [...map.keys()].sort()])
+    if (scds.length !== map.size)
+        throw new Error(`Cannot calculate generations: multiple projects with the same name
+        ${scds.map(scd => `${scd.detailsAndDirectory.directory} => ${scd.detailsAndDirectory.projectDetails.name}`).join(', ')}`);
     if (scds.length !== map.size) throw new Error('Cannot calculate generations: multiple projects with the same name')
     let genNames = calculateAllGenerations(scds).generations
+    debug(() => ['genNames', ...genNames])
     return genNames.map(names => names.map(n => map.get(n)))
 
 }

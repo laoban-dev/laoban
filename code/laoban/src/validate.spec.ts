@@ -10,7 +10,8 @@ import {validateProjectDetailsAndTemplates} from "./validation";
 import {Config} from "./config";
 import {loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
 import {dirsIn, testRoot} from "./fixture";
-import {addDebug} from "./debug";
+// @ts-ignore
+import {addDebug} from "@phil-rice/debug";
 
 describe("validate laoban json", () => {
     dirsIn(testRoot).forEach(testDir => {

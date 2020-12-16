@@ -44,9 +44,9 @@
   "types": "index",
   "version": "0.2.1",
   "template": "noreact",
-  "name": "@phil-rice/validation",
-  "description": "A library for validating json",
+  "name": "@phil-rice/generations",
+  "description": "A library that typologically sorts data into generations",
   "details": {
-    "publish": true
+    "publish": false
   }
 }

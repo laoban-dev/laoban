@@ -1,14 +1,12 @@
-import {Config, ConfigWithDebug} from "./config";
-
-type DebugString = 'projects' | 'session' | 'update'
-type DebugFactory = (options: Set<string>, printer: ( msgs: any[]) => any) => Debug
-export type Debug = (option: DebugString) => DebugCommands
+type DebugFactory = (options: Set<string>, printer: (msgs: any[]) => any) => Debug
+export type Debug = (option: string) => DebugCommands
 
 export let debug: DebugFactory = (options, printer) => option =>
     options.has(option) ? new DebugCommandImpl(option, printer) : NullDebugCommands
 
-export function addDebug(debugString: string | undefined, printer: (msgs: any[]) => any){
-    return (config : Config)=> ({...config, debug: debug(new Set(debugString.split(',')), printer)})
+export type DebugPrinter = (msgs: any[]) => any
+export function addDebug(debugString: string | undefined, printer: DebugPrinter): <X>(x: X) => X & { debug: Debug } {
+    return <X>(x: X) => ({...x, debug: debug(new Set(debugString ? debugString.split(',') : []), printer)})
 }
 
 export interface DebugCommands {
@@ -22,10 +20,11 @@ let NullDebugCommands: DebugCommands = ({
 })
 
 class DebugCommandImpl implements DebugCommands {
-    private printer: ( msgs: any[]) => void;
+    private printer: (msgs: any[]) => void;
     private option: string;
-    constructor(option: string, printer: ( msgs: any[]) => void) {
-        this.option = option;this.printer = printer
+    constructor(option: string, printer: (msgs: any[]) => void) {
+        this.option = option;
+        this.printer = printer
     }
     k<To>(msg: () => string, raw: () => Promise<To>): Promise<To> {
         return raw().then(to => {

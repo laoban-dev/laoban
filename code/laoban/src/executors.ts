@@ -73,7 +73,7 @@ export function buildShellCommandDetails(scd: ScriptInContextAndDirectory): Shel
             return resultForOneCommand;
         }
         let rawlinks = scd.detailsAndDirectory.projectDetails.details.links;
-        let links = rawlinks?rawlinks:[]
+        let links = rawlinks ? rawlinks : []
         // console.log('links are', links)
         return cmd.eachLink ? links.map(makeShellDetails) : [makeShellDetails()]
     }))
@@ -92,6 +92,8 @@ export function executeAllGenerations(executeOne: ExecuteOneGeneration, reporter
 }
 
 export let executeScript: (e: ExecuteCommand) => ExecuteScript = e => (scd: ScriptInContextAndDirectory) => {
+    let s = scd.scriptInContext.debug('scripts')
+    s.message(() => [`execute script`])
     let startTime = new Date().getTime()
     return executeOneAfterTheOther(e)(buildShellCommandDetails(scd)).then(results => ({results: [].concat(...results), scd, duration: new Date().getTime() - startTime}))
 }
@@ -133,7 +135,10 @@ export function make(shell: RawCommandExecutor, js: RawCommandExecutor, timeIt: 
     let decoratedShell = decorate(timeIt(shell))
     let decoratedJs = decorate(timeIt(js))
     let finder = jsOrShellFinder(decoratedJs, decoratedShell)
-    return c => finder(c)(c)
+    return c => {
+        let s = c.scriptInContext.debug('scripts');
+        return s.k(() => `executing ${c.details.commandString} in ${c.detailsAndDirectory.directory}`, () => finder(c)(c));
+    }
 }
 
 export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDetails>) => {

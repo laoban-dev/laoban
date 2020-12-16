@@ -21,6 +21,7 @@ interface ToFileDecorator {
 }
 
 interface GuardDecorator {
+    name: string,
     guard: (d: ShellCommandDetails<CommandDetails>) => any | undefined
     valid: (guard: any, d: ShellCommandDetails<CommandDetails>) => any
 }
@@ -48,6 +49,7 @@ function calculateVariableText(d: ShellCommandDetails<CommandDetails>): string {
 }
 
 interface GenerationsDecoratorTemplate {
+    name: string,
     condition: (scd: ScriptInContext) => boolean,
     transform: (scd: ScriptInContext, g: Generations) => Generations
 }
@@ -80,9 +82,8 @@ export class GenerationsDecorators {
     }
 
     static PlanDecorator: GenerationsDecoratorTemplate = {
-        condition: scd => {
-            return scd.genPlan
-        },
+        name: 'plan',
+        condition: scd => scd.genPlan,
         transform: (sc, gens) => {
             let trim = trimmedDirectory(sc)
             function log(...s: any[]) {return output(sc.config)(s.join(' ') + "\n")}
@@ -103,11 +104,13 @@ export class GenerationsDecorators {
         }
     }
     static ThrottlePlanDecorator: GenerationsDecoratorTemplate = {
+        name: 'throttle',
         condition: scd => scd.throttle > 0,
         transform: (scd, gens) => flatten(gens.map(gen => partition(gen, scd.throttle)))
     }
 
     static LinkPlanDecorator: GenerationsDecoratorTemplate = {
+        name: 'links',
         condition: scd => scd.links || scd.details.inLinksOrder,
         transform: (scd, g) => flatten(g.map(splitGenerationsByLinks))
     }
@@ -115,6 +118,8 @@ export class GenerationsDecorators {
     static applyTemplate: (t: GenerationsDecoratorTemplate) => GenerationsDecorator = t => e => gens => {
         if (gens.length > 0 && gens[0].length > 0) {
             let scd: ScriptInContext = gens[0][0].scriptInContext;
+            let s = scd.debug('scripts')
+            s.message(() => ['applying GenerationsDecoratorTemplates', 'generationTemplate', t.name, 'generations', gens.length,'condition', t.condition(scd)])
             if (t.condition(scd)) {
                 return e(t.transform(scd, gens))
             }
@@ -199,19 +204,23 @@ export class CommandDecorators {
 
     static guardDecorate: (guardDecorator: GuardDecorator) => CommandDecorator = dec => e =>
         d => {
+            let s = d.scriptInContext.debug('scripts')
             let guard = dec.guard(d)
-            return (guard === undefined || dec.valid(guard, d)) ? e(d) : Promise.resolve([])
+            return (guard === undefined || dec.valid(guard, d)) ? e(d) : s.k(() => `Script killed by guard ${dec.name}`, () => Promise.resolve([]))
         }
 
     static guard: GuardDecorator = {
+        name: 'guard',
         guard: d => d.scriptInContext.details.guard,
         valid: (g, d) => derefenceToUndefined(d.details.dic, g) != ''
     }
     static osGuard: GuardDecorator = {
+        name: 'osGuard',
         guard: d => d.details.command.osGuard,
         valid: (g, d) => g === d.scriptInContext.config.os
     }
     static pmGuard: GuardDecorator = {
+        name: 'pmGuard',
         guard: d => d.details.command.pmGuard,
         valid: (g, d) => g === d.scriptInContext.config.packageManager
     }

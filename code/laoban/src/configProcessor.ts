@@ -3,6 +3,7 @@ import * as path from "path";
 import {laobanFile, loabanConfigName} from "./Files";
 import * as os from "os";
 import fs from "fs";
+// @ts-ignore
 import {Validate} from "@phil-rice/validation";
 import {validateLaobanJson} from "./validation";
 import {Writable} from "stream";
@@ -77,9 +78,7 @@ export function derefenceToUndefined(dic: any, s: string) {
     return undefined
 }
 
-// function cleanUpCommandString(dic: any): (s: string) => string {
-//     return s => derefence(dic, s)
-// }
+
 function isCommand(x: (string | CommandDefn)): x is CommandDefn {
     return typeof x === 'object'
 }

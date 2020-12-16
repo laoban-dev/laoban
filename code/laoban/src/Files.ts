@@ -3,7 +3,9 @@ import * as fse from "fs-extra";
 import * as path from "path";
 import {ConfigWithDebug, HasLaobanDirectory, ProjectDetailsAndDirectory} from "./config";
 import {flatten} from "./utils";
-import {Debug} from "./debug";
+// @ts-ignore
+import {Debug} from "@phil-rice/debug";
+
 
 
 export let loabanConfigName = 'laoban.json'
@@ -44,16 +46,23 @@ export class ProjectDetailFiles {
         let p = hasRoot.debug('projects')
         let root = hasRoot.laobanDirectory
         // p.message(() =>['p.message'])
-        if (options.projects) return p.k(() => `options.projects= [${options.projects}]`, () => this.findAndLoadProjectDetailsFromChildren(root).then(pd => pd.filter(p => p.directory.match(options.projects))))
-        if (options.all) return p.k(() => "options.allProjects", () => this.findAndLoadProjectDetailsFromChildren(root));
-        if (options.one) return p.k(() => "optionsOneProject", () => this.loadProjectDetails(process.cwd()).then(x => [x]))
-        return this.loadProjectDetails(process.cwd()).then(pd => {
-                p.message(() => ["using default project rules. Looking in ", process.cwd(), 'pd.details', pd.projectDetails ? pd.projectDetails.name : 'No project.details.json found'])
-                return pd.projectDetails ?
-                    p.k(() => 'Using project details from process.cwd()', () => this.loadProjectDetails(process.cwd())).then(x => [x]) :
-                    p.k(() => 'Using project details under root', () => this.findAndLoadProjectDetailsFromChildren(root))
-            }
-        )
+        function find() {
+            if (options.projects) return p.k(() => `options.projects= [${options.projects}]`, () =>
+                ProjectDetailFiles.findAndLoadProjectDetailsFromChildren(root).then(pd => pd.filter(p => p.directory.match(options.projects))))
+            if (options.all) return p.k(() => "options.allProjects", () => ProjectDetailFiles.findAndLoadProjectDetailsFromChildren(root));
+            if (options.one) return p.k(() => "optionsOneProject", () => ProjectDetailFiles.loadProjectDetails(process.cwd()).then(x => [x]))
+            return ProjectDetailFiles.loadProjectDetails(process.cwd()).then(pd => {
+                    p.message(() => ["using default project rules. Looking in ", process.cwd(), 'pd.details', pd.projectDetails ? pd.projectDetails.name : 'No project.details.json found'])
+                    return pd.projectDetails ?
+                        p.k(() => 'Using project details from process.cwd()', () => ProjectDetailFiles.loadProjectDetails(process.cwd())).then(x => [x]) :
+                        p.k(() => 'Using project details under root', () => ProjectDetailFiles.findAndLoadProjectDetailsFromChildren(root))
+                }
+            )
+        }
+        return find().then(pds => {
+            p.message(() => ['found', ...pds.map(p => p.directory)]);
+            return pds
+        })
     }
 
 
