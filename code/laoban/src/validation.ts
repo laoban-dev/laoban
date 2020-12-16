@@ -1,6 +1,7 @@
 import {CommandDefn, Config, ConfigWithDebug, Details, PackageJson, ProjectDetails, ProjectDetailsAndDirectory, RawConfig, ScriptDefn} from "./config";
 import * as path from "path";
 import {flatten, groupBy, removeDuplicates} from "./utils";
+// @ts-ignore
 import {Validate} from "@phil-rice/validation";
 
 
