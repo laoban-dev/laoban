@@ -127,8 +127,11 @@ let validationAction: Action<Config | void> =
 
 
 let projectsAction: Action<void> = (config: ConfigWithDebug, cmd: any) => {
-    return ProjectDetailFiles.workOutProjectDetails(config, cmd).//
-        then(pds => pds.forEach(p => output(config)(p.directory))).//
+    return ProjectDetailFiles.workOutProjectDetails(config, {...cmd, all: true}).//
+        then(pds => {
+            let width = Strings.maxLength(pds.map(p => p.directory))
+            pds.forEach(p => output(config)(`${p.directory.padEnd(width)} => ${p.projectDetails.name}`))
+        }).//
         catch(displayError(config.outputStream))
 }
 
