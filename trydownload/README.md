@@ -1,0 +1,1 @@
+This is a place where we can try downloading laoban from npmjs and see if it works

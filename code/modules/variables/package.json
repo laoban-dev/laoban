@@ -25,9 +25,9 @@
   },
   "files": [
     "README.md",
-    "index.js",
-    "index.d.ts",
-    "src/"
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
   ],
   "keywords": [
     "functionalprogramming",
@@ -35,14 +35,14 @@
     "optics"
   ],
   "license": "MIT",
+  "main": "dist/index",
+  "types": "dist/index",
   "repository": "git@github.com:phil-rice/laoban.git",
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "main": "dist/index",
-  "types": "dist/index",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "template": "noreact",
   "name": "@phil-rice/variables",
   "description": "A library that can dereference ${xxx} in strings",
