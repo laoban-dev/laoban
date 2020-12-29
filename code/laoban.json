@@ -53,6 +53,7 @@
     "pack"       : {
       "description" : "does everything for a publish except the actual 'npm publish'",
       "guard"       : "${projectDetails.details.publish}",
+      "comment": "why the --noEmit --outDir? Answer: using react_scripts we have to turn these off",
       "commands"    : [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
         {"name": "pack", "command": "${packageManager} pack", "status": true}

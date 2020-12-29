@@ -1,14 +1,11 @@
 {
   "dependencies": {},
-  "devDependencies": {
-    "laoban": "0.2.2"
-  },
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
   "version": "0.2.3",
   "name": "laoban-trydownload",
-  "description": "We just download laoban as a dev dependancy and see if we can use it",
-  "bin": {
-    "laoban": "dist/index.js"
+  "description": "We just download laoban as a dev dependency and see if we can use it",
+  "devDependencies": {
+    "laoban": "^0.2.2"
   }
 }

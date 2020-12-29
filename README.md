@@ -31,8 +31,37 @@ Laoban makes the following easy:
 
 For more details read [the full README](code/modules/laoban/README.md)
 
-# Installation instructions for developers
+# Installation instructions
+
+The simplest way is to use npm:
+```
+npm i -g -D laoban
+```
+
+Testing it works
+```
+laoban
+```
+If there is no laoban.json in the current or the parent directories, it will give an error
+
+
+
+
+# Contributing
+Please feel free to use and help laoban better. If you want to load the code locally the following may help
+
 
 ## Linux users (or Windows subsystem for Linux users)
 Please git clone the repo, then execute the scripts 'install.sh' in the root directory
+
+Note that if you have laoban installed in your global package then changes you make will not be visible. I recommend
+making a symbolic link. In the code directory or below you can type the following
+
+```
+sudo ln -s $(yarn bin)/laoban /usr/bin/laoban"
+```
+If you want to have a devban allowing both laoban and devban at the same time:
+```
+sudo ln -s $(yarn bin)/laoban /usr/bin/devban"
+```
 
