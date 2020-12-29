@@ -54,12 +54,12 @@
       "commands"       : [
         "laoban update",
         {"name": "install", "command": "${packageManager} install", "status": true},
-        {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
+        {"name": "remoteLink", "command": "${packageManager} link ${link}", "eachLink": true, "status": true},
+        {"name": "tsc", "command  ": "tsc --noEmit false --outDir dist", "status": true},
         {"name": "copyPackageJsonLinux", "command": "cp package.json dist", "osGuard": "Linux"},
         {"name": "copyPackageJsonWindows", "command": "copy package.json dist", "osGuard": "Windows"},
         {"name": "unlink", "command": "${packageManager} unlink", "status": true, "directory": "dist"},
         {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
-        {"name": "remoteLink", "command": "${packageManager} link ${link}", "eachLink": true, "status": true},
         {"name": "test", "command": "echo ${packageManager} test", "status": true}
       ], "inLinksOrder": true
     },

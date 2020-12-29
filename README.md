@@ -3,6 +3,7 @@
 Laoban or 老板 is chinese for 'boss'. It is a tool for controlling multiple projects. While it is
 language agnostic it probably offers the most value to javascript/typescript projects
 
+
 ## NPM usage
 NPM does not handle multiple projects well. Each project is a separate project.json that is managed separately. 
 There is no ability to 'inherit' or share configuration, so in a project with many moving parts each of which

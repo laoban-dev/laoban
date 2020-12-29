@@ -145,10 +145,18 @@ export let execInSpawn: RawCommandExecutor = (d: ShellCommandDetails<CommandDeta
     // console.log('in execInSpawn', d.details)
     let options = d.details.env ? {cwd: d.details.directory, env: {...process.env, ...d.details.env}} : {cwd: d.details.directory}
     return new Promise<RawShellResult>((resolve, reject) => {
-        let child = cp.spawn(d.details.commandString, {...options, shell: true})
-        child.stdout.on('data', data => writeTo(d.streams, data))//Why not pipe? because the lifecycle of the streams are different
-        child.stderr.on('data', data => writeTo(d.streams, data))
-        child.on('close', (code) => {resolve({err: code == 0 ? null : code})})
+        //TODO refactor this so that the catch is just for the spawn
+        try {
+            let debug=d.scriptInContext.debug('scripts')
+            debug.message(() => [`spawning ${d.details.commandString}. Options are ${JSON.stringify({...options, shell: true})}`])
+            let child = cp.spawn(d.details.commandString, {...options, shell: true})
+            child.stdout.on('data', data => writeTo(d.streams, data))//Why not pipe? because the lifecycle of the streams are different
+            child.stderr.on('data', data => writeTo(d.streams, data))
+            child.on('close', (code) => {resolve({err: code == 0 ? null : code})})
+        } catch (e){
+            console.error(e)
+            reject(Error (`Error while trying to execute ${d.details.commandString} in ${d.detailsAndDirectory.directory}\n\nError is ${e}`))
+        }
     })
 }
 
