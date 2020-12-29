@@ -14,13 +14,14 @@ describe("Debugging", () => {
     })
 
     describe('message', () => {
-        it('should print a message if the section is enabled', () => {
-            let remembered: any[][] = [];
-            let one = addDebug("one", remember(remembered))(context).debug('one')
-            one.message(() => ['some', 'text'])
-            one.message(() => ['more', 'text'])
-            expect(remembered).toEqual([["some", "text"], ["more", "text"]])
-        })
+        it(
+            'should print a message if the section is enabled', () => {
+                let remembered: any[][] = [];
+                let one = addDebug("one", remember(remembered))(context).debug('one')
+                one.message(() => ['some', 'text'])
+                one.message(() => ['more', 'text'])
+                expect(remembered).toEqual([["some", "text"], ["more", "text"]])
+            })
         it('should not print a message if the section is not enabled', () => {
             let remembered: any[][] = [];
             let one = addDebug("two", remember(remembered))(context).debug('one')
@@ -36,9 +37,9 @@ describe("Debugging", () => {
             let remembered: any[][] = [];
             let one = addDebug("one", remember(remembered))(context).debug('one')
             let result = one.k(() => 'some message', () => Promise.resolve('some result'))
-            result.then(res => {
-                expect(res).toEqual('some resulta')
-                expect(remembered).toEqual([["some", "text"], ["more", "text"]])
+            return result.then(res => {
+                expect(res).toEqual('some result')
+                expect(remembered).toEqual([["one","some message"]])
             })
         })
         it('should print an error message if the section is enabled', async () => {

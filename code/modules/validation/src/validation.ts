@@ -95,7 +95,7 @@ export class Validate<T> {
         let newContext = this.context + '.' + fieldName
         if (Array.isArray(array))
             array.forEach((t, i) => this.checkChildObject(`${newContext}[${i}]`, array[i], fn))
-        else this.error(`${this.context}.${fieldName} is not an array`)
+        else this.error(`${this.context}.${fieldName} is not an array.`)
         return this
     }
     isObjectofObjects<T1>(fieldName: string, fn: (v: Validate<T1>) => void): Validate<T> {
@@ -103,7 +103,7 @@ export class Validate<T> {
         let newContext = this.context + '.' + fieldName
         return this._checkIs('object', <any>fieldName) ?
             Object.keys(element).sort().reduce((acc, key) => acc.checkChildObject(`${newContext}.${key}`, element[key], fn), this) :
-            this.error(`${this.context}.${fieldName} is not an object`);
+            this.error(`${this.context}.${fieldName} is not an object.`);
     }
 }
 

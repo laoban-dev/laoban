@@ -6,114 +6,65 @@
   "profile"       : ".profile",
   "packageManager": "yarn",
   "scripts"       : {
-    "log"       : {
+    "log"        : {
       "description": "displays the tail of  log file. Best used with -s option", "commands": ["tail -5 ${log} "]
     },
-    "link"      : {
-      "description": "Sets up the 'links'. ${packageManage} link in the directories that define a project, and then links to it in the using projects",
-      "commands"   : [
-        {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        {"name": "copyPackageJsonLinux", "command": "cp package.json dist", "osGuard": "Linux"},
-        {"name": "copyPackageJsonWindows", "command": "copy package.json dist", "osGuard": "Windows"},
-        {"name": "unlink", "command": "${packageManager} unlink", "status": true, "directory": "dist"},
-        {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
-        {"name": "remoteLink", "command": "${packageManager} link ${link}", "eachLink": true, "status": true}
-      ], "inLinksOrder": true
-    },
-    "ls"        : {"description": "lists all the projects", "commands": ["js:process.cwd()"], "osGuard": "Linux"},
-    "lsDist"    : {
+    "ls"         : {"description": "lists all the projects", "commands": ["js:process.cwd()"], "osGuard": "Linux"},
+    "lsDist"     : {
       "description": "check that the directory option works", "commands": [
         {"command": "js:process.cwd()", "directory": "dist"},
         {"command": "pwd", "directory": "dist"}
       ]
     },
-    "envCheck"  : {
+    "envCheck"   : {
       "description": "checks evn",
       "commands"   : ["echo Linux: [${PORT}] windows: [%PORT%]"],
       "guard"      : "${projectDetails.details.port}",
       "env"        : {"PORT": "${projectDetails.details.port}"}
     },
-    "tsc"       : {
+    "tsc"        : {
       "description": "runs tsc",
       "commands"   : [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
-    "unlink"    : {
-      "description": "runs ${packageManager} unlink",
-      "commands"   : ["${packageManager} unlink"]
-    },
-    "test"      : {
+    "test"       : {
       "description": "runs ${packageManager} test",
       "commands"   : [{"name": "test", "command": "${packageManager} test", "status": true}]
     },
-    "slow"      : {
+    "slow"       : {
       "description": "prints something, delays 2s, prints something",
       "commands"   : ["echo `pwd` 'start'", "sleep 2s", "echo `pwd` 'stop' "]
     },
-    "install": {
-      "description"    : "(not working yet ) doing the initial updateConfigFilesFromTemplates/install/link/tsc/test... etc in each project",
-      "commands"       : [
-        "laoban update",
-        {"name": "install", "command": "${packageManager} install", "status": true},
-        {"name": "remoteLink", "command": "${packageManager} link ${link}", "eachLink": true, "status": true},
-        {"name": "tsc", "command  ": "tsc --noEmit false --outDir dist", "status": true},
-        {"name": "copyPackageJsonLinux", "command": "cp package.json dist", "osGuard": "Linux"},
-        {"name": "copyPackageJsonWindows", "command": "copy package.json dist", "osGuard": "Windows"},
-        {"name": "unlink", "command": "${packageManager} unlink", "status": true, "directory": "dist"},
-        {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
-        {"name": "test", "command": "echo ${packageManager} test", "status": true}
-      ], "inLinksOrder": true
-    },
-    "ls-ports"  : {
+    "ls-ports": {
       "description": "lists the projects that have a port defined in project.details.json",
       "guard"      : "${projectDetails.details.port}",
       "commands"   : ["js:process.cwd()"]
     },
-    "start"     : {
+    "start"      : {
       "description": "${packageManager} start for all projects that have a port defined in project.details.json",
       "guard"      : "${projectDetails.details.port}",
       "commands"   : ["${packageManager} start"],
       "env"        : {"PORT": "${projectDetails.details.port}"}
     },
-    "ls-publish": {
+    "ls-publish" : {
       "description": "lists the projects that can be published",
       "guard"      : "${projectDetails.details.publish}",
       "commands"   : ["js:process.cwd()"], "inLinksOrder": true
     },
-    "ls-orgcmd" : {
-      "description": "lists the projects that have code on demand",
-      "guard"      : "${projectDetails.details.orgcmd}",
-      "commands"   : ["js:process.cwd()"]
-    },
-    "orgcmd"    : {
-      "description": "makes the code on demand using orgcmd",
-      "guard"      : "${projectDetails.details.orgcmd}",
-      "commands"   : [{"name": "orgcmd", "command": "orgcmd build -f", "status": true}]
-    },
-    "pack"      : {
+    "pack"       : {
       "description" : "does everything for a publish except the actual 'npm publish'",
       "guard"       : "${projectDetails.details.publish}",
-      "osGuard"     : "Linux",
-      "guardReason" : "the find and copy commands used only work on window",
       "commands"    : [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        "find dist -type f -name 'enzymeAdapterSetup.*' -delete",
-        "cp package.json dist",
-        "cp README.* dist",
-        {"name": "pack", "command": "${packageManager} pack", "status": true, "directory": "dist"}
+        {"name": "pack", "command": "${packageManager} pack", "status": true}
       ],
       "inLinksOrder": true
     },
-    "publish"   : {
+    "publish"    : {
       "description" : "publishes the projects to npmjs",
       "guard"       : "${projectDetails.details.publish}",
-      "osGuard"     : "Linux",
-      "guardReason" : "the find and copy commands used only work on window",
       "commands"    : [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        "find dist -type f -name 'enzymeAdapterSetup.*' -delete",
-        "cp package.json dist",
-        "cp README.* dist",
-        {"name": "publish", "command": "${packageManager} publish --access public", "status": true, "directory": "dist"}
+        {"name": "pack", "command": "${packageManager} publish --access public", "status": true}
       ],
       "inLinksOrder": true
     }

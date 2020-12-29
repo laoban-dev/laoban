@@ -31,9 +31,9 @@
   },
   "files": [
     "README.md",
-    "index.js",
-    "index.d.ts",
-    "src/"
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
   ],
   "keywords": [
     "functionalprogramming",
@@ -41,13 +41,13 @@
     "optics"
   ],
   "license": "MIT",
-  "main": "index",
+  "main": "dist/index",
+  "types": "dist/index",
   "repository": "git@github.com:phil-rice/laoban.git",
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "types": "index",
   "version": "0.2.1",
   "template": "noreact",
   "name": "laoban",
@@ -65,6 +65,12 @@
     "extraDevDeps": {
       "@types/fs-extra": "^9.0.5"
     },
+    "extraBins": {
+      "laoban": "dist/index.js"
+    },
     "publish": true
+  },
+  "bin": {
+    "laoban": "dist/index.js"
   }
 }

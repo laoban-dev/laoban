@@ -9,6 +9,7 @@
       "commander": "^6.2.0"
     },
     "extraDevDeps": {"@types/fs-extra": "^9.0.5"},
+    "extraBins"   : {"laoban": "dist/index.js"},
     "publish"     : true
   }
 }
