@@ -46,6 +46,7 @@ import {Writable} from "stream";
 import {CommanderStatic} from "commander";
 // @ts-ignore
 import {addDebug} from "@phil-rice/debug";
+import {init} from "./init";
 
 
 const displayError = (outputStream: Writable) => (e: Error) => {outputStream.write(e.message.split('\n').slice(0, 2).join('\n') + "\n");}
@@ -84,6 +85,12 @@ let configAction: Action<void> = (config: Config, cmd: any) => {
     delete simpleConfig.scripts
     delete simpleConfig.outputStream
     return Promise.resolve(output(config)(JSON.stringify(simpleConfig, null, 2)))
+}
+let initAction: Action<void> = (config: Config, cmd: any) => {
+    let simpleConfig = {...config}
+    delete simpleConfig.scripts
+    delete simpleConfig.outputStream
+    return Promise.resolve(output(config)("init called"))
 }
 
 //TODO sort out type signature.. and it's just messy
@@ -155,6 +162,7 @@ let updateConfigFilesFromTemplates: ProjectAction<void[]> = (config: ConfigWithD
 //     return p.action(action(a))
 // }
 
+
 export class Cli {
     private program: any;
 
@@ -224,6 +232,9 @@ export class Cli {
                 }))
             }, description, ...options)
         }
+        program.command('init').description('creates a laoban.json and a template directory in the current dir').//
+            option('-f|--force ', "will overwrite existing laoban.json").//
+            action(cmd => init(configAndIssues, process.cwd(), cmd.force))
 
         action(program, 'config', configAction, 'displays the config', this.minimalOptions(configAndIssues))
         action(program, 'validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions)
@@ -296,8 +307,20 @@ let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorat
 export function executeGenerations(outputStream: Writable): ExecuteGenerations {
     return GenerationsDecorators.normalDecorators()(executeAllGenerations(executeGeneration, shellReporter(outputStream)))
 }
+
+function loadLaobanAndIssues(dir: string, outputStream: Writable) {
+    try {
+        let laoban = findLaoban(process.cwd())
+        return loadConfigOrIssues(outputStream, loadLoabanJsonAndValidate)(laoban);
+    } catch (e) {
+        return {
+            outputStream,
+            issues: [`Error while starting  ${e.message}`]
+        }
+    }
+
+}
 export function makeStandardCli(outputStream: Writable) {
-    let laoban = findLaoban(process.cwd())
-    let configAndIssues = loadConfigOrIssues(outputStream, loadLoabanJsonAndValidate)(laoban);
+    let configAndIssues = loadLaobanAndIssues(process.cwd(), outputStream)
     return new Cli(configAndIssues, executeGenerations(outputStream), abortWithReportIfAnyIssues);
 }

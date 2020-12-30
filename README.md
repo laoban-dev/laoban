@@ -37,6 +37,7 @@ The simplest way is to use npm:
 ```
 npm i -g -D laoban
 ```
+On linux you may need to execute this with `sudo` if you get a permissions error
 
 Testing it works
 ```
