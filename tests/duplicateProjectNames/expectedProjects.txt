@@ -1,2 +1,2 @@
-<root>/duplicateProjectNames/projects/project1 => projectName
-<root>/duplicateProjectNames/projects/project2 => projectName
+<root>/duplicateProjectNames/projects/project1 => projectName (noreact)
+<root>/duplicateProjectNames/projects/project2 => projectName (noreact)

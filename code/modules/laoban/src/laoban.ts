@@ -136,8 +136,15 @@ let validationAction: Action<Config | void> =
 let projectsAction: Action<void> = (config: ConfigWithDebug, cmd: any) => {
     return ProjectDetailFiles.workOutProjectDetails(config, {...cmd, all: true}).//
         then(pds => {
-            let width = Strings.maxLength(pds.map(p => p.directory))
-            pds.forEach(p => output(config)(`${p.directory.padEnd(width)} => ${p.projectDetails.name}`))
+            let dirWidth = Strings.maxLength(pds.map(p => p.directory))
+            let projWidth = Strings.maxLength(pds.map(p => p.projectDetails.name))
+            let templateWidth = Strings.maxLength(pds.map(p => p.projectDetails.template))
+
+            pds.forEach(p => {
+                let links = p.projectDetails.details.links;
+                let dependsOn = (links && links.length > 0) ? ` depends on [${links.join()}]` : ""
+                output(config)(`${p.directory.padEnd(dirWidth)} => ${p.projectDetails.name.padEnd(projWidth)} (${p.projectDetails.template.padEnd(templateWidth)})${dependsOn}`)
+            })
         }).//
         catch(displayError(config.outputStream))
 }
