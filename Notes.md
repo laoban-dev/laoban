@@ -26,4 +26,6 @@ and had reference error1
     * It would be good to have that as a skeleton story and have other people able to add their skeletons
 * add the generation code in: currently using old generation code
 
+Also check if works without template
+
 

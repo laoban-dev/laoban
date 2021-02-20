@@ -43,6 +43,7 @@ function calculateVariableText(d: ShellCommandDetails<CommandDetails>): string {
     let dic = d.details.dic
     let simplerdic = {...dic}
     delete simplerdic.scripts
+    delete simplerdic.outputStream
     return [`Raw command is [${d.details.command.command}] became [${d.details.commandString}]`,
         "legal variables are",
         JSON.stringify(simplerdic, null, 2)].join("\n") + "\n"
