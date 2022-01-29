@@ -1,10 +1,10 @@
 import path from "path";
 import fs from "fs";
 import * as cp from 'child_process'
-import {findLaoban} from "./Files";
+import { findLaoban } from "./Files";
 import os from "os";
-import {makeStandardCli} from "./laoban";
-import {Writable} from "stream";
+import { makeStandardCli } from "./laoban";
+import { Writable } from "stream";
 
 
 export let testRoot = path.resolve(findLaoban(process.cwd()), '..', 'tests');
@@ -63,8 +63,9 @@ function streamToString(stream) {
 }
 
 export function toArrayReplacingRoot(s: string): string[] {
-    let rootMatch = new RegExp(testRoot, "g")
-    return s.split('\n').map(s => s.trim()).map(s => s.replace(rootMatch, "<root>")).filter(s => s.length > 0)
+
+    let rootMatch = new RegExp(testRoot.replace(/\\/g, "/"), "g")
+    return s.split ( '\n' ).map ( s => s.replace ( /\\/g, "/" ).trim () ).map ( s => s.replace ( rootMatch, "<root>" ) ).filter ( s => s.length > 0 )
 }
 
 

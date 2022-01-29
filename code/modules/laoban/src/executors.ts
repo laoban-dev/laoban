@@ -45,10 +45,14 @@ export interface CommandDetails {
 function calculateDirectory ( directory: string, command: CommandDefn ) { return (command.directory) ? path.join ( directory, command.directory ) : directory;}
 
 export function streamNamefn ( sessionDir: string, sessionId: string, scriptName: string, directory: string ) {
-  let paths = directory.replace ( /\//g, '_' ).replace(/\\/g, '_');
-  return path.join ( sessionDir,
-    sessionId,
-    paths ) + '.' + scriptName + '.log'
+  let paths = directory.replace ( /\//g, '_' ).replace ( /\\/g, '_' ).replace(/:/g, "");
+  let result = path.join ( sessionDir, sessionId, paths ) + '.' + scriptName + '.log';
+  // console.log("streamNamefn -sessionDir", sessionDir)
+  // console.log("streamNamefn -directory", directory)
+  // console.log("streamNamefn -paths", paths)
+  // console.log("streamNamefn -directory", result)
+  // console.log("streamNamefn", result)
+  return result
 }
 export function streamName ( scd: ScriptInContextAndDirectoryWithoutStream ) {
   return streamNamefn ( scd.scriptInContext.config.sessionDir, scd.scriptInContext.sessionId, scd.scriptInContext.details.name, scd.detailsAndDirectory.directory )
