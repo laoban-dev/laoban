@@ -198,9 +198,10 @@ export class Cli {
     }
 
     constructor(configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues) {
+        const version = require("../../package.json").version
         var program = require('commander').//
             arguments('').//
-            version('0.1.0')//
+            version(version)//
 
         let defaultOptions = this.defaultOptions(configAndIssues)
         function command(program: any, cmd: string, description: string, fns: ((a: any) => any)[]) {
