@@ -148,7 +148,13 @@ export function make ( shell: RawCommandExecutor, js: RawCommandExecutor, timeIt
 
 export let execInSpawn: RawCommandExecutor = ( d: ShellCommandDetails<CommandDetails> ) => {
   // console.log('in execInSpawn', d.details)
-  let options = d.details.env ? { cwd: d.details.directory, env: { ...process.env, ...d.details.env } } : { cwd: d.details.directory }
+  let cwd = d.details.directory;
+  let options = { cwd, env: { ...process.env, ...d.details.env }}
+
+  //  let cwd = d.details.directory;
+  //   let rawOptions = d.details.env ? { cwd: cwd, env: { ...process.env, ...d.details.env } } : { cwd: cwd }
+  //   let options = {...rawOptions, env:{...rawOptions.env, cwd}}
+
   return new Promise<RawShellResult> ( ( resolve, reject ) => {
     //TODO refactor this so that the catch is just for the spawn
     try {

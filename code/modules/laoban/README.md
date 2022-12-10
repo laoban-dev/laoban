@@ -126,6 +126,8 @@ Scripts are lists of commands (sometimes just one) that are executed when you ty
           * -1 means 'just run in this directory'
 * Scripts have access to variables
 
+
+
 ### OsGuard
 Scripts can be marked so that they only run in a particularly OS. Examples can be seen in the laoban.json. If
 called from the wrong os then an error is given. `guardReason` can be set to give an error message (and document why)
@@ -169,6 +171,19 @@ So by setting 'ports' to a numeric value in the  `project.details.json` we have 
 executing `laoban start` will start up the project. This lets us spin up multiple react projects at once. It's a good idea
 if all the projects have different ports...
 
+### environment variables
+cwd is added as an environment variable to represent the current directory
+other environment variables can be added to scripts such as 
+```json
+    "ls-pact":        {
+      "osGuard":     "Windows_NT",
+      "description": "lists the projects with pact files in them",
+      "guard":       "${projectDetails.details.packport}",
+      "commands":    ["echo %PORT%  %cwd%"],
+      "env":         {"PORT": "${projectDetails.details.packport}"}
+    },
+```
+
 
 ## inLinksOrder
 Some scripts don't parallelise that well. For example if we are compiling projects, and some projects depend on other projects
@@ -180,7 +195,9 @@ This can be seen using '-g | --generationPlan' as an option. This behavior can a
 
 ## env
 If a command needs access to environment variables (for example a port) these can be added. It is
-not uncommon to have a guard condition on the command. For example:
+not uncommon to have a guard condition on the command. 
+
+
 
 ## Commands
 
