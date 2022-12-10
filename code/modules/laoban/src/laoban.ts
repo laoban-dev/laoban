@@ -50,9 +50,10 @@ import { init } from "./init";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
-  outputStream.write ( (e.message?e.message:e.toString()).split ( '\n' ).slice ( 0, 2 ).join ( '\n' ) + "\n" );
+  outputStream.write ( (e.message ? e.message : e.toString ()).split ( '\n' ).slice ( 0, 2 ).join ( '\n' ) + "\n" );
 }
-const makeSessionId = ( d: Date, suffix: any ) => d.toISOString ().replace ( /:/g, '.' ) + '.' + suffix;
+const makeSessionId = ( d: Date, suffix: any, params: string[] ) =>
+  d.toISOString ().replace ( /:/g, '.' ) + '.' + [ suffix, params.slice(3).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '.' );
 
 function openStream ( sc: ScriptInContextAndDirectoryWithoutStream ): ScriptInContextAndDirectory {
   let logStream = fs.createWriteStream ( streamName ( sc ) );
@@ -118,7 +119,7 @@ let compactStatusAction: ProjectAction<void[]> = ( config: Config, cmd: any, pds
   Promise.all ( pds.map ( d =>
     writeCompactedStatus ( path.join ( d.directory, config.status ), compactStatus ( path.join ( d.directory, config.status ) ) ) ) )
 
-let profileAction: ProjectAction<void> = ( config: Config, cmd: any, pds: ProjectDetailsAndDirectory[] ) =>
+const profileAction: ProjectAction<void> = ( config: Config, cmd: any, pds: ProjectDetailsAndDirectory[] ) =>
   Promise.all ( pds.map ( d => loadProfile ( config, d.directory ).then ( p => ({ directory: d.directory, profile: findProfilesFromString ( p ) }) ) ) ).//
     then ( p => {
       let data = prettyPrintProfileData ( p );
@@ -127,10 +128,10 @@ let profileAction: ProjectAction<void> = ( config: Config, cmd: any, pds: Projec
       prettyPrintProfiles ( output ( config ), 'average', data, p => (p.average / 1000).toFixed ( 3 ) )
     } )
 
-let validationAction: Action<Config | void> =
-      ( config: ConfigWithDebug, cmd: any ) => ProjectDetailFiles.workOutProjectDetails ( config, cmd ).//
-        then ( ds => validateProjectDetailsAndTemplates ( config, ds ) ).//
-        then ( issues => abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues } ), displayError ( config.outputStream ) )
+const validationAction = ( params: string[] ): Action<Config | void> =>
+  ( config: ConfigWithDebug, cmd: any ) => ProjectDetailFiles.workOutProjectDetails ( config, cmd ).//
+    then ( ds => validateProjectDetailsAndTemplates ( config, ds ) ).//
+    then ( issues => abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params } ), displayError ( config.outputStream ) )
 
 //TODO This looks like it needs a clean up. It has abort logic and display error logic.
 
@@ -174,6 +175,7 @@ let updateConfigFilesFromTemplates: ProjectAction<void[]> = ( config: ConfigWith
 
 export class Cli {
   private program: any;
+  private params: string[]
 
   defaultOptions ( configAndIssues: ConfigAndIssues ): ( program: CommanderStatic ) => any {
     return program => {
@@ -201,6 +203,7 @@ export class Cli {
 
   constructor ( configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
     const version = require ( "../../package.json" ).version
+    this.params = configAndIssues.params
     var program = require ( 'commander' ).//
       arguments ( '' ).//
       version ( version )//
@@ -226,10 +229,11 @@ export class Cli {
     }
 
     function scriptAction<T> ( p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
+
       return projectAction ( p, name, ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
         let script = scriptFn ()
         let status = new Status ( config, dir => streamNamefn ( config.sessionDir, sessionId, script.name, dir ) )
-        let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId ( new Date (), script.name );
+        let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId ( new Date (), script.name, configAndIssues.params );
         let sessionDir = path.join ( config.sessionDir, sessionId );
         config.debug ( 'session' ).message ( () => [ 'sessionId', sessionId, 'sessionDir', sessionDir ] )
         return checkGuard ( config, script ).then ( () => fse.mkdirp ( sessionDir ).then ( () => {
@@ -247,7 +251,7 @@ export class Cli {
       action ( cmd => init ( configAndIssues, process.cwd (), cmd.force ) )
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
-    action ( program, 'validate', validationAction, 'checks the laoban.json and the project.details.json', defaultOptions )
+    action ( program, 'validate', validationAction ( this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitary command (the rest of the command line).',
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]
@@ -296,13 +300,13 @@ export class Cli {
 
   parsed: any;
 
-  start ( argv: string[] ) {
+  start () {
     // console.log('starting', argv)
-    if ( argv.length == 2 ) {
+    if ( this.params.length == 2 ) {
       this.program.outputHelp ();
       return Promise.resolve ()
     }
-    this.parsed = this.program.parseAsync ( argv ); // notice that we have to parse in a new statement.
+    this.parsed = this.program.parseAsync ( this.params ); // notice that we have to parse in a new statement.
     return this.parsed
   }
 }
@@ -318,19 +322,20 @@ export function executeGenerations ( outputStream: Writable ): ExecuteGeneration
   return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration, shellReporter ( outputStream ) ) )
 }
 
-function loadLaobanAndIssues ( dir: string, outputStream: Writable ) {
+function loadLaobanAndIssues ( dir: string, params: string[], outputStream: Writable ): ConfigAndIssues {
   try {
     let laoban = findLaoban ( process.cwd () )
-    return loadConfigOrIssues ( outputStream, loadLoabanJsonAndValidate ) ( laoban );
+    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ) ( laoban );
   } catch ( e ) {
     return {
       outputStream,
+      params,
       issues: [ `Error while starting  ${e.message}` ]
     }
   }
 
 }
-export function makeStandardCli ( outputStream: Writable ) {
-  let configAndIssues = loadLaobanAndIssues ( process.cwd (), outputStream )
-    return new Cli(configAndIssues, executeGenerations(outputStream), abortWithReportIfAnyIssues);
+export function makeStandardCli ( outputStream: Writable, params: string[] ) {
+  const configAndIssues: ConfigAndIssues = loadLaobanAndIssues ( process.cwd (), params, outputStream )
+  return new Cli ( configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
 }

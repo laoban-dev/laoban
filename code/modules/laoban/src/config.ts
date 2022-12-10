@@ -150,6 +150,7 @@ export interface RawConfigAndIssues {
 }
 export interface ConfigAndIssues extends HasOutputStream {
     config?: Config,
+    params: string[]
     issues: string[]
 }
 

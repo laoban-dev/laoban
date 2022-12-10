@@ -18,7 +18,7 @@ describe("validate laoban json", () => {
         it(`should check the laobon.json validation for ${testDir}`, () => {
             let parsed = path.parse(testDir)
             let expected = fs.readFileSync(path.join(testRoot, testDir, 'expectedValidationLaoban.txt')).toString().split('\n').map(s => s.trim()).filter(s => s.length > 0)
-            let configOrIssues = loadConfigOrIssues(process.stdout, loadLoabanJsonAndValidate)(path.join(testRoot, testDir))
+            let configOrIssues = loadConfigOrIssues(process.stdout, ['param1', 'param2'],loadLoabanJsonAndValidate)(path.join(testRoot, testDir))
             expect(configOrIssues.issues).toEqual(expected)
         })
     })
@@ -27,7 +27,7 @@ describe("validate laoban json", () => {
 describe("validate directories", () => {
     dirsIn(testRoot).forEach(testDir => {
         let parsed = path.parse(testDir)
-        let configOrIssues = loadConfigOrIssues(process.stdout, loadLoabanJsonAndValidate)(testDir)
+        let configOrIssues = loadConfigOrIssues(process.stdout, ['param1', 'param2'],loadLoabanJsonAndValidate)(testDir)
         if (configOrIssues.issues.length == 0) {
             it(`should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
                 let expected = fs.readFileSync(path.join(testDir, 'expectedValidateProjectDetailsAndTemplate.txt')).toString().trim()

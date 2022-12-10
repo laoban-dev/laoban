@@ -40,7 +40,7 @@ export function executeCli(cwd: string, cmd: string): Promise<string> {
     let data: string[] = []
     let stream: Writable = rememberWritable(data)
     let args: string[] = [...process.argv.slice(0, 2), ...cmd.split(' ').slice(1)];
-    return executeInChangedDirectory(cwd, () => makeStandardCli(stream).start(args).then(() => data.join('')))
+    return executeInChangedDirectory(cwd, () => makeStandardCli(stream, args).start().then(() => data.join('')))
 }
 
 
