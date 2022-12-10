@@ -52,7 +52,7 @@ import { init } from "./init";
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
   outputStream.write ( (e.message ? e.message : e.toString ()).split ( '\n' ).slice ( 0, 2 ).join ( '\n' ) + "\n" );
 }
-const makeSessionId = ( d: Date, suffix: any, params: string[] ) =>
+export const makeSessionId = ( d: Date, suffix: any, params: string[] ) =>
   d.toISOString ().replace ( /:/g, '.' ) + '.' + [ suffix, params.slice(3).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '.' );
 
 function openStream ( sc: ScriptInContextAndDirectoryWithoutStream ): ScriptInContextAndDirectory {
