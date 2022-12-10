@@ -1,8 +1,7 @@
-import {Generations, ShellResult} from "./executors";
-import {Writable} from "stream";
-import {Status} from "./monitor";
+import { Generations, ShellResult } from "./executors";
+import { Writable } from "stream";
 // @ts-ignore
-import {Debug} from "@phil-rice/debug";
+import { Debug } from "@phil-rice/debug";
 
 
 export interface ConfigVariables {
@@ -54,7 +53,6 @@ export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectory
 export interface ScriptInContext {
     dirWidth: number,
     debug: Debug,
-    status: Status,
     dryrun: boolean,
     shell: boolean,
     genPlan: boolean,

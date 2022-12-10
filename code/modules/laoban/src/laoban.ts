@@ -2,43 +2,14 @@ import { copyTemplateDirectory, findLaoban, ProjectDetailFiles } from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate } from "./configProcessor";
-import {
-  Action,
-  Config,
-  ConfigAndIssues,
-  ConfigOrReportIssues,
-  ConfigWithDebug,
-  ProjectAction,
-  ProjectDetailsAndDirectory,
-  ScriptDetails,
-  ScriptInContext,
-  ScriptInContextAndDirectory,
-  ScriptInContextAndDirectoryWithoutStream
-} from "./config";
+import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
 import { loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus } from "./status";
 import * as os from "os";
-import {
-  execInSpawn,
-  execJS,
-  executeAllGenerations,
-  ExecuteCommand,
-  ExecuteGenerations,
-  executeOneGeneration,
-  ExecuteOneGeneration,
-  executeScript,
-  ExecuteScript,
-  Generations,
-  GenerationsResult,
-  make,
-  streamName,
-  streamNamefn,
-  timeIt
-} from "./executors";
+import { execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, GenerationsResult, make, streamName, streamNamefn, timeIt } from "./executors";
 import { output, Strings } from "./utils";
-import { monitor, Status } from "./monitor";
 import { validateProjectDetailsAndTemplates } from "./validation";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
@@ -59,11 +30,10 @@ function openStream ( sc: ScriptInContextAndDirectoryWithoutStream ): ScriptInCo
   let logStream = fs.createWriteStream ( streamName ( sc ) );
   return { ...sc, logStream, streams: [ logStream ] }
 }
-function makeSc ( config: ConfigWithDebug, status: Status, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, cmd: any ) {
+function makeSc ( config: ConfigWithDebug, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, cmd: any ) {
   let sc: ScriptInContext = {
     debug: config.debug,
     sessionId,
-    status,
     dirWidth: Strings.maxLength ( details.map ( d => d.directory ) ) - config.laobanDirectory.length,
     dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet, links: cmd.links, throttle: cmd.throttle,
     config, details: script, timestamp: new Date (), genPlan: cmd.generationPlan,
@@ -232,13 +202,11 @@ export class Cli {
 
       return projectAction ( p, name, ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
         let script = scriptFn ()
-        let status = new Status ( config, dir => streamNamefn ( config.sessionDir, sessionId, script.name, dir ) )
         let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId ( new Date (), script.name, configAndIssues.params );
         let sessionDir = path.join ( config.sessionDir, sessionId );
         config.debug ( 'session' ).message ( () => [ 'sessionId', sessionId, 'sessionDir', sessionDir ] )
         return checkGuard ( config, script ).then ( () => fse.mkdirp ( sessionDir ).then ( () => {
-          monitor ( status )
-          let scds: ScriptInContextAndDirectory[] = pds.map ( d => openStream ( { detailsAndDirectory: d, scriptInContext: makeSc ( config, status, sessionId, pds, script, cmd ) } ) )
+          let scds: ScriptInContextAndDirectory[] = pds.map ( d => openStream ( { detailsAndDirectory: d, scriptInContext: makeSc ( config,sessionId, pds, script, cmd ) } ) )
           let s = config.debug ( 'scripts' );
           s.message ( () => [ 'rawScriptCommands', ...script.commands.map ( s => s.command ) ] )
           s.message ( () => [ 'directories', ...scds.map ( s => s.detailsAndDirectory.directory ) ] )
