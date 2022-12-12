@@ -1,8 +1,9 @@
 {
-  "template"      : "noreact",
-  "name"          : "@phil-rice/generations",
-  "description"   : "A library that typologically sorts data into generations",
-  "details": {
-    "publish"     : false
+  "template":    "noreact",
+  "name":        "@phil-rice/generations",
+  "description": "A library that typologically sorts data into generations",
+  "details":     {
+    "publish": false,
+    "links":   ["@phil-rice/debug", "@phil-rice/utils"]
   }
 }

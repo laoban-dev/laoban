@@ -199,7 +199,6 @@ export class Cli {
     }
 
     function scriptAction<T> ( p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
-
       return projectAction ( p, name, ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
         let script = scriptFn ()
         let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId ( new Date (), script.name, configAndIssues.params );
@@ -286,6 +285,7 @@ let appendToFiles: AppendToFileIf = ( condition, name, contentGenerator ) =>
 let executeOne: ExecuteCommand = defaultExecutor ( appendToFiles )
 let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators () ( executeScript ( executeOne ) )
 let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators () ( executeOneGeneration ( executeOneScript ) )
+
 export function executeGenerations ( outputStream: Writable ): ExecuteGenerations {
   return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration, shellReporter ( outputStream ) ) )
 }

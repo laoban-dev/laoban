@@ -1,153 +1,246 @@
-import {calcGenerationsPromise, GenerationFns, GenerationView, generationView, mutateAndGetAllGens, mutateAndGetGen0} from "./generations";
+import { cannonicalLoop, findAllLoopsFor, removeIfSamePath, removeIfSuperLoop, throwExceptionIfLoopsFor, uniqueLoops } from "./cyclicGraphDetection";
+import { topologicalSort, topologicalSortNames, TopologicalSortTypeClasses } from "./topologicalSort";
+import { NullDebugCommands } from "@phil-rice/debug";
 
 interface Thing {
-    name: string,
-    children: Thing[]
-}
-
-let genFns: GenerationFns<Thing> = {
-    name: t => t.name,
-    children: t => t.children.map(x => x.name),
-    errorMessage: (view: GenerationView) => Error(`had error in ${JSON.stringify(view)}`)
+  name: string,
+  children: string[]
 }
 // let thing0a = {name: "zero", children: []}
-let thing0a = {name: "zeroa", children: []}
-let thing0b = {name: "zerob", children: []}
+const thing0a: Thing = { name: "zeroa", children: [] }
+const thing0b: Thing = { name: "zerob", children: [] }
+const thing0WithLoop: Thing = { name: "loopa", children: [ 'loopa' ] }
 
-let thing1a = {name: "onea", children: [thing0a]}
-let thing1b = {name: "oneb", children: [thing0a]}
-let thing1c = {name: "onec", children: [thing0b]}
 
-let thing2a = {name: "twoa", children: [thing0a, thing1a]}
-let thing2b = {name: "twob", children: [thing1b]}
-let thing2c = {name: "twoc", children: [thing0b, thing1a]}
+const thing1a: Thing = { name: "onea", children: [ thing0a.name ] }
+const thing1b: Thing = { name: "oneb", children: [ thing0a.name ] }
+const thing1c: Thing = { name: "onec", children: [ thing0b.name ] }
 
-let calc = calcGenerationsPromise(genFns)
-describe("generations", () => {
-    describe("empty generations", () => {
-        it("should return an empty set of generations, if no data passed in", async () => {
-            return calc([]).then(result => expect(result).toEqual([]))
-        })
-    })
-    describe("just one generation", () => {
-        it("should return only generation 0 when there are no dependancies ", async () => {
-            expect(await calc([thing0a])).toEqual([[thing0a]])
-        })
-        it("should return only generation 0 when the named dependencies are not in the input list", async () => {
-            expect(await calc([thing1a])).toEqual([[thing1a]])
-            expect(await calc([thing2a])).toEqual([[thing2a]])
-            expect(await calc([thing2c])).toEqual([[thing2c]])
-        })
-    })
-    describe("generations when all links present", () => {
-        it("return a list of generations where each generation is only dependant on earlier", async () => {
-            expect(await calc([thing0a, thing1a])).toEqual([[thing0a], [thing1a]])
-            expect(await calc([thing1a, thing0a])).toEqual([[thing0a], [thing1a]])
-            expect(await calc([thing2a, thing1a, thing0a])).toEqual([[thing0a], [thing1a], [thing2a]])
-        })
-    })
-    describe("generations have a loop", () => {
-        it("return an error if have a loop", async () => {
-            expect(await calc([thing0a, thing1a])).toEqual([[thing0a], [thing1a]])
-            expect(await calc([thing1a, thing0a])).toEqual([[thing0a], [thing1a]])
-            expect(await calc([thing2a, thing1a, thing0a])).toEqual([[thing0a], [thing1a], [thing2a]])
-        })
-    })
-})
+const thing2a: Thing = { name: "twoa", children: [ thing0a.name, thing1a.name ] }
+const thing2b: Thing = { name: "twob", children: [ thing1b.name ] }
+const thing2c: Thing = { name: "twoc", children: [ thing0b.name, thing1a.name ] }
 
-describe("generationView", () => {
-    it("should be a subset of parent->child, filtered by whether the parents/children are in the input", () => {
-        let view = generationView(genFns)
-        expect(view([])).toEqual({})
-        expect(view([thing0a])).toEqual({zeroa: []})
-        expect(view([thing1a])).toEqual({onea: []})
-        expect(view([thing2a])).toEqual({twoa: []})
-        expect(view([thing0a, thing2c])).toEqual({zeroa: [], twoc: []})
-        expect(view([thing0a, thing1a, thing2c])).toEqual({
-            "onea": ["zeroa"],
-            "twoc": ["onea"],
-            "zeroa": []
-        })
-    })
-})
+describe ( "findAllLoopsFor", () => {
+  it ( "should return nothing for empty", () => {
+    expect ( findAllLoopsFor ( {} ) ).toEqual ( {} )
+  } )
+  it ( "Should return nothing if there are no loops", () => {
+    expect ( findAllLoopsFor ( {
+      "two": [ "one" ],
+      "one": [ "zeroa", "zerob" ],
+      "zeroa": []
+    } ) ).toEqual ( {} )
+  } )
+  it ( "Should return a list of loop descriptions when there are single loops ", () => {
+    expect ( findAllLoopsFor ( {
+      "two": [ "one", "loop" ],
+      "one": [ "zeroa", "zerob" ],
+      "zeroa": [],
+      "loop": [ "two" ]
+    } ) ).toEqual ( {
+      "loop": [ [ "loop", "two", "loop" ] ],
+      "two": [ [ "two", "loop", "two" ] ],
+    } )
+  } )
+  it ( "Should return a list of loop descriptions when there are multiple loops ", () => {
+    expect ( findAllLoopsFor ( {
+      "two": [ "one", "loop1", "loop2" ],
+      "one": [ "zeroa", "zerob" ],
+      "zeroa": [],
+      "zerob": [],
+      "loop1": [ "two" ],
+      "loop2": [ "loop2Mid" ],
+      "loop2Mid": [ "two" ],
+    } ) ).toEqual ( {
+      "loop1": [
+        [ "loop1", "two", "loop1" ],
+        [ "loop1", "two", "loop2", "loop2Mid", "two" ]
+      ],
+      "loop2": [
+        [ "loop2", "loop2Mid", "two", "loop1", "two" ],
+        [ "loop2", "loop2Mid", "two", "loop2" ] ],
+      "loop2Mid": [
+        [ "loop2Mid", "two", "loop1", "two" ],
+        [ "loop2Mid", "two", "loop2", "loop2Mid" ]
+      ],
+      "two": [
+        [ "two", "loop1", "two" ],
+        [ "two", "loop2", "loop2Mid", "two" ]
+      ],
+    } )
+  } )
+} )
 
-describe("mutateAndGetAllGens", () => {
-    it("should return a list of all gens and mutate the gen view to be empty if everything OK", () => {
-        let gen: GenerationView = {
-            "two": ["one"],
-            "one": ["zeroa", "zerob"],
-            "zeroa": [],
-            "zerob": []
-        }
-        expect(mutateAndGetAllGens(gen)).toEqual([["zeroa", "zerob"], ["one"], ["two"]]);
-        expect(gen).toEqual({})
-    })
-    it("should return a list of the gens it can do, and leave the loops in the gen", () => {
-        let gen: GenerationView = {
-            "two": ["one", "loop"],
-            "one": ["zeroa", "zerob"],
-            "zeroa": [],
-            "zerob": [],
-            "loop": ["two"]
-        }
-        expect(mutateAndGetAllGens(gen)).toEqual([["zeroa", "zerob"], ["one"]]);
-        expect(gen).toEqual({"loop": ["two"], "two": ["loop"]})
-    })
+describe ( "cannonicalLoop", () => {
+  it ( "should find a cannonical view of a loop", () => {
+    expect ( cannonicalLoop ( [] ) ).toEqual ( [] )
+    expect ( cannonicalLoop ( [ 'z', 'a', 'd', 'b', 'z' ] ) ).toEqual ( [ "a", "d", "b", "z", 'a' ] )
+    expect ( cannonicalLoop ( [ 'a', 'd', 'b', 'z', 'a' ] ) ).toEqual ( [ "a", "d", "b", "z", 'a' ] )
+    expect ( cannonicalLoop ( [ 'd', 'b', 'z', 'a', 'd' ] ) ).toEqual ( [ "a", "d", "b", "z", 'a' ] )
+    expect ( cannonicalLoop ( [ "loop1", "two", "loop1" ], ) ).toEqual ( [ "loop1", "two", "loop1" ] )
+    expect ( cannonicalLoop ( [ "two", "loop1", "two" ], ) ).toEqual ( [ "loop1", "two", "loop1" ] )
+  } )
+  it ( 'should cannonical the loops used in tests', () => {
+    expect ( [ [ 'loop1', 'two', 'loop1' ],
+      [ 'loop2', 'loop2Mid', 'two', 'loop1', 'two' ],
+      [ 'loop2Mid', 'two', 'loop1', 'two' ],
+      [ 'two', 'loop1', 'two' ] ].map ( cannonicalLoop ) ).toEqual ( [
+      [ "loop1", "two", "loop1" ],
+      [ "loop1", "loop2", "loop2Mid", "two", "loop1" ],
+      [ "loop1", "loop2Mid", "two", "loop1" ],
+      [ "loop1", "two", "loop1" ]
+    ] )
 
-})
-describe("mutateAndGetGen0", () => {
-    it("should return nothing for empty", () => {
-        let gen = {}
-        expect(mutateAndGetGen0(gen)).toEqual([])
-        expect(gen).toEqual({})
-    })
+  } )
+} )
 
-    it("should return the gen0 and mutate the gen", () => {
-        let gen: GenerationView = {
-            "two": ["one"],
-            "one": ["zeroa", "zerob"],
-            "zeroa": [],
-            "zerob": []
-        }
-        let gen0 = mutateAndGetGen0(gen);
-        expect(gen0).toEqual(["zeroa", "zerob"])
-        expect(gen).toEqual({"two": ["one"], "one": []})
+describe ( "remove if same path", () => {
+  expect ( removeIfSamePath ( [
+    [ "loop1", "two", "loop1" ],
+    [ "loop2", "loop2Mid", "two", "loop2" ],
+    [ "loop1", "loop2Mid", "two", "loop1" ],
+    [ "loop1", "two", "loop2", "loop2Mid", "loop1" ],
+    [ "loop1", "loop2", "loop2Mid", "two", "loop1" ]
+  ] ) ).toEqual ( [
+    [ "loop1", "two", "loop1" ],
+    [ "loop2", "loop2Mid", "two", "loop2"
+    ]
+  ] )
+} )
 
-        let gen1 = mutateAndGetGen0(gen);
-        expect(gen1).toEqual(["one"])
-        expect(gen).toEqual({"two": []})
+describe ( "removeIfSuperLoop", () => {
+  it ( "should return the loops without super loops", () => {
+    expect ( removeIfSuperLoop ( [] ) ).toEqual ( [] )
+    expect ( removeIfSuperLoop ( [ [ "loop", "two", "loop" ], [ "two", "loop", "two" ] ] ) ).toEqual ( [
+      [ "loop", "two", "loop" ], [ "two", "loop", "two" ]
+    ] )
+    expect ( removeIfSuperLoop ( [
+      [ "loop1", "two", "loop1" ],
+      [ "loop1", "two", "loop2", "loop2Mid", "two" ],
+      [ "loop2", "loop2Mid", "two", "loop1", "two" ],
+      [ "loop2", "loop2Mid", "two", "loop2" ],
+      [ "loop2Mid", "two", "loop1", "two" ],
+      [ "loop2Mid", "two", "loop2", "loop2Mid" ],
+      [ "two", "loop1", "two" ],
+      [ "two", "loop2", "loop2Mid", "two" ]
+    ] ) ).toEqual ( [
+      [ "loop1", "two", "loop1" ],
+      [ "loop2", "loop2Mid", "two", "loop2" ],
+      [ "loop2Mid", "two", "loop2", "loop2Mid" ],
+      [ "two", "loop1", "two" ],
+      [ "two", "loop2", "loop2Mid", "two" ]
+    ] )
+  } )
+} )
 
-        let gen2 = mutateAndGetGen0(gen);
-        expect(gen2).toEqual(["two"])
-        expect(gen).toEqual({})
+describe ( "uniqueLoops", () => {
+  it ( "should return the unique loops", () => {
+    expect ( uniqueLoops ( {} ) ).toEqual ( [] )
+    expect ( uniqueLoops ( {
+      "loop": [ [ "loop", "two", "loop" ] ],
+      "two": [ [ "two", "loop", "two" ] ],
+    } ) ).toEqual ( [
+      [ "loop", "two", "loop" ]
+    ] )
+    expect ( uniqueLoops ( {
+      "loop1": [
+        [ "loop1", "two", "loop1" ],
+        [ "loop1", "two", "loop2", "loop2Mid", "two" ]
+      ],
+      "loop2": [
+        [ "loop2", "loop2Mid", "two", "loop1", "two" ],
+        [ "loop2", "loop2Mid", "two", "loop2" ] ],
+      "loop2Mid": [
+        [ "loop2Mid", "two", "loop1", "two" ],
+        [ "loop2Mid", "two", "loop2", "loop2Mid" ]
+      ],
+      "two": [
+        [ "two", "loop1", "two" ],
+        [ "two", "loop2", "loop2Mid", "two" ]
+      ],
+    } ) ).toEqual ( [
+      [ "loop1", "two", "loop1" ],
+      [ "loop2", "loop2Mid", "two", "loop2" ]
+    ] )
+  } )
+} )
 
-        let gen3 = mutateAndGetGen0(gen);
-        expect(gen3).toEqual([])
-        expect(gen).toEqual({})
-    })
-    it("should not crash with loops, leaving a none empty gen at end", () => {
-        let gen: GenerationView = {
-            "two": ["one", "loop"],
-            "one": ["zeroa", "zerob"],
-            "zeroa": [],
-            "zerob": [],
-            "loop": ["two"]
-        }
-        let gen0 = mutateAndGetGen0(gen);
-        expect(gen0).toEqual(["zeroa", "zerob"])
-        expect(gen).toEqual({
-            "loop": ["two"],
-            "one": [],
-            "two": ["one", "loop"]
-        })
+describe ( "throwExceptionIfLoopsFor", () => {
+  it ( "should not throw an exception if there isn't a loop", () => {
+    throwExceptionIfLoopsFor ( 'Loop error' ) ( {
+      "two": [ "one" ],
+      "one": [ "zeroa", "zerob" ],
+      "zeroa": []
+    } )
+  } )
+  it ( "should throw an exception if there is a loop", () => {
+    expect ( () => throwExceptionIfLoopsFor ( 'Loop error' ) ( {
+      "two": [ "one", "loop1", "loop2" ],
+      "one": [ "zeroa", "zerob" ],
+      "zeroa": [],
+      "zerob": [],
+      "loop1": [ "two" ],
+      "loop2": [ "loop2Mid" ],
+      "loop2Mid": [ "two" ],
+    } ) ).toThrow ( `Loop error
+  loop1 -> two -> loop1
+  loop2 -> loop2Mid -> two -> loop2` )
 
-        let gen1 = mutateAndGetGen0(gen);
-        expect(gen1).toEqual(["one"])
-        expect(gen).toEqual({"loop": ["two"], "two": ["loop"]})
+  } )
 
-        let gen2 = mutateAndGetGen0(gen);
-        expect(gen2).toEqual([])
-        expect(gen).toEqual({"loop": ["two"], "two": ["loop"]})
+} )
 
-    })
-})
+describe ( "topological sort names", () => {
+  it ( "should return [] for {}", () => {
+    expect ( topologicalSortNames ( {} ) ).toEqual ( [] )
+  } )
+  it ( "should return [[name]] for {name:[]}", () => {
+    expect ( topologicalSortNames ( { name: [] } ) ).toEqual ( [ [ 'name' ] ] )
+  } )
+  it ( "should sort a simple graph a->b", () => {
+    expect ( topologicalSortNames ( { a: [ 'b' ], b: [] } ) ).toEqual ( [ [ 'a' ], [ 'b' ] ] )
+    expect ( topologicalSortNames ( { a: [ 'b' ], b: undefined } ) ).toEqual ( [ [ 'a' ], [ 'b' ] ] )
+    expect ( topologicalSortNames ( { b: [], a: [ 'b' ] } ) ).toEqual ( [ [ 'a' ], [ 'b' ] ] )
+  } )
+  it ( "should sort a simple graph a->b ->c but c isn't in graph", () => {
+    expect ( topologicalSortNames ( { a: [ 'b' ], b: [ 'c' ] } ) ).toEqual ( [ [ 'a' ], [ 'b' ], [ 'c' ] ] )
+    expect ( topologicalSortNames ( { b: [ 'c' ], a: [ 'b' ] } ) ).toEqual ( [ [ 'a' ], [ 'b' ], [ 'c' ] ] )
+  } )
+  it ( "should sort a simple graph a->b ->c, a->b2, b2 -> c2 ", () => {
+    let expected = [ [ 'a' ], [ 'b', 'b2' ], [ 'c', 'c2' ] ];
+    expect ( topologicalSortNames ( { a: [ 'b', 'b2' ], b: [ 'c' ], b2: [ 'c2' ] } ) ).toEqual ( expected )
+    expect ( topologicalSortNames ( { b: [ 'c' ], a: [ 'b', 'b2' ], b2: [ 'c2' ] } ) ).toEqual ( expected )
+    expect ( topologicalSortNames ( { b: [ 'c' ], b2: [ 'c2' ], a: [ 'b', 'b2' ] } ) ).toEqual ( expected )
+  } )
+} )
+
+describe ( "topologicalSort", () => {
+  let tc: TopologicalSortTypeClasses<Thing> = {
+    debug: () => NullDebugCommands,
+    name: t => t.name,
+    children: t => t.children,
+    loopMessage: ( gs, loops ) => {throw Error ( `had error in ${JSON.stringify ( gs )}\nLoops: ${JSON.stringify ( loops )}` )}
+  }
+  it ( "should handle an empty graph", () => {
+    expect ( topologicalSort ( tc ) ( [] ) ).toEqual ( [] )
+  } )
+  it ( "should handle a singleton graph", () => {
+    expect ( topologicalSort ( tc ) ( [ thing0a ] ) ).toEqual ( [ [ thing0a ] ] )
+  } )
+  it ( "should handle a graph with children, even if the children aren't in the graph", () => {
+    expect ( topologicalSort ( tc ) ( [ thing1a ] ) ).toEqual ( [ [ thing1a ] ] )
+  } )
+  it ( "should handle a graph with children", () => {
+    expect ( topologicalSort ( tc ) ( [ thing0a, thing1a ] ) ).toEqual ( [ [ thing0a ], [ thing1a ] ] )
+    expect ( topologicalSort ( tc ) ( [ thing0a, thing1a, thing1b ] ) ).toEqual ( [ [ thing0a ], [ thing1a, thing1b ] ] )
+    expect ( topologicalSort ( tc ) ( [ thing0a, thing1a, thing1b, thing2a, thing2a, thing2c ] ).map ( gs => gs.map ( g => g.name ) ) )
+      .toEqual ( [
+        [ "zeroa" ],
+        [ "onea" ],
+        [ "oneb", "twoa", "twoc" ]
+      ] )
+  } )
+  it ( "should throw a nice exception if there is a loop", () => {
+    expect ( () => topologicalSort ( tc ) ( [ thing0WithLoop ] ) ).toThrow ( `had error in ` )
+  } )
+} )

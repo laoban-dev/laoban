@@ -2,7 +2,7 @@ import { ScriptInContext } from "./config";
 import { derefenceToUndefined } from "./configProcessor";
 import * as path from "path";
 import { chain, flatten, output, partition, writeTo } from "./utils";
-import { splitGenerationsByLinks } from "./generations";
+import { splitGenerationsByLinks, splitGenerationsByLinksUsingGenerations } from "./generations";
 import * as fs from "fs";
 import { CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult } from "./executors";
 
@@ -113,7 +113,8 @@ export class GenerationsDecorators {
   static LinkPlanDecorator: GenerationsDecoratorTemplate = {
     name: 'links',
     condition: scd => scd.links || scd.details.inLinksOrder,
-    transform: ( scd, g ) => flatten ( g.map ( splitGenerationsByLinks ) )
+    transform: ( scd, g ) => flatten ( g.map ( splitGenerationsByLinksUsingGenerations ( scd.debug ) ) )
+    // transform: ( scd, g ) => flatten ( g.map ( splitGenerationsByLinks ) )
   }
 
   static applyTemplate: ( t: GenerationsDecoratorTemplate ) => GenerationsDecorator = t => e => gens => {

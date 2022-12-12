@@ -14,7 +14,7 @@ export interface DebugCommands {
     k<To>(msg: () => string, raw: () => Promise<To>): Promise<To>
 }
 
-let NullDebugCommands: DebugCommands = ({
+export const NullDebugCommands: DebugCommands = ({
     k: <To>(msg: () => string, raw: () => Promise<To>) => raw(),
     message: (msg: () => any[]) => { }
 })

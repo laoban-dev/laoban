@@ -65,11 +65,13 @@ This is a file that configures laoban. The variable values can be seen by `laoba
 The existance of the file marks that this is the root of a 'big project' which is composed of one or more sub projects
 
 It holds:
-* "templateDir": the directory that the templates can be found in
-* "log": the name of the log file found in the project directories holding the log of executing the commands
-* "status": the name of the file (in each project directory) that holds the status of 'important commands' executed
-* "scriptDir": A place for bash scripts that can be accessed by the laoban commands. You can put your own scripts here
-* "packageManager": defaults to npm
+* `templateDir`: the directory that the templates can be found in
+* `log`: the name of the log file found in the project directories holding the log of executing the commands
+* `status`: the name of the file (in each project directory) that holds the status of 'important commands' executed
+* `scriptDir`: A place for bash scripts that can be accessed by the laoban commands. You can put your own scripts here
+* `packageManager`: defaults to npm
+* `throttle` sets the maximum number of parallel activites that will be executed. The default is 0 which doesn't limit things
+
 
 ## Templates
 * under `templateDir`. Each template is a directory holding files that are used by the update command
@@ -94,7 +96,6 @@ if the variable is not 'correct' you can often see what are legal values, and wh
   "name"          : "@phil-rice/lens",
   "description"   : "A simple implementation of lens using type script",
   "projectDetails": {
-    "generation"  : 0,
     "publish"     : true,
     "links"       : [],
     "extraDeps"   : {},
@@ -114,9 +115,6 @@ If this is present in a directory it tells laoban that the directory is a projec
 * `publish` should this project be affected by commands with the guard condition ${projectDetails.details.publish}
       * Typically these are projects to be published to npmjs
       * typicall commands are `laoban pack`, `laoban publish`, `laoban ls-publish`
-* `generation` the projects are sorted in generation order so that all generation 0 projects are processed before generation 1
-      * See the 'TODO' section at the end: generations are only respected in display order at the moment
-* `throttle` sets the maximum number of parallel activites that will be executed. The default is 0 which doesn't limit things
 
 ## Scripts
 Scripts are lists of commands (sometimes just one) that are executed when you type `laoban scriptName`. 
@@ -125,8 +123,6 @@ Scripts are lists of commands (sometimes just one) that are executed when you ty
           * -a means 'run in all project directories'
           * -1 means 'just run in this directory'
 * Scripts have access to variables
-
-
 
 ### OsGuard
 Scripts can be marked so that they only run in a particularly OS. Examples can be seen in the laoban.json. If
@@ -196,8 +192,6 @@ This can be seen using '-g | --generationPlan' as an option. This behavior can a
 ## env
 If a command needs access to environment variables (for example a port) these can be added. It is
 not uncommon to have a guard condition on the command. 
-
-
 
 ## Commands
 
