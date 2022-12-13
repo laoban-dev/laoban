@@ -65,7 +65,7 @@ export class Validate<T> {
         this.errors = [...this.errors, ...errors]
         return this
     }
-    private _checkIs<K extends keyof T>(type: string, fieldName: K): boolean {return this.t[fieldName] ? typeof this.t[fieldName] == type : false;}
+    private _checkIs<K extends keyof T>(type: string, fieldName: K): boolean {return this.t[fieldName] !== undefined ? typeof this.t[fieldName] == type : false;}
 
     checkIs(type: string): <K extends keyof T>(fieldName: K, reason?: string) => Validate<T> {
         return (fieldName, reason) => {
