@@ -18,13 +18,14 @@ import { CommanderStatic } from "commander";
 // @ts-ignore
 import { addDebug } from "@phil-rice/debug";
 import { init } from "./init";
+import { FileOps } from "@phil-rice/utils";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
   outputStream.write ( (e.message ? e.message : e.toString ()).split ( '\n' ).slice ( 0, 2 ).join ( '\n' ) + "\n" );
 }
 export const makeSessionId = ( d: Date, suffix: any, params: string[] ) =>
-  d.toISOString ().replace ( /:/g, '.' ) + '.' + [ suffix, params.slice(3).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '.' );
+  d.toISOString ().replace ( /:/g, '.' ) + '.' + [ suffix, params.slice ( 3 ).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '.' );
 
 function openStream ( sc: ScriptInContextAndDirectoryWithoutStream ): ScriptInContextAndDirectory {
   let logStream = fs.createWriteStream ( streamName ( sc ) );
@@ -205,7 +206,7 @@ export class Cli {
         let sessionDir = path.join ( config.sessionDir, sessionId );
         config.debug ( 'session' ).message ( () => [ 'sessionId', sessionId, 'sessionDir', sessionDir ] )
         return checkGuard ( config, script ).then ( () => fse.mkdirp ( sessionDir ).then ( () => {
-          let scds: ScriptInContextAndDirectory[] = pds.map ( d => openStream ( { detailsAndDirectory: d, scriptInContext: makeSc ( config,sessionId, pds, script, cmd ) } ) )
+          let scds: ScriptInContextAndDirectory[] = pds.map ( d => openStream ( { detailsAndDirectory: d, scriptInContext: makeSc ( config, sessionId, pds, script, cmd ) } ) )
           let s = config.debug ( 'scripts' );
           s.message ( () => [ 'rawScriptCommands', ...script.commands.map ( s => s.command ) ] )
           s.message ( () => [ 'directories', ...scds.map ( s => s.detailsAndDirectory.directory ) ] )
@@ -290,10 +291,10 @@ export function executeGenerations ( outputStream: Writable ): ExecuteGeneration
   return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration, shellReporter ( outputStream ) ) )
 }
 
-function loadLaobanAndIssues ( dir: string, params: string[], outputStream: Writable ): ConfigAndIssues {
+const loadLaobanAndIssues = ( fileOps: FileOps ) => ( dir: string, params: string[], outputStream: Writable ): ConfigAndIssues => {
   try {
     let laoban = findLaoban ( process.cwd () )
-    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ) ( laoban );
+    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ( fileOps ) ) ( laoban );
   } catch ( e ) {
     return {
       outputStream,
@@ -302,8 +303,8 @@ function loadLaobanAndIssues ( dir: string, params: string[], outputStream: Writ
     }
   }
 
-}
-export function makeStandardCli ( outputStream: Writable, params: string[] ) {
-  const configAndIssues: ConfigAndIssues = loadLaobanAndIssues ( process.cwd (), params, outputStream )
+};
+export function makeStandardCli ( fileOps: FileOps, outputStream: Writable, params: string[] ) {
+  const configAndIssues: ConfigAndIssues = loadLaobanAndIssues ( fileOps ) ( process.cwd (), params, outputStream )
   return new Cli ( configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
 }

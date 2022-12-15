@@ -3,7 +3,7 @@
   "name"       : "laoban",
   "description": "A cli for managing projects that have many npm packages",
   "details"    : {
-    "links"       : ["@phil-rice/variables","@phil-rice/generations", "@phil-rice/validation", "@phil-rice/debug"],
+    "links"       : ["@phil-rice/variables","@phil-rice/generations", "@phil-rice/validation", "@phil-rice/debug","@phil-rice/files"],
     "extraDeps"   : {
       "fs-extra" : "^9.0.1",
       "commander": "^6.2.0"

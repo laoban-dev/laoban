@@ -5,6 +5,7 @@ import { findLaoban } from "./Files";
 import os from "os";
 import { makeStandardCli } from "./laoban";
 import { Writable } from "stream";
+import { fileOps } from "@phil-rice/files";
 
 
 export let testRoot = path.resolve(findLaoban(process.cwd()), '..', 'tests');
@@ -40,7 +41,7 @@ export function executeCli(cwd: string, cmd: string): Promise<string> {
     let data: string[] = []
     let stream: Writable = rememberWritable(data)
     let args: string[] = [...process.argv.slice(0, 2), ...cmd.split(' ').slice(1)];
-    return executeInChangedDirectory(cwd, () => makeStandardCli(stream, args).start().then(() => data.join('')))
+    return executeInChangedDirectory(cwd, () => makeStandardCli(fileOps,stream, args).start().then(() => data.join('')))
 }
 
 

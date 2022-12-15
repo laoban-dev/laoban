@@ -1,26 +1,26 @@
-import { CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, Envs, RawConfig, RawConfigAndIssues, ScriptDefn, ScriptDefns, ScriptDetails } from "./config";
+import { CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, Envs, RawConfig, RawConfigAndIssues, ScriptDefn, ScriptDefns, ScriptDetails } from "./config";
 import * as path from "path";
 import { laobanFile, loabanConfigName } from "./Files";
 import * as os from "os";
-import fs from "fs";
 // @ts-ignore
 import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
-import WritableStream = NodeJS.WritableStream;
 import { output } from "./utils";
+import { FileOps } from "@phil-rice/utils";
+import WritableStream = NodeJS.WritableStream;
 
 
-export function loadLoabanJsonAndValidate ( laobanDirectory: string ): RawConfigAndIssues {
+export const loadLoabanJsonAndValidate = ( files: FileOps ) => ( laobanDirectory: string ): RawConfigAndIssues => {
   let laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
-    let rawConfig = JSON.parse ( fs.readFileSync ( laobanConfigFileName ).toString () )
+    let rawConfig = JSON.parse ( files.loadFileSync ( laobanConfigFileName ) )
     let issues = validateLaobanJson ( Validate.validate ( `In directory ${path.parse ( laobanDirectory ).name}, ${loabanConfigName}`, rawConfig ) ).errors;
     return { rawConfig, issues }
   } catch ( e ) {
     return { issues: [ `Could not load laoban.json` ] }
   }
-}
+};
 
 export let abortWithReportIfAnyIssues: ConfigOrReportIssues = ( configAndIssues ) => {
   let issues = configAndIssues.issues

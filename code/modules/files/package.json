@@ -16,21 +16,14 @@
     "@types/node": "^14.14.7",
     "npm-check-updates": "^10.0.0",
     "typescript": "^4.0.5",
-    "fs-extra": "^9.0.1",
-    "commander": "^6.2.0",
-    "@phil-rice/variables": "0.2.17",
-    "@phil-rice/generations": "0.2.17",
-    "@phil-rice/validation": "0.2.17",
-    "@phil-rice/debug": "0.2.17",
-    "@phil-rice/files": "0.2.17"
+    "@phil-rice/utils": "0.2.17"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/user-event": "^12.2.0",
     "@types/jest": "^26.0.15",
     "jest": "^26.6.0",
-    "ts-jest": "^26.4.4",
-    "@types/fs-extra": "^9.0.5"
+    "ts-jest": "^26.4.4"
   },
   "files": [
     "README.md",
@@ -53,29 +46,12 @@
   },
   "version": "0.2.17",
   "template": "noreact",
-  "name": "laoban",
-  "description": "A cli for managing projects that have many npm packages",
+  "name": "@phil-rice/files",
+  "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
   "details": {
+    "publish": false,
     "links": [
-      "@phil-rice/variables",
-      "@phil-rice/generations",
-      "@phil-rice/validation",
-      "@phil-rice/debug",
-      "@phil-rice/files"
-    ],
-    "extraDeps": {
-      "fs-extra": "^9.0.1",
-      "commander": "^6.2.0"
-    },
-    "extraDevDeps": {
-      "@types/fs-extra": "^9.0.5"
-    },
-    "extraBins": {
-      "laoban": "dist/index.js"
-    },
-    "publish": true
-  },
-  "bin": {
-    "laoban": "dist/index.js"
+      "@phil-rice/utils"
+    ]
   }
 }
