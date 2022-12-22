@@ -16,8 +16,8 @@
     "@types/node": "^14.14.7",
     "npm-check-updates": "^10.0.0",
     "typescript": "^4.0.5",
-    "@phil-rice/debug": "0.2.17",
-    "@phil-rice/utils": "0.2.17"
+    "@phil-rice/debug": "0.2.18",
+    "@phil-rice/utils": "0.2.18"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.11.5",
@@ -45,7 +45,7 @@
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "version": "0.2.17",
+  "version": "0.2.18",
   "template": "noreact",
   "name": "@phil-rice/generations",
   "description": "A library that typologically sorts data into generations",
