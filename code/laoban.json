@@ -1,6 +1,6 @@
 {
   "packageManager": "yarn",
-  "parent": [
+  "parents": [
     "https://raw.githubusercontent.com/phil-rice/laoban/master/common/core.laoban.json",
     "https://raw.githubusercontent.com/phil-rice/laoban/master/common/typescript.laoban.json",
     "https://raw.githubusercontent.com/phil-rice/laoban/master/common/typescript.publish.laoban.json"

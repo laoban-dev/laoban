@@ -15,7 +15,7 @@ const load = ( fileOps: FileOps, debug: boolean ) => async ( filename ): Promise
   const fileContent = await fileOps.loadFileOrUrl ( filename )
   if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent )
   const rawConfig = JSON.parse ( fileContent )
-  const ps = toArray ( rawConfig.parent );
+  const ps = toArray ( rawConfig.parents );
   if ( debug ) console.log ( `\nParents are`, ps )
   if ( ps.length === 0 ) return rawConfig
   const configs: RawConfig[] = await Promise.all ( ps.map ( load ( fileOps , debug) ) )
