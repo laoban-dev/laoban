@@ -19,14 +19,15 @@ const load = ( fileOps: FileOps ) => async ( filename ): Promise<RawConfig> => {
   return configs.reduce ( combineRawConfigs, rawConfig )
 }
 
-export const loadLoabanJsonAndValidate = ( files: FileOps ) => async ( laobanDirectory: string ): Promise<RawConfigAndIssues> => {
+export const loadLoabanJsonAndValidate = ( files: FileOps, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndIssues> => {
   const laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
     const rawConfig = await load ( files ) ( laobanConfigFileName )
     const issues = Validate.validate ( `In directory ${path.parse ( laobanDirectory ).name}, ${loabanConfigName}`, rawConfig );
     return { rawConfig, issues: validateLaobanJson ( issues ).errors }
   } catch ( e ) {
-    return { issues: [ `Could not load laoban.json` ] }
+    if (debug) console.error(e)
+    return { issues: [ `Could not load laoban.json. Run with --load.laoban.debug to find more` ] }
   }
 }
 
@@ -40,12 +41,14 @@ export let abortWithReportIfAnyIssues: ConfigOrReportIssues = ( configAndIssues 
   } else return Promise.resolve ( { ...configAndIssues.config } )
 }
 
-export function loadConfigOrIssues ( outputStream: Writable, params: string[], fn: ( dir: string ) => Promise<RawConfigAndIssues> ): ( laoban: string ) => Promise<ConfigAndIssues> {
+export function loadConfigOrIssues ( outputStream: Writable, params: string[], fn: ( dir: string ) => Promise<RawConfigAndIssues>, debug: boolean ): ( laoban: string ) => Promise<ConfigAndIssues> {
   return laoban =>
     fn ( laoban ).then ( ( { rawConfig, issues } ) => {
-      const config = issues.length > 0 ? undefined : configProcessor ( laoban, outputStream, rawConfig );
-      return { issues, outputStream, config, params };
-    } )
+        if ( debug ) outputStream.write ( `rawConfig is\n${JSON.stringify(rawConfig,null,2)}\nIssues are ${issues}\n` )
+        const config = issues.length > 0 ? undefined : configProcessor ( laoban, outputStream, rawConfig );
+        return { issues, outputStream, config, params };
+      }
+    )
 }
 
 

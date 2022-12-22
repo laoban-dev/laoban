@@ -177,6 +177,7 @@ export class Cli {
     this.params = configAndIssues.params
     var program = require ( 'commander' ).//
       arguments ( '' ).//
+      option('--load.laoban.debug' ).
       version ( version )//
 
     let defaultOptions = this.defaultOptions ( configAndIssues )
@@ -293,8 +294,10 @@ export function executeGenerations ( outputStream: Writable ): ExecuteGeneration
 
 const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {
   try {
-    let laoban = findLaoban ( process.cwd () )
-    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ( fileOps ) ) ( laoban );
+    const debug = params.includes ( '--load.laoban.debug' )
+    const laoban = findLaoban ( process.cwd () )
+    if ( debug ) console.log ( `Found laoban.json at ${laoban}\n` )
+    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ( fileOps, debug ), debug ) ( laoban );
   } catch ( e ) {
     return {
       outputStream,

@@ -3,7 +3,7 @@
   "name":        "@phil-rice/files",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
   "details":     {
-    "publish": false,
+    "publish": true,
     "links":   ["@phil-rice/utils"]
   }
 }

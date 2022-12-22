@@ -1,0 +1,28 @@
+{
+  "scripts": {
+    "ls-tsc":      {
+      "description": "lists projects that will be tsced",
+      "guard":       "${projectDetails.details.tsc}",
+      "commands":    ["js:process.cwd()"]
+    },
+    "tsc":         {
+      "description": "runs tsc",
+      "guard":       "${projectDetails.details.tsc}",
+      "commands":    [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
+    },
+    "tsc-noguard": {
+      "description": "runs tsc without a guard",
+      "commands":    [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
+    },
+    "test":        {
+      "description": "runs ${packageManager} test",
+      "guard":       "${projectDetails.details.test}",
+      "commands":    [{"name": "test", "command": "${packageManager} test", "status": true}]
+    },
+    "ls-tests":    {
+      "description": "lists the projects with tests in them",
+      "guard":       "${projectDetails.details.test}",
+      "commands":    ["js:process.cwd()"]
+    }
+  }
+}

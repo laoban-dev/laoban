@@ -14,12 +14,12 @@ import { dirsIn, testRoot } from "./fixture";
 import { addDebug } from "@phil-rice/debug";
 import { fileOps } from "@phil-rice/files";
 
-describe ( "validate laoban json",  () => {
+describe ( "validate laoban json", () => {
   dirsIn ( testRoot ).forEach ( testDir => {
     it ( `should check the laobon.json validation for ${testDir}`, () => {
       let parsed = path.parse ( testDir )
       let expected = fs.readFileSync ( path.join ( testRoot, testDir, 'expectedValidationLaoban.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
-      loadConfigOrIssues ( process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps ) ) ( path.join ( testRoot, testDir ) ).then ( configOrIssues => {
+      loadConfigOrIssues ( process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps, false ), false ) ( path.join ( testRoot, testDir ) ).then ( configOrIssues => {
         expect ( configOrIssues.issues ).toEqual ( expected )
       } )
     } )
@@ -29,7 +29,7 @@ describe ( "validate laoban json",  () => {
 describe ( "validate directories", () => {
   dirsIn ( testRoot ).forEach ( testDir => {
     let parsed = path.parse ( testDir )
-    loadConfigOrIssues ( process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps ) ) ( testDir ).then ( configOrIssues => {
+    loadConfigOrIssues ( process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps, false ), false ) ( testDir ).then ( configOrIssues => {
       if ( configOrIssues.issues.length == 0 ) {
         it ( `should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
           let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().trim ()
