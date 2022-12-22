@@ -3,28 +3,19 @@
     "pack":       {
       "description":  "does everything for a publish except the actual 'npm publish'",
       "guard":        "${projectDetails.details.publish}",
-      "osGuard":      "Linux",
-      "guardReason":  "the find and copy commands used only work on window",
+      "comment":      "why the --noEmit --outDir? Answer: using react_scripts we have to turn these off",
       "commands":     [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        "find dist -type f -name 'enzymeAdapterSetup.*' -delete",
-        "cp package.json dist",
-        "cp README.* dist",
-        {"name": "pack", "command": "${packageManager} pack", "status": true, "directory": "dist"}
+        {"name": "pack", "command": "${packageManager} pack", "status": true}
       ],
       "inLinksOrder": true
     },
     "publish":    {
       "description":  "publishes the projects to npmjs",
       "guard":        "${projectDetails.details.publish}",
-      "osGuard":      "Linux",
-      "guardReason":  "the find and copy commands used only work on window",
       "commands":     [
         {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
-        "find dist -type f -name 'enzymeAdapterSetup.*' -delete",
-        "cp package.json dist",
-        "cp README.* dist",
-        {"name": "publish", "command": "${packageManager} publish", "status": true, "directory": "dist"}
+        {"name": "pack", "command": "${packageManager} publish --access public", "status": true}
       ],
       "inLinksOrder": true
     },
