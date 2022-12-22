@@ -92,7 +92,7 @@ if the variable is not 'correct' you can often see what are legal values, and wh
 ## project.details.json
 ```
 {
-  "template"      : "noreact",
+  "template"      : "typescript",
   "name"          : "@phil-rice/lens",
   "description"   : "A simple implementation of lens using type script",
   "projectDetails": {

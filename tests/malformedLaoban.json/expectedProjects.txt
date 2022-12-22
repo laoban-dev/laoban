@@ -1,2 +1,2 @@
 Validation errors prevent laoban from running correctly
-Could not load laoban.json
+Could not load laoban.json. Run with --load.laoban.debug to find more

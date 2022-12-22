@@ -1,5 +1,5 @@
 {
-  "template"      : "noreact",
+  "template"      : "typescript",
   "noname"          : "proj1",
   "description"   : "A sample project",
   "details": {

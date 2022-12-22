@@ -1,5 +1,5 @@
 {
-  "template"   : "noreact",
+  "template"   : "typescript",
   "name"       : "laoban",
   "description": "A cli for managing projects that have many npm packages",
   "details"    : {
@@ -10,6 +10,8 @@
     },
     "extraDevDeps": {"@types/fs-extra": "^9.0.5"},
     "extraBins"   : {"laoban": "dist/index.js"},
-    "publish"     : true
+    "publish"     : true,
+    "tsc": true,
+    "test": true
   }
 }

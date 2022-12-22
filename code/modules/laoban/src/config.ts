@@ -9,6 +9,7 @@ export interface ConfigVariables {
   templateDir: string;
   versionFile: string;
   sessionDir: string;
+  cacheDir?: string
   throttle?: number;
   log: string;
   status: string;

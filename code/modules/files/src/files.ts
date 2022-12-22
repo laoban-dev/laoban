@@ -1,7 +1,7 @@
 import { promises } from "fs";
 import { FileOps } from "@phil-rice/utils";
-import { readFileSync } from "fs";
 import fetch from 'node-fetch';
+import { createHash } from "crypto";
 
 
 function loadFile ( fileName: string ): Promise<string> {
@@ -15,6 +15,12 @@ function loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
   return fileOrUrl.includes ( "://" ) ? loadUrl ( fileOrUrl ) : loadFile ( fileOrUrl )
 }
 export const fileOps: FileOps = {
+  digest: ( s: string ): string => {
+    const hash = createHash ( 'sha256' );
+    hash.update ( s );
+    return hash.digest ( 'hex' );
+  },
   loadFileOrUrl,
-  loadFileSync: fileName => readFileSync ( fileName ).toString ()
+  createDir: dir => promises.mkdir ( dir, { recursive: true } ),
+  saveFile: ( filename, text ) => promises.writeFile ( filename, text )
 }

@@ -43,8 +43,8 @@
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "version": "0.3.0",
-  "template": "noreact",
+  "version": "0.3.1",
+  "template": "typescript",
   "name": "@phil-rice/validation",
   "description": "A library for validating json",
   "details": {

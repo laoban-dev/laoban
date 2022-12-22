@@ -1,5 +1,5 @@
 {
-  "notemplate"      : "noreact",
+  "notemplate"      : "typescript",
   "name"          : "proj2",
   "description"   : "A simple implementation of lens using type script",
   "details": {

@@ -1,5 +1,5 @@
 {
-  "template"      : "noreact",
+  "template"      : "typescript",
   "name"          : "@phil-rice/validation",
   "description"   : "A library for validating json",
   "details": {
