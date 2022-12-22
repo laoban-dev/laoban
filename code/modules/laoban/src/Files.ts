@@ -25,8 +25,8 @@ export function copyTemplateDirectory(config: ConfigWithDebug, template: string,
 export function isProjectDirectory(directory: string) {
     return fs.existsSync(path.join(directory, projectDetailsFile))
 }
-export function findLaoban(directory: string) {
-    function find(dir: string) {
+export function findLaoban(directory: string): string {
+    function find(dir: string): string {
         let fullName = path.join(dir, loabanConfigName);
         if (fs.existsSync(fullName)) return dir
         let parse = path.parse(dir)

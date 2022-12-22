@@ -5,46 +5,48 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import {ProjectDetailFiles} from "./Files";
-import {validateProjectDetailsAndTemplates} from "./validation";
-import {Config} from "./config";
-import {loadConfigOrIssues, loadLoabanJsonAndValidate} from "./configProcessor";
-import {dirsIn, testRoot} from "./fixture";
+import { ProjectDetailFiles } from "./Files";
+import { validateProjectDetailsAndTemplates } from "./validation";
+import { Config } from "./config";
+import { loadConfigOrIssues, loadLoabanJsonAndValidate } from "./configProcessor";
+import { dirsIn, testRoot } from "./fixture";
 // @ts-ignore
-import {addDebug} from "@phil-rice/debug";
+import { addDebug } from "@phil-rice/debug";
 import { fileOps } from "@phil-rice/files";
 
-describe("validate laoban json", () => {
-    dirsIn(testRoot).forEach(testDir => {
-        it(`should check the laobon.json validation for ${testDir}`, () => {
-            let parsed = path.parse(testDir)
-            let expected = fs.readFileSync(path.join(testRoot, testDir, 'expectedValidationLaoban.txt')).toString().split('\n').map(s => s.trim()).filter(s => s.length > 0)
-            let configOrIssues = loadConfigOrIssues(process.stdout, ['param1', 'param2'],loadLoabanJsonAndValidate(fileOps))(path.join(testRoot, testDir))
-            expect(configOrIssues.issues).toEqual(expected)
-        })
-    })
-})
+describe ( "validate laoban json",  () => {
+  dirsIn ( testRoot ).forEach ( testDir => {
+    it ( `should check the laobon.json validation for ${testDir}`, () => {
+      let parsed = path.parse ( testDir )
+      let expected = fs.readFileSync ( path.join ( testRoot, testDir, 'expectedValidationLaoban.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
+      loadConfigOrIssues ( process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps ) ) ( path.join ( testRoot, testDir ) ).then ( configOrIssues => {
+        expect ( configOrIssues.issues ).toEqual ( expected )
+      } )
+    } )
+  } )
+} )
 
-describe("validate directories", () => {
-    dirsIn(testRoot).forEach(testDir => {
-        let parsed = path.parse(testDir)
-        let configOrIssues = loadConfigOrIssues(process.stdout, ['param1', 'param2'],loadLoabanJsonAndValidate(fileOps))(testDir)
-        if (configOrIssues.issues.length == 0) {
-            it(`should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
-                let expected = fs.readFileSync(path.join(testDir, 'expectedValidateProjectDetailsAndTemplate.txt')).toString().trim()
-                let config = addDebug(undefined, () => {})(configOrIssues.config)
-                return ProjectDetailFiles.workOutProjectDetails(config, {}).//
-                    then(pds => validateProjectDetailsAndTemplates(config, pds)).//
-                    then(actual => {
-                            let expected = fs.readFileSync(path.join(testDir, 'expectedValidateProjectDetailsAndTemplate.txt')).toString().split('\n').map(s => s.trim()).filter(s => s.length > 0)
-                            expect(actual).toEqual(expected)
-                        },
-                        e => {
-                            let expected = fs.readFileSync(path.join(testDir, 'expectedValidateProjectDetailsAndTemplate.txt')).toString().trim()
-                            let msgLine1: string = e.message.split("\n")[0];
-                            expect(msgLine1).toEqual(expected)
-                        })//
-            })
-        }
-    })
-})
+describe ( "validate directories", () => {
+  dirsIn ( testRoot ).forEach ( testDir => {
+    let parsed = path.parse ( testDir )
+    loadConfigOrIssues ( process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps ) ) ( testDir ).then ( configOrIssues => {
+      if ( configOrIssues.issues.length == 0 ) {
+        it ( `should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
+          let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().trim ()
+          let config = addDebug ( undefined, () => {} ) ( configOrIssues.config )
+          return ProjectDetailFiles.workOutProjectDetails ( config, {} ).//
+            then ( pds => validateProjectDetailsAndTemplates ( config, pds ) ).//
+            then ( actual => {
+                let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
+                expect ( actual ).toEqual ( expected )
+              },
+              e => {
+                let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().trim ()
+                let msgLine1: string = e.message.split ( "\n" )[ 0 ];
+                expect ( msgLine1 ).toEqual ( expected )
+              } )//
+        } )
+      }
+    } )
+  } )
+} )

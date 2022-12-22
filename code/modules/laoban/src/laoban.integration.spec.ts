@@ -9,15 +9,22 @@ function doPwd ( cmd: string, expectedFile: string ) {
     dirsIn ( testRoot ).map ( d => path.join ( testRoot, d ) ).forEach ( testDir => {
       let expected = toArrayReplacingRoot ( fs.readFileSync ( path.join ( testDir, expectedFile ) ).toString () )
       it ( `should return ${expectedFile} when ${cmd} is run in ${path.parse ( testDir ).name}. Fullname${testDir}`, async () => {
-          experimental ?
-            executeCli ( testDir, cmd ).then ( actual => expect ( toArrayReplacingRoot ( actual ) ).toEqual ( expected ) ) :
-            execute ( testDir, cmd ).then ( actual => expect ( toArrayReplacingRoot ( actual ) ).toEqual ( expected ) )
+          await experimental ?
+            await executeCli ( testDir, cmd ).then ( actual => expect ( toArrayReplacingRoot ( actual ) ).toEqual ( expected ) ) :
+            await execute ( testDir, cmd ).then ( result => {
+              let actual = toArrayReplacingRoot ( result );
+              // console.log ( 'cmd', expectedFile )
+              // console.log ( 'expected', expected )
+              // console.log ( 'actual', actual )
+              return expect ( actual ).toEqual ( expected );
+            } )
         }
       )
     } )
   } )
 
 }
-doPwd ( "laoban ls", 'expectedLs.txt' ) //tests dos execution
-doPwd ( "laoban projects", 'expectedProjects.txt' ) //tests a command
-doPwd ( "laoban run 'js:process.cwd()'", 'expectedPwds.txt' ) // tests javascript execution
+const  prefix = "node ../../code/modules/laoban/dist/index.js ";
+doPwd ( prefix + "ls", 'expectedLs.txt' ) //tests dos execution
+doPwd ( prefix +"projects", 'expectedProjects.txt' ) //tests a command
+doPwd ( prefix + `run "js:process.cwd()"`, 'expectedPwds.txt' ) // tests javascript execution

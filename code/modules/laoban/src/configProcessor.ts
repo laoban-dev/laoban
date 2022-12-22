@@ -1,4 +1,4 @@
-import { CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, Envs, RawConfig, RawConfigAndIssues, ScriptDefn, ScriptDefns, ScriptDetails } from "./config";
+import { combineRawConfigs, CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, Envs, RawConfig, RawConfigAndIssues, ScriptDefn, ScriptDefns, ScriptDetails } from "./config";
 import * as path from "path";
 import { laobanFile, loabanConfigName } from "./Files";
 import * as os from "os";
@@ -7,36 +7,45 @@ import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { FileOps } from "@phil-rice/utils";
+import { FileOps, toArray } from "@phil-rice/utils";
 import WritableStream = NodeJS.WritableStream;
 
+const load = ( fileOps: FileOps ) => async ( filename ): Promise<RawConfig> => {
+  const fileContent = await fileOps.loadFile ( filename )
+  const rawConfig = JSON.parse ( fileContent )
+  const ps = toArray ( rawConfig.parent );
+  if ( ps.length === 0 ) return rawConfig
+  const configs: RawConfig[] = await Promise.all ( ps.map ( load ( fileOps ) ) )
+  return configs.reduce ( combineRawConfigs, rawConfig )
+}
 
-export const loadLoabanJsonAndValidate = ( files: FileOps ) => ( laobanDirectory: string ): RawConfigAndIssues => {
-  let laobanConfigFileName = laobanFile ( laobanDirectory );
+export const loadLoabanJsonAndValidate = ( files: FileOps ) => async ( laobanDirectory: string ): Promise<RawConfigAndIssues> => {
+  const laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
-    let rawConfig = JSON.parse ( files.loadFileSync ( laobanConfigFileName ) )
-    let issues = validateLaobanJson ( Validate.validate ( `In directory ${path.parse ( laobanDirectory ).name}, ${loabanConfigName}`, rawConfig ) ).errors;
-    return { rawConfig, issues }
+    const rawConfig = await load ( files ) ( laobanConfigFileName )
+    const issues = Validate.validate ( `In directory ${path.parse ( laobanDirectory ).name}, ${loabanConfigName}`, rawConfig );
+    return { rawConfig, issues: validateLaobanJson ( issues ).errors }
   } catch ( e ) {
     return { issues: [ `Could not load laoban.json` ] }
   }
-};
+}
 
 export let abortWithReportIfAnyIssues: ConfigOrReportIssues = ( configAndIssues ) => {
   let issues = configAndIssues.issues
   let log = output ( configAndIssues )
   if ( issues.length > 0 ) {
-    log ( 'Validation errors prevent loaban from running correctly' )
+    log ( 'Validation errors prevent laoban from running correctly' )
     issues.forEach ( e => log ( '  ' + e ) )
     process.exit ( 2 )
   } else return Promise.resolve ( { ...configAndIssues.config } )
 }
 
-export function loadConfigOrIssues ( outputStream: Writable, params: string[], fn: ( dir: string ) => RawConfigAndIssues ): ( laoban: string ) => ConfigAndIssues {
-  return laoban => {
-    let { rawConfig, issues } = fn ( laoban )
-    return { issues, outputStream, config: issues.length > 0 ? undefined : configProcessor ( laoban, outputStream, rawConfig ), params };
-  }
+export function loadConfigOrIssues ( outputStream: Writable, params: string[], fn: ( dir: string ) => Promise<RawConfigAndIssues> ): ( laoban: string ) => Promise<ConfigAndIssues> {
+  return laoban =>
+    fn ( laoban ).then ( ( { rawConfig, issues } ) => {
+      const config = issues.length > 0 ? undefined : configProcessor ( laoban, outputStream, rawConfig );
+      return { issues, outputStream, config, params };
+    } )
 }
 
 

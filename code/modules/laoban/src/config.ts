@@ -2,6 +2,7 @@ import { Generations, ShellResult } from "./executors";
 import { Writable } from "stream";
 // @ts-ignore
 import { Debug } from "@phil-rice/debug";
+import { combineTwoObjects, safeArray } from "@phil-rice/utils";
 
 
 export interface ConfigVariables {
@@ -17,9 +18,17 @@ export interface ConfigVariables {
   variables?: { [ name: string ]: string }
 }
 export interface RawConfig extends ConfigVariables {
-  scripts?: ScriptDefns,
-  projectScripts?: ScriptDefns
+  scripts?: ScriptDefns
 }
+export function combineRawConfigs ( r1: RawConfig, r2: RawConfig ): RawConfig {
+  return {
+    ...r1, ...r2,
+    parent: [ ...safeArray ( r1.parent ), ...safeArray ( r2.parent ) ],
+    variables: combineTwoObjects ( r1.variables, r2.variables ),
+    scripts: combineTwoObjects ( r1.scripts, r2.scripts )
+  }
+}
+
 export interface PackageJson {
   dependencies: { [ key: string ]: string }
 }
@@ -93,6 +102,17 @@ export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputSt
   scripts: ScriptDetails[],
   os: string
 }
+
+export function combineConfigs ( c1: Config | undefined, c2: Config | undefined ): Config | undefined {
+  if ( c1 === undefined ) return c2
+  if ( c2 === undefined ) return c1
+  return {
+    ...c1, ...c2,
+    variables: { ...c1.variables, ...c2.variables },
+    scripts: [ ...c1.scripts, ...c2.scripts ]
+  }
+}
+
 export interface ConfigWithDebug extends Config {
   debug: Debug
 }

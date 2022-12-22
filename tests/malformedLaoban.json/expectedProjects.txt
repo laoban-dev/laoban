@@ -1,2 +1,2 @@
-Validation errors prevent loaban from running correctly
+Validation errors prevent laoban from running correctly
 Could not load laoban.json
