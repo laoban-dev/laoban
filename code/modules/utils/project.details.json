@@ -6,6 +6,8 @@
     "links"       : [],
     "extraDeps"   : {    },
     "extraDevDeps": {},
+    "tsc": true,
+    "test": true,
     "publish"     : true
   }
 }

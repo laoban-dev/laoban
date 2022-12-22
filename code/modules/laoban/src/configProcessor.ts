@@ -10,23 +10,26 @@ import { output } from "./utils";
 import { FileOps, toArray } from "@phil-rice/utils";
 import WritableStream = NodeJS.WritableStream;
 
-const load = ( fileOps: FileOps ) => async ( filename ): Promise<RawConfig> => {
-  const fileContent = await fileOps.loadFile ( filename )
+const load = ( fileOps: FileOps, debug: boolean ) => async ( filename ): Promise<RawConfig> => {
+  if ( debug ) console.log ( `About to try and load ${filename}` )
+  const fileContent = await fileOps.loadFileOrUrl ( filename )
+  if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent )
   const rawConfig = JSON.parse ( fileContent )
   const ps = toArray ( rawConfig.parent );
+  if ( debug ) console.log ( `\nParents are`, ps )
   if ( ps.length === 0 ) return rawConfig
-  const configs: RawConfig[] = await Promise.all ( ps.map ( load ( fileOps ) ) )
+  const configs: RawConfig[] = await Promise.all ( ps.map ( load ( fileOps , debug) ) )
   return configs.reduce ( combineRawConfigs, rawConfig )
 }
 
 export const loadLoabanJsonAndValidate = ( files: FileOps, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndIssues> => {
   const laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
-    const rawConfig = await load ( files ) ( laobanConfigFileName )
+    const rawConfig = await load ( files, debug ) ( laobanConfigFileName )
     const issues = Validate.validate ( `In directory ${path.parse ( laobanDirectory ).name}, ${loabanConfigName}`, rawConfig );
     return { rawConfig, issues: validateLaobanJson ( issues ).errors }
   } catch ( e ) {
-    if (debug) console.error(e)
+    if ( debug ) console.error ( e )
     return { issues: [ `Could not load laoban.json. Run with --load.laoban.debug to find more` ] }
   }
 }
@@ -44,7 +47,7 @@ export let abortWithReportIfAnyIssues: ConfigOrReportIssues = ( configAndIssues 
 export function loadConfigOrIssues ( outputStream: Writable, params: string[], fn: ( dir: string ) => Promise<RawConfigAndIssues>, debug: boolean ): ( laoban: string ) => Promise<ConfigAndIssues> {
   return laoban =>
     fn ( laoban ).then ( ( { rawConfig, issues } ) => {
-        if ( debug ) outputStream.write ( `rawConfig is\n${JSON.stringify(rawConfig,null,2)}\nIssues are ${issues}\n` )
+        if ( debug ) outputStream.write ( `rawConfig is\n${JSON.stringify ( rawConfig, null, 2 )}\nIssues are ${issues}\n` )
         const config = issues.length > 0 ? undefined : configProcessor ( laoban, outputStream, rawConfig );
         return { issues, outputStream, config, params };
       }
