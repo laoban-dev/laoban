@@ -128,7 +128,7 @@ const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[
     d.k ( () => `${p.directory} copyTemplateDirectory`, () => copyTemplateDirectory ( fileOps, config, p.projectDetails.template, p.directory ).then ( () => {
       d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) ).then ( raw =>
         d.k ( () => `${p.directory} loadVersionFile`, () => loadVersionFile ( config ) ).//
-          then ( version => d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse(raw), version, p.projectDetails ) ) ) ) )
+          then ( version => d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) ) ) )
     } ) )
   ) )
 }
@@ -215,7 +215,7 @@ export class Cli {
     }
     program.command ( 'init' ).description ( 'creates a laoban.json and a template directory in the current dir' ).//
       option ( '-f|--force ', "will overwrite existing laoban.json" ).//
-      action ( cmd => init ( configAndIssues, process.cwd (), cmd.force ) )
+      action ( cmd => init ( fileOps, configAndIssues, process.cwd (), cmd.force ) )
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
     action ( program, 'validate', validationAction ( this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
