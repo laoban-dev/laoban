@@ -43,7 +43,7 @@ export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, la
   // console.log ( 'copyTemplateDirectoryFromConfigFile', cacheUrl, 'url', url )
   const controlFileAsString = await cachedLoad ( fileOps, cacheUrl ) ( url )
   const controlFile = parseCopyFile ( controlFileAsString );
-  return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target ) ( safeArray ( controlFile.files ) )
+  return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target, cacheUrl ) ( safeArray ( controlFile.files ) )
 }
 
 export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, template: string, target: string ): Promise<void> {

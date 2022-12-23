@@ -18,12 +18,12 @@ export function cachedLoad ( fileOps: FileOps, cache: string ): ( fileOrUrl: str
 
 
 export type CopyFileDetails = string
-export function copyFile ( fileOps: FileOps, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
-  return ( offset ) => fileOps.loadFileOrUrl ( rootUrl + '/' + offset )
+export function copyFile ( fileOps: FileOps, rootUrl: string, target: string , cacheDir: string|undefined): ( fd: CopyFileDetails ) => Promise<void> {
+  return ( offset ) => cachedLoad(fileOps, cacheDir)( rootUrl + '/' + offset )
     .then ( file => fileOps.saveFile ( target + '/' + offset, file ) )
 }
-export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string ): ( fs: CopyFileDetails[] ) => Promise<void> {
-  const cf = copyFile ( fileOps, rootUrl, target )
+export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string , cacheDir: string|undefined): ( fs: CopyFileDetails[] ) => Promise<void> {
+  const cf = copyFile ( fileOps, rootUrl, target , cacheDir)
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
       console.error ( e );
       throw Error ( `Error ${context}\nFile ${f}\n${e}` )
