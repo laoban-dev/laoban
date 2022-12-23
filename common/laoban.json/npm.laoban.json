@@ -1,0 +1,6 @@
+{
+  "packageManager": "npm",
+  "scripts": {
+    "npm_install": ["npm install"]
+  }
+}

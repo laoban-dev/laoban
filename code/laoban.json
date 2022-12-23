@@ -5,6 +5,7 @@
   },
   "parents":        [
     "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/core.laoban.json",
+    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/npm.laoban.json",
     "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/typescript.laoban.json",
     "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/typescript.publish.laoban.json"
   ],

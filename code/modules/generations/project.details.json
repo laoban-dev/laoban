@@ -4,6 +4,8 @@
   "description": "A library that typologically sorts data into generations",
   "details":     {
     "publish": true,
+    "tsc": true,
+    "test": true,
     "links":   ["@phil-rice/debug", "@phil-rice/utils"]
   }
 }

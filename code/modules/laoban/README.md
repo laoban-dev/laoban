@@ -3,9 +3,16 @@
 Laoban or 老板 is chinese for 'boss'. It is a tool for controlling multiple projects. While it is language agnostic it
 probably offers the most value to javascript/typescript projects in a monorepo.
 
+
+## Getting started with a laoban managed project
+* If you want to install it `npm i -g laoban@latest`
+* If you are new to a project that is managed by `laoban` then start [here](LAOBAN.EXISTING.md)
+* If you want to try out `laoban` on your project start [here](GETTING.STARTED.md)
+
 # Further documentation
 
 * [Cheat Sheet](documentation/CHEATSHEET.md)
+* [Laoban and Yarn](documentation/YARN.md)
 * [laoban.json](documentation/LAOBAN.JSON.md)
 * [Logs](documentation/LOGS.md)
 * [Projects](documentation/PROJECTS.md)
@@ -13,6 +20,7 @@ probably offers the most value to javascript/typescript projects in a monorepo.
 * [Templates](documentation/TEMPLATES.md)
 * [Variables](documentation/VARIABLES.md)
 * [Command line arguments](documentation/COMMAND.LINE.ARGUMENTS.md)
+
 
 ## Motivation
 

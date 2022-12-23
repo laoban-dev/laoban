@@ -34,7 +34,7 @@ Instead, we have the ability to 'merge together' lots of parents. A typical
 ## Important values in laoban,json
 Note that most of these have defaults if you include the `core` in parents.
 
-* `templateDir`: the directory that the templates can be found in
+* `templateDir`: the directory that the [templates]((documentation/TEMPLATES.md)) can be found in
 * `log`: the name of the log file found in the project directories holding the log of executing the commands
 * `status`: the name of the file (in each project directory) that holds the status of 'important commands' executed
 * `scriptDir`: A place for bash scripts that can be accessed by the laoban commands. You can put your own scripts here

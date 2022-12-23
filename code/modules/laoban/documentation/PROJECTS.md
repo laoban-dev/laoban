@@ -31,6 +31,7 @@ has a [`laoban.json`](LAOBAN.JSON.md) file in it.
 ## Project details file and variables
 All the fields in a `project.details.json` file are available as [variables](VARIABLES.md) in scripts.
 
+<a id='projects'></a>
 ## How do I find what projects exist
 
 ```shell

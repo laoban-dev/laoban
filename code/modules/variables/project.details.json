@@ -1,8 +1,10 @@
 {
-  "template"      : "typescript",
-  "name"          : "@phil-rice/variables",
-  "description"   : "A library that can dereference ${xxx} in strings",
-  "details": {
-    "publish"     : true
+  "template":    "typescript",
+  "name":        "@phil-rice/variables",
+  "description": "A library that can dereference ${xxx} in strings",
+  "details":     {
+    "publish": true,
+    "tsc":     true,
+    "test":    true
   }
 }

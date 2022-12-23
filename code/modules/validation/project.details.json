@@ -1,8 +1,10 @@
 {
-  "template"      : "typescript",
-  "name"          : "@phil-rice/validation",
-  "description"   : "A library for validating json",
-  "details": {
-    "publish"     : true
+  "template":    "typescript",
+  "name":        "@phil-rice/validation",
+  "description": "A library for validating json",
+  "details":     {
+    "publish": true,
+    "tsc":     true,
+    "test":    true
   }
 }
