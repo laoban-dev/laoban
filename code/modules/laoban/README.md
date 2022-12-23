@@ -124,74 +124,9 @@ Scripts are lists of commands (sometimes just one) that are executed when you ty
           * -1 means 'just run in this directory'
 * Scripts have access to variables
 
-### OsGuard
-Scripts can be marked so that they only run in a particularly OS. Examples can be seen in the laoban.json. If
-called from the wrong os then an error is given. `guardReason` can be set to give an error message (and document why)
-
-```
-    "pack"       : {
-       ...
-      "osGuard":  "Linux",
-      "guardReason": "uses the linux 'cp' command",
-      "commands"   : [
-          ....
-      ]
-    },
-```
-
-## pmGuard
-If a script requires a particular package manager (example `npm test` and `yarn test` are both OK but `yarn install` is not allowed),
-then a pmGuard can be set. If the command is executed then it will give an error message. As with `osGuard`, `guardReason` can be set
-to document why
-
-## guard
-A command can be set to only execute if a guard is defined. Unlike the `osGuard` and `pmGuard` this does not cause
-an error message: only scripts that match are executed. The example of ls-ports here:
-```
-    "ls-ports"  : {
-      "description": "lists the projects that have a port defined in project.details.json",
-      "guard"      : "${projectDetails.details.port}",
-      "commands"   : ["js:process.cwd()"]
-    },
-```
-Another good example is 
-```
-    "start"     : {
-      "description": "${packageManager} start for all projects that have a port defined in project.details.json",
-      "guard"      : "${projectDetails.details.port}",
-      "commands"   : ["${packageManager} start"],
-      "env"        : {"PORT": "${projectDetails.details.port}"}
-    },
-```
-So by setting 'ports' to a numeric value in the  `project.details.json` we have  'marked' the directory in such a way that 
-executing `laoban start` will start up the project. This lets us spin up multiple react projects at once. It's a good idea
-if all the projects have different ports...
-
-### environment variables
-cwd is added as an environment variable to represent the current directory
-other environment variables can be added to scripts such as 
-```json
-    "ls-pact":        {
-      "osGuard":     "Windows_NT",
-      "description": "lists the projects with pact files in them",
-      "guard":       "${projectDetails.details.packport}",
-      "commands":    ["echo %PORT%  %cwd%"],
-      "env":         {"PORT": "${projectDetails.details.packport}"}
-    },
-```
 
 
-## inLinksOrder
-Some scripts don't parallelise that well. For example if we are compiling projects, and some projects depend on other projects
-then we want to compile them in 'the right order'.
 
-Setting 'inLinksOrder' means that the links in the projectDetails are used to determine the order in which things are executed
-
-This can be seen using '-g | --generationPlan' as an option. This behavior can also be forced on any command by selecting  -l, --links
-
-## env
-If a command needs access to environment variables (for example a port) these can be added. It is
-not uncommon to have a guard condition on the command. 
 
 ## Commands
 
@@ -206,6 +141,15 @@ so for example changing directory or setting environment variables in one step w
 After adding this command `laoban --help` will now display the command and the description. The command simply 
 executes `cat ${log}`.
 
+### Javascript
+If the text of a command starts with js: then the command will be executed in javascript.
+
+Examples
+```javascript
+  js:process.cwd()
+  js:"Hello World"
+```
+
 ### Commands with step names and (optional) status
 
 ```
@@ -216,59 +160,6 @@ executes `cat ${log}`.
 ```
 Here we can see that the command has one step with name `test`. Because status is true the 
 step results will be visible in the status
-
-### Javascript
-If the text of a command starts with js: then the command will be executed in javascript.
-
-Examples
-* js:process.cwd()
-* js:"Hello World"
-
-This is primarily for `js:process.cwd()` so that we can run scripts on both windows and linux that want to show the current directory
-
-
-### directory
-If a command needs to run in a different directory (typically a sub directory) the directory can be set 
-``` 
-   "install"    : {
-      "commands"   : [
-        {"name": "link", "command": "${packageManager} link", "status": true, "directory": "dist"},
-```             
-This link command is now executed in the `dist` sub directory
-
-### eachLink
-Some commands need to be accessed once for each link defined in the projectDetails file.
-
-```
-    "remoteLink"   : {
-...
-      "commands"       : [
-        {"name": "remoteLink", "command": "${packageManager} link ${link}", "eachLink": true, "status": true},
-```
-Here we can see that the command will be executed once for each link. The variable `${link}` holds the value of the link
-
-### osGuard and pmGuard
-Scripts can also be set with these. If set at the script it is used to say 'this script will throw an error if you try and use it'.
-When set at the command level the command is ignored if the guard is not valid. This can be used
-to give multiple implementations for different operating systems / package managers
-
-```
-    "install": {
-      "description"    : "(not working yet ) doing the initial updateConfigFilesFromTemplates/install/link/tsc/test... etc in each project",
-      "commands"       : [
-...
-        {"name": "copyPackageJsonLinux", "command": "cp package.json dist", "osGuard": "Linux"},
-        {"name": "copyPackageJsonWindows", "command": "copy package.json dist", "osGuard": "Windows"},
-      ], "inLinksOrder": true
-```
-
-
-## Monitoring
-While laoban is running you can press ? to get an interactive menu. 
-* You can press (capital) S to see the status of all your scripts as they are executed in different directories
-    * The status includes 'which commands have finished', 'how long they ran for'
-* You can press (capital) L for the names of the log files if you want to do something like `tail -f`
-* You can press a number (or letter if there are more than 10 directory) to see the tail of the log for that log 
 
 ## options
 

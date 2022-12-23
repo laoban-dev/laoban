@@ -140,12 +140,17 @@ function addScripts ( dic: any, scripts: ScriptDefns ) {
 export function configProcessor ( laoban: string, outputStream: WritableStream, rawConfig: RawConfig ): Config {
   var result: any = { laobanDirectory: laoban, outputStream, laobanConfig: path.join ( laoban, loabanConfigName ) }
   function add ( name: string, raw: any ) {
+    try{
     result[ name ] = derefence ( result, raw[ name ] )
+  } catch ( e ){
+    console.error(e);
+    throw Error(`Failed to add ${name} to config. Error is ${e}`)}
   }
   add ( "templateDir", rawConfig )
   add ( "versionFile", rawConfig )
   add ( "log", rawConfig )
   add ( "status", rawConfig )
+  add ( "cacheDir", {...rawConfig, cacheDir: findCache(laoban,undefined,rawConfig.cacheDir )})
   add ( "profile", rawConfig )
   add ( "packageManager", rawConfig )
   result.templates = rawConfig.templates ? rawConfig.templates : {}

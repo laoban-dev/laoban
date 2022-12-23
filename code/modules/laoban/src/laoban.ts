@@ -307,6 +307,6 @@ const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params:
 };
 export async function makeStandardCli ( fileOps: FileOps, outputStream: Writable, params: string[] ) {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps ) ( process.cwd (), params, outputStream )
-  // console.log('makeStandardCli', configAndIssues.config?.templates)
+  // console.log('makeStandardCli', configAndIssues.config)
   return new Cli ( fileOps, configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
 }

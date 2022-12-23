@@ -17,7 +17,7 @@
     "npm-check-updates": "^10.0.0",
     "typescript": "^4.0.5",
     "node-fetch": "2.6.1",
-    "@phil-rice/utils": "0.3.1"
+    "@phil-rice/utils": "0.3.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.11.5",
@@ -45,7 +45,7 @@
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "version": "0.3.1",
+  "version": "0.3.2",
   "template": "typescript",
   "name": "@phil-rice/files",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
