@@ -45,3 +45,5 @@ project/
 .session/
 *.tgz
 coverage/
+
+.cache/
