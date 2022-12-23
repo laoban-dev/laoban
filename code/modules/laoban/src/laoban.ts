@@ -2,7 +2,7 @@ import { copyTemplateDirectory, findLaoban, ProjectDetailFiles } from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate } from "./configProcessor";
-import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, RawConfigAndIssues, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
+import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
 import { loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
@@ -123,10 +123,10 @@ let projectsAction: Action<void> = ( config: ConfigWithDebug, cmd: any ) => {
     catch ( displayError ( config.outputStream ) )
 }
 
-let updateConfigFilesFromTemplates: ProjectAction<void[]> = ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
+const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
   let d = config.debug ( 'update' )
   return Promise.all ( pds.map ( p =>
-    d.k ( () => 'copyTemplateDirectory', () => copyTemplateDirectory ( config, p.projectDetails.template, p.directory ).then ( () => {
+    d.k ( () => 'copyTemplateDirectory', () => copyTemplateDirectory ( fileOps, config, p.projectDetails.template, p.directory ).then ( () => {
       d.k ( () => 'loadPackageJson', () => loadPackageJsonInTemplateDirectory ( config, p.projectDetails ) ).then ( raw =>
         d.k ( () => 'loadVersionFile', () => loadVersionFile ( config ) ).//
           then ( version => d.k ( () => 'saveProjectJsonFile', () => saveProjectJsonFile ( p.directory, modifyPackageJson ( raw, version, p.projectDetails ) ) ) ) )
@@ -172,7 +172,7 @@ export class Cli {
       option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]" )
   }
 
-  constructor ( configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
+  constructor ( fileOps: FileOps, configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
     const version = require ( "../../package.json" ).version
     this.params = configAndIssues.params
     var program = require ( 'commander' ).//
@@ -229,7 +229,7 @@ export class Cli {
     projectAction ( program, 'compactStatus', compactStatusAction, 'crunches the status', defaultOptions )
     projectAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
     action ( program, 'projects', projectsAction, 'lists the projects under the laoban directory', this.minimalOptions ( configAndIssues ) )
-    projectAction ( program, 'update', updateConfigFilesFromTemplates, "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions )
+    projectAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ), "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions )
 
     if ( configAndIssues.issues.length == 0 )
       configAndIssues.config.scripts.forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions ) )
@@ -308,5 +308,5 @@ const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params:
 };
 export async function makeStandardCli ( fileOps: FileOps, outputStream: Writable, params: string[] ) {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps ) ( process.cwd (), params, outputStream )
-  return new Cli ( configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
+  return new Cli ( fileOps, configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
 }

@@ -2,11 +2,12 @@ import { Generations, ShellResult } from "./executors";
 import { Writable } from "stream";
 // @ts-ignore
 import { Debug } from "@phil-rice/debug";
-import { combineTwoObjects, safeArray } from "@phil-rice/utils";
+import { combineTwoObjects, NameAnd, safeArray, safeObject } from "@phil-rice/utils";
 
 
 export interface ConfigVariables {
   templateDir: string;
+  templates: NameAnd<string>
   versionFile: string;
   sessionDir: string;
   cacheDir?: string
@@ -110,7 +111,8 @@ export function combineConfigs ( c1: Config | undefined, c2: Config | undefined 
   return {
     ...c1, ...c2,
     variables: { ...c1.variables, ...c2.variables },
-    scripts: [ ...c1.scripts, ...c2.scripts ]
+    scripts: [ ...c1.scripts, ...c2.scripts ],
+    templates: { ...safeObject ( c1.templates ), ...safeObject ( c2.templates ) }
   }
 }
 

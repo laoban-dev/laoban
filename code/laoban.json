@@ -1,8 +1,8 @@
 {
   "packageManager": "yarn",
-  "parents": [
-    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/core.laoban.json",
-    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/typescript.laoban.json",
-    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/typescript.publish.laoban.json"
+  "parents":        [
+    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/core.laoban.json",
+    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/typescript.laoban.json",
+    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/typescript.publish.laoban.json"
   ]
 }
