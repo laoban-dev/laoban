@@ -7,3 +7,4 @@
 0.3.0 Can now have parents
 0.3.1 Now caching parents
 0.3.2 Can have remote templates now
+0.3.3 'laoban init' makes a simpler laoban.json 

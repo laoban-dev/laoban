@@ -28,12 +28,21 @@ interface TemplateControlFile {
   files: CopyFileDetails[]
 }
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, laobanDirectory: string, templateUrl: string, target: string, cacheUrl: string | undefined ): Promise<void> {
+
   const prefix = templateUrl.includes ( '://' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   // console.log ( 'copyTemplateDirectoryFromConfigFile', 'laobanDirectory', laobanDirectory, 'templateUrl', templateUrl, 'prefix', prefix )
   const url = prefix + '/.template.json';
+  function parseCopyFile ( controlFileAsString: string ): TemplateControlFile {
+    try {
+      return JSON.parse ( controlFileAsString );
+    } catch ( e ) {
+      console.error ( e )
+      throw new Error ( `Error copying template file in ${target} from url ${url}\n${controlFileAsString}\n` )
+    }
+  }
   // console.log ( 'copyTemplateDirectoryFromConfigFile', cacheUrl, 'url', url )
   const controlFileAsString = await cachedLoad ( fileOps, cacheUrl ) ( url )
-  const controlFile: TemplateControlFile = JSON.parse ( controlFileAsString )
+  const controlFile = parseCopyFile ( controlFileAsString );
   return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target ) ( safeArray ( controlFile.files ) )
 }
 

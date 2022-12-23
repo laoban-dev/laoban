@@ -1,7 +1,7 @@
 {
   "packageManager": "yarn",
   "templates":      {
-    "remoteTypescript": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript_405"
+    "typescript": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript_405"
   },
   "parents":        [
     "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/core.laoban.json",
