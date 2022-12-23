@@ -8,10 +8,12 @@ function loadFile ( fileName: string ): Promise<string> {
   return promises.readFile ( fileName ).then ( buffer => buffer.toString ( 'utf-8' ) )
 }
 function loadUrl ( fileOrUrl: string ): Promise<string> {
-  return fetch ( fileOrUrl ).then ( res => res.json () ).then ( json => { return JSON.stringify ( json, null, 2 ); } )
+  // console.log('in loadUrl', fileOrUrl)
+  return fetch ( fileOrUrl ).then ( res => res.text () )
 }
 
 function loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
+  // console.log('in loadFileOrUrl', fileOrUrl)
   return fileOrUrl.includes ( "://" ) ? loadUrl ( fileOrUrl ) : loadFile ( fileOrUrl )
 }
 export const fileOps: FileOps = {
