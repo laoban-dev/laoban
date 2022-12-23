@@ -1,17 +1,18 @@
 # Laoban
 
 Laoban or 老板 is chinese for 'boss'. It is a tool for controlling multiple projects. While it is language agnostic it
-probably offers the most value to javascript/typescript projects
+probably offers the most value to javascript/typescript projects in a monorepo.
 
 # Further documentation
 
 * [Cheat Sheet](documentation/CHEATSHEET.md)
-* [Command line arguments](documentation/COMMAND.LINE.ARGUMENTS.md)
 * [laoban.json](documentation/LAOBAN.JSON.md)
+* [Logs](documentation/LOGS.md)
 * [Projects](documentation/PROJECTS.md)
 * [Scripts](documentation/SCRIPTS.md)
 * [Templates](documentation/TEMPLATES.md)
 * [Variables](documentation/VARIABLES.md)
+* [Command line arguments](documentation/COMMAND.LINE.ARGUMENTS.md)
 
 ## Motivation
 

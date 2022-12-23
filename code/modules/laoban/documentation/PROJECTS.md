@@ -3,6 +3,31 @@
 A laoban project is a directory with a `project.details.json` file in it. This project MUST be under a directory that
 has a [`laoban.json`](LAOBAN.JSON.md) file in it.
 
+## Typical `project.details.json`
+
+```json
+{
+  "template":    "typescript",
+  "name":        "laoban",
+  "description": "A cli for managing projects that have many npm packages",
+  "details":     {
+    "links": [
+      "@phil-rice/variables", "@phil-rice/generations", "@phil-rice/validation", "@phil-rice/debug", "@phil-rice/files"
+    ],
+    "tsc":   true,
+    "test":  true,
+    "publish": true
+  }
+}
+```
+| Name | Purpose
+| --- | --- |
+|[template](TEMPLATES.md) | This examples 'what type of project this is'.
+| name | The name of the project. This is the value that the project would be published to in `npmjs`
+| description | Human readable description of the project.
+| [details.links](#dependencies) | This is how we express 'This project depends on other projects'
+| details.tsc/test/publish | These control if commands are executed in this project
+
 ## Project details file and variables
 All the fields in a `project.details.json` file are available as [variables](VARIABLES.md) in scripts.
 
@@ -26,21 +51,13 @@ Each line corresponds to a project. We can see the directory and the npm name of
 The value in (brackets) is the [template](TEMPLATES.md) of the project
 The dependencies between the projects are shown at the end.
 
+<a id='dependencies'></a>
 ## What are project dependencies?
 Each `laoban project` can depend on others. This is important for things like 'compilation order'. If we are compiling
 all the projects we want to compile the dependent projects first. 
 
 Dependencies are specified in the `project.details.json` file. A sample is shown here
-```json
-{
-  "template"   : "typescript",
-  "name"       : "laoban",
-  "description": "A cli for managing projects that have many npm packages",
-  "details"    : {
-    "links"       : ["@phil-rice/variables","@phil-rice/generations", "@phil-rice/validation", "@phil-rice/debug","@phil-rice/files"]
-  }
-}
-```
+
 Note that the links reference the `name` of the project not the directory. With a javascript project this is the 
 name that would be present in [npmjs](https://www.npmjs.com).
 

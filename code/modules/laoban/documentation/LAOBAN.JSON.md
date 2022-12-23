@@ -1,9 +1,8 @@
 # laoban.json
 
-This is a file that configures laoban. The variable values can be seen by `laoban config`
+This is a file that configures `laoban`. The key variable values can be seen by `laoban config`
 
 The existence of the file marks that this is the root of a 'big project' which is composed of one or more sub projects
-
 
 ## Further documentation
 
@@ -15,7 +14,7 @@ The existence of the file marks that this is the root of a 'big project' which i
 
 It is rare to just have 'a single laoban.json'. That would probably violate the principle of 'separation of concerns'.
 
-Instead we have the ability to 'merge together' lots of parents. A typical
+Instead, we have the ability to 'merge together' lots of parents. A typical
 `laoban.json` file might look like this:
 
 
@@ -33,7 +32,7 @@ Instead we have the ability to 'merge together' lots of parents. A typical
 * The `typescript.publish` parent pulls in scripts for publishing to `npmjs`
 
 ## Important values in laoban,json
-All of these have defaults if you include the `core` in parents.
+Note that most of these have defaults if you include the `core` in parents.
 
 * `templateDir`: the directory that the templates can be found in
 * `log`: the name of the log file found in the project directories holding the log of executing the commands
