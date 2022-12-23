@@ -10,7 +10,7 @@ import { output } from "./utils";
 import { cachedLoad, FileOps, toArray } from "@phil-rice/utils";
 import WritableStream = NodeJS.WritableStream;
 
-function findCache ( laobanDir, rawConfig, cacheDir: string ) {
+export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
   if ( rawConfig !== undefined ) return rawConfig
   if ( cacheDir !== undefined ) return path.join ( laobanDir, cacheDir )
   return path.join ( laobanDir, '.cache' )
@@ -19,19 +19,22 @@ const load = ( fileOps: FileOps, laobanDir: string, cacheDir: string | undefined
   if ( debug ) console.log ( `About to try and load ${filename}` )
   const fileContent = await cachedLoad ( fileOps, cacheDir ) ( filename )
   if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent )
-  const rawConfig = JSON.parse ( fileContent )
+  const rawConfig: RawConfig = JSON.parse ( fileContent )
+  // console.log ( `load ${filename}`, rawConfig.templates )
   const ps = toArray ( rawConfig.parents );
   const actualCache = findCache ( laobanDir, rawConfig.cacheDir, cacheDir )
   if ( debug ) console.log ( `\nParents are`, ps )
   if ( ps.length === 0 ) return rawConfig
   const configs: RawConfig[] = await Promise.all ( ps.map ( load ( fileOps, laobanDir, actualCache, debug ) ) )
-  return configs.reduce ( combineRawConfigs, rawConfig )
+  let result = configs.reduce ( combineRawConfigs, rawConfig );
+  // console.log ( `load result ${filename}  `, result.templates )
+  return result
 }
 
-export const loadLoabanJsonAndValidate = ( files: FileOps, laobanDir: string,cacheDir: string | undefined, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndIssues> => {
+export const loadLoabanJsonAndValidate = ( files: FileOps, laobanDir: string, cacheDir: string | undefined, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndIssues> => {
   const laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
-    const rawConfig = await load ( files,laobanDir, cacheDir, debug ) ( laobanConfigFileName )
+    const rawConfig = await load ( files, laobanDir, cacheDir, debug ) ( laobanConfigFileName )
     const issues = Validate.validate ( `In directory ${path.parse ( laobanDirectory ).name}, ${loabanConfigName}`, rawConfig );
     return { rawConfig, issues: validateLaobanJson ( issues ).errors }
   } catch ( e ) {
@@ -145,6 +148,7 @@ export function configProcessor ( laoban: string, outputStream: WritableStream, 
   add ( "status", rawConfig )
   add ( "profile", rawConfig )
   add ( "packageManager", rawConfig )
+  result.templates = rawConfig.templates ? rawConfig.templates : {}
   result.sessionDir = rawConfig.sessionDir ? rawConfig.sessionDir : path.join ( laoban, '.session' )
   result.throttle = rawConfig.throttle ? rawConfig.throttle : 0
   for ( const k in rawConfig.variables ) add ( k, rawConfig.variables )

@@ -1,2 +1,2 @@
-<root>/passing/projects/project1 => proj1 (noreact)
-<root>/passing/projects/project2 => proj2 (noreact)
+<root>/passing/projects/project1 => proj1 (typescript)
+<root>/passing/projects/project2 => proj2 (typescript)

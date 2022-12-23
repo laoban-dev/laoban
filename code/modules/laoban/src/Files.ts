@@ -5,8 +5,8 @@ import { ConfigWithDebug, HasLaobanDirectory, ProjectDetailsAndDirectory } from 
 import { flatten } from "./utils";
 // @ts-ignore
 import { Debug } from "@phil-rice/debug";
-import { CopyFileDetails, FileOps, safeArray, safeObject } from "@phil-rice/utils";
-import { copyFiles } from "../../utils/src/types";
+import { cachedLoad, CopyFileDetails, copyFiles, FileOps, safeArray, safeObject } from "@phil-rice/utils";
+import { findCache } from "./configProcessor";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -27,16 +27,24 @@ export function copyTemplateDirectoryByConfig ( config: ConfigWithDebug, templat
 interface TemplateControlFile {
   files: CopyFileDetails[]
 }
-export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, templateUrl: string, target: string ): Promise<void> {
-  const controlFileAsString = await fileOps.loadFileOrUrl ( templateUrl )
+export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, laobanDirectory: string, templateUrl: string, target: string, cacheUrl: string | undefined ): Promise<void> {
+  const prefix = templateUrl.includes ( '://' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
+  // console.log ( 'copyTemplateDirectoryFromConfigFile', 'laobanDirectory', laobanDirectory, 'templateUrl', templateUrl, 'prefix', prefix )
+  let url = path.join ( prefix, '.template.json' );
+  // console.log ( 'copyTemplateDirectory', cacheUrl, url )
+  const controlFileAsString = await cachedLoad ( fileOps, cacheUrl ) ( url )
   const controlFile: TemplateControlFile = JSON.parse ( controlFileAsString )
-  return copyFiles ( fileOps, target, `Copying template ${templateUrl} to ${target}` ) ( safeArray ( controlFile.files ) )
+  return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, prefix, target ) ( safeArray ( controlFile.files ) )
 }
 
 export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, template: string, target: string ): Promise<void> {
+  let d = config.debug ( 'update' )
   const namedTemplateUrl = safeObject ( config.templates )[ template ]
+  // console.log ( `copyTemplateDirector. Legal templates are ${JSON.stringify ( config.templates )}` )
+  d.message ( () => [ `namedTemplateUrl in ${target} for ${template} is ${namedTemplateUrl} (should be undefined if using local template)` ] )
   if ( namedTemplateUrl === undefined ) return copyTemplateDirectoryByConfig ( config, template, target )
-  return copyTemplateDirectoryFromConfigFile ( fileOps, template, target )
+  const cacheUrl = findCache ( config.laobanDirectory, config.cacheDir, '.cache' )
+  return copyTemplateDirectoryFromConfigFile ( fileOps, config.laobanDirectory, namedTemplateUrl, target, cacheUrl )
 }
 
 export function isProjectDirectory ( directory: string ) {

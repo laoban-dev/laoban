@@ -5,7 +5,7 @@ import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValida
 import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
-import { loadPackageJsonInTemplateDirectory, loadVersionFile, modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
+import { loadVersionFile, modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus } from "./status";
 import * as os from "os";
 import { execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, GenerationsResult, make, streamName, timeIt } from "./executors";
@@ -15,7 +15,6 @@ import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDec
 import { shellReporter } from "./report";
 import { Writable } from "stream";
 import { CommanderStatic } from "commander";
-// @ts-ignore
 import { addDebug } from "@phil-rice/debug";
 import { init } from "./init";
 import { FileOps } from "@phil-rice/utils";
@@ -126,10 +125,10 @@ let projectsAction: Action<void> = ( config: ConfigWithDebug, cmd: any ) => {
 const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
   let d = config.debug ( 'update' )
   return Promise.all ( pds.map ( p =>
-    d.k ( () => 'copyTemplateDirectory', () => copyTemplateDirectory ( fileOps, config, p.projectDetails.template, p.directory ).then ( () => {
-      d.k ( () => 'loadPackageJson', () => loadPackageJsonInTemplateDirectory ( config, p.projectDetails ) ).then ( raw =>
-        d.k ( () => 'loadVersionFile', () => loadVersionFile ( config ) ).//
-          then ( version => d.k ( () => 'saveProjectJsonFile', () => saveProjectJsonFile ( p.directory, modifyPackageJson ( raw, version, p.projectDetails ) ) ) ) )
+    d.k ( () => `${p.directory} copyTemplateDirectory`, () => copyTemplateDirectory ( fileOps, config, p.projectDetails.template, p.directory ).then ( () => {
+      d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) ).then ( raw =>
+        d.k ( () => `${p.directory} loadVersionFile`, () => loadVersionFile ( config ) ).//
+          then ( version => d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse(raw), version, p.projectDetails ) ) ) ) )
     } ) )
   ) )
 }
@@ -308,5 +307,6 @@ const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params:
 };
 export async function makeStandardCli ( fileOps: FileOps, outputStream: Writable, params: string[] ) {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps ) ( process.cwd (), params, outputStream )
+  // console.log('makeStandardCli', configAndIssues.config?.templates)
   return new Cli ( fileOps, configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
 }

@@ -10,6 +10,7 @@ export interface FileOps {
 export function cachedLoad ( fileOps: FileOps, cache: string ): ( fileOrUrl: string ) => Promise<string> {
   if ( cache === undefined ) return fileOps.loadFileOrUrl
   return fileOrUrl => {
+    if ( !fileOrUrl.includes ( '://' ) ) return fileOps.loadFileOrUrl ( fileOrUrl )
     const digest = fileOps.digest ( fileOrUrl );
     // console.log ( 'cache', cache, 'digest', digest )
     const cached = cache + '/' + digest
@@ -19,14 +20,12 @@ export function cachedLoad ( fileOps: FileOps, cache: string ): ( fileOrUrl: str
 }
 
 
-export interface CopyFileDetails {
-  url: string
-  offset: string
+export type CopyFileDetails = string
+export function copyFile ( fileOps: FileOps, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
+  return ( offset ) => fileOps.loadFileOrUrl ( rootUrl + '/' + offset )
+    .then ( file => fileOps.saveFile ( rootUrl + '/' + offset, file ) )
 }
-export function copyFile ( fileOps: FileOps, root: string ): ( fd: CopyFileDetails ) => Promise<void> {
-  return ( { url, offset } ) => fileOps.loadFileOrUrl ( url ).then ( file => fileOps.saveFile ( root + '/' + offset, file ) )
-}
-export function copyFiles ( fileOps: FileOps, root: string, context: string ): ( fs: CopyFileDetails[] ) => Promise<void> {
-  const cf = copyFile ( fileOps, root )
+export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string ): ( fs: CopyFileDetails[] ) => Promise<void> {
+  const cf = copyFile ( fileOps, rootUrl, target )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {throw Error ( `${context}\nFile ${f}\n${e}` )} ) ) ).then ( () => {} )
 }

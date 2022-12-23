@@ -4,15 +4,15 @@ import * as fs from "fs";
 // @ts-ignore
 import {Debug} from "@phil-rice/debug";
 
-export function loadPackageJsonInTemplateDirectory(config: ConfigWithDebug, projectDetails: ProjectDetails): Promise<any> {
-    let file = path.join(config.templateDir, projectDetails.template, 'package.json')
-    try {
-        let data = fs.readFileSync(file) // not sure why readFile async not working: silent fail
-        return Promise.resolve(JSON.parse(data.toString()))
-    } catch (err) {
-        return Promise.reject(Error("Could not find template file" + file + '\n' + err))
-    }
-}
+// export function loadPackageJsonInTargetDirectory( config: ConfigWithDebug, projectDetails: ProjectDetails): Promise<any> {
+//     let file = path.join(projectDetails.deta, projectDetails.template, 'package.json')
+//     try {
+//         let data = fs.readFileSync(file) // not sure why readFile async not working: silent fail
+//         return Promise.resolve(JSON.parse(data.toString()))
+//     } catch (err) {
+//         return Promise.reject(Error("Could not find template file" + file + '\n' + err))
+//     }
+// }
 
 //
 // return new Promise<any>((resolve, reject) => fs.readFile(file, (err, data) => {

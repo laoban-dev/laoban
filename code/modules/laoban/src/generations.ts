@@ -1,7 +1,7 @@
 import { HasOutputStream, ScriptInContextAndDirectory } from "./config";
 import { output } from "./utils";
 import { uniqueLoops } from "@phil-rice/generations";
-import { topologicalSort, TopologicalSortTypeClasses } from "@phil-rice/generations/dist/src/topologicalSort";
+import { topologicalSort, TopologicalSortTypeClasses } from "@phil-rice/generations";
 import { Debug } from "@phil-rice/debug";
 
 

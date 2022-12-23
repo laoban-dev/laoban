@@ -7,6 +7,7 @@ import { combineTwoObjects, NameAnd, safeArray, safeObject } from "@phil-rice/ut
 
 export interface ConfigVariables {
   templateDir: string;
+  parents?: string|string[];
   templates: NameAnd<string>
   versionFile: string;
   sessionDir: string;
@@ -26,6 +27,7 @@ export function combineRawConfigs ( r1: RawConfig, r2: RawConfig ): RawConfig {
   return {
     ...r1, ...r2,
     parent: [ ...safeArray ( r1.parent ), ...safeArray ( r2.parent ) ],
+    templates: combineTwoObjects(r1.templates, r2.templates),
     variables: combineTwoObjects ( r1.variables, r2.variables ),
     scripts: combineTwoObjects ( r1.scripts, r2.scripts )
   }
