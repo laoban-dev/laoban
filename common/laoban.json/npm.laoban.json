@@ -1,6 +1,8 @@
 {
   "packageManager": "npm",
-  "scripts": {
-    "npm_install": ["npm install"]
+  "scripts":        {
+    "npm_install": {
+      "description": "Executes npm install in each project", "commands": ["npm install"]
+    }
   }
 }
