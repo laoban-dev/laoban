@@ -77,3 +77,31 @@ This is telling us that all the projects in generation 0 will be executed before
 * Execute `laoban update`
 
 You should be able to see the project now if you execute `laoban projects`
+
+## Typical `project.details.json`
+
+* `template` is the name of the subdirectory that holds the configuration files that laoban will place in the project
+* `name` is the name of the project. This is injected into package.json by update
+* `description` is the name of the project. This is injected into package.json by update
+* `details.extraDeps` are the names of dependancies that this project needs and are to be added to the template
+* `details.extraDevDeps` are the names of developer dependancies that this project needs and are to be added to the template
+* `details.links` are used within the 'master project' that laoban is looking after. * It allows laoban to set up symbolic links
+  so that changes in one project are immediately reflected * These are added as dependencies to the project, with the '
+  current version number'
+* `details.tsc` Should this project be compiled with the typescript compiler
+* `details.test` should this project be testing by `npm test`
+* `details.publish` should this project be affected by commands with the guard condition ${projectDetails.details.publish}. Typically these are projects to be published to npmjs * typicall commands are `laoban pack`, `laoban publish`, `laoban ls-publish`
+
+## Status
+
+As described in [Scripts](SCRIPTS.md#complexCommands) some commands set `status` to true,
+ which means that the success or failure of the last run will be remembered and displayed 
+when you run `laoban status`.
+
+Examples of this are `laoban tsc`, `laoban test` and `laoban publish`.
+
+## Profiling
+For general interest the times of the `status` scripts is recorded and 
+can be seen with `laoban profile`. Each project is shown twice: once in `average`
+and once in `latest`.
+
