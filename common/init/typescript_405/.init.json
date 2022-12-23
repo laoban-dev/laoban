@@ -1,0 +1,10 @@
+{
+  "parents":     [
+    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/init/typescript_core"
+  ],
+  "laoban.json": {
+    "templates": {
+      "typescript": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript_405"
+    }
+  }
+}

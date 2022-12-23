@@ -10,7 +10,6 @@ probably offers the most value to javascript/typescript projects in a monorepo.
 * If you want to try out `laoban` on your project start [here](GETTING.STARTED.md)
 
 # Further documentation
-
 * [Cheat Sheet](documentation/CHEATSHEET.md)
 * [Laoban and Yarn](documentation/YARN.md)
 * [laoban.json](documentation/LAOBAN.JSON.md)

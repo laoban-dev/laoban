@@ -1,0 +1,24 @@
+{
+  "laoban.json":          {
+    "packageManager": "yarn",
+    "parents":        [
+      "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/core.laoban.json"
+    ]
+  },
+  "project.details.json": [
+    {
+      "guardfile":     "project.json",
+      "variableFiles": {"projectJson": "project.json"},
+      "contents":      {
+        "template":    "typescript",
+        "name":        "${projectJson.name}",
+        "description": "${projectJson.description}",
+        "details":     {
+          "publish": false,
+          "test":    true,
+          "links":   []
+        }
+      }
+    }
+  ]
+}
