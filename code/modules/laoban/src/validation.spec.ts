@@ -7,14 +7,13 @@ import * as fs from "fs";
 import * as path from "path";
 import { findLaoban, ProjectDetailFiles } from "./Files";
 import { validateProjectDetailsAndTemplates } from "./validation";
-import { Config } from "./config";
 import { loadConfigOrIssues, loadLoabanJsonAndValidate } from "./configProcessor";
 import { dirsIn, testRoot } from "./fixture";
 // @ts-ignore
 import { addDebug } from "@phil-rice/debug";
 import { fileOps } from "@phil-rice/files";
 
-const laobanDir = findLaoban ( process.cwd() )
+const laobanDir = findLaoban ( process.cwd () )
 
 describe ( "validate laoban json", () => {
   dirsIn ( testRoot ).forEach ( testDir => {
@@ -28,7 +27,7 @@ describe ( "validate laoban json", () => {
   } )
 } )
 
-describe ( "validate directories", () => {
+describe ( "validate directories",  () => {
   dirsIn ( testRoot ).forEach ( testDir => {
     let parsed = path.parse ( testDir )
     loadConfigOrIssues ( process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps, laobanDir, false ), false ) ( testDir ).then ( configOrIssues => {
@@ -36,7 +35,7 @@ describe ( "validate directories", () => {
         it ( `should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
           let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().trim ()
           let config = addDebug ( undefined, () => {} ) ( configOrIssues.config )
-          return ProjectDetailFiles.workOutProjectDetails ( config, {} ).//
+          return ProjectDetailFiles.workOutProjectDetails ( fileOps, config, {} ).//
             then ( pds => validateProjectDetailsAndTemplates ( config, pds ) ).//
             then ( actual => {
                 let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )

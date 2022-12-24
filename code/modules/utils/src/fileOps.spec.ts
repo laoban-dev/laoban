@@ -84,7 +84,8 @@ describe ( "copyFiles", () => {
 describe ( "childDirs", () => {
   const fileOps = (): MeteredFileOps => meteredFileOps ( {
     ...emptyFileOps,
-    listFiles: root => Promise.resolve ( root.length > 10 ? [] : [ 1, 2 ].map ( i => lastSegment ( root ) + i ) )
+    listFiles: root => Promise.resolve ( root.length > 10 ? [] : [ 1, 2 ].map ( i => lastSegment ( root ) + i ) ),
+    isDirectory ( filename: string ): Promise<boolean> {return Promise.resolve ( true )}
   } )
   it ( "it should find all the descendants if no filter", async () => {
     expect ( await childDirs ( fileOps (), s => false ) ( 'X' ) ).toEqual ( [

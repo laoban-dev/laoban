@@ -2,10 +2,8 @@ import * as fs from "fs";
 import * as fse from "fs-extra";
 import * as path from "path";
 import { ConfigWithDebug, HasLaobanDirectory, ProjectDetailsAndDirectory } from "./config";
-import { flatten } from "./utils";
-// @ts-ignore
 import { Debug } from "@phil-rice/debug";
-import { CopyFileDetails, copyFiles, FileOps, safeArray, safeObject } from "@phil-rice/utils";
+import { childDirs, CopyFileDetails, copyFiles, FileOps, findMatchingK, safeArray, safeObject } from "@phil-rice/utils";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -53,9 +51,6 @@ export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebu
   return copyTemplateDirectoryFromConfigFile ( fileOps, config.laobanDirectory, namedTemplateUrl, target )
 }
 
-export function isProjectDirectory ( directory: string ) {
-  return fs.existsSync ( path.join ( directory, projectDetailsFile ) )
-}
 export function findLaoban ( directory: string ): string {
   function find ( dir: string ): string {
     let fullName = path.join ( dir, loabanConfigName );
@@ -73,20 +68,20 @@ interface ProjectDetailOptions {
   projects?: string,
 }
 export class ProjectDetailFiles {
-  static workOutProjectDetails ( hasRoot: HasLaobanDirectory & { debug: Debug }, options: ProjectDetailOptions ): Promise<ProjectDetailsAndDirectory[]> {
+  static workOutProjectDetails ( fileOps: FileOps, hasRoot: HasLaobanDirectory & { debug: Debug }, options: ProjectDetailOptions ): Promise<ProjectDetailsAndDirectory[]> {
     let p = hasRoot.debug ( 'projects' )
     let root = hasRoot.laobanDirectory
     // p.message(() =>['p.message'])
     function find () {
       if ( options.projects ) return p.k ( () => `options.projects= [${options.projects}]`, () =>
-        ProjectDetailFiles.findAndLoadProjectDetailsFromChildren ( root ).then ( pd => pd.filter ( p => p.directory.match ( options.projects ) ) ) )
-      if ( options.all ) return p.k ( () => "options.allProjects", () => ProjectDetailFiles.findAndLoadProjectDetailsFromChildren ( root ) );
+        ProjectDetailFiles.findAndLoadProjectDetailsFromChildren ( fileOps, root ).then ( pd => pd.filter ( p => p.directory.match ( options.projects ) ) ) )
+      if ( options.all ) return p.k ( () => "options.allProjects", () => ProjectDetailFiles.findAndLoadProjectDetailsFromChildren ( fileOps, root ) );
       if ( options.one ) return p.k ( () => "optionsOneProject", () => ProjectDetailFiles.loadProjectDetails ( process.cwd () ).then ( x => [ x ] ) )
       return ProjectDetailFiles.loadProjectDetails ( process.cwd () ).then ( pd => {
           p.message ( () => [ "using default project rules. Looking in ", process.cwd (), 'pd.details', pd.projectDetails ? pd.projectDetails.name : 'No project.details.json found' ] )
           return pd.projectDetails ?
             p.k ( () => 'Using project details from process.cwd()', () => ProjectDetailFiles.loadProjectDetails ( process.cwd () ) ).then ( x => [ x ] ) :
-            p.k ( () => 'Using project details under root', () => ProjectDetailFiles.findAndLoadProjectDetailsFromChildren ( root ) )
+            p.k ( () => 'Using project details under root', () => ProjectDetailFiles.findAndLoadProjectDetailsFromChildren ( fileOps, root ) )
         }
       )
     }
@@ -97,8 +92,9 @@ export class ProjectDetailFiles {
   }
 
 
-  static findAndLoadProjectDetailsFromChildren ( root: string ): Promise<ProjectDetailsAndDirectory[]> {
-    return Promise.all ( this.findProjectDirectories ( root ).map ( this.loadProjectDetails ) )
+  static async findAndLoadProjectDetailsFromChildren ( fileOps: FileOps, root: string ): Promise<ProjectDetailsAndDirectory[]> {
+    let dirs = await this.findProjectDirectories ( fileOps ) ( root );
+    return Promise.all ( dirs.map ( this.loadProjectDetails ) )
   }
 
   static loadProjectDetails ( root: string ): Promise<ProjectDetailsAndDirectory> {
@@ -118,19 +114,13 @@ export class ProjectDetailFiles {
     } )
   }
 
-  static findProjectDirectories ( root: string ): string[] {
-    let rootAndFileName = path.join ( root, projectDetailsFile );
-    let result = fs.existsSync ( rootAndFileName ) ? [ root ] : []
-    let children: string[][] = fs.readdirSync ( root ).map ( ( file, index ) => {
-      if ( file !== 'node_modules' && file !== '.git' ) {
-        const curPath = path.join ( root, file );
-        if ( fs.lstatSync ( curPath ).isDirectory () )
-          return this.findProjectDirectories ( curPath )
-      }
-      return []
-    } );
-    return flatten ( [ result, ...children ] )
-  }
+  static findProjectDirectories = ( fileOps: FileOps ) => async ( root: string ): Promise<string[]> => {
+    const findDescs = childDirs ( fileOps, s => s === 'node_modules' || s === '.git' || s === '.session' )
+    const descs = await findDescs ( root )
+
+    let result = findMatchingK ( descs, s => fileOps.isFile ( path.join ( s, projectDetailsFile ) ) );
+    return result
+  };
 }
 
 

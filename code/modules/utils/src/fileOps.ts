@@ -7,18 +7,30 @@ export interface FileOps extends CopyFileFns {
   createDir: ( dir: string ) => Promise<string | undefined>
   listFiles ( root: string ): Promise<string[]>
   isDirectory ( filename: string ): Promise<boolean>
+  isFile ( filename: string ): Promise<boolean>
 }
 export function lastSegment ( s: string ) {
   const index = s.lastIndexOf ( '/' )
   return index === -1 ? s : s.substring ( index + 1 )
 }
 
+interface StringAndExist {
+  string: string
+  exists: boolean
+}
+
+export async function findMatchingK ( list: string[], filter: ( s: string ) => Promise<boolean> ): Promise<string[]> {
+  const ps: StringAndExist[] = await Promise.all ( list.map ( string => filter ( string ).then ( exists => ({ exists, string }) ) ) )
+  return ps.filter ( se => se.exists ).map ( se => se.string )
+
+}
 export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boolean ) => ( root: string ): Promise<string[]> => {
   const children = async ( parent: string ): Promise<string[]> => {
     const addPrefix = ( s1: string ) => ( s2: string ) => s1 === '' ? s2 : s1 + '/' + s2
-    const files = await fileOps.listFiles ( parent )
-    const dirChildren: string[] = files.filter ( d => !stopDirFilter ( d ) ).filter ( fileOps.isDirectory ).map ( addPrefix ( parent ) )
-    let result: string[] = [ ...dirChildren ]
+    const files: string[] = await fileOps.listFiles ( parent )
+    const withParent = files.filter ( d => !stopDirFilter ( d ) ).map ( addPrefix ( parent ) )
+    const directories: string[] = await findMatchingK ( withParent, fileOps.isDirectory )
+    let result: string[] = [ ...directories ]
     let descendents = await Promise.all ( result.map ( children ) )
     descendents.forEach ( c => result.push ( ...c ) )
     return result
@@ -125,7 +137,9 @@ export const emptyFileOps: FileOps = {
   digest (): string {return "";},
   listFiles (): Promise<string[]> {return Promise.resolve ( [] );},
   saveFile (): Promise<void> {return Promise.resolve ();},
-  isDirectory ( filename: string ): Promise<boolean> {return Promise.resolve ( false )}
+  isDirectory ( filename: string ): Promise<boolean> {return Promise.resolve ( false )},
+  isFile: ( filename: string ): Promise<boolean> => {return Promise.resolve ( false )}
+
 }
 
 export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheFileOps ): ( fileOrUrl: string ) => Promise<string> {
@@ -148,6 +162,7 @@ export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheF
 }
 
 export interface CachedFileOps extends FileOps {
+  original: FileOps
   cached: true
   cacheHits (): number,
   cacheMisses (): number
@@ -158,16 +173,20 @@ export interface PrivateCacheFileOps {
   cacheMiss ()
 }
 
+export function nonCached ( f: FileOps ): FileOps {
+  return isCachedFileOps ( f ) ? f.original : f
+}
 export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
   const a: any = f
   return a.cached === true
 }
+
 export function cachedFileOps ( fileOps: FileOps, cache: string | undefined ): FileOps | CachedFileOps {
   if ( cache === undefined || isCachedFileOps ( fileOps ) ) return fileOps
   var cacheHits = 0
   var cacheMisses = 0
   var ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
-  let result: CachedFileOps = { ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cache, ops ), cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits };
+  let result: CachedFileOps = { ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cache, ops ), cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits, original: fileOps };
   return result
 }
 

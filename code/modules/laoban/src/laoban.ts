@@ -53,13 +53,13 @@ function checkGuard ( config: ConfigWithDebug, script: ScriptDetails ): Promise<
 }
 
 
-let configAction: Action<void> = ( config: Config, cmd: any ) => {
+let configAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
   let simpleConfig = { ...config }
   delete simpleConfig.scripts
   delete simpleConfig.outputStream
   return Promise.resolve ( output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) ) )
 }
-let initAction: Action<void> = ( config: Config, cmd: any ) => {
+let initAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
   let simpleConfig = { ...config }
   delete simpleConfig.scripts
   delete simpleConfig.outputStream
@@ -68,7 +68,7 @@ let initAction: Action<void> = ( config: Config, cmd: any ) => {
 
 //TODO sort out type signature.. and it's just messy
 function runAction ( executeCommand: any, command: () => string, executeGenerations: ExecuteGenerations ): Action<GenerationsResult> {
-  return ( config: Config, cmd: any ) => {
+  return ( fileOps: FileOps, config: Config, cmd: any ) => {
     // console.log('runAction', command())
     let s: ScriptDetails = { name: '', description: `run ${command}`, commands: [ { name: 'run', command: command (), status: false } ] }
     // console.log('command.run', command)
@@ -98,16 +98,16 @@ const profileAction: ProjectAction<void> = ( config: Config, cmd: any, pds: Proj
       prettyPrintProfiles ( output ( config ), 'average', data, p => (p.average / 1000).toFixed ( 3 ) )
     } )
 
-const validationAction = ( fileOps: FileOps, params: string[] ): Action<Config | void> =>
-  ( config: ConfigWithDebug, cmd: any ) => ProjectDetailFiles.workOutProjectDetails ( config, cmd )
+const validationAction = ( params: string[] ): Action<Config | void> =>
+  ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => ProjectDetailFiles.workOutProjectDetails ( fileOps, config, cmd )
     .then ( ds => validateProjectDetailsAndTemplates ( config, ds ) )
     .then ( issues => abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } ), displayError ( config.outputStream ) )
 
 //TODO This looks like it needs a clean up. It has abort logic and display error logic.
 
 
-let projectsAction: Action<void> = ( config: ConfigWithDebug, cmd: any ) => {
-  return ProjectDetailFiles.workOutProjectDetails ( config, { ...cmd, all: true } ).//
+let projectsAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => {
+  return ProjectDetailFiles.workOutProjectDetails ( fileOps, config, { ...cmd, all: true } ).//
     then ( pds => {
       let dirWidth = Strings.maxLength ( pds.map ( p => p.directory ) )
       let projWidth = Strings.maxLength ( pds.map ( p => p.projectDetails.name ) )
@@ -196,13 +196,13 @@ export class Cli {
       return command ( p, name, description, options )
         .action ( cmd => configOrReportIssues ( configAndIssues ).then ( addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) )
           .then ( ( configWithDebug: ConfigWithDebug ) =>
-            a ( configWithDebug, cmd )
+            a ( fileOps, configWithDebug, cmd )
               .then ( postCommand ( p, fileOps ) )
               .catch ( displayError ( configWithDebug.outputStream ) ) ) )
     }
     function projectAction<T> ( p: any, name: string, a: ProjectAction<T>, description: string, ...options: (( p: any ) => any)[] ) {
-      return action ( p, name, ( config: ConfigWithDebug, cmd: any ) =>
-        ProjectDetailFiles.workOutProjectDetails ( config, cmd )
+      return action ( p, name, ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) =>
+        ProjectDetailFiles.workOutProjectDetails ( fileOps, config, cmd )
           .then ( pds => a ( config, cmd, pds ) )
           .catch ( displayError ( config.outputStream ) ), description, ...options )
     }
@@ -227,7 +227,7 @@ export class Cli {
       action ( cmd => init ( fileOps, configAndIssues, process.cwd (), cmd.force ).then ( postCommand ( program, fileOps ) ) )
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
-    action ( program, 'validate', validationAction ( fileOps, this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
+    action ( program, 'validate', validationAction ( this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitary command (the rest of the command line).',
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]

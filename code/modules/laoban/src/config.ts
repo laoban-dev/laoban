@@ -98,7 +98,7 @@ export interface HasOutputStream {
   outputStream: Writable
 }
 
-export type Action<T> = ( config: ConfigWithDebug, cmd: any ) => Promise<T>
+export type Action<T> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => Promise<T>
 export type ProjectAction<T> = ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => Promise<T>
 export type ScriptAction<T> = ( config: ConfigWithDebug, cmd: any, generations: Generations ) => Promise<T>
 
