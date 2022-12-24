@@ -8,7 +8,9 @@ export interface FileOps extends CopyFileFns {
   listFiles ( root: string ): Promise<string[]>
 }
 
+
 export interface MeteredFileOps extends FileOps {
+
   digestCount (): number
   lastDigested (): string
   loadFileOrUrlCount (): number
@@ -24,10 +26,18 @@ export interface MeteredFileOps extends FileOps {
   listFilesCount (): number
 }
 export function cacheStats ( fileOps: FileOps ): any {
-  if ( !isMeteredFileOps ( fileOps ) ) return { error: "No cache" }
-  const { saveFileCount, loadFileOrUrlCount, createDirCount } = fileOps
-  return { saveFileCount: saveFileCount (), loadFileOrUrlCount: loadFileOrUrlCount (), createDirCount: createDirCount () }
-
+  const result: any = {}
+  if ( isMeteredFileOps ( fileOps ) ) {
+    const { saveFileCount, loadFileOrUrlCount, createDirCount } = fileOps
+    result.saveFileCount = saveFileCount ()
+    result.loadFileOrUrlCount = loadFileOrUrlCount ()
+    result.createDirCount = createDirCount ()
+  }
+  if ( isCachedFileOps ( fileOps ) ) {
+    result.cacheHits = fileOps.cacheHits ()
+    result.cacheMisses = fileOps.cacheMisses ()
+  }
+  return result
 }
 export function isMeteredFileOps ( fileOps: FileOps ): fileOps is MeteredFileOps {
   const a: any = fileOps
@@ -96,14 +106,18 @@ export const emptyFileOps: FileOps = {
   saveFile (): Promise<void> {return Promise.resolve ();}
 }
 
-export function cachedLoad ( fileOps: FileOps, cache: string ): ( fileOrUrl: string ) => Promise<string> {
+export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheFileOps ): ( fileOrUrl: string ) => Promise<string> {
   if ( cache === undefined ) return fileOps.loadFileOrUrl
   return fileOrUrl => {
     if ( !fileOrUrl.includes ( '://' ) ) return fileOps.loadFileOrUrl ( fileOrUrl )
     const digest = fileOps.digest ( fileOrUrl );
     const cached = cache + '/' + digest
-    return fileOps.loadFileOrUrl ( cached ).then ( result => result,
+    return fileOps.loadFileOrUrl ( cached ).then ( result => {
+        ops.cacheHit ();
+        return result;
+      },
       async () => {
+        ops.cacheMiss ()
         await fileOps.createDir ( cache )
         const result = await fileOps.loadFileOrUrl ( fileOrUrl )
         return fileOps.saveFile ( cached, result ).then ( () => result )
@@ -113,6 +127,13 @@ export function cachedLoad ( fileOps: FileOps, cache: string ): ( fileOrUrl: str
 
 export interface CachedFileOps extends FileOps {
   cached: true
+  cacheHits (): number,
+  cacheMisses (): number
+}
+
+export interface PrivateCacheFileOps {
+  cacheHit (),
+  cacheMiss ()
 }
 
 export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
@@ -120,7 +141,12 @@ export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
   return a.cached === true
 }
 export function cachedFileOps ( fileOps: FileOps, cache: string | undefined ): FileOps | CachedFileOps {
-  return cache === undefined || isCachedFileOps ( fileOps ) ? fileOps : { ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cache ), cached: true }
+  if ( cache === undefined || isCachedFileOps ( fileOps ) ) return fileOps
+  var cacheHits = 0
+  var cacheMisses = 0
+  var ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
+  let result: CachedFileOps = { ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cache, ops ), cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits };
+  return result
 }
 
 export type CopyFileDetails = string

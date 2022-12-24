@@ -9,3 +9,4 @@
 0.3.2 Can have remote templates now
 0.3.3 'laoban init' makes a simpler laoban.json 
 0.3.4 No significant functionality change: cleaning up how things work
+0.3.5 added --cachestats
