@@ -197,7 +197,6 @@ export class Cli {
         ProjectDetailFiles.workOutProjectDetails ( config, cmd )
           .then ( pds => a ( config, cmd, pds ) )
           .then ( res => {
-            console.log ( 'p.cachestats', p.cachestats )
             if ( p.cachestats ) config.outputStream.write ( `Cache stats\n${JSON.stringify ( cacheStats ( fileOps ), null, 2 )}\n` )
             return res
           } )
