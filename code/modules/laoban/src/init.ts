@@ -4,10 +4,14 @@ import path from "path";
 import { output } from "./utils";
 import { FileOps } from "@phil-rice/utils";
 
-export function init ( fileOps: FileOps, configAndIssues: ConfigAndIssues, dir: string, force: undefined | boolean ) {
+export function init ( fileOps: FileOps, configAndIssues: ConfigAndIssues, dir: string, force: undefined | boolean ): Promise<void> {
   let file = path.join ( dir, 'laoban.json' );
-  if ( !force && configAndIssues.config ) return output ( configAndIssues ) ( `This project already has a laoban.json in ${configAndIssues.config.laobanDirectory}. Use --force if you need to create one here` )
-  fileOps.saveFile ( file, defaultLaobanJson )
+  if ( !force && configAndIssues.config ) return Promise.resolve ( output ( configAndIssues ) ( `This project already has a laoban.json in ${configAndIssues.config.laobanDirectory}. Use --force if you need to create one here` ) )
+  return fileOps.saveFile ( file, defaultLaobanJson )
+}
+
+export function initProjects(fileOps: FileOps){
+
 }
 
 export const defaultLaobanJson = `{

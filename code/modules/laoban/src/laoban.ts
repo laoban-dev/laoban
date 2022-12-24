@@ -17,7 +17,7 @@ import { Writable } from "stream";
 import { CommanderStatic } from "commander";
 import { addDebug } from "@phil-rice/debug";
 import { init } from "./init";
-import { FileOps } from "@phil-rice/utils";
+import { cachedFileOps, cacheStats, FileOps, meteredFileOps } from "@phil-rice/utils";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
@@ -174,9 +174,10 @@ export class Cli {
   constructor ( fileOps: FileOps, configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
     const version = require ( "../../package.json" ).version
     this.params = configAndIssues.params
-    var program = require ( 'commander' ).//
-      arguments ( '' ).//
-      option ( '--load.laoban.debug' ).version ( version )//
+    var program = require ( 'commander' )
+      .arguments ( '' )
+      .option ( '-c, --cachestats', "show how the cache was impacted by this command", false )
+      .option ( '--load.laoban.debug' ).version ( version )//
 
     let defaultOptions = this.defaultOptions ( configAndIssues )
     function command ( program: any, cmd: string, description: string, fns: (( a: any ) => any)[] ) {
@@ -193,9 +194,14 @@ export class Cli {
     }
     function projectAction<T> ( p: any, name: string, a: ProjectAction<T>, description: string, ...options: (( p: any ) => any)[] ) {
       return action ( p, name, ( config: ConfigWithDebug, cmd: any ) =>
-        ProjectDetailFiles.workOutProjectDetails ( config, cmd ).//
-          then ( pds => a ( config, cmd, pds ) ).//
-          catch ( displayError ( config.outputStream ) ), description, ...options )
+        ProjectDetailFiles.workOutProjectDetails ( config, cmd )
+          .then ( pds => a ( config, cmd, pds ) )
+          .then ( res => {
+            console.log ( 'p.cachestats', p.cachestats )
+            if ( p.cachestats ) config.outputStream.write ( `Cache stats\n${JSON.stringify ( cacheStats ( fileOps ), null, 2 )}\n` )
+            return res
+          } )
+          .catch ( displayError ( config.outputStream ) ), description, ...options )
     }
 
     function scriptAction<T> ( p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
@@ -295,7 +301,7 @@ const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params:
     const debug = params.includes ( '--load.laoban.debug' )
     const laoban = findLaoban ( process.cwd () )
     if ( debug ) console.log ( `Found laoban.json at ${laoban}\n` )
-    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ( fileOps, laoban, undefined, debug ), debug ) ( laoban );
+    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ( fileOps, laoban, debug ), debug ) ( laoban );
   } catch ( e ) {
     return {
       outputStream,
@@ -308,5 +314,6 @@ const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params:
 export async function makeStandardCli ( fileOps: FileOps, outputStream: Writable, params: string[] ) {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps ) ( process.cwd (), params, outputStream )
   // console.log('makeStandardCli', configAndIssues.config)
-  return new Cli ( fileOps, configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
+  const withCacheAndMetered = cachedFileOps ( meteredFileOps ( fileOps ), configAndIssues?.config?.cacheDir )
+  return new Cli ( withCacheAndMetered, configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
 }

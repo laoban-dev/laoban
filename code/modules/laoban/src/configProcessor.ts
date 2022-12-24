@@ -7,7 +7,7 @@ import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { cachedLoad, FileOps, toArray } from "@phil-rice/utils";
+import { cachedFileOps, FileOps, toArray } from "@phil-rice/utils";
 import WritableStream = NodeJS.WritableStream;
 
 export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
@@ -15,26 +15,27 @@ export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
   if ( cacheDir !== undefined ) return path.join ( laobanDir, cacheDir )
   return path.join ( laobanDir, '.cache' )
 }
-const load = ( fileOps: FileOps, laobanDir: string, cacheDir: string | undefined, debug: boolean ) => async ( filename ): Promise<RawConfig> => {
+const load = ( fileOps: FileOps, laobanDir: string, debug: boolean ) => async ( filename ): Promise<RawConfig> => {
   if ( debug ) console.log ( `About to try and load ${filename}` )
-  const fileContent = await cachedLoad ( fileOps, cacheDir ) ( filename )
+  const fileContent = await fileOps.loadFileOrUrl ( filename )
   if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent )
   const rawConfig: RawConfig = JSON.parse ( fileContent )
   // console.log ( `load ${filename}`, rawConfig.templates )
   const ps = toArray ( rawConfig.parents );
-  const actualCache = findCache ( laobanDir, rawConfig.cacheDir, cacheDir )
+  const actualCache = findCache ( laobanDir, rawConfig.cacheDir, undefined )
   if ( debug ) console.log ( `\nParents are`, ps )
   if ( ps.length === 0 ) return rawConfig
-  const configs: RawConfig[] = await Promise.all ( ps.map ( load ( fileOps, laobanDir, actualCache, debug ) ) )
+  const withCache = cachedFileOps ( fileOps, actualCache )
+  const configs: RawConfig[] = await Promise.all ( ps.map ( load ( withCache, laobanDir, debug ) ) )
   let result = configs.reduce ( combineRawConfigs, rawConfig );
   // console.log ( `load result ${filename}  `, result.templates )
   return result
 }
 
-export const loadLoabanJsonAndValidate = ( files: FileOps, laobanDir: string, cacheDir: string | undefined, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndIssues> => {
+export const loadLoabanJsonAndValidate = ( files: FileOps, laobanDir: string, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndIssues> => {
   const laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
-    const rawConfig = await load ( files, laobanDir, cacheDir, debug ) ( laobanConfigFileName )
+    const rawConfig = await load ( files, laobanDir, debug ) ( laobanConfigFileName )
     const issues = Validate.validate ( `In directory ${path.parse ( laobanDirectory ).name}, ${loabanConfigName}`, rawConfig );
     return { rawConfig, issues: validateLaobanJson ( issues ).errors }
   } catch ( e ) {
@@ -140,17 +141,18 @@ function addScripts ( dic: any, scripts: ScriptDefns ) {
 export function configProcessor ( laoban: string, outputStream: WritableStream, rawConfig: RawConfig ): Config {
   var result: any = { laobanDirectory: laoban, outputStream, laobanConfig: path.join ( laoban, loabanConfigName ) }
   function add ( name: string, raw: any ) {
-    try{
-    result[ name ] = derefence ( result, raw[ name ] )
-  } catch ( e ){
-    console.error(e);
-    throw Error(`Failed to add ${name} to config. Error is ${e}`)}
+    try {
+      result[ name ] = derefence ( result, raw[ name ] )
+    } catch ( e ) {
+      console.error ( e );
+      throw Error ( `Failed to add ${name} to config. Error is ${e}` )
+    }
   }
   add ( "templateDir", rawConfig )
   add ( "versionFile", rawConfig )
   add ( "log", rawConfig )
   add ( "status", rawConfig )
-  add ( "cacheDir", {...rawConfig, cacheDir: findCache(laoban,undefined,rawConfig.cacheDir )})
+  add ( "cacheDir", { ...rawConfig, cacheDir: findCache ( laoban, undefined, rawConfig.cacheDir ) } )
   add ( "profile", rawConfig )
   add ( "packageManager", rawConfig )
   result.templates = rawConfig.templates ? rawConfig.templates : {}
