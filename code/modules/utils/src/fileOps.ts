@@ -25,8 +25,8 @@ export interface MeteredFileOps extends FileOps {
 }
 export function cacheStats ( fileOps: FileOps ): any {
   if ( !isMeteredFileOps ( fileOps ) ) return { error: "No cache" }
-  const { saveFileCount, listFilesCount, createDirCount } = fileOps
-  return { saveFileCount: saveFileCount (), listFilesCount: listFilesCount (), createDirCount: createDirCount () }
+  const { saveFileCount, loadFileOrUrlCount, createDirCount } = fileOps
+  return { saveFileCount: saveFileCount (), loadFileOrUrlCount: loadFileOrUrlCount (), createDirCount: createDirCount () }
 
 }
 export function isMeteredFileOps ( fileOps: FileOps ): fileOps is MeteredFileOps {
@@ -34,7 +34,7 @@ export function isMeteredFileOps ( fileOps: FileOps ): fileOps is MeteredFileOps
   return a.digestCount !== undefined
 }
 export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
-  if (isMeteredFileOps(fileOps))return fileOps
+  if ( isMeteredFileOps ( fileOps ) ) return fileOps
   var digestCount: number = 0;
   var lastDigested: string = undefined
 
@@ -47,6 +47,7 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
   var lastSavedFile: string = undefined;
   var listFilesCount: number = 0
   return {
+    ...fileOps,
     createDirCount: () => createDirCount,
     digestCount: () => digestCount,
     lastCreatedDir: () => lastCreatedDir,
@@ -102,13 +103,18 @@ export function cachedLoad ( fileOps: FileOps, cache: string ): ( fileOrUrl: str
     const digest = fileOps.digest ( fileOrUrl );
     const cached = cache + '/' + digest
     return fileOps.loadFileOrUrl ( cached ).then ( result => result,
-      error => fileOps.createDir ( cache ).then ( () => fileOps.loadFileOrUrl ( fileOrUrl ) ).then ( result => fileOps.saveFile ( cached, result ).then ( () => result ) ) )
+      async () => {
+        await fileOps.createDir ( cache )
+        const result = await fileOps.loadFileOrUrl ( fileOrUrl )
+        return fileOps.saveFile ( cached, result ).then ( () => result )
+      } )
   }
 }
 
 export interface CachedFileOps extends FileOps {
   cached: true
 }
+
 export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
   const a: any = f
   return a.cached === true
@@ -117,9 +123,7 @@ export function cachedFileOps ( fileOps: FileOps, cache: string | undefined ): F
   return cache === undefined || isCachedFileOps ( fileOps ) ? fileOps : { ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cache ), cached: true }
 }
 
-
 export type CopyFileDetails = string
-
 
 export function copyFile ( fileOps: FileOps, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
   return ( offset ) => fileOps.loadFileOrUrl ( rootUrl + '/' + offset )

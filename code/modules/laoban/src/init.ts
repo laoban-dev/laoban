@@ -1,4 +1,4 @@
-import { ConfigAndIssues } from "./config";
+import { Action, ConfigAndIssues } from "./config";
 import * as fs from "fs";
 import path from "path";
 import { output } from "./utils";
@@ -10,7 +10,7 @@ export function init ( fileOps: FileOps, configAndIssues: ConfigAndIssues, dir: 
   return fileOps.saveFile ( file, defaultLaobanJson )
 }
 
-export function initProjects(fileOps: FileOps){
+export function initProjects ( fileOps: FileOps ) {
 
 }
 

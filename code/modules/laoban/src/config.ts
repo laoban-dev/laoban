@@ -2,12 +2,12 @@ import { Generations, ShellResult } from "./executors";
 import { Writable } from "stream";
 // @ts-ignore
 import { Debug } from "@phil-rice/debug";
-import { combineTwoObjects, NameAnd, safeArray, safeObject } from "@phil-rice/utils";
+import { combineTwoObjects, FileOps, NameAnd, safeArray, safeObject } from "@phil-rice/utils";
 
 
 export interface ConfigVariables {
   templateDir: string;
-  parents?: string|string[];
+  parents?: string | string[];
   templates: NameAnd<string>
   versionFile: string;
   sessionDir: string;
@@ -27,10 +27,13 @@ export function combineRawConfigs ( r1: RawConfig, r2: RawConfig ): RawConfig {
   return {
     ...r1, ...r2,
     parent: [ ...safeArray ( r1.parent ), ...safeArray ( r2.parent ) ],
-    templates: combineTwoObjects(r1.templates, r2.templates),
+    templates: combineTwoObjects ( r1.templates, r2.templates ),
     variables: combineTwoObjects ( r1.variables, r2.variables ),
     scripts: combineTwoObjects ( r1.scripts, r2.scripts )
   }
+}
+export function combineRawConfigsAndFileOps ( r1: RawConfigAndFileOps, r2: RawConfigAndFileOps ): RawConfigAndFileOps {
+  return { rawConfig: combineRawConfigs ( r1.rawConfig, r2.rawConfig ), fileOps: r1.fileOps }
 }
 
 export interface PackageJson {
@@ -166,14 +169,17 @@ export interface ProjectDetails {
   template: string,
   "details": Details
 }
-
-
-export interface RawConfigAndIssues {
+export interface RawConfigAndFileOps {
   rawConfig?: RawConfig,
+  fileOps: FileOps
+}
+
+export interface RawConfigAndFileOpsAndIssues extends RawConfigAndFileOps {
   issues: string[]
 }
 export interface ConfigAndIssues extends HasOutputStream {
   config?: Config,
+  fileOps: FileOps
   params: string[]
   issues: string[]
 }

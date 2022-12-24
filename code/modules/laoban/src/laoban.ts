@@ -98,10 +98,10 @@ const profileAction: ProjectAction<void> = ( config: Config, cmd: any, pds: Proj
       prettyPrintProfiles ( output ( config ), 'average', data, p => (p.average / 1000).toFixed ( 3 ) )
     } )
 
-const validationAction = ( params: string[] ): Action<Config | void> =>
-  ( config: ConfigWithDebug, cmd: any ) => ProjectDetailFiles.workOutProjectDetails ( config, cmd ).//
-    then ( ds => validateProjectDetailsAndTemplates ( config, ds ) ).//
-    then ( issues => abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params } ), displayError ( config.outputStream ) )
+const validationAction = ( fileOps: FileOps, params: string[] ): Action<Config | void> =>
+  ( config: ConfigWithDebug, cmd: any ) => ProjectDetailFiles.workOutProjectDetails ( config, cmd )
+    .then ( ds => validateProjectDetailsAndTemplates ( config, ds ) )
+    .then ( issues => abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } ), displayError ( config.outputStream ) )
 
 //TODO This looks like it needs a clean up. It has abort logic and display error logic.
 
@@ -118,8 +118,8 @@ let projectsAction: Action<void> = ( config: ConfigWithDebug, cmd: any ) => {
         let dependsOn = (links && links.length > 0) ? ` depends on [${links.join ()}]` : ""
         output ( config ) ( `${p.directory.padEnd ( dirWidth )} => ${p.projectDetails.name.padEnd ( projWidth )} (${p.projectDetails.template.padEnd ( templateWidth )})${dependsOn}` )
       } )
-    } ).//
-    catch ( displayError ( config.outputStream ) )
+    } )
+    .catch ( displayError ( config.outputStream ) )
 }
 
 const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
@@ -143,6 +143,12 @@ const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[
 // }
 
 
+function postCommand ( p: any, fileOps: FileOps ) {
+  return res => {
+    if ( p.cachestats ) console.log ( `Cache stats ${JSON.stringify ( cacheStats ( fileOps ), null, 2 )}\n` )
+    return res
+  };
+}
 export class Cli {
   private program: any;
   private params: string[]
@@ -171,8 +177,9 @@ export class Cli {
       option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]" )
   }
 
-  constructor ( fileOps: FileOps, configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
+  constructor ( configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
     const version = require ( "../../package.json" ).version
+    const fileOps = configAndIssues.fileOps
     this.params = configAndIssues.params
     var program = require ( 'commander' )
       .arguments ( '' )
@@ -186,20 +193,17 @@ export class Cli {
       return p
     }
     function action<T> ( p: any, name: string, a: Action<T>, description: string, ...options: (( p: any ) => any)[] ) {
-      return command ( p, name, description, options ).//
-        action ( cmd =>
-          configOrReportIssues ( configAndIssues ).then ( addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) ).then ( ( configWithDebug: ConfigWithDebug ) =>
-            a ( configWithDebug, cmd ).//
-              catch ( displayError ( configWithDebug.outputStream ) ) ) )
+      return command ( p, name, description, options )
+        .action ( cmd => configOrReportIssues ( configAndIssues ).then ( addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) )
+          .then ( ( configWithDebug: ConfigWithDebug ) =>
+            a ( configWithDebug, cmd )
+              .then ( postCommand ( p, fileOps ) )
+              .catch ( displayError ( configWithDebug.outputStream ) ) ) )
     }
     function projectAction<T> ( p: any, name: string, a: ProjectAction<T>, description: string, ...options: (( p: any ) => any)[] ) {
       return action ( p, name, ( config: ConfigWithDebug, cmd: any ) =>
         ProjectDetailFiles.workOutProjectDetails ( config, cmd )
           .then ( pds => a ( config, cmd, pds ) )
-          .then ( res => {
-            if ( p.cachestats ) config.outputStream.write ( `Cache stats\n${JSON.stringify ( cacheStats ( fileOps ), null, 2 )}\n` )
-            return res
-          } )
           .catch ( displayError ( config.outputStream ) ), description, ...options )
     }
 
@@ -220,10 +224,10 @@ export class Cli {
     }
     program.command ( 'init' ).description ( 'creates a laoban.json and a template directory in the current dir' ).//
       option ( '-f|--force ', "will overwrite existing laoban.json" ).//
-      action ( cmd => init ( fileOps, configAndIssues, process.cwd (), cmd.force ) )
+      action ( cmd => init ( fileOps, configAndIssues, process.cwd (), cmd.force ).then ( postCommand ( program, fileOps ) ) )
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
-    action ( program, 'validate', validationAction ( this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
+    action ( program, 'validate', validationAction ( fileOps, this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitary command (the rest of the command line).',
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]
@@ -233,6 +237,7 @@ export class Cli {
     projectAction ( program, 'compactStatus', compactStatusAction, 'crunches the status', defaultOptions )
     projectAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
     action ( program, 'projects', projectsAction, 'lists the projects under the laoban directory', this.minimalOptions ( configAndIssues ) )
+
     projectAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ), "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions )
 
     if ( configAndIssues.issues.length == 0 )
@@ -305,6 +310,7 @@ const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params:
     return {
       outputStream,
       params,
+      fileOps,
       issues: [ `Error while starting  ${e.message}` ]
     }
   }
@@ -313,6 +319,5 @@ const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params:
 export async function makeStandardCli ( fileOps: FileOps, outputStream: Writable, params: string[] ) {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps ) ( process.cwd (), params, outputStream )
   // console.log('makeStandardCli', configAndIssues.config)
-  const withCacheAndMetered = cachedFileOps ( meteredFileOps ( fileOps ), configAndIssues?.config?.cacheDir )
-  return new Cli ( withCacheAndMetered, configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
+  return new Cli ( configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
 }
