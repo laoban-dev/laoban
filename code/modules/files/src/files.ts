@@ -17,6 +17,7 @@ function loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
   return fileOrUrl.includes ( "://" ) ? loadUrl ( fileOrUrl ) : loadFile ( fileOrUrl )
 }
 export const fileOps: FileOps = {
+  isDirectory: filename => promises.lstat ( filename ).then ( s => s.isDirectory () ),
   digest: ( s: string ): string => {
     const hash = createHash ( 'sha256' );
     hash.update ( s );

@@ -6,8 +6,25 @@ export interface FileOps extends CopyFileFns {
   digest ( s: string ): string
   createDir: ( dir: string ) => Promise<string | undefined>
   listFiles ( root: string ): Promise<string[]>
+  isDirectory ( filename: string ): Promise<boolean>
+}
+export function lastSegment ( s: string ) {
+  const index = s.lastIndexOf ( '/' )
+  return index === -1 ? s : s.substring ( index + 1 )
 }
 
+export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boolean ) => ( root: string ): Promise<string[]> => {
+  const children = async ( parent: string ): Promise<string[]> => {
+    const addPrefix = ( s1: string ) => ( s2: string ) => s1 === '' ? s2 : s1 + '/' + s2
+    const files = await fileOps.listFiles ( parent )
+    const dirChildren: string[] = files.filter ( d => !stopDirFilter ( d ) ).filter ( fileOps.isDirectory ).map ( addPrefix ( parent ) )
+    let result: string[] = [ ...dirChildren ]
+    let descendents = await Promise.all ( result.map ( children ) )
+    descendents.forEach ( c => result.push ( ...c ) )
+    return result
+  };
+  return children ( root )
+};
 
 export interface MeteredFileOps extends FileOps {
 
@@ -20,12 +37,13 @@ export interface MeteredFileOps extends FileOps {
   lastCreatedDir (): string
 
   saveFileCount (): number
+  savedFiles (): [ string, string ][]
   lastSavedFileName (): string
   lastSavedFile (): string
 
   listFilesCount (): number
 }
-export function cacheStats ( fileOps: FileOps ): any {
+export function fileOpsStats ( fileOps: FileOps ): any {
   const result: any = {}
   if ( isMeteredFileOps ( fileOps ) ) {
     const { saveFileCount, loadFileOrUrlCount, createDirCount } = fileOps
@@ -56,6 +74,7 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
   var lastSavedFileName: string = undefined;
   var lastSavedFile: string = undefined;
   var listFilesCount: number = 0
+  var savedFiles: [ string, string ][] = []
   return {
     ...fileOps,
     createDirCount: () => createDirCount,
@@ -68,6 +87,7 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
     loadFileOrUrlCount: () => loadFileOrUrlCount,
     saveFileCount: () => saveFileCount,
     listFilesCount: () => listFilesCount,
+    savedFiles: () => savedFiles,
 
     createDir ( dir: string ): Promise<string | undefined> {
       createDirCount += 1
@@ -92,6 +112,7 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
       saveFileCount += 1
       lastSavedFile = text
       lastSavedFileName = filename
+      savedFiles.push ( [ filename, text ] )
       return fileOps.saveFile ( filename, text )
     }
   }
@@ -103,7 +124,8 @@ export const emptyFileOps: FileOps = {
   loadFileOrUrl (): Promise<string> {return Promise.resolve ( "" );},
   digest (): string {return "";},
   listFiles (): Promise<string[]> {return Promise.resolve ( [] );},
-  saveFile (): Promise<void> {return Promise.resolve ();}
+  saveFile (): Promise<void> {return Promise.resolve ();},
+  isDirectory ( filename: string ): Promise<boolean> {return Promise.resolve ( false )}
 }
 
 export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheFileOps ): ( fileOrUrl: string ) => Promise<string> {

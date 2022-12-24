@@ -17,7 +17,7 @@ import { Writable } from "stream";
 import { CommanderStatic } from "commander";
 import { addDebug } from "@phil-rice/debug";
 import { init } from "./init";
-import { cachedFileOps, cacheStats, FileOps, meteredFileOps } from "@phil-rice/utils";
+import { FileOps, fileOpsStats } from "@phil-rice/utils";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
@@ -145,7 +145,7 @@ const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[
 
 function postCommand ( p: any, fileOps: FileOps ) {
   return res => {
-    if ( p.cachestats ) console.log ( `Cache stats ${JSON.stringify ( cacheStats ( fileOps ), null, 2 )}\n` )
+    if ( p.cachestats ) console.log ( `Cache stats ${JSON.stringify ( fileOpsStats ( fileOps ), null, 2 )}\n` )
     return res
   };
 }

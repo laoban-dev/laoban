@@ -7,7 +7,7 @@ import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { cachedFileOps, cacheStats, FileOps, isMeteredFileOps, meteredFileOps, toArray } from "@phil-rice/utils";
+import { cachedFileOps, FileOps, fileOpsStats, isMeteredFileOps, meteredFileOps, toArray } from "@phil-rice/utils";
 import WritableStream = NodeJS.WritableStream;
 
 export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
@@ -17,7 +17,7 @@ export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
 }
 const load = ( fileOps: FileOps, laobanDir: string, debug: boolean ) => {
   return async ( filename ): Promise<RawConfigAndFileOps> => {
-    if ( debug ) console.log ( `About to try and load ${filename}` , cacheStats(fileOps))
+    if ( debug ) console.log ( `About to try and load ${filename}` , fileOpsStats(fileOps))
     const fileContent = await fileOps.loadFileOrUrl ( filename )
     if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent)
     const rawConfig: RawConfig = JSON.parse ( fileContent )
