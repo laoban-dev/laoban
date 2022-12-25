@@ -7,7 +7,7 @@ import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { cachedFileOps, FileOps, fileOpsStats, meteredFileOps, toArray } from "@phil-rice/utils";
+import { CachedFileOps, cachedFileOps, FileOps, fileOpsStats, isCachedFileOps, meteredFileOps, toArray } from "@phil-rice/utils";
 import WritableStream = NodeJS.WritableStream;
 
 export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
@@ -15,13 +15,21 @@ export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
   if ( cacheDir !== undefined ) return path.join ( laobanDir, cacheDir )
   return path.join ( laobanDir, '.cache' )
 }
-export type MakeCacheFn = ( rawConfig: RawConfigAndFileOps ) => FileOps
+export type MakeCacheFn = ( rawConfig: RawConfigAndFileOps ) => Promise<FileOps>
 export type MakeCacheFnFromLaobanDir = ( laobanDir: string ) => MakeCacheFn
 
-export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawConfigAndFileOps ) => {
+export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawConfigAndFileOps ): Promise<FileOps> => {
   const actualCache = findCache ( laobanDir, rawConfig.cacheDir, undefined )
-  return cachedFileOps ( meteredFileOps ( fileOps ), actualCache );
+  return Promise.resolve ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ) )
 };
+
+export const makeAndClearCache = ( laobanDir: string ) => async ( rcf: RawConfigAndFileOps ): Promise<FileOps> => {
+  const { rawConfig, fileOps } = rcf
+  let newFileOps = await makeCache ( laobanDir ) ( rcf );
+  const actualCache = isCachedFileOps ( newFileOps ) ? newFileOps.cacheDir : undefined
+  if ( actualCache === undefined ) return Promise.resolve ( newFileOps )
+  return newFileOps.removeDirectory ( actualCache, true ).then ( () => newFileOps.createDir ( actualCache ).then ( () => newFileOps ) )
+}
 const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
   return async ( filename ): Promise<RawConfigAndFileOps> => {
     if ( debug ) console.log ( `About to try and load ${filename}`, fileOpsStats ( fileOps ) )
@@ -31,10 +39,10 @@ const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
     // console.log ( `load ${filename}`, rawConfig.templates )
     const ps = toArray ( rawConfig.parents );
     if ( debug ) console.log ( `\nParents are`, ps )
-    const withCache = makeCache ( { rawConfig, fileOps } );
+    const withCache = await makeCache ( { rawConfig, fileOps } );
     if ( ps.length === 0 ) return { rawConfig, fileOps: withCache }
     const configs: RawConfigAndFileOps[] = await Promise.all ( ps.map ( load ( withCache, makeCache, debug ) ) )
-    const result: RawConfigAndFileOps = { ...configs.reduce ( combineRawConfigsAndFileOps ), ...rawConfig, fileOps: withCache };
+    const result: RawConfigAndFileOps = { ...configs.reduce ( combineRawConfigsAndFileOps, { rawConfig, fileOps: withCache } ) };
     return result
   };
 }

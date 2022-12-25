@@ -43,7 +43,7 @@
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "version": "0.3.5",
+  "version": "0.3.6",
   "template": "typescript",
   "name": "@phil-rice/utils",
   "description": "Those miscellaneous utilities and types that every project needs",

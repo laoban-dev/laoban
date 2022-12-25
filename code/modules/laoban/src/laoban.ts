@@ -1,4 +1,4 @@
-import { copyTemplateDirectory, findLaoban, ProjectDetailFiles } from "./Files";
+import { findLaoban, ProjectDetailFiles } from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate, MakeCacheFn, MakeCacheFnFromLaobanDir } from "./configProcessor";
@@ -18,6 +18,7 @@ import { CommanderStatic } from "commander";
 import { addDebug } from "@phil-rice/debug";
 import { init } from "./init";
 import { FileOps, fileOpsStats } from "@phil-rice/utils";
+import { copyTemplateDirectory } from "./update";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
@@ -184,6 +185,7 @@ export class Cli {
     var program = require ( 'commander' )
       .arguments ( '' )
       .option ( '-c, --cachestats', "show how the cache was impacted by this command", false )
+      .option ( '--clearcache', "removes the cache", false )
       .option ( '--load.laoban.debug' ).version ( version )//
 
     let defaultOptions = this.defaultOptions ( configAndIssues )
@@ -246,8 +248,6 @@ export class Cli {
     program.on ( '--help', () => {
       let log = output ( configAndIssues )
       log ( '' );
-      log ( "Press ? while running for list of 'status' commands. S is the most useful" )
-      log ( '' )
       log ( 'Notes' );
       log ( "  If you are 'in' a project (the current directory has a project.details.json') then commands are executed by default just for the current project " );
       log ( "     but if you are not 'in' a project, the commands are executed for all projects" );

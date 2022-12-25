@@ -1,55 +1,14 @@
 import * as fs from "fs";
-import * as fse from "fs-extra";
 import * as path from "path";
-import { ConfigWithDebug, HasLaobanDirectory, ProjectDetailsAndDirectory } from "./config";
+import { HasLaobanDirectory, ProjectDetailsAndDirectory } from "./config";
 import { Debug } from "@phil-rice/debug";
-import { childDirs, CopyFileDetails, copyFiles, FileOps, findMatchingK, safeArray, safeObject } from "@phil-rice/utils";
+import { childDirs, FileOps, findMatchingK } from "@phil-rice/utils";
 
 
 export let loabanConfigName = 'laoban.json'
 export let projectDetailsFile = 'project.details.json'
 
 export function laobanFile ( dir: string ) { return path.join ( dir, loabanConfigName )}
-
-export function copyTemplateDirectoryByConfig ( config: ConfigWithDebug, template: string, target: string ): Promise<void> {
-  let src = path.join ( config.templateDir, template );
-  let d = config.debug ( 'update' );
-  return d.k ( () => `copyTemplateDirectory directory from ${src}, to ${target}`, () => {
-    fse.copySync ( src, target )
-    // no idea why the fse.copy doesn't work here... it just fails silently
-    return Promise.resolve ()
-  } )
-}
-
-interface TemplateControlFile {
-  files: CopyFileDetails[]
-}
-export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, laobanDirectory: string, templateUrl: string, target: string ): Promise<void> {
-
-  const prefix = templateUrl.includes ( '://' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
-  // console.log ( 'copyTemplateDirectoryFromConfigFile', 'laobanDirectory', laobanDirectory, 'templateUrl', templateUrl, 'prefix', prefix )
-  const url = prefix + '/.template.json';
-  function parseCopyFile ( controlFileAsString: string ): TemplateControlFile {
-    try {
-      return JSON.parse ( controlFileAsString );
-    } catch ( e ) {
-      console.error ( e )
-      throw new Error ( `Error copying template file in ${target} from url ${url}\n${controlFileAsString}\n` )
-    }
-  }
-  // console.log ( 'copyTemplateDirectoryFromConfigFile', cacheUrl, 'url', url )
-  const controlFileAsString = await fileOps.loadFileOrUrl ( url )
-  const controlFile = parseCopyFile ( controlFileAsString );
-  return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target ) ( safeArray ( controlFile.files ) )
-}
-
-export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, template: string, target: string ): Promise<void> {
-  let d = config.debug ( 'update' )
-  const namedTemplateUrl = safeObject ( config.templates )[ template ]
-  d.message ( () => [ `namedTemplateUrl in ${target} for ${template} is ${namedTemplateUrl} (should be undefined if using local template)` ] )
-  if ( namedTemplateUrl === undefined ) return copyTemplateDirectoryByConfig ( config, template, target )
-  return copyTemplateDirectoryFromConfigFile ( fileOps, config.laobanDirectory, namedTemplateUrl, target )
-}
 
 export function findLaoban ( directory: string ): string {
   function find ( dir: string ): string {

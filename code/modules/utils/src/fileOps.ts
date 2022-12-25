@@ -177,6 +177,7 @@ export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheF
 
 export interface CachedFileOps extends FileOps {
   original: FileOps
+  cacheDir: string
   cached: true
   cacheHits (): number,
   cacheMisses (): number
@@ -195,12 +196,15 @@ export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
   return a.cached === true
 }
 
-export function cachedFileOps ( fileOps: FileOps, cache: string | undefined ): FileOps | CachedFileOps {
-  if ( cache === undefined || isCachedFileOps ( fileOps ) ) return fileOps
+export function cachedFileOps ( fileOps: FileOps, cacheDir: string | undefined ): FileOps | CachedFileOps {
+  if ( cacheDir === undefined || isCachedFileOps ( fileOps ) ) return fileOps
   var cacheHits = 0
   var cacheMisses = 0
   var ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
-  let result: CachedFileOps = { ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cache, ops ), cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits, original: fileOps };
+  let result: CachedFileOps = {
+    ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cacheDir, ops ),
+    cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits, original: fileOps, cacheDir
+  };
   return result
 }
 
