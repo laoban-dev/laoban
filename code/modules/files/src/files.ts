@@ -27,5 +27,6 @@ export const fileOps: FileOps = {
   loadFileOrUrl,
   createDir: dir => promises.mkdir ( dir, { recursive: true } ),
   saveFile: ( filename, text ) => promises.writeFile ( filename, text ),
-  listFiles: ( root: string ): Promise<string[]> => promises.readdir ( root )
+  listFiles: ( root: string ): Promise<string[]> => promises.readdir ( root ),
+  removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => promises.rmdir ( filename, { recursive } )
 }

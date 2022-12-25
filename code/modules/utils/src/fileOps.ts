@@ -8,6 +8,7 @@ export interface FileOps extends CopyFileFns {
   listFiles ( root: string ): Promise<string[]>
   isDirectory ( filename: string ): Promise<boolean>
   isFile ( filename: string ): Promise<boolean>
+  removeDirectory ( filename: string, recursive: boolean ): Promise<void>
 }
 export function lastSegment ( s: string ) {
   const index = s.lastIndexOf ( '/' )
@@ -54,14 +55,18 @@ export interface MeteredFileOps extends FileOps {
   lastSavedFile (): string
 
   listFilesCount (): number
+
+  removeDirectoryCount (): number
+  lastRemoveDirectory (): string
 }
 export function fileOpsStats ( fileOps: FileOps ): any {
   const result: any = {}
   if ( isMeteredFileOps ( fileOps ) ) {
-    const { saveFileCount, loadFileOrUrlCount, createDirCount } = fileOps
+    const { saveFileCount, loadFileOrUrlCount, createDirCount, removeDirectoryCount } = fileOps
     result.saveFileCount = saveFileCount ()
     result.loadFileOrUrlCount = loadFileOrUrlCount ()
     result.createDirCount = createDirCount ()
+    result.removeDirectoryCount = removeDirectoryCount ()
   }
   if ( isCachedFileOps ( fileOps ) ) {
     result.cacheHits = fileOps.cacheHits ()
@@ -87,6 +92,9 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
   var lastSavedFile: string = undefined;
   var listFilesCount: number = 0
   var savedFiles: [ string, string ][] = []
+  var removeDirectoryCount: number = 0
+  var lastRemoveDirectory: string = undefined
+
   return {
     ...fileOps,
     createDirCount: () => createDirCount,
@@ -100,7 +108,8 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
     saveFileCount: () => saveFileCount,
     listFilesCount: () => listFilesCount,
     savedFiles: () => savedFiles,
-
+    removeDirectoryCount: () => removeDirectoryCount,
+    lastRemoveDirectory: (): string => lastRemoveDirectory,
     createDir ( dir: string ): Promise<string | undefined> {
       createDirCount += 1
       lastCreatedDir = dir
@@ -126,6 +135,11 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
       lastSavedFileName = filename
       savedFiles.push ( [ filename, text ] )
       return fileOps.saveFile ( filename, text )
+    },
+    removeDirectory ( filename: string, recursive: boolean ): Promise<void> {
+      removeDirectoryCount += 1
+      lastRemoveDirectory = filename
+      return fileOps.removeDirectory ( filename, recursive )
     }
   }
 }
@@ -138,8 +152,8 @@ export const emptyFileOps: FileOps = {
   listFiles (): Promise<string[]> {return Promise.resolve ( [] );},
   saveFile (): Promise<void> {return Promise.resolve ();},
   isDirectory ( filename: string ): Promise<boolean> {return Promise.resolve ( false )},
-  isFile: ( filename: string ): Promise<boolean> => {return Promise.resolve ( false )}
-
+  isFile: ( filename: string ): Promise<boolean> => {return Promise.resolve ( false )},
+  removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => Promise.resolve ()
 }
 
 export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheFileOps ): ( fileOrUrl: string ) => Promise<string> {

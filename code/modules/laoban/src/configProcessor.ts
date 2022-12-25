@@ -17,9 +17,9 @@ export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
 }
 const load = ( fileOps: FileOps, laobanDir: string, debug: boolean ) => {
   return async ( filename ): Promise<RawConfigAndFileOps> => {
-    if ( debug ) console.log ( `About to try and load ${filename}` , fileOpsStats(fileOps))
+    if ( debug ) console.log ( `About to try and load ${filename}`, fileOpsStats ( fileOps ) )
     const fileContent = await fileOps.loadFileOrUrl ( filename )
-    if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent)
+    if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent )
     const rawConfig: RawConfig = JSON.parse ( fileContent )
     // console.log ( `load ${filename}`, rawConfig.templates )
     const ps = toArray ( rawConfig.parents );
@@ -27,8 +27,8 @@ const load = ( fileOps: FileOps, laobanDir: string, debug: boolean ) => {
     if ( debug ) console.log ( `\nParents are`, ps )
     const withCache = cachedFileOps ( meteredFileOps ( fileOps ), actualCache )
     if ( ps.length === 0 ) return { rawConfig, fileOps: withCache }
-    const configs: RawConfigAndFileOps[] = await Promise.all ( ps.map ( load ( withCache, laobanDir, debug )  ) )
-    const result = configs.reduce ( combineRawConfigsAndFileOps, { rawConfig, fileOps: withCache } );
+    const configs: RawConfigAndFileOps[] = await Promise.all ( ps.map ( load ( withCache, laobanDir, debug ) ) )
+    const result: RawConfigAndFileOps = { ...configs.reduce ( combineRawConfigsAndFileOps ), ...rawConfig, fileOps: withCache };
     return result
   };
 }

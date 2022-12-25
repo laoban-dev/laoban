@@ -66,15 +66,15 @@ let initAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) =>
   return Promise.resolve ( output ( config ) ( "init called" ) )
 }
 
-//TODO sort out type signature.. and it's just messy
-function runAction ( executeCommand: any, command: () => string, executeGenerations: ExecuteGenerations ): Action<GenerationsResult> {
-  return ( fileOps: FileOps, config: Config, cmd: any ) => {
-    // console.log('runAction', command())
-    let s: ScriptDetails = { name: '', description: `run ${command}`, commands: [ { name: 'run', command: command (), status: false } ] }
-    // console.log('command.run', command)
-    return executeCommand ( config, s, executeGenerations ) ( config, cmd )
-  }
-}
+// //TODO sort out type signature.. and it's just messy
+// function runAction ( executeCommand: any, command: () => string, executeGenerations: ExecuteGenerations ): Action<GenerationsResult> {
+//   return ( fileOps: FileOps, config: Config, cmd: any ) => {
+//     // console.log('runAction', command())
+//     let s: ScriptDetails = { name: '', description: `run ${command}`, commands: [ { name: 'run', command: command (), status: false } ] }
+//     // console.log('command.run', command)
+//     return executeCommand ( config, s, executeGenerations ) ( config, cmd )
+//   }
+// }
 
 
 let statusAction: ProjectAction<void> = ( config: Config, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
