@@ -1,14 +1,14 @@
 import { copyTemplateDirectory, findLaoban, ProjectDetailFiles } from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
-import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate } from "./configProcessor";
+import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate, MakeCacheFn, MakeCacheFnFromLaobanDir } from "./configProcessor";
 import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
 import { loadVersionFile, modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus } from "./status";
 import * as os from "os";
-import { execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, GenerationsResult, make, streamName, timeIt } from "./executors";
+import { execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, make, streamName, timeIt } from "./executors";
 import { output, Strings } from "./utils";
 import { validateProjectDetailsAndTemplates } from "./validation";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
@@ -300,12 +300,12 @@ export function executeGenerations ( outputStream: Writable ): ExecuteGeneration
   return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration, shellReporter ( outputStream ) ) )
 }
 
-const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {
+const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {
   try {
     const debug = params.includes ( '--load.laoban.debug' )
     const laoban = findLaoban ( process.cwd () )
     if ( debug ) console.log ( `Found laoban.json at ${laoban}\n` )
-    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ( fileOps, laoban, debug ), debug ) ( laoban );
+    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ( fileOps, makeCacheFn ( laoban ), debug ), debug ) ( laoban );
   } catch ( e ) {
     return {
       outputStream,
@@ -316,8 +316,8 @@ const loadLaobanAndIssues = ( fileOps: FileOps ) => async ( dir: string, params:
   }
 
 };
-export async function makeStandardCli ( fileOps: FileOps, outputStream: Writable, params: string[] ) {
-  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps ) ( process.cwd (), params, outputStream )
+export async function makeStandardCli ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir, outputStream: Writable, params: string[] ) {
+  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCacheFn ) ( process.cwd (), params, outputStream )
   // console.log('makeStandardCli', configAndIssues.config)
   return new Cli ( configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
 }
