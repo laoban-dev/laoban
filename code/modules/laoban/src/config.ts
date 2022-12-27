@@ -156,6 +156,12 @@ export interface ProjectDetailsAndDirectory {
   directory: string
   projectDetails?: ProjectDetails
 }
+export interface ProjectDetailsDirectoryAndVersion {
+  version: string
+  directory: string
+  projectDetails?: ProjectDetails
+}
+
 export interface Details {
   "publish": boolean,
   "links": string[],

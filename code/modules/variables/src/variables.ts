@@ -49,9 +49,11 @@ export function replaceVar ( context: string, ref: string, dic: any, options: De
   const obj = findVar ( dic, withoutStartEnd )
   const last = lastSegment ( withoutStartEnd, '.' )
   const { result, error } = processVariable ( last, obj, options )
-  if ( error !== undefined )
-    if ( options?.throwError ) {throw new Error ( context + '\n' + safeArray ( error ).join ( ',' ) )} else
-      return `//LAOBAN-UPDATE-ERROR ${context} ${error}. ref was ${ref}. Value was ${JSON.stringify ( obj )}`
+  if ( error !== undefined ) {
+    console.log('dic', dic)
+    if ( options?.throwError ) {throw new Error ( context + `Ref is ${ref}\n` + safeArray ( error ).join ( ',' ) )} else
+      return `//LAOBAN-UPDATE-ERROR ${context} for ref [${ref}]. ${error}. Value was ${JSON.stringify ( obj )}`
+  }
   return result
 }
 function findIndentString ( parts: string[] ): ProcessedVariableResult {

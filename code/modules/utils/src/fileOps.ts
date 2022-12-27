@@ -1,5 +1,5 @@
 import { NameAnd } from "./utils";
-import { derefence, replaceVar } from "@phil-rice/variables";
+
 
 export interface CopyFileFns {
   loadFileOrUrl: ( fileOrUrl: string ) => Promise<string>
@@ -207,10 +207,9 @@ export function cachedFileOps ( fileOps: FileOps, cacheDir: string | undefined )
   return result
 }
 
-type TemplateTypes = 'nochange' | 'variables'
 interface TemplateFileDetails {
   file: string
-  type: TemplateFileDetails
+  type: string
 }
 export function isTemplateFileDetails ( t: CopyFileDetails ): t is TemplateFileDetails {
   const a: any = t
@@ -223,20 +222,20 @@ export function fileNameFrom ( f: CopyFileDetails ): string {
 }
 export type CopyFileDetails = string | TemplateFileDetails
 
-export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target: string, variables: any ): ( fd: CopyFileDetails ) => Promise<void> {
-  return ( offset ) => {
-    const fileName = fileNameFrom ( offset );
-    return fileOps
-      .loadFileOrUrl ( rootUrl + '/' + fileName )
-      .then ( file => fileOps.saveFile ( target + '/' + fileName, variables && isTemplateFileDetails ( offset ) ? derefence (`copyFileAndTransform ${fileName}`, variables, file ) : file ) );
+export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) => string ): ( fd: CopyFileDetails ) => Promise<void> {
+  return async ( cfd ) => {
+    const fileName = fileNameFrom ( cfd );
+    const text = await fileOps.loadFileOrUrl ( rootUrl + '/' + fileName )
+    const txformed = tx && isTemplateFileDetails ( cfd ) ? tx ( cfd.type, text ) : text
+    return fileOps.saveFile ( target + '/' + fileName, txformed );
   }
 }
 
 export function copyFile ( fileOps: FileOps, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
   return copyFileAndTransform ( fileOps, rootUrl, target, undefined )
 }
-export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string, variables: any | undefined ): ( fs: CopyFileDetails[] ) => Promise<void> {
-  const cf = copyFileAndTransform ( fileOps, rootUrl, target, variables )
+export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) => string ): ( fs: CopyFileDetails[] ) => Promise<void> {
+  const cf = copyFileAndTransform ( fileOps, rootUrl, target, tx )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );
     throw Error ( `Error ${context}\nFile ${f}\n${e}` )

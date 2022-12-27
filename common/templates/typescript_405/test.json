@@ -1,6 +1,7 @@
 {
   "name": "${projectDetails.name}",
   "description": "${projectDetails.description}",
-  "version": "${version}"
+  "version": "${version}",
+  "links": "${projectDetails.details.link:map<<>>(i:\"<<i>>\":\"<<version>>\")}"
 
 }

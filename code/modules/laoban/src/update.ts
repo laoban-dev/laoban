@@ -1,7 +1,8 @@
 import { CopyFileDetails, copyFiles, FileOps, safeArray, safeObject } from "@phil-rice/utils";
 import path from "path";
-import { ConfigWithDebug, ProjectDetailsAndDirectory } from "./config";
+import { ConfigWithDebug, ProjectDetailsAndDirectory, ProjectDetailsDirectoryAndVersion } from "./config";
 import * as fse from "fs-extra";
+import { derefence, dollarsBracesVarDefn, VariableDefn } from "@phil-rice/variables";
 
 export function copyTemplateDirectoryByConfig ( config: ConfigWithDebug, template: string, target: string ): Promise<void> {
   let src = path.join ( config.templateDir, template );
@@ -16,11 +17,14 @@ interface TemplateControlFile {
   files: CopyFileDetails[]
 }
 
-// type ModifyTemplateBy = 'nothing' | 'variables'
-// interface TemplateFileDetails {
-//   file: string
-//   modifyBy
-// }
+export const transformFile = ( context: string, dic: any ) => ( type: string, text: string ): string => {
+  function variableDefn (): VariableDefn {
+    if ( type === '${}' ) return dollarsBracesVarDefn
+    throw new Error ( `${context}. Unexpected type ${type}` )
+  }
+  return derefence ( context, dic, text, { throwError: true, variableDefn: variableDefn () } )
+};
+
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {
   const prefix = templateUrl.includes ( '://' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const url = prefix + '/.template.json';
@@ -35,12 +39,9 @@ export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, la
   }
   const controlFileAsString = await fileOps.loadFileOrUrl ( url )
   const controlFile = parseCopyFile ( controlFileAsString );
-  return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target, p ) ( safeArray ( controlFile.files ) )
+  return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target, transformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p ) ) ( safeArray ( controlFile.files ) )
 }
-export interface ConfigWithDebugAndVersion extends ConfigWithDebug{
-  version: string
-}
-export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebugAndVersion, p: ProjectDetailsAndDirectory ): Promise<void> {
+export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryAndVersion ): Promise<void> {
   let d = config.debug ( 'update' )
   const template = p.projectDetails.template
   const target = p.directory
