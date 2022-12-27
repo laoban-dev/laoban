@@ -38,7 +38,10 @@ export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, la
   const controlFile = parseCopyFile ( controlFileAsString );
   return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target, p ) ( safeArray ( controlFile.files ) )
 }
-export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsAndDirectory ): Promise<void> {
+export interface ConfigWithDebugAndVersion extends ConfigWithDebug{
+  version: string
+}
+export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebugAndVersion, p: ProjectDetailsAndDirectory ): Promise<void> {
   let d = config.debug ( 'update' )
   const template = p.projectDetails.template
   const target = p.directory

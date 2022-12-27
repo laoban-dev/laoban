@@ -11,3 +11,4 @@
 0.3.4 No significant functionality change: cleaning up how things work
 0.3.5 added --cachestats
 0.3.6 added --clearcache
+0.3.7 variables can now be of form${var:object:indent4:comma} which allows objects to be merged in templates

@@ -1,6 +1,18 @@
 /** ref is like ${xxx} and this returns dic[xxx]. */
 import { firstSegment, lastSegment, safeArray } from "@phil-rice/utils";
 
+export interface VariableDefn {
+  regex: RegExp
+  removeStartEnd: ( s: string ) => string
+}
+export const dollarsBracesVarDefn: VariableDefn = {
+  regex: /(\$\{[^}]*\})/g,
+  removeStartEnd: ref => ref.slice ( 2, ref.length - 1 )
+}
+export const fulltextVariableDefn: VariableDefn = {
+  regex: /(\$.*^)/g,
+  removeStartEnd: ref => ref
+}
 interface ProcessedVariableResult {
   result: string
   error?: string | string[]
@@ -8,12 +20,18 @@ interface ProcessedVariableResult {
 
 interface DereferenceOptions {
   allowUndefined?: true
+  undefinedIs?: string
   throwError?: true
+  variableDefn?: VariableDefn
+}
+
+function variableDefn ( options: DereferenceOptions | undefined ): VariableDefn {
+  return options?.variableDefn ? options.variableDefn : dollarsBracesVarDefn;
 }
 
 /** If the string has ${a} in it, then that is replaced by the dic entry */
 export function derefence ( context: string, dic: any, s: string, options?: DereferenceOptions ) {
-  const regex = /(\$\{[^}]*\})/g
+  const regex = variableDefn ( options ).regex
   let groups = s.match ( regex )
   return groups ? groups.reduce ( ( acc, v ) => acc.replace ( v, replaceVar ( context, v, dic, options ) ), s ) : s;
 }
@@ -27,9 +45,9 @@ export function findVar ( dic: any, ref: string ): any {
   } catch ( e ) {return undefined}
 }
 export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
-  const withoutDollarsBrackets = ref.slice ( 2, ref.length - 1 );
-  const obj = findVar ( dic, withoutDollarsBrackets )
-  const last = lastSegment ( withoutDollarsBrackets, '.' )
+  const withoutStartEnd = variableDefn ( options ).removeStartEnd ( ref )
+  const obj = findVar ( dic, withoutStartEnd )
+  const last = lastSegment ( withoutStartEnd, '.' )
   const { result, error } = processVariable ( last, obj, options )
   if ( error !== undefined )
     if ( options?.throwError ) {throw new Error ( context + '\n' + safeArray ( error ).join ( ',' ) )} else
@@ -46,7 +64,7 @@ function findIndentString ( parts: string[] ): ProcessedVariableResult {
   }
 }
 export function processVariable ( nameWithCommands: string, value: any | undefined, options: DereferenceOptions | undefined ): ProcessedVariableResult {
-  if ( value === undefined && options?.allowUndefined ) return value
+  if ( value === undefined && options?.allowUndefined ) return { result: options?.undefinedIs }
   function error ( error: string | string[] ): ProcessedVariableResult {
     return { result: nameWithCommands, error }
   }

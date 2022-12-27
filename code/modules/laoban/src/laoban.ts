@@ -1,7 +1,7 @@
 import { findLaoban, ProjectDetailFiles } from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
-import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate, MakeCacheFn, MakeCacheFnFromLaobanDir } from "./configProcessor";
+import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate, MakeCacheFnFromLaobanDir } from "./configProcessor";
 import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
@@ -58,13 +58,15 @@ let configAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) 
   let simpleConfig = { ...config }
   delete simpleConfig.scripts
   delete simpleConfig.outputStream
-  return Promise.resolve ( output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) ) )
+  output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) )
+  return Promise.resolve ()
 }
 let initAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
   let simpleConfig = { ...config }
   delete simpleConfig.scripts
   delete simpleConfig.outputStream
-  return Promise.resolve ( output ( config ) ( "init called" ) )
+  output ( config ) ( "init called" )
+  return Promise.resolve ()
 }
 
 // //TODO sort out type signature.. and it's just messy
@@ -125,13 +127,12 @@ let projectsAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, 
 
 const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
   let d = config.debug ( 'update' )
-  return Promise.all ( pds.map ( p =>
-    d.k ( () => `${p.directory} copyTemplateDirectory`, () => copyTemplateDirectory ( fileOps, config, p ).then ( () => {
-      d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) ).then ( raw =>
-        d.k ( () => `${p.directory} loadVersionFile`, () => loadVersionFile ( config ) ).//
-          then ( version => d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) ) ) )
-    } ) )
-  ) )
+  return Promise.all ( pds.map ( async p => {
+    const version = await d.k ( () => `${p.directory} loadVersionFile`, () => loadVersionFile ( config ) )
+    await d.k ( () => `${p.directory} copyTemplateDirectory`, () => copyTemplateDirectory ( fileOps, { ...config, version }, p ) )
+    const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
+    return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )
+  } ) )
 }
 
 // function command<T>(p: commander.CconfigOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues) => (cmd: string,a: Action<T>, description: string, ...fns: ((a: any) => any)[]) {
@@ -168,7 +169,7 @@ export class Cli {
         option ( '-g, --generationPlan', "instead of executing shows the generation plan", false ).//
         option ( '-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle.toString () ).//
         option ( '-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false ).//
-        option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]" ).//
+        option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link,guard]" ).//
         option ( '--sessionId <sessionId>', "specifies the session id, which is mainly used for logging" )
     }
   }
@@ -265,7 +266,7 @@ export class Cli {
     } );
     program.on ( 'command:*',
       function () {
-        output ( configAndIssues ) ( `Invalid command: ${this.program.args.join ( ' ' )}\nSee --help for a list of available commands.` );
+        output ( configAndIssues ) ( `Invalid command: ${program.args.join ( ' ' )}\nSee --help for a list of available commands.` );
         abortWithReportIfAnyIssues ( configAndIssues )
         process.exit ( 1 );
       }

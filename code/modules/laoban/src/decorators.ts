@@ -206,14 +206,17 @@ export class CommandDecorators {
   static guardDecorate: ( guardDecorator: GuardDecorator ) => CommandDecorator = dec => e =>
     d => {
       let s = d.scriptInContext.debug ( 'scripts' )
+      let g = d.scriptInContext.debug ( 'guard' )
       let guard = dec.guard ( d )
+      g.message ( () => [ `Guard ${d.detailsAndDirectory.directory} ${d.scriptInContext.details.name}.[${guard}]=${dec?.valid ( guard, d )}` ] )
       return (guard === undefined || dec.valid ( guard, d )) ? e ( d ) : s.k ( () => `Script killed by guard ${dec.name}`, () => Promise.resolve ( [] ) )
     }
 
   static guard: GuardDecorator = {
     name: 'guard',
     guard: d => d.scriptInContext.details.guard,
-    valid: ( g, d ) => derefence ( `Guard for ${d.scriptInContext?.details?.name}`, d.details.dic, g, { allowUndefined: true, throwError: true } ) != ''
+    valid: ( g, d ) => {
+      return derefence ( `Guard for ${d.scriptInContext?.details?.name}`, d.details.dic, g, { allowUndefined: true, throwError: true, undefinedIs: '' } ) != '';}
   }
   static osGuard: GuardDecorator = {
     name: 'osGuard',
