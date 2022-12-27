@@ -12,3 +12,4 @@
 0.3.5 added --cachestats
 0.3.6 added --clearcache
 0.3.7 variables can now be of form${var:object:indent4:comma} which allows objects to be merged in templates
+0.3.8 fixed issues with guards introduced by 0.3.7
