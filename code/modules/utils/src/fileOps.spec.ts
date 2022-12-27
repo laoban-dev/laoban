@@ -1,4 +1,5 @@
-import { cachedFileOps, cachedLoad, fileOpsStats, emptyFileOps, meteredFileOps, MeteredFileOps, copyFile, copyFiles, childDirs, lastSegment } from "./fileOps";
+import { cachedFileOps, childDirs, copyFile, copyFiles, emptyFileOps, fileOpsStats, meteredFileOps, MeteredFileOps } from "./fileOps";
+import { lastSegment } from "./strings";
 
 const foundFileOps = (): MeteredFileOps => meteredFileOps ( {
   ...emptyFileOps,
@@ -31,28 +32,28 @@ describe ( "fileOps", () => {
       const fileOps = foundFileOps ();
       const cached = cachedFileOps ( fileOps, undefined );
       expect ( await cached.loadFileOrUrl ( 'https://someUrl' ) ).toEqual ( 'loaded_https://someUrl' )
-      expect ( fileOpsStats ( fileOps ) ).toEqual ( { "createDirCount": 0, "loadFileOrUrlCount": 1, "saveFileCount": 0 ,"removeDirectoryCount": 0} )
+      expect ( fileOpsStats ( fileOps ) ).toEqual ( { "createDirCount": 0, "loadFileOrUrlCount": 1, "saveFileCount": 0, "removeDirectoryCount": 0 } )
       expect ( fileOps.digestCount () ).toEqual ( 0 )
     } )
     it ( "should use the cached value if it exists for urls when cache defined", async () => {
       const fileOps = foundFileOps ();
       const cached = cachedFileOps ( fileOps, 'cache' );
       expect ( await cached.loadFileOrUrl ( 'https://someUrl' ) ).toEqual ( 'loaded_cache/digested(https://someUrl)' )
-      expect ( fileOpsStats ( fileOps ) ).toEqual ( { "createDirCount": 0, "loadFileOrUrlCount": 1, "saveFileCount": 0 ,"removeDirectoryCount": 0} )
+      expect ( fileOpsStats ( fileOps ) ).toEqual ( { "createDirCount": 0, "loadFileOrUrlCount": 1, "saveFileCount": 0, "removeDirectoryCount": 0 } )
       expect ( fileOps.digestCount () ).toEqual ( 1 )
     } )
     it ( "should use the fileops value if cached value doesn't exist  when cache defined", async () => {
       const fileOps = foundFileOps ();
       const cached = cachedFileOps ( fileOps, 'cache' );
       expect ( await cached.loadFileOrUrl ( 'https://someUrl' ) ).toEqual ( 'loaded_cache/digested(https://someUrl)' )
-      expect ( fileOpsStats ( fileOps ) ).toEqual ( { "createDirCount": 0, "loadFileOrUrlCount": 1, "saveFileCount": 0,"removeDirectoryCount": 0 } )
+      expect ( fileOpsStats ( fileOps ) ).toEqual ( { "createDirCount": 0, "loadFileOrUrlCount": 1, "saveFileCount": 0, "removeDirectoryCount": 0 } )
       expect ( fileOps.digestCount () ).toEqual ( 1 )
     } )
     it ( "should use the fileops if the item isn't in the cache, and then it should save the item in the cache", async () => {
       const fileOps = notInCacheFileOps ();
       const cached = cachedFileOps ( fileOps, 'cache' );
       expect ( await cached.loadFileOrUrl ( 'https://someUrl' ) ).toEqual ( 'loaded_https://someUrl' )
-      expect ( fileOpsStats ( fileOps ) ).toEqual ( { "createDirCount": 1, "loadFileOrUrlCount": 2, "saveFileCount": 1,"removeDirectoryCount": 0 } )
+      expect ( fileOpsStats ( fileOps ) ).toEqual ( { "createDirCount": 1, "loadFileOrUrlCount": 2, "saveFileCount": 1, "removeDirectoryCount": 0 } )
       expect ( fileOps.digestCount () ).toEqual ( 1 )
       expect ( fileOps.lastSavedFileName () ).toEqual ( 'cache/digested(https://someUrl)' )
       expect ( fileOps.lastSavedFile () ).toEqual ( 'loaded_https://someUrl' )
@@ -72,7 +73,7 @@ describe ( "copyFile", () => {
 describe ( "copyFiles", () => {
   it ( "it should copy files", async () => {
     const fileOps = foundFileOps ();
-    await copyFiles ( 'someContext', fileOps, 'rootUrl', 'target' ) ( [ 'url1', 'url2' ] )
+    await copyFiles ( 'someContext', fileOps, 'rootUrl', 'target', copyFiles ) ( [ 'url1', 'url2' ] )
     expect ( fileOps.savedFiles () ).toEqual ( [
       [ "target/url1", "loaded_rootUrl/url1" ],
       [ "target/url2", "loaded_rootUrl/url2" ]

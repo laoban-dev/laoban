@@ -1,3 +1,6 @@
+import { NameAnd } from "./utils";
+import { derefence, replaceVar } from "@phil-rice/variables";
+
 export interface CopyFileFns {
   loadFileOrUrl: ( fileOrUrl: string ) => Promise<string>
   saveFile ( filename: string, text: string ): Promise<void>
@@ -9,10 +12,6 @@ export interface FileOps extends CopyFileFns {
   isDirectory ( filename: string ): Promise<boolean>
   isFile ( filename: string ): Promise<boolean>
   removeDirectory ( filename: string, recursive: boolean ): Promise<void>
-}
-export function lastSegment ( s: string ) {
-  const index = s.lastIndexOf ( '/' )
-  return index === -1 ? s : s.substring ( index + 1 )
 }
 
 interface StringAndExist {
@@ -208,14 +207,36 @@ export function cachedFileOps ( fileOps: FileOps, cacheDir: string | undefined )
   return result
 }
 
-export type CopyFileDetails = string
+type TemplateTypes = 'nochange' | 'variables'
+interface TemplateFileDetails {
+  file: string
+  type: TemplateFileDetails
+}
+export function isTemplateFileDetails ( t: CopyFileDetails ): t is TemplateFileDetails {
+  const a: any = t
+  return a.type !== undefined
+}
+export function fileNameFrom ( f: CopyFileDetails ): string {
+  if ( isTemplateFileDetails ( f ) ) return f.file
+  if ( typeof f === 'string' ) return f
+  throw new Error ( `Cannot find file name in [${f}]` )
+}
+export type CopyFileDetails = string | TemplateFileDetails
+
+export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target: string, variables: any ): ( fd: CopyFileDetails ) => Promise<void> {
+  return ( offset ) => {
+    const fileName = fileNameFrom ( offset );
+    return fileOps
+      .loadFileOrUrl ( rootUrl + '/' + fileName )
+      .then ( file => fileOps.saveFile ( target + '/' + fileName, variables && isTemplateFileDetails ( offset ) ? derefence (`copyFileAndTransform ${fileName}`, variables, file ) : file ) );
+  }
+}
 
 export function copyFile ( fileOps: FileOps, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
-  return ( offset ) => fileOps.loadFileOrUrl ( rootUrl + '/' + offset )
-    .then ( file => fileOps.saveFile ( target + '/' + offset, file ) )
+  return copyFileAndTransform ( fileOps, rootUrl, target, undefined )
 }
-export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string ): ( fs: CopyFileDetails[] ) => Promise<void> {
-  const cf = copyFile ( fileOps, rootUrl, target )
+export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string, variables: any | undefined ): ( fs: CopyFileDetails[] ) => Promise<void> {
+  const cf = copyFileAndTransform ( fileOps, rootUrl, target, variables )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );
     throw Error ( `Error ${context}\nFile ${f}\n${e}` )

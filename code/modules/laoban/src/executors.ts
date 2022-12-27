@@ -1,11 +1,12 @@
 import * as cp from 'child_process'
 import { CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
-import { cleanUpEnv, derefence } from "./configProcessor";
+import { cleanUpEnv } from "./configProcessor";
 import * as path from "path";
 
 import { chain, flatten, writeTo } from "./utils";
 import { Writable } from "stream";
 import { CommandDecorator } from "./decorators";
+import { derefence } from "@phil-rice/variables";
 
 export interface RawShellResult {
   err: any
@@ -45,7 +46,7 @@ export interface CommandDetails {
 function calculateDirectory ( directory: string, command: CommandDefn ) { return (command.directory) ? path.join ( directory, command.directory ) : directory;}
 
 export function streamNamefn ( sessionDir: string, sessionId: string, scriptName: string, directory: string ) {
-  let paths = directory.replace ( /\//g, '_' ).replace ( /\\/g, '_' ).replace(/:/g, "");
+  let paths = directory.replace ( /\//g, '_' ).replace ( /\\/g, '_' ).replace ( /:/g, "" );
   let result = path.join ( sessionDir, sessionId, paths ) + '.' + scriptName + '.log';
   // console.log("streamNamefn -sessionDir", sessionDir)
   // console.log("streamNamefn -directory", directory)
@@ -64,15 +65,16 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectory ): S
     let directory = calculateDirectory ( scd.detailsAndDirectory.directory, cmd )
     function makeShellDetails ( link?: string ) {
       let dic = { ...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails, link }
-      let env = cleanUpEnv ( dic, scd.scriptInContext.details.env );
+      let name = scd.scriptInContext?.details?.name;
+      let env = cleanUpEnv ( `Script ${name}.env`, dic, scd.scriptInContext.details.env );
       let resultForOneCommand: ShellCommandDetails<CommandDetails> = {
         ...scd,
         details: ({
           command: cmd,
-          commandString: derefence ( dic, cmd.command ),
+          commandString: derefence ( `Script ${name}.commandString`, dic, cmd.command, { throwError: true } ),
           dic: dic,
           env: env,
-          directory: derefence ( dic, directory ),
+          directory: derefence ( `Script ${name}.directory`, dic, directory, { throwError: true } ),
         })
       };
       return resultForOneCommand;
@@ -149,7 +151,7 @@ export function make ( shell: RawCommandExecutor, js: RawCommandExecutor, timeIt
 export let execInSpawn: RawCommandExecutor = ( d: ShellCommandDetails<CommandDetails> ) => {
   // console.log('in execInSpawn', d.details)
   let cwd = d.details.directory;
-  let options = { cwd, env: { ...process.env, ...d.details.env }}
+  let options = { cwd, env: { ...process.env, ...d.details.env } }
 
   //  let cwd = d.details.directory;
   //   let rawOptions = d.details.env ? { cwd: cwd, env: { ...process.env, ...d.details.env } } : { cwd: cwd }

@@ -4,6 +4,7 @@
   "description": "A library that can dereference ${xxx} in strings",
   "details":     {
     "publish": true,
+    "links": ["@phil-rice/utils"],
     "tsc":     true,
     "test":    true
   }

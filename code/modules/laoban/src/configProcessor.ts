@@ -7,7 +7,8 @@ import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { CachedFileOps, cachedFileOps, FileOps, fileOpsStats, isCachedFileOps, meteredFileOps, toArray } from "@phil-rice/utils";
+import { cachedFileOps, FileOps, fileOpsStats, isCachedFileOps, meteredFileOps, toArray } from "@phil-rice/utils";
+import { derefence } from "@phil-rice/variables";
 import WritableStream = NodeJS.WritableStream;
 
 export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
@@ -80,44 +81,6 @@ export function loadConfigOrIssues ( outputStream: Writable, params: string[], f
 }
 
 
-/** ref is like ${xxx} and this returns dic[xxx]. If the variable doesn't exist it is left alone... */
-function replaceVar ( dic: any, ref: string ): string {
-  if ( ref === undefined ) return undefined
-  let i = ref.slice ( 2, ref.length - 1 );
-  let parts = i.split ( '.' )
-  try {
-    let result = parts.reduce ( ( acc, part ) => acc[ part ], dic )
-    return result !== undefined ? result : ref
-  } catch ( e ) {return ref}
-}
-/** If the string has ${a} in it, then that is replaced by the dic entry */
-export function derefence ( dic: any, s: string ) {
-  const regex = /(\$\{[^}]*\})/g
-  let groups = s.match ( regex )
-  return groups ? groups.reduce ( ( acc, v ) => acc.replace ( v, replaceVar ( dic, v ) ), s ) : s;
-}
-
-export function replaceVarToUndefined ( dic: any, ref: string ): string | undefined {
-  if ( ref === undefined ) return undefined
-  let i = ref.slice ( 2, ref.length - 1 );
-  let parts = i.split ( '.' )
-  try {
-    return parts.reduce ( ( acc, part ) => acc[ part ], dic )
-  } catch ( e ) {return undefined}
-}
-export function derefenceToUndefined ( dic: any, s: string ) {
-  const regex = /(\$\{[^}]*\})/g
-  let groups = s.match ( regex )
-  if ( groups ) {
-    return groups.reduce ( ( acc, v ) => {
-      let repl = replaceVarToUndefined ( dic, v )
-      return acc.replace ( v, repl ? repl : "" )
-    }, s )
-  }
-  return undefined
-}
-
-
 function isCommand ( x: (string | CommandDefn) ): x is CommandDefn {
   return typeof x === 'object'
 }
@@ -126,25 +89,25 @@ export function cleanUpCommand ( command: (string | CommandDefn) ): CommandDefn 
     ({ ...command, command: command.command }) :
     ({ name: '', command: command })
 }
-export function cleanUpEnv ( dic: any, env: Envs ): Envs {
+export function cleanUpEnv ( context: string, dic: any, env: Envs ): Envs {
   if ( env ) {
     let result: Envs = {}
-    Object.keys ( env ).forEach ( key => result[ key ] = derefence ( dic, env[ key ].toString () ) )
+    Object.keys ( env ).forEach ( key => result[ key ] = derefence ( context, dic, env[ key ].toString (), { throwError: true } ) )
     return result
   }
   return env
 }
 function cleanUpScript ( dic: any ): ( scriptName: string, defn: ScriptDefn ) => ScriptDetails {
   return ( scriptName, defn ) => ({
-    name: derefence ( dic, scriptName ),
-    description: derefence ( dic, defn.description ),
+    name: derefence ( `cleanUpScript ${scriptName}.name`, dic, scriptName, { throwError: true } ),
+    description: derefence ( `cleanUpScript ${scriptName}.description`, dic, defn.description, { throwError: true } ),
     guard: defn.guard,
     osGuard: defn.osGuard,
     pmGuard: defn.pmGuard,
     guardReason: defn.guardReason,
     inLinksOrder: defn.inLinksOrder,
     commands: defn.commands.map ( cleanUpCommand ),
-    env: cleanUpEnv ( dic, defn.env )
+    env: cleanUpEnv ( `cleanUpScript ${scriptName}.env`, dic, defn.env )
   })
 }
 function addScripts ( dic: any, scripts: ScriptDefns ) {
@@ -157,7 +120,7 @@ export function configProcessor ( laoban: string, outputStream: WritableStream, 
   var result: any = { laobanDirectory: laoban, outputStream, laobanConfig: path.join ( laoban, loabanConfigName ) }
   function add ( name: string, raw: any ) {
     try {
-      result[ name ] = derefence ( result, raw[ name ] )
+      result[ name ] = derefence ( `processing config ${name}`, result, raw[ name ], { throwError: true } )
     } catch ( e ) {
       console.error ( e );
       throw Error ( `Failed to add ${name} to config. Error is ${e}` )

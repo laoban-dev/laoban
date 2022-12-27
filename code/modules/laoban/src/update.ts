@@ -1,6 +1,6 @@
 import { CopyFileDetails, copyFiles, FileOps, safeArray, safeObject } from "@phil-rice/utils";
 import path from "path";
-import { ConfigWithDebug } from "./config";
+import { ConfigWithDebug, ProjectDetailsAndDirectory } from "./config";
 import * as fse from "fs-extra";
 
 export function copyTemplateDirectoryByConfig ( config: ConfigWithDebug, template: string, target: string ): Promise<void> {
@@ -21,26 +21,29 @@ interface TemplateControlFile {
 //   file: string
 //   modifyBy
 // }
-export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, laobanDirectory: string, templateUrl: string, target: string ): Promise<void> {
+export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {
 
   const prefix = templateUrl.includes ( '://' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const url = prefix + '/.template.json';
+  const target = p.directory
   function parseCopyFile ( controlFileAsString: string ): TemplateControlFile {
     try {
       return JSON.parse ( controlFileAsString );
     } catch ( e ) {
       console.error ( e )
-      throw new Error ( `Error copying template file in ${target} from url ${url}\n${controlFileAsString}\n` )
+      throw new Error ( `Error copying template file in ${p.directory} from url ${url}\n${controlFileAsString}\n` )
     }
   }
   const controlFileAsString = await fileOps.loadFileOrUrl ( url )
   const controlFile = parseCopyFile ( controlFileAsString );
-  return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target ) ( safeArray ( controlFile.files ) )
+  return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target, p ) ( safeArray ( controlFile.files ) )
 }
-export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, template: string, target: string ): Promise<void> {
+export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsAndDirectory ): Promise<void> {
   let d = config.debug ( 'update' )
+  const template = p.projectDetails.template
+  const target = p.directory
   const namedTemplateUrl = safeObject ( config.templates )[ template ]
   d.message ( () => [ `namedTemplateUrl in ${target} for ${template} is ${namedTemplateUrl} (should be undefined if using local template)` ] )
   if ( namedTemplateUrl === undefined ) return copyTemplateDirectoryByConfig ( config, template, target )
-  return copyTemplateDirectoryFromConfigFile ( fileOps, config.laobanDirectory, namedTemplateUrl, target )
+  return copyTemplateDirectoryFromConfigFile ( fileOps, config.laobanDirectory, namedTemplateUrl, p )
 }

@@ -1,10 +1,10 @@
 import { ScriptInContext } from "./config";
-import { derefenceToUndefined } from "./configProcessor";
 import * as path from "path";
 import { chain, flatten, output, partition, writeTo } from "./utils";
-import { splitGenerationsByLinks, splitGenerationsByLinksUsingGenerations } from "./generations";
+import { splitGenerationsByLinksUsingGenerations } from "./generations";
 import * as fs from "fs";
 import { CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult } from "./executors";
+import { derefence } from "@phil-rice/variables";
 
 export type CommandDecorator = ( e: ExecuteCommand ) => ExecuteCommand
 export type ScriptDecorator = ( e: ExecuteScript ) => ExecuteScript
@@ -213,7 +213,7 @@ export class CommandDecorators {
   static guard: GuardDecorator = {
     name: 'guard',
     guard: d => d.scriptInContext.details.guard,
-    valid: ( g, d ) => derefenceToUndefined ( d.details.dic, g ) != ''
+    valid: ( g, d ) => derefence ( `Guard for ${d.scriptInContext?.details?.name}`, d.details.dic, g, { allowUndefined: true, throwError: true } ) != ''
   }
   static osGuard: GuardDecorator = {
     name: 'osGuard',
