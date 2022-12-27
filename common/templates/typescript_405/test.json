@@ -2,6 +2,6 @@
   "name": "${projectDetails.name}",
   "description": "${projectDetails.description}",
   "version": "${version}",
-  "links": "${projectDetails.details.link:map<<>>(i:\"<<i>>\":\"<<version>>\")}"
+  "dependencies": {${projectDetails.details.links:map<<>>(i=>"<<i>>":"<<version>>")}}
 
 }
