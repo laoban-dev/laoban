@@ -31,10 +31,11 @@ export function replaceVar ( context: string, ref: string, dic: any, options: De
   const obj = findVar ( dic, withoutDollarsBrackets )
   const last = lastSegment ( withoutDollarsBrackets, '.' )
   const { result, error } = processVariable ( last, obj, options )
-  if ( error !== undefined ) return `//LAOBAN-UPDATE-ERROR ${context} ${error}. ref was ${ref}. Value was ${JSON.stringify ( obj )}`
+  if ( error !== undefined )
+    if ( options?.throwError ) {throw new Error ( context + '\n' + safeArray ( error ).join ( ',' ) )} else
+      return `//LAOBAN-UPDATE-ERROR ${context} ${error}. ref was ${ref}. Value was ${JSON.stringify ( obj )}`
   return result
 }
-
 function findIndentString ( parts: string[] ): ProcessedVariableResult {
   const indent = parts.find ( s => s.startsWith ( 'indent' ) );
   try {
@@ -47,7 +48,6 @@ function findIndentString ( parts: string[] ): ProcessedVariableResult {
 export function processVariable ( nameWithCommands: string, value: any | undefined, options: DereferenceOptions | undefined ): ProcessedVariableResult {
   if ( value === undefined && options?.allowUndefined ) return value
   function error ( error: string | string[] ): ProcessedVariableResult {
-    if ( options?.throwError === true ) throw Error ( safeArray ( error ).join ( "," ) )
     return { result: nameWithCommands, error }
   }
   if ( value === undefined ) return error ( 'no value found' )

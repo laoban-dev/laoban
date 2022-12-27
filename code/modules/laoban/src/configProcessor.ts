@@ -92,7 +92,8 @@ export function cleanUpCommand ( command: (string | CommandDefn) ): CommandDefn 
 export function cleanUpEnv ( context: string, dic: any, env: Envs ): Envs {
   if ( env ) {
     let result: Envs = {}
-    Object.keys ( env ).forEach ( key => result[ key ] = derefence ( context, dic, env[ key ].toString (), { throwError: true } ) )
+    const realContext = context + `${JSON.stringify ( env )}`
+    Object.keys ( env ).forEach ( key => result[ key ] = derefence ( context + '.' + key, dic, env[ key ].toString (), {  } ) )
     return result
   }
   return env

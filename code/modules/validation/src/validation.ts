@@ -69,15 +69,15 @@ export class Validate<T> {
 
     checkIs(type: string): <K extends keyof T>(fieldName: K, reason?: string) => Validate<T> {
         return (fieldName, reason) => {
-            if (!this._checkIs(type, fieldName)) this.error(`${this.context}.${fieldName} should be a ${type}.${reasonString(reason)}`)
+            if (!this._checkIs(type, fieldName)) this.error(`${this.context}.${fieldName.toString()} should be a ${type}.${reasonString(reason)}`)
             return this
         }
     }
 
     isObject<K extends keyof T>(fieldName: K, fn: (v: Validate<T[K]>) => void, reason? : string): Validate<T> {
         let element: any = this.t[fieldName]
-        if (this._checkIs('object', fieldName)) this.checkChildObject(this.context + '.' + fieldName, element, fn);
-        else this.error(`${this.context}.${fieldName} should be an object.${reasonString(reason)}`)
+        if (this._checkIs('object', fieldName)) this.checkChildObject(this.context + '.' + fieldName.toString(), element, fn);
+        else this.error(`${this.context}.${fieldName.toString()} should be an object.${reasonString(reason)}`)
         return this
     }
     optObject = <K extends keyof T>(fieldName: K, fn: (v: Validate<T[K]>) => void, reason?: string): Validate<T> =>
