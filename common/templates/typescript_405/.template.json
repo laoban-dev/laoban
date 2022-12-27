@@ -4,6 +4,7 @@
     "babel.config.json",
     "jest.config.json",
     "package.json",
+    "test.json",
     "tsconfig.json"
   ]
 }

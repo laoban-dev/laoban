@@ -22,7 +22,6 @@ interface TemplateControlFile {
 //   modifyBy
 // }
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {
-
   const prefix = templateUrl.includes ( '://' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const url = prefix + '/.template.json';
   const target = p.directory
