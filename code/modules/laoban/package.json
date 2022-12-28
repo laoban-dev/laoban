@@ -1,8 +1,7 @@
 {
   "name":        "laoban",
   "description": "A cli for managing projects that have many npm packages",
-  "version":     "0.3.10"
-,
+  "version":     "0.3.10",
  "browserslist": {
     "development": [
       "last 1 chrome version",

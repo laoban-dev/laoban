@@ -1,1 +1,1 @@
-${projectDetails.details.extraDevDeps:object:comma:indent6}
+${projectDetails.details.extraDevDeps:object:comma:indent4}

@@ -13,7 +13,7 @@ ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templ
     ]
   },
   "dependencies": {
-    ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.dependencies.template)
+${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.dependencies.template)
     "array.prototype.flatmap": "^1.3.1",
     "@types/node": "^14.14.7",
     "npm-check-updates": "^10.0.0",

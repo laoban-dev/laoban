@@ -1,8 +1,7 @@
 {
   "name":        "@phil-rice/generations",
   "description": "A library that typologically sorts data into generations",
-  "version":     "0.3.10"
-,
+  "version":     "0.3.10",
  "browserslist": {
     "development": [
       "last 1 chrome version",

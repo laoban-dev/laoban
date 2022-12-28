@@ -1,8 +1,7 @@
 {
   "name":        "@phil-rice/variables",
   "description": "A library that can dereference ${xxx} in strings",
-  "version":     "0.3.10"
-,
+  "version":     "0.3.10",
  "browserslist": {
     "development": [
       "last 1 chrome version",
