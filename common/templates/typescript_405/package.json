@@ -20,7 +20,7 @@ ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templ
     "typescript": "^4.0.5"
   },
   "devDependencies": {
-    ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.devdependencies.template)
+${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.devdependencies.template)
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/user-event": "^12.2.0",
     "@types/jest": "^26.0.15",
