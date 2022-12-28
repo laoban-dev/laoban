@@ -46,5 +46,6 @@ ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templ
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "bin":{${projectDetails.details.extraBins:object:indent4}}
-}
+  "bin":{
+${projectDetails.details.extraBins:object:indent4}}
+  }
