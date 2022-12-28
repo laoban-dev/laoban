@@ -1,3 +1,7 @@
   "name":        "${projectDetails.name}",
   "description": "${projectDetails.description}",
-  "version":     "${version}"
+  "version":     "${version}",
+  "bin":{
+${projectDetails.details.extraBins:object:indent4}
+  },
+  "keywords": [${projectDetails.details.keyword:map<<>>(kw=>"<<kw>>")}]

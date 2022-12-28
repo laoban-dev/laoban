@@ -51,5 +51,6 @@
     "test:watch": "npm run test -- --watch"
   },
   "bin":{
-    "laoban": "dist/index.js"}
+    "laoban": "dist/index.js"
   }
+}
