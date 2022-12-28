@@ -73,7 +73,7 @@ describe ( "copyFile", () => {
 describe ( "copyFiles", () => {
   it ( "it should copy files", async () => {
     const fileOps = foundFileOps ();
-    await copyFiles ( 'someContext', fileOps, 'rootUrl', 'target', ( type, text ) => text ) ( [ 'url1', 'url2' ] )
+    await copyFiles ( 'someContext', fileOps, 'rootUrl', 'target', ( type, text ) => Promise.resolve ( text ) ) ( [ 'url1', 'url2' ] )
     expect ( fileOps.savedFiles () ).toEqual ( [
       [ "target/url1", "loaded_rootUrl/url1" ],
       [ "target/url2", "loaded_rootUrl/url2" ]
