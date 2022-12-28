@@ -4,4 +4,4 @@
   "bin":{
 ${projectDetails.details.extraBins:object:indent4}
   },
-  "keywords": [${projectDetails.details.keyword:map<<>>(kw=>"<<kw>>")}]
+  "keywords": [${projectDetails.details.keywords:map<<>>(kw=>"<<kw>>")}]

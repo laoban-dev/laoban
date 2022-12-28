@@ -2,6 +2,11 @@
   "name":        "laoban",
   "description": "A cli for managing projects that have many npm packages",
   "version":     "0.3.12",
+  "bin":{
+    "laoban": "dist/index.js"
+  },
+  "keywords": ["monorepo","devops"]
+,
  "browserslist": {
     "development": [
       "last 1 chrome version",
@@ -49,8 +54,5 @@
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
-  },
-  "bin":{
-    "laoban": "dist/index.js"
   }
 }

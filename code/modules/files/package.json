@@ -2,6 +2,11 @@
   "name":        "@phil-rice/files",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
   "version":     "0.3.12",
+  "bin":{
+
+  },
+  "keywords": []
+,
  "browserslist": {
     "development": [
       "last 1 chrome version",
@@ -48,8 +53,5 @@
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
-  },
-  "bin":{
-
   }
 }

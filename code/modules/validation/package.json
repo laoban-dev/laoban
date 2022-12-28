@@ -2,6 +2,11 @@
   "name":        "@phil-rice/validation",
   "description": "A library for validating json",
   "version":     "0.3.12",
+  "bin":{
+
+  },
+  "keywords": []
+,
  "browserslist": {
     "development": [
       "last 1 chrome version",
@@ -48,8 +53,5 @@
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
-  },
-  "bin":{
-
   }
 }
