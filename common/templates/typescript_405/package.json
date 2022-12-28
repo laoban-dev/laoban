@@ -1,17 +1,7 @@
 {
 ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.variables.template.json),
- "browserslist": {
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ],
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ]
-  },
+  "license": "${properties.license}",
+  "repository": "${properties.license}",
   "dependencies": {
 ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.dependencies.template)
     "typescript": "^4.0.5"
@@ -26,17 +16,26 @@ ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templ
     "ts-jest": "^26.4.4"
   },
   "files": [
-    "README.md",
     "dist/index.js",
     "dist/index.d.ts",
     "dist/src/"
   ],
-  "license": "${properties.license}",
   "main": "dist/index",
   "types": "dist/index",
-  "repository": "git@github.com:phil-rice/laoban.git",
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
+  },
+ "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ],
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ]
   }
 }

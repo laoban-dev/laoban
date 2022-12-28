@@ -9,6 +9,8 @@
     "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/typescript.publish.laoban.json"
   ],
   "properties":     {
-    "license": "MIT"
+    "license": "MIT",
+    "repository": "git@github.com:phil-rice/laoban.git"
+
   }
 }
