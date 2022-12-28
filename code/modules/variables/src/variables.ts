@@ -33,13 +33,11 @@ interface DereferenceOptions {
   variableDefn?: VariableDefn
 }
 
-function variableDefn ( options: DereferenceOptions | undefined ): VariableDefn {
-  return options?.variableDefn ? options.variableDefn : dollarsBracesVarDefn;
-}
 
 /** If the string has ${a} in it, then that is replaced by the dic entry */
 export function derefence ( context: string, dic: any, s: string, options?: DereferenceOptions ) {
-  const regex = variableDefn ( options ).regex
+  if ( options?.variableDefn === undefined ) return s;
+  const regex = options.variableDefn.regex
   let groups: RegExpMatchArray = s.match ( regex )
   return s.replace ( regex, match => {
     let result = replaceVar ( context, match, dic, options );
@@ -56,7 +54,7 @@ export function findVar ( dic: any, ref: string ): any {
   } catch ( e ) {return undefined}
 }
 export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
-  const withoutStartEnd = variableDefn ( options ).removeStartEnd ( ref )
+  const withoutStartEnd = options.variableDefn.removeStartEnd ( ref )
   const obj = findVar ( dic, withoutStartEnd )
   const last = lastSegment ( withoutStartEnd, '.' )
   const { result, error } = processVariable ( context, dic, last, obj, options )

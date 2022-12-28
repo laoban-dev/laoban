@@ -8,7 +8,7 @@ import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
 import { cachedFileOps, FileOps, fileOpsStats, isCachedFileOps, meteredFileOps, toArray } from "@phil-rice/utils";
-import { derefence } from "@phil-rice/variables";
+import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
 import WritableStream = NodeJS.WritableStream;
 
 export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
@@ -93,15 +93,15 @@ export function cleanUpEnv ( context: string, dic: any, env: Envs ): Envs {
   if ( env ) {
     let result: Envs = {}
     const realContext = context + `${JSON.stringify ( env )}`
-    Object.keys ( env ).forEach ( key => result[ key ] = derefence ( context + '.' + key, dic, env[ key ].toString (), {  } ) )
+    Object.keys ( env ).forEach ( key => result[ key ] = derefence ( context + '.' + key, dic, env[ key ].toString (), { variableDefn: dollarsBracesVarDefn } ) )
     return result
   }
   return env
 }
 function cleanUpScript ( dic: any ): ( scriptName: string, defn: ScriptDefn ) => ScriptDetails {
   return ( scriptName, defn ) => ({
-    name: derefence ( `cleanUpScript ${scriptName}.name`, dic, scriptName, { throwError: true } ),
-    description: derefence ( `cleanUpScript ${scriptName}.description`, dic, defn.description, { throwError: true } ),
+    name: derefence ( `cleanUpScript ${scriptName}.name`, dic, scriptName, { throwError: true, variableDefn: dollarsBracesVarDefn } ),
+    description: derefence ( `cleanUpScript ${scriptName}.description`, dic, defn.description, { throwError: true, variableDefn: dollarsBracesVarDefn } ),
     guard: defn.guard,
     osGuard: defn.osGuard,
     pmGuard: defn.pmGuard,
@@ -121,7 +121,7 @@ export function configProcessor ( laoban: string, outputStream: WritableStream, 
   var result: any = { laobanDirectory: laoban, outputStream, laobanConfig: path.join ( laoban, loabanConfigName ) }
   function add ( name: string, raw: any ) {
     try {
-      result[ name ] = derefence ( `processing config ${name}`, result, raw[ name ], { throwError: true } )
+      result[ name ] = derefence ( `processing config ${name}`, result, raw[ name ], { throwError: true, variableDefn: dollarsBracesVarDefn } )
     } catch ( e ) {
       console.error ( e );
       throw Error ( `Failed to add ${name} to config. Error is ${e}` )

@@ -6,7 +6,7 @@ import * as path from "path";
 import { chain, flatten, writeTo } from "./utils";
 import { Writable } from "stream";
 import { CommandDecorator } from "./decorators";
-import { derefence } from "@phil-rice/variables";
+import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
 
 export interface RawShellResult {
   err: any
@@ -71,7 +71,7 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectory ): S
         ...scd,
         details: ({
           command: cmd,
-          commandString: derefence ( `Script ${name}.commandString`, dic, cmd.command, { throwError: true } ),
+          commandString: derefence ( `Script ${name}.commandString`, dic, cmd.command, { throwError: true, variableDefn: dollarsBracesVarDefn } ),
           dic: dic,
           env: env,
           directory: derefence ( `Script ${name}.directory`, dic, directory, { throwError: true } ),

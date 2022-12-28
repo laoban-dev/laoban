@@ -1,4 +1,4 @@
-import { derefence, doubleXmlVariableDefn } from "./variables";
+import { derefence, dollarsBracesVarDefn } from "./variables";
 
 describe ( "derefence", () => {
   describe ( "simple variables like ${a}", () => {
@@ -32,7 +32,7 @@ describe ( "derefence", () => {
 "two":2}` )
     } )
     it ( 'should report an error if the reference isnt an object', () => {
-      expect ( derefence ( 'context', dic, '{"one":1,\n${b:object},\n"two":2}' ) ).toEqual (
+      expect ( derefence ( 'context', dic, '{"one":1,\n${b:object},\n"two":2}',{ variableDefn: dollarsBracesVarDefn} ) ).toEqual (
         '{"one":1,\n' +
         '//LAOBAN-UPDATE-ERROR context for ref [${b:object}]. no value found. Value was undefined,\n' +
         '"two":2}' )
@@ -42,11 +42,11 @@ describe ( "derefence", () => {
   } )
   describe ( "variable:object:indentx like ${a:object:indentx}", () => {
     it ( 'should replace an object with the string w/o {}', () => {
-      expect ( derefence ( 'context', dic, '{"one":1,\n${a:object:indent1}\n"two":2}' ) ).toEqual ( `{"one":1,
+      expect ( derefence ( 'context', dic, '{"one":1,\n${a:object:indent1}\n"two":2}',{ variableDefn: dollarsBracesVarDefn} ) ).toEqual ( `{"one":1,
  "this": 1,
  "item": 2
 "two":2}` )
-      expect ( derefence ( 'context', dic, '{"one":1,\n${a:object:indent3}\n"two":2}' ) ).toEqual ( `{"one":1,
+      expect ( derefence ( 'context', dic, '{"one":1,\n${a:object:indent3}\n"two":2}',{ variableDefn: dollarsBracesVarDefn} ) ).toEqual ( `{"one":1,
    "this": 1,
    "item": 2
 "two":2}` )
@@ -54,31 +54,31 @@ describe ( "derefence", () => {
   } )
   describe ( "variable:object:comma like ${a:object:comma}", () => {
     it ( 'should replace an object with the string w/o {}', () => {
-      expect ( derefence ( 'context', dic, '{"one":1,${a:object:comma},"two":2}' ) ).toEqual ( `{"one":1,"this": 1,
+      expect ( derefence ( 'context', dic, '{"one":1,${a:object:comma},"two":2}' ,{ variableDefn: dollarsBracesVarDefn}) ).toEqual ( `{"one":1,"this": 1,
 "item": 2,"two":2}` )
     } )
   } )
 
   describe ( "variable:object:comma:indentx like ${a:object:comma:indentx}", () => {
     it ( 'should replace an object with the string w/o {}', () => {
-      expect ( derefence ( 'context', dic, '{"one":1,${a:object:comma:indent3},"two":2}' ) ).toEqual ( `{"one":1,   "this": 1,
+      expect ( derefence ( 'context', dic, '{"one":1,${a:object:comma:indent3},"two":2}' ,{ variableDefn: dollarsBracesVarDefn}) ).toEqual ( `{"one":1,   "this": 1,
    "item": 2,"two":2}` )
     } )
   } )
   describe ( "We should be able to process  {${projectDetails.details.links:map<<>>(i=>\"<<i>>\":\"<<version>>\")}}", () => {
     it ( 'should inline the mapped array', () => {
       expect ( derefence ( 'context', { ...dic, version: '1.2.3' },
-        '{"one":1, ${array:map<<>>(i=>"<<i>>":"<<version>>")},"two":2}' ) ).toEqual (
+        '{"one":1, ${array:map<<>>(i=>"<<i>>":"<<version>>")},"two":2}' ,{ variableDefn: dollarsBracesVarDefn}) ).toEqual (
         '{"one":1, "a":"1.2.3","b":"1.2.3","c":"1.2.3","two":2}' )
     } )
   } )
   describe ( "We should be able to process  {${projectDetails.details.links:comma:map<<>>(i=>\"<<i>>\":\"<<version>>\")}}", () => {
     it ( "should only add a comma if the array is not empty", () => {
       expect ( derefence ( 'context', { ...dic, version: '1.2.3' },
-        '{"one":1, ${array:comma:map<<>>(i=>"<<i>>":"<<version>>")}"two":2}' ) ).toEqual (
+        '{"one":1, ${array:comma:map<<>>(i=>"<<i>>":"<<version>>")}"two":2}' ,{ variableDefn: dollarsBracesVarDefn}) ).toEqual (
         '{"one":1, "a":"1.2.3","b":"1.2.3","c":"1.2.3","two":2}' )
       expect ( derefence ( 'context', { ...dic, version: '1.2.3' },
-        '{"one":1, ${nothingPresent:comma:map<<>>(i=>"<<i>>":"<<version>>")}"two":2}' ) ).toEqual (
+        '{"one":1, ${nothingPresent:comma:map<<>>(i=>"<<i>>":"<<version>>")}"two":2}',{ variableDefn: dollarsBracesVarDefn} ) ).toEqual (
         '{"one":1, "two":2}' )
     } )
   } )

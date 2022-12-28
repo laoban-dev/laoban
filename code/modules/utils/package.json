@@ -1,7 +1,7 @@
 {
   "name":        "@phil-rice/utils",
   "description": "Those miscellaneous utilities and types that every project needs",
-  "version":     "0.3.10",
+  "version":     "0.3.12",
  "browserslist": {
     "development": [
       "last 1 chrome version",
@@ -23,7 +23,6 @@
     "typescript": "^4.0.5"
   },
   "devDependencies": {
-
 
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/user-event": "^12.2.0",

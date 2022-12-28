@@ -4,7 +4,7 @@ import { chain, flatten, output, partition, writeTo } from "./utils";
 import { splitGenerationsByLinksUsingGenerations } from "./generations";
 import * as fs from "fs";
 import { CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult } from "./executors";
-import { derefence } from "@phil-rice/variables";
+import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
 
 export type CommandDecorator = ( e: ExecuteCommand ) => ExecuteCommand
 export type ScriptDecorator = ( e: ExecuteScript ) => ExecuteScript
@@ -216,7 +216,7 @@ export class CommandDecorators {
     name: 'guard',
     guard: d => d.scriptInContext.details.guard,
     valid: ( g, d ) => {
-      return derefence ( `Guard for ${d.scriptInContext?.details?.name}`, d.details.dic, g, { allowUndefined: true, throwError: true, undefinedIs: '' } ) != '';}
+      return derefence ( `Guard for ${d.scriptInContext?.details?.name}`, d.details.dic, g, { allowUndefined: true, throwError: true, undefinedIs: '', variableDefn: dollarsBracesVarDefn } ) != '';}
   }
   static osGuard: GuardDecorator = {
     name: 'osGuard',

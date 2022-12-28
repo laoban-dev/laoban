@@ -235,9 +235,7 @@ export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target
     const fileName = fileNameFrom ( cfd );
     const target = targetFrom ( cfd )
     const fullname = fileName.includes ( '://' ) ? fileName : rootUrl + '/' + fileName
-    console.log ( 'copyFileAndTransform', fileName, fullname )
     const text = await fileOps.loadFileOrUrl ( fullname )
-    console.log(`   text from [${fullname}] was`, text)
     const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
     return fileOps.saveFile ( targetRoot + '/' + target, txformed );
   }
