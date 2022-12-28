@@ -105,7 +105,6 @@ export function processVariable ( context: string, dic: any, nameWithCommands: s
       return error ( `The value is not an array for a map<<>>` )
   }
   if ( value === undefined && options?.allowUndefined ) return { result: options?.undefinedIs }
-
   if ( value === undefined ) return error ( 'no value found' )
 
   const parts = nameWithCommands.split ( ':' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
@@ -114,7 +113,8 @@ export function processVariable ( context: string, dic: any, nameWithCommands: s
   const indent = findIndentString ( parts )
   if ( indent.error !== undefined ) return error ( indent.error )
   if ( parts.includes ( 'object' ) ) {
-    return (typeof value === 'object') ? { result: toStringRemovingBraces ( value, indent.result ) } : error ( `Expected object but was of type ${typeof value} with value ${JSON.stringify ( value )}` )
+    const comma = parts.includes ( 'comma' ) ? ',' : ''
+    return (typeof value === 'object') ? { result: toStringRemovingBraces ( value, indent.result ) + comma } : error ( `Expected object but was of type ${typeof value} with value ${JSON.stringify ( value )}` )
   } else {
     return { result: value.toString () }
   }

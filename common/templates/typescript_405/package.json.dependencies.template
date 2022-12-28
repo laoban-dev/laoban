@@ -1,3 +1,3 @@
   "dependencies": {
-     ${projectDetails.details.extraDeps:object:comma}
+     ${projectDetails.details.extraDeps:object:comma:indent6}
      ${projectDetails.details.links:map<<>>(i=>"<<i>>":"<<version>>")}}

@@ -22,7 +22,6 @@ export const includeFiles = ( fileOps: FileOps ): TransformTextFn => async ( typ
   if ( !includes ) return Promise.resolve ( text )
   const urlsAndContent: string [][] = await Promise.all<string[]> ( includes.map ( (includeStr) => {
     let url = includeStr.slice ( 10, -1 );
-    console.log(includeStr, url)
     return fileOps.loadFileOrUrl ( url ).then ( text => [ includeStr, text ] );} ) )
   return text.replace ( regExp, url => urlsAndContent.find ( (urlsAndContent => urlsAndContent[ 0 ] === url) )[ 1 ] )
 };
