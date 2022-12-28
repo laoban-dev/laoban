@@ -1,7 +1,7 @@
 {
 ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.variables.template.json),
   "license": "${properties.license}",
-  "repository": "${properties.license}",
+  "repository": "${properties.repository}",
   "dependencies": {
 ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.dependencies.template)
     "typescript": "^4.0.5"

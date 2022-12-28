@@ -6,18 +6,8 @@
     "laoban": "dist/index.js"
   },
   "keywords": ["monorepo","devops"],
- "browserslist": {
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ],
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ]
-  },
+  "license": "MIT",
+  "repository": "MIT",
   "dependencies": {
     "fs-extra": "^9.0.1",
     "commander": "^6.2.0",
@@ -34,17 +24,26 @@
     "ts-jest": "^26.4.4"
   },
   "files": [
-    "README.md",
     "dist/index.js",
     "dist/index.d.ts",
     "dist/src/"
   ],
-  "license": "",
   "main": "dist/index",
   "types": "dist/index",
-  "repository": "git@github.com:phil-rice/laoban.git",
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
+  },
+ "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ],
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ]
   }
 }
