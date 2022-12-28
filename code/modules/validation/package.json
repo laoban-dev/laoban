@@ -1,13 +1,13 @@
 {
   "name":        "@phil-rice/validation",
   "description": "A library for validating json",
-  "version":     "0.3.12",
+  "version":     "0.3.13",
   "bin":{
 
   },
   "keywords": [],
   "license": "MIT",
-  "repository": "MIT",
+  "repository": "git@github.com:phil-rice/laoban.git",
   "dependencies": {
 
     

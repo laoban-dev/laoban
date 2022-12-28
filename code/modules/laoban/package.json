@@ -1,17 +1,17 @@
 {
   "name":        "laoban",
   "description": "A cli for managing projects that have many npm packages",
-  "version":     "0.3.12",
+  "version":     "0.3.13",
   "bin":{
     "laoban": "dist/index.js"
   },
   "keywords": ["monorepo","devops"],
   "license": "MIT",
-  "repository": "MIT",
+  "repository": "git@github.com:phil-rice/laoban.git",
   "dependencies": {
     "fs-extra": "^9.0.1",
     "commander": "^6.2.0",
-    "@phil-rice/variables":"0.3.12","@phil-rice/generations":"0.3.12","@phil-rice/validation":"0.3.12","@phil-rice/debug":"0.3.12","@phil-rice/files":"0.3.12",
+    "@phil-rice/variables":"0.3.13","@phil-rice/generations":"0.3.13","@phil-rice/validation":"0.3.13","@phil-rice/debug":"0.3.13","@phil-rice/files":"0.3.13",
     "typescript": "^4.0.5"
   },
   "devDependencies": {
