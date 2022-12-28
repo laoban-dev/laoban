@@ -113,8 +113,9 @@ export function processVariable ( context: string, dic: any, nameWithCommands: s
   const indent = findIndentString ( parts )
   if ( indent.error !== undefined ) return error ( indent.error )
   if ( parts.includes ( 'object' ) ) {
-    const comma = parts.includes ( 'comma' ) ? ',' : ''
-    return (typeof value === 'object') ? { result: toStringRemovingBraces ( value, indent.result ) + comma } : error ( `Expected object but was of type ${typeof value} with value ${JSON.stringify ( value )}` )
+    if ( typeof value !== 'object' ) return error ( `Expected object but was of type ${typeof value} with value ${JSON.stringify ( value )}` )
+    const comma = parts.includes ( 'comma' ) && Object.keys ( value ).length > 0 ? ',' : ''
+    return { result: toStringRemovingBraces ( value, indent.result ) + comma }
   } else {
     return { result: value.toString () }
   }

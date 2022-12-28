@@ -1,5 +1,6 @@
 {
-  "browserslist": {
+  ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.variables.template)
+ "browserslist": {
     "development": [
       "last 1 chrome version",
       "last 1 firefox version",
