@@ -16,7 +16,7 @@
     "@types/node": "^14.14.7",
     "npm-check-updates": "^10.0.0",
     "typescript": "^4.0.5",
-    "@phil-rice/utils": "0.3.9"
+    "@phil-rice/utils": "0.3.10"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.11.5",
@@ -44,7 +44,7 @@
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "version": "0.3.9",
+  "version": "0.3.10",
   "template": "typescript",
   "name": "@phil-rice/variables",
   "description": "A library that can dereference ${xxx} in strings",
