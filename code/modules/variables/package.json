@@ -12,13 +12,16 @@
     ]
   },
   "dependencies": {
+    
+     "@phil-rice/utils":"0.3.10"
     "array.prototype.flatmap": "^1.3.1",
     "@types/node": "^14.14.7",
     "npm-check-updates": "^10.0.0",
-    "typescript": "^4.0.5",
-    "@phil-rice/utils": "0.3.10"
+    "typescript": "^4.0.5"
   },
   "devDependencies": {
+    
+
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/user-event": "^12.2.0",
     "@types/jest": "^26.0.15",
@@ -44,16 +47,5 @@
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
-  "version": "0.3.10",
-  "template": "typescript",
-  "name": "@phil-rice/variables",
-  "description": "A library that can dereference ${xxx} in strings",
-  "details": {
-    "publish": true,
-    "links": [
-      "@phil-rice/utils"
-    ],
-    "tsc": true,
-    "test": true
-  }
+  "version": "<version>"
 }

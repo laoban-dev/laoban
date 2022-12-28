@@ -2,7 +2,7 @@ import { CopyFileDetails, copyFiles, FileOps, safeArray, safeObject } from "@phi
 import path from "path";
 import { ConfigWithDebug, ProjectDetailsAndDirectory, ProjectDetailsDirectoryAndVersion } from "./config";
 import * as fse from "fs-extra";
-import { derefence, dollarsBracesVarDefn, VariableDefn ,fulltextVariableDefn} from "@phil-rice/variables";
+import { derefence, dollarsBracesVarDefn, VariableDefn } from "@phil-rice/variables";
 
 
 export function copyTemplateDirectoryByConfig ( config: ConfigWithDebug, template: string, target: string ): Promise<void> {
@@ -29,9 +29,9 @@ export const includeFiles = ( fileOps: FileOps ): TransformTextFn => async ( typ
 };
 
 export const transformFile = ( context: string, dic: any ): TransformTextFn => ( type: string, text: string ): Promise<string> => {
-  function variableDefn (): VariableDefn {
+  function variableDefn (): VariableDefn | undefined {
     if ( type === '${}' ) return dollarsBracesVarDefn
-    if ( type === undefined ) return fulltextVariableDefn
+    if ( type === undefined ) return undefined
     throw new Error ( `${context}. Unexpected type ${type}` )
   }
   return Promise.resolve ( derefence ( context, dic, text, { throwError: true, variableDefn: variableDefn (), allowUndefined: true, undefinedIs: '' } ) )
