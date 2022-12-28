@@ -5,8 +5,7 @@
   "bin":{
 
   },
-  "keywords": []
-,
+  "keywords": [],
  "browserslist": {
     "development": [
       "last 1 chrome version",

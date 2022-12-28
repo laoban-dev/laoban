@@ -14,16 +14,14 @@ ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templ
   },
   "dependencies": {
 ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.dependencies.template)
-    "array.prototype.flatmap": "^1.3.1",
-    "@types/node": "^14.14.7",
-    "npm-check-updates": "^10.0.0",
     "typescript": "^4.0.5"
   },
   "devDependencies": {
 ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.devdependencies.template)
+    "@types/node": "^14.14.7",
+    "@types/jest": "^26.0.15",
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/user-event": "^12.2.0",
-    "@types/jest": "^26.0.15",
     "jest": "^26.6.0",
     "ts-jest": "^26.4.4"
   },
@@ -32,11 +30,6 @@ ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templ
     "dist/index.js",
     "dist/index.d.ts",
     "dist/src/"
-  ],
-  "keywords": [
-    "functionalprogramming",
-    "lens",
-    "optics"
   ],
   "license": "MIT",
   "main": "dist/index",

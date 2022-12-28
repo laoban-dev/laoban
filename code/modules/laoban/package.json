@@ -5,8 +5,7 @@
   "bin":{
     "laoban": "dist/index.js"
   },
-  "keywords": ["monorepo","devops"]
-,
+  "keywords": ["monorepo","devops"],
  "browserslist": {
     "development": [
       "last 1 chrome version",
