@@ -1,10 +1,9 @@
 {
   "files": [
-    ".npmrc",
-    "babel.config.json",
-    "jest.config.json",
-    "package.json",
-    {"file": "test.json", "type": "${}"},
+    {"file": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/.npmrc", "target": ".npmrc"},
+    {"file": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/babel.config.json", "target": "babel.config.json"},
+    {"file": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/jest.config.json", "target": "jest.config.json"},
+    {"file": "package.json", "type": "${}"},
     "tsconfig.json"
   ]
 }

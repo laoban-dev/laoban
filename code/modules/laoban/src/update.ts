@@ -2,7 +2,8 @@ import { CopyFileDetails, copyFiles, FileOps, safeArray, safeObject } from "@phi
 import path from "path";
 import { ConfigWithDebug, ProjectDetailsAndDirectory, ProjectDetailsDirectoryAndVersion } from "./config";
 import * as fse from "fs-extra";
-import { derefence, dollarsBracesVarDefn, VariableDefn } from "@phil-rice/variables";
+import { derefence, dollarsBracesVarDefn, VariableDefn ,fulltextVariableDefn} from "@phil-rice/variables";
+
 
 export function copyTemplateDirectoryByConfig ( config: ConfigWithDebug, template: string, target: string ): Promise<void> {
   let src = path.join ( config.templateDir, template );
@@ -20,18 +21,20 @@ export const includeFiles = ( fileOps: FileOps ): TransformTextFn => async ( typ
   let regExp = /\${include\(([^)]*)\)/g;
   const includes = text.match ( regExp )
   if ( !includes ) return Promise.resolve ( text )
-  const urlsAndContent: string [][] = await Promise.all<string[]> ( includes.map ( (includeStr) => {
+  const urlsAndContent: string [][] = await Promise.all<string[]> ( includes.map ( ( includeStr ) => {
     let url = includeStr.slice ( 10, -1 );
-    return fileOps.loadFileOrUrl ( url ).then ( text => [ includeStr, text ] );} ) )
+    return fileOps.loadFileOrUrl ( url ).then ( text => [ includeStr, text ] );
+  } ) )
   return text.replace ( regExp, url => urlsAndContent.find ( (urlsAndContent => urlsAndContent[ 0 ] === url) )[ 1 ] )
 };
 
 export const transformFile = ( context: string, dic: any ): TransformTextFn => ( type: string, text: string ): Promise<string> => {
   function variableDefn (): VariableDefn {
     if ( type === '${}' ) return dollarsBracesVarDefn
+    if ( type === undefined ) return fulltextVariableDefn
     throw new Error ( `${context}. Unexpected type ${type}` )
   }
-  return Promise.resolve ( derefence ( context, dic, text, { throwError: true, variableDefn: variableDefn (), allowUndefined: true,undefinedIs: '' } ) )
+  return Promise.resolve ( derefence ( context, dic, text, { throwError: true, variableDefn: variableDefn (), allowUndefined: true, undefinedIs: '' } ) )
 };
 
 type TransformTextFn = ( type: string, text: string ) => Promise<string>

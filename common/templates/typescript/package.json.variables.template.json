@@ -1,0 +1,3 @@
+  "name":        "${projectDetails.name}",
+  "description": "${projectDetails.description}",
+  "version":     "${version}"

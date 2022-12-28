@@ -1,0 +1,1 @@
+${projectDetails.details.extraDevDeps:object:comma:indent6}

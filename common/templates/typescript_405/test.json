@@ -1,6 +1,0 @@
-{
-  "name": "${projectDetails.name}",
-  "description": "${projectDetails.description}",
-  "version": "${version}",
-  ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.dependencies.template)
-}

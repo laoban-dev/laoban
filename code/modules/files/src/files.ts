@@ -9,7 +9,10 @@ function loadFile ( fileName: string ): Promise<string> {
 }
 function loadUrl ( fileOrUrl: string ): Promise<string> {
   // console.log('in loadUrl', fileOrUrl)
-  return fetch ( fileOrUrl ).then ( res => res.text () )
+  return fetch ( fileOrUrl ).then ( res => res.text (), error => {
+    console.error (fileOrUrl, fetch )
+    throw error
+  } )
 }
 
 function loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
@@ -28,5 +31,5 @@ export const fileOps: FileOps = {
   createDir: dir => promises.mkdir ( dir, { recursive: true } ),
   saveFile: ( filename, text ) => promises.writeFile ( filename, text ),
   listFiles: ( root: string ): Promise<string[]> => promises.readdir ( root ),
-  removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => promises.rm( filename, { recursive, force: true } )
+  removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => promises.rm ( filename, { recursive, force: true } )
 }

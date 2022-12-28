@@ -209,32 +209,43 @@ export function cachedFileOps ( fileOps: FileOps, cacheDir: string | undefined )
 
 interface TemplateFileDetails {
   file: string
+  target?: string
   type: string
 }
 export function isTemplateFileDetails ( t: CopyFileDetails ): t is TemplateFileDetails {
   const a: any = t
-  return a.type !== undefined
+  return a.file !== undefined
 }
 export function fileNameFrom ( f: CopyFileDetails ): string {
   if ( isTemplateFileDetails ( f ) ) return f.file
   if ( typeof f === 'string' ) return f
-  throw new Error ( `Cannot find file name in [${f}]` )
+  throw new Error ( `Cannot find file name in [${JSON.stringify(f)}]` )
 }
+export function targetFrom ( f: CopyFileDetails ): string {
+  if ( isTemplateFileDetails ( f ) ) return f.target ? f.target : f.file
+  if ( typeof f === 'string' ) return f
+  throw new Error ( `Cannot find target in [${JSON.stringify ( f )}]` )
+}
+
+
 export type CopyFileDetails = string | TemplateFileDetails
 
-export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fd: CopyFileDetails ) => Promise<void> {
+export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, targetRoot: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fd: CopyFileDetails ) => Promise<void> {
   return async ( cfd ) => {
     const fileName = fileNameFrom ( cfd );
-    const text = await fileOps.loadFileOrUrl ( rootUrl + '/' + fileName )
+    const target = targetFrom ( cfd )
+    const fullname = fileName.includes ( '://' ) ? fileName : rootUrl + '/' + fileName
+    console.log ( 'copyFileAndTransform', fileName, fullname )
+    const text = await fileOps.loadFileOrUrl ( fullname )
     const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
-    return fileOps.saveFile ( target + '/' + fileName, txformed );
+    return fileOps.saveFile ( targetRoot + '/' + target, txformed );
   }
 }
 
 export function copyFile ( fileOps: FileOps, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
   return copyFileAndTransform ( fileOps, rootUrl, target, undefined )
 }
-export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) =>  Promise<string> ): ( fs: CopyFileDetails[] ) => Promise<void> {
+export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fs: CopyFileDetails[] ) => Promise<void> {
   const cf = copyFileAndTransform ( fileOps, rootUrl, target, tx )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );
