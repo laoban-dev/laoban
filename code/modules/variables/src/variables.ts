@@ -61,7 +61,7 @@ export function replaceVar ( context: string, ref: string, dic: any, options: De
   const last = lastSegment ( withoutStartEnd, '.' )
   const { result, error } = processVariable ( context, dic, last, obj, options )
   if ( error !== undefined ) {
-    if ( options?.throwError ) {throw new Error ( context + `Ref is ${ref}\n` + safeArray ( error ).join ( ',' ) )} else
+    if ( options?.throwError ) {throw new Error ( context + ` Ref is ${ref}\n` + safeArray ( error ).join ( ',' ) )} else
       return `//LAOBAN-UPDATE-ERROR ${context} for ref [${ref}]. ${error}. Value was ${JSON.stringify ( obj )}`
   }
   return result

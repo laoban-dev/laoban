@@ -32,7 +32,7 @@ export const transformFile = ( context: string, dic: any ): TransformTextFn => (
     if ( type === '${}' ) return dollarsBracesVarDefn
     throw new Error ( `${context}. Unexpected type ${type}` )
   }
-  return Promise.resolve ( derefence ( context, dic, text, { throwError: true, variableDefn: variableDefn () } ) )
+  return Promise.resolve ( derefence ( context, dic, text, { throwError: true, variableDefn: variableDefn (), allowUndefined: true,undefinedIs: '' } ) )
 };
 
 type TransformTextFn = ( type: string, text: string ) => Promise<string>
