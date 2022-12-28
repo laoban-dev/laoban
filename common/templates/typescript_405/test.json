@@ -3,5 +3,4 @@
   "description": "${projectDetails.description}",
   "version": "${version}",
   "dependencies": {${projectDetails.details.links:map<<>>(i=>"<<i>>":"<<version>>")}}
-
 }
