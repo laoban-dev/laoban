@@ -222,11 +222,11 @@ export function fileNameFrom ( f: CopyFileDetails ): string {
 }
 export type CopyFileDetails = string | TemplateFileDetails
 
-export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) => string ): ( fd: CopyFileDetails ) => Promise<void> {
+export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fd: CopyFileDetails ) => Promise<void> {
   return async ( cfd ) => {
     const fileName = fileNameFrom ( cfd );
     const text = await fileOps.loadFileOrUrl ( rootUrl + '/' + fileName )
-    const txformed = tx && isTemplateFileDetails ( cfd ) ? tx ( cfd.type, text ) : text
+    const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
     return fileOps.saveFile ( target + '/' + fileName, txformed );
   }
 }
@@ -234,7 +234,7 @@ export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target
 export function copyFile ( fileOps: FileOps, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
   return copyFileAndTransform ( fileOps, rootUrl, target, undefined )
 }
-export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) => string ): ( fs: CopyFileDetails[] ) => Promise<void> {
+export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) =>  Promise<string> ): ( fs: CopyFileDetails[] ) => Promise<void> {
   const cf = copyFileAndTransform ( fileOps, rootUrl, target, tx )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );

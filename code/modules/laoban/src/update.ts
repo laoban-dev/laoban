@@ -17,12 +17,12 @@ interface TemplateControlFile {
   files: CopyFileDetails[]
 }
 
-export const transformFile = ( context: string, dic: any ) => ( type: string, text: string ): string => {
+export const transformFile = ( context: string, dic: any ) => ( type: string, text: string ): Promise<string> => {
   function variableDefn (): VariableDefn {
     if ( type === '${}' ) return dollarsBracesVarDefn
     throw new Error ( `${context}. Unexpected type ${type}` )
   }
-  return derefence ( context, dic, text, { throwError: true, variableDefn: variableDefn () } )
+  return Promise.resolve ( derefence ( context, dic, text, { throwError: true, variableDefn: variableDefn () } ) )
 };
 
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {
