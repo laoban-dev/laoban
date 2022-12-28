@@ -17,7 +17,7 @@ import { Writable } from "stream";
 import { CommanderStatic } from "commander";
 import { addDebug } from "@phil-rice/debug";
 import { init } from "./init";
-import { FileOps, fileOpsStats } from "@phil-rice/utils";
+import { FileOps, fileOpsStats, safeObject } from "@phil-rice/utils";
 import { copyTemplateDirectory } from "./update";
 
 
@@ -130,7 +130,7 @@ const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[
 
   return Promise.all ( pds.map ( async p => {
     const version = await d.k ( () => `${p.directory} loadVersionFile`, () => loadVersionFile ( config ) )
-    return d.k ( () => `${p.directory} copyTemplateDirectory`, () => copyTemplateDirectory ( fileOps, config, { ...p, version } ) )
+    return d.k ( () => `${p.directory} copyTemplateDirectory`, () => copyTemplateDirectory ( fileOps, config, { ...p, version, properties: safeObject ( config.properties ) } ) )
     // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
     // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )
   } ) )

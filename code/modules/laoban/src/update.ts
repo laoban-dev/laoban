@@ -1,6 +1,6 @@
 import { CopyFileDetails, copyFiles, FileOps, safeArray, safeObject } from "@phil-rice/utils";
 import path from "path";
-import { ConfigWithDebug, ProjectDetailsAndDirectory, ProjectDetailsDirectoryAndVersion } from "./config";
+import { ConfigWithDebug, ProjectDetailsAndDirectory, ProjectDetailsDirectoryPropertiesAndVersion } from "./config";
 import * as fse from "fs-extra";
 import { derefence, dollarsBracesVarDefn, VariableDefn } from "@phil-rice/variables";
 
@@ -62,7 +62,7 @@ export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, la
   return copyFiles ( `Copying x template ${templateUrl} to ${target}`, fileOps, prefix, target,
     includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ) ) ( safeArray ( controlFile.files ) )
 }
-export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryAndVersion ): Promise<void> {
+export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryPropertiesAndVersion ): Promise<void> {
   let d = config.debug ( 'update' )
   const template = p.projectDetails.template
   const target = p.directory

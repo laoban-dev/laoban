@@ -31,7 +31,7 @@ ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templ
     "dist/index.d.ts",
     "dist/src/"
   ],
-  "license": "MIT",
+  "license": "${properties.license}",
   "main": "dist/index",
   "types": "dist/index",
   "repository": "git@github.com:phil-rice/laoban.git",

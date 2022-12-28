@@ -19,6 +19,7 @@ export interface ConfigVariables {
   packageManager: string;
   parent?: string | string[];
   variables?: { [ name: string ]: string }
+  properties?: NameAnd<string>
 }
 export interface RawConfig extends ConfigVariables {
   scripts?: ScriptDefns
@@ -108,6 +109,7 @@ export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputSt
   variables: { [ name: string ]: string },
   scripts: ScriptDetails[],
   os: string
+
 }
 
 export function combineConfigs ( c1: Config | undefined, c2: Config | undefined ): Config | undefined {
@@ -156,10 +158,11 @@ export interface ProjectDetailsAndDirectory {
   directory: string
   projectDetails?: ProjectDetails
 }
-export interface ProjectDetailsDirectoryAndVersion {
+export interface ProjectDetailsDirectoryPropertiesAndVersion {
   version: string
   directory: string
   projectDetails?: ProjectDetails
+  properties: NameAnd<string>
 }
 
 export interface Details {

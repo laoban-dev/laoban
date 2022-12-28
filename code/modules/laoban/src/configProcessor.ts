@@ -134,6 +134,7 @@ export function configProcessor ( laoban: string, outputStream: WritableStream, 
   add ( "cacheDir", { ...rawConfig, cacheDir: findCache ( laoban, undefined, rawConfig.cacheDir ) } )
   add ( "profile", rawConfig )
   add ( "packageManager", rawConfig )
+  result.properties = rawConfig.properties ? rawConfig.properties : {}
   result.templates = rawConfig.templates ? rawConfig.templates : {}
   result.sessionDir = rawConfig.sessionDir ? rawConfig.sessionDir : path.join ( laoban, '.session' )
   result.throttle = rawConfig.throttle ? rawConfig.throttle : 0
