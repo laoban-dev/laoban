@@ -1,5 +1,9 @@
 {
-  "browserslist": {
+  "name":        "@phil-rice/debug",
+  "description": "A general debug utility that allows debugs to be turned on and off easily and thus left in the code",
+  "version":     "0.3.10"
+,
+ "browserslist": {
     "development": [
       "last 1 chrome version",
       "last 1 firefox version",
@@ -12,12 +16,16 @@
     ]
   },
   "dependencies": {
+    
+     
     "array.prototype.flatmap": "^1.3.1",
     "@types/node": "^14.14.7",
     "npm-check-updates": "^10.0.0",
     "typescript": "^4.0.5"
   },
   "devDependencies": {
+    
+
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/user-event": "^12.2.0",
     "@types/jest": "^26.0.15",
@@ -42,17 +50,5 @@
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
-  },
-  "version": "0.3.10",
-  "template": "typescript",
-  "name": "@phil-rice/debug",
-  "description": "A general debug utility that allows debugs to be turned on and off easily and thus left in the code",
-  "details": {
-    "links": [],
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "tsc": true,
-    "test": true,
-    "publish": true
   }
 }

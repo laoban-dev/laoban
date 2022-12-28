@@ -1,5 +1,5 @@
 {
-  ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.variables.template)
+${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.variables.template.json),
  "browserslist": {
     "development": [
       "last 1 chrome version",
@@ -45,6 +45,5 @@
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
-  },
-  "version": "<version>"
+  }
 }
