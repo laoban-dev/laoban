@@ -2,5 +2,5 @@
   "name": "${projectDetails.name}",
   "description": "${projectDetails.description}",
   "version": "${version}",
-  "dependencies": {${projectDetails.details.links:map<<>>(i=>"<<i>>":"<<version>>")}}
+  ${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript_405/package.json.dependencies.template)}
 }

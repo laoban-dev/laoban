@@ -1,0 +1,1 @@
+  "dependencies": {${projectDetails.details.links:map<<>>(i=>"<<i>>":"<<version>>")}}
