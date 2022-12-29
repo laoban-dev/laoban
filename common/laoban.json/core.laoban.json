@@ -1,15 +1,18 @@
 {
   "packageManager": "yarn",
-  "templateDir": "${laobanDirectory}/template",
-  "templates":    {},
-  "versionFile": "${templateDir}/version.txt",
-  "log":         ".log",
-  "status":      ".status",
-  "profile":     ".profile",
-  "scripts":     {
+  "templateDir":    "${laobanDirectory}/template",
+  "templates":      {},
+  "versionFile":    "${templateDir}/version.txt",
+  "log":            ".log",
+  "status":         ".status",
+  "profile":        ".profile",
+  "scripts":        {
     "log":   {
       "description": "displays the tail of  log file. Best used with -s option", "commands": ["tail -5 ${log} "]
     },
     "clean": {"description": "Cleans up laoban", "commands": ["rm -f .status", "rm -f .log", "rm -f .profile"]}
+  },
+  "properties":     {
+    "license": "MIT"
   }
 }
