@@ -1,5 +1,6 @@
 import { cachedFileOps, childDirs, copyFile, copyFiles, emptyFileOps, fileOpsStats, meteredFileOps, MeteredFileOps } from "./fileOps";
 import { lastSegment } from "./strings";
+import { NullDebugCommands } from "@phil-rice/debug";
 
 const foundFileOps = (): MeteredFileOps => meteredFileOps ( {
   ...emptyFileOps,
@@ -66,14 +67,14 @@ describe ( "fileOps", () => {
 describe ( "copyFile", () => {
   it ( "it should copy a file", async () => {
     const fileOps = foundFileOps ();
-    await copyFile ( fileOps, 'rootUrl', 'target' ) ( 'url' )
+    await copyFile ( fileOps, NullDebugCommands, 'rootUrl', 'target' ) ( 'url' )
     expect ( fileOps.savedFiles () ).toEqual ( [ [ "target/url", "loaded_rootUrl/url" ] ] )
   } )
 } )
 describe ( "copyFiles", () => {
   it ( "it should copy files", async () => {
     const fileOps = foundFileOps ();
-    await copyFiles ( 'someContext', fileOps, 'rootUrl', 'target', ( type, text ) => Promise.resolve ( text ) ) ( [ 'url1', 'url2' ] )
+    await copyFiles ( 'someContext', fileOps, NullDebugCommands, 'rootUrl', 'target', ( type, text ) => Promise.resolve ( text ) ) ( [ 'url1', 'url2' ] )
     expect ( fileOps.savedFiles () ).toEqual ( [
       [ "target/url1", "loaded_rootUrl/url1" ],
       [ "target/url2", "loaded_rootUrl/url2" ]
@@ -86,10 +87,10 @@ describe ( "childDirs", () => {
   const fileOps = (): MeteredFileOps => meteredFileOps ( {
     ...emptyFileOps,
     listFiles: root => Promise.resolve ( root.length > 10 ? [] : [ 1, 2 ].map ( i => lastSegment ( root ) + i ) ),
-    isDirectory ( filename: string ): Promise<boolean> {return Promise.resolve ( true )}
+    isDirectory (): Promise<boolean> {return Promise.resolve ( true )}
   } )
   it ( "it should find all the descendants if no filter", async () => {
-    expect ( await childDirs ( fileOps (), s => false ) ( 'X' ) ).toEqual ( [
+    expect ( await childDirs ( fileOps (), () => false ) ( 'X' ) ).toEqual ( [
       "X/X1",
       "X/X2",
       "X/X1/X11",

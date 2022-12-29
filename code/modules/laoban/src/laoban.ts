@@ -61,6 +61,12 @@ let configAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) 
   output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) )
   return Promise.resolve ()
 }
+let clearCacheAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
+  if ( config.cacheDir )
+    return fileOps.removeDirectory ( config.cacheDir, true )
+  else
+    console.log ( 'Cache directory is not defined in laoban.json' )
+}
 let initAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
   let simpleConfig = { ...config }
   delete simpleConfig.scripts
@@ -187,7 +193,6 @@ export class Cli {
     var program = require ( 'commander' )
       .arguments ( '' )
       .option ( '-c, --cachestats', "show how the cache was impacted by this command", false )
-      .option ( '--clearcache', "removes the cache", false )
       .option ( '--load.laoban.debug' ).version ( version )//
 
     let defaultOptions = this.defaultOptions ( configAndIssues )
@@ -231,6 +236,7 @@ export class Cli {
       action ( cmd => init ( fileOps, configAndIssues, process.cwd (), cmd.force ).then ( postCommand ( program, fileOps ) ) )
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
+    action ( program, 'clearCache', clearCacheAction, 'Clears the cache', this.minimalOptions ( configAndIssues ) )
     action ( program, 'validate', validationAction ( this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitary command (the rest of the command line).',

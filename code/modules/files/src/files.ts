@@ -8,15 +8,17 @@ function loadFile ( fileName: string ): Promise<string> {
   return promises.readFile ( fileName ).then ( buffer => buffer.toString ( 'utf-8' ) )
 }
 function loadUrl ( fileOrUrl: string ): Promise<string> {
-  // console.log('in loadUrl', fileOrUrl)
-  return fetch ( fileOrUrl ).then ( res => res.text (), error => {
-    console.error (fileOrUrl, fetch )
+  return fetch ( fileOrUrl ).then ( async res => {
+    let text = await res.text ();
+    if ( res.status >= 400 ) throw Error ( `Cannot load file ${fileOrUrl}. Status is ${res.status}\n${text}` )
+    return text;
+  }, error => {
+    console.error ( error )
     throw error
   } )
 }
 
 function loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
-  // console.log('in loadFileOrUrl', fileOrUrl)
   return fileOrUrl.includes ( "://" ) ? loadUrl ( fileOrUrl ) : loadFile ( fileOrUrl )
 }
 export const fileOps: FileOps = {

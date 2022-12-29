@@ -15,3 +15,5 @@
 0.3.8 fixed issues with guards introduced by 0.3.7
 0.3.12 package.json is now 'nothing special'. 
 0.3.13 we have properties in laoban.json that can be accessed by package.json (project wide things like 'license' and 'repository')
+0.3.14 Restored the 'old default update' mechanism for legacy laoban installations
+0.3.15 Changed --clearcache to a command and improved error reporting/debugging for update

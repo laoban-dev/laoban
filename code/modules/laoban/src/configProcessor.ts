@@ -24,13 +24,6 @@ export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawC
   return Promise.resolve ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ) )
 };
 
-export const makeAndClearCache = ( laobanDir: string ) => async ( rcf: RawConfigAndFileOps ): Promise<FileOps> => {
-  const { rawConfig, fileOps } = rcf
-  let newFileOps = await makeCache ( laobanDir ) ( rcf );
-  const actualCache = isCachedFileOps ( newFileOps ) ? newFileOps.cacheDir : undefined
-  if ( actualCache === undefined ) return Promise.resolve ( newFileOps )
-  return newFileOps.removeDirectory ( actualCache, true ).then ( () => newFileOps.createDir ( actualCache ).then ( () => newFileOps ) )
-}
 const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
   return async ( filename ): Promise<RawConfigAndFileOps> => {
     if ( debug ) console.log ( `About to try and load ${filename}`, fileOpsStats ( fileOps ) )

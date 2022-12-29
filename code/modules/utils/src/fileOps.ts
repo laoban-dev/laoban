@@ -1,5 +1,4 @@
-import { NameAnd } from "./utils";
-
+import { DebugCommands } from "@phil-rice/debug";
 
 export interface CopyFileFns {
   loadFileOrUrl: ( fileOrUrl: string ) => Promise<string>
@@ -79,20 +78,20 @@ export function isMeteredFileOps ( fileOps: FileOps ): fileOps is MeteredFileOps
 }
 export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
   if ( isMeteredFileOps ( fileOps ) ) return fileOps
-  var digestCount: number = 0;
-  var lastDigested: string = undefined
+  let digestCount: number = 0;
+  let lastDigested: string = undefined
 
-  var loadFileOrUrlCount: number = 0;
-  var lastLoadedFile: string = undefined
-  var createDirCount: number = 0;
-  var lastCreatedDir: string = undefined;
-  var saveFileCount: number = 0;
-  var lastSavedFileName: string = undefined;
-  var lastSavedFile: string = undefined;
-  var listFilesCount: number = 0
-  var savedFiles: [ string, string ][] = []
-  var removeDirectoryCount: number = 0
-  var lastRemoveDirectory: string = undefined
+  let loadFileOrUrlCount: number = 0;
+  let lastLoadedFile: string = undefined
+  let createDirCount: number = 0;
+  let lastCreatedDir: string = undefined;
+  let saveFileCount: number = 0;
+  let lastSavedFileName: string = undefined;
+  let lastSavedFile: string = undefined;
+  let listFilesCount: number = 0
+  let savedFiles: [ string, string ][] = []
+  let removeDirectoryCount: number = 0
+  let lastRemoveDirectory: string = undefined
 
   return {
     ...fileOps,
@@ -150,9 +149,9 @@ export const emptyFileOps: FileOps = {
   digest (): string {return "";},
   listFiles (): Promise<string[]> {return Promise.resolve ( [] );},
   saveFile (): Promise<void> {return Promise.resolve ();},
-  isDirectory ( filename: string ): Promise<boolean> {return Promise.resolve ( false )},
-  isFile: ( filename: string ): Promise<boolean> => {return Promise.resolve ( false )},
-  removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => Promise.resolve ()
+  isDirectory (): Promise<boolean> {return Promise.resolve ( false )},
+  isFile: (): Promise<boolean> => {return Promise.resolve ( false )},
+  removeDirectory: (): Promise<void> => Promise.resolve ()
 }
 
 export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheFileOps ): ( fileOrUrl: string ) => Promise<string> {
@@ -197,14 +196,13 @@ export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
 
 export function cachedFileOps ( fileOps: FileOps, cacheDir: string | undefined ): FileOps | CachedFileOps {
   if ( cacheDir === undefined || isCachedFileOps ( fileOps ) ) return fileOps
-  var cacheHits = 0
-  var cacheMisses = 0
-  var ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
-  let result: CachedFileOps = {
+  let cacheHits = 0
+  let cacheMisses = 0
+  let ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
+  return {
     ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cacheDir, ops ),
     cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits, original: fileOps, cacheDir
-  };
-  return result
+  }
 }
 
 interface TemplateFileDetails {
@@ -219,7 +217,7 @@ export function isTemplateFileDetails ( t: CopyFileDetails ): t is TemplateFileD
 export function fileNameFrom ( f: CopyFileDetails ): string {
   if ( isTemplateFileDetails ( f ) ) return f.file
   if ( typeof f === 'string' ) return f
-  throw new Error ( `Cannot find file name in [${JSON.stringify(f)}]` )
+  throw new Error ( `Cannot find file name in [${JSON.stringify ( f )}]` )
 }
 export function targetFrom ( f: CopyFileDetails ): string {
   if ( isTemplateFileDetails ( f ) ) return f.target ? f.target : f.file
@@ -230,7 +228,7 @@ export function targetFrom ( f: CopyFileDetails ): string {
 
 export type CopyFileDetails = string | TemplateFileDetails
 
-export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, targetRoot: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fd: CopyFileDetails ) => Promise<void> {
+export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fd: CopyFileDetails ) => Promise<void> {
   return async ( cfd ) => {
     const fileName = fileNameFrom ( cfd );
     const target = targetFrom ( cfd )
@@ -241,13 +239,14 @@ export function copyFileAndTransform ( fileOps: FileOps, rootUrl: string, target
   }
 }
 
-export function copyFile ( fileOps: FileOps, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
-  return copyFileAndTransform ( fileOps, rootUrl, target, undefined )
+
+export function copyFile ( fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
+  return copyFileAndTransform ( fileOps, d, rootUrl, target, undefined )
 }
-export function copyFiles ( context: string, fileOps: FileOps, rootUrl: string, target: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fs: CopyFileDetails[] ) => Promise<void> {
-  const cf = copyFileAndTransform ( fileOps, rootUrl, target, tx )
+export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fs: CopyFileDetails[] ) => Promise<void> {
+  const cf = copyFileAndTransform ( fileOps, d, rootUrl, target, tx )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );
-    throw Error ( `Error ${context}\nFile ${f}\n${e}` )
+    throw Error ( `Error ${context}\nFile ${JSON.stringify(f)}\n${e}` )
   } ) ) ).then ( () => {} )
 }

@@ -3,7 +3,7 @@
   "name"       : "@phil-rice/utils",
   "description": "Those miscellaneous utilities and types that every project needs",
   "details"    : {
-    "links"       : [],
+    "links"       : ["@phil-rice/debug"],
     "extraDeps"   : {    },
     "extraDevDeps": {},
     "tsc": true,
