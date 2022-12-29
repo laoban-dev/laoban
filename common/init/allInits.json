@@ -1,7 +1,5 @@
 {
-  "inits": {
-    "javascript":     "@laoban@/javascript_core",
-    "typescript":     "@laoban@/typescript",
-    "typescript_405": "@laoban@/typescript_405"
-  }
+  "javascript":     "@laoban@/javascript_core",
+  "typescript":     "@laoban@/typescript",
+  "typescript_405": "@laoban@/typescript_405"
 }
