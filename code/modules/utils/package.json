@@ -1,13 +1,13 @@
 {
   "name": "@phil-rice/utils",
   "description": "Those miscellaneous utilities and types that every project needs",
-  "version": "0.3.16",
+  "version": "0.3.17",
   "bin": {},
   "keywords": [],
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
   "dependencies": {
-    "@phil-rice/debug": "0.3.16",
+    "@phil-rice/debug": "0.3.17",
     "typescript": "^4.0.5"
   },
   "devDependencies": {
