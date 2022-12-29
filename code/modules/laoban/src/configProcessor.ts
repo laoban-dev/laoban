@@ -114,9 +114,10 @@ function addScripts ( dic: any, scripts: ScriptDefns ) {
 }
 export function configProcessor ( laoban: string, outputStream: WritableStream, rawConfig: RawConfig ): Config {
   var result: any = { laobanDirectory: laoban, outputStream, laobanConfig: path.join ( laoban, loabanConfigName ) }
-  function add ( name: string, raw: any ) {
+  function add ( name: string, raw: any , defaultvalue?: string) {
     try {
-      result[ name ] = derefence ( `processing config ${name}`, result, raw[ name ], { throwError: true, variableDefn: dollarsBracesVarDefn } )
+      const value = raw[name]?raw[name]:defaultvalue
+      result[ name ] = derefence ( `processing config ${name}`, result, value, { throwError: true, variableDefn: dollarsBracesVarDefn } )
     } catch ( e ) {
       console.error ( e );
       throw Error ( `Failed to add ${name} to config. Error is ${e}` )
@@ -126,6 +127,7 @@ export function configProcessor ( laoban: string, outputStream: WritableStream, 
   add ( "versionFile", rawConfig )
   add ( "log", rawConfig )
   add ( "status", rawConfig )
+  add ( "inits", rawConfig, "@laoban@/init/allInits.json" )
   add ( "cacheDir", { ...rawConfig, cacheDir: findCache ( laoban, undefined, rawConfig.cacheDir ) } )
   add ( "profile", rawConfig )
   add ( "packageManager", rawConfig )

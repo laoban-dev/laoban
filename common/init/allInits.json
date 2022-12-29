@@ -1,0 +1,6 @@
+{
+  inits:[
+    "@laoban@/javascript_core",
+    "@laoban@/typescript",
+    "@laoban@/typescript_405" ]
+}

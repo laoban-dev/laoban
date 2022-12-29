@@ -110,6 +110,7 @@ export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputSt
   variables: { [ name: string ]: string },
   scripts: ScriptDetails[],
   os: string
+  inits?: string
 
 }
 

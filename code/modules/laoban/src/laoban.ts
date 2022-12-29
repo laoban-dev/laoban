@@ -67,24 +67,6 @@ let clearCacheAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: an
   else
     console.log ( 'Cache directory is not defined in laoban.json' )
 }
-let initAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
-  let simpleConfig = { ...config }
-  delete simpleConfig.scripts
-  delete simpleConfig.outputStream
-  output ( config ) ( "init called" )
-  return Promise.resolve ()
-}
-
-// //TODO sort out type signature.. and it's just messy
-// function runAction ( executeCommand: any, command: () => string, executeGenerations: ExecuteGenerations ): Action<GenerationsResult> {
-//   return ( fileOps: FileOps, config: Config, cmd: any ) => {
-//     // console.log('runAction', command())
-//     let s: ScriptDetails = { name: '', description: `run ${command}`, commands: [ { name: 'run', command: command (), status: false } ] }
-//     // console.log('command.run', command)
-//     return executeCommand ( config, s, executeGenerations ) ( config, cmd )
-//   }
-// }
-
 
 let statusAction: ProjectAction<void> = ( config: Config, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
   let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
@@ -142,16 +124,6 @@ const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[
   } ) )
 }
 
-// function command<T>(p: commander.CconfigOrReportIssues: ConfigOrReportIssues, configAndIssues: ConfigAndIssues) => (cmd: string,a: Action<T>, description: string, ...fns: ((a: any) => any)[]) {
-//     function action<T>(a: Action<T>): (cmd: any) => Promise<T> {
-//         return cmd => configOrReportIssues(configAndIssues).then(config => a(config, cmd))
-//     }
-//     var p = this.program.command(cmd).description(description)
-//     fns.forEach(fn => p = fn(p))
-//     return p.action(action(a))
-// }
-
-
 function postCommand ( p: any, fileOps: FileOps ) {
   return res => {
     if ( p.cachestats ) console.log ( `Cache stats ${JSON.stringify ( fileOpsStats ( fileOps ), null, 2 )}\n` )
@@ -182,9 +154,10 @@ export class Cli {
   }
 
   minimalOptions ( configAndIssues: ConfigAndIssues ): ( program: CommanderStatic ) => any {
-    return program => program.//
-      option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]" )
+    return program => program
+      .option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]" )
   }
+
 
   constructor ( configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
     const version = require ( "../../package.json" ).version
@@ -231,9 +204,11 @@ export class Cli {
         } ) )
       }, description, ...options )
     }
-    program.command ( 'init' ).description ( 'creates a laoban.json and a template directory in the current dir' ).//
-      option ( '-f|--force ', "will overwrite existing laoban.json" ).//
-      action ( cmd => init ( fileOps, configAndIssues, process.cwd (), cmd.force ).then ( postCommand ( program, fileOps ) ) )
+    program.command ( 'init' ).description ( 'creates a laoban.json and a template directory in the current dir' )
+      .option ( '-t,--types <types...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", ['typescript'] )
+      .option ( '-l, --listtypes', "lists the types of projects that can be created (and doesn't create anything)", false )
+      .option ( '-f,--force ', "will overwrite existing laoban.json" , false)
+      .action ( cmd => init ( fileOps, configAndIssues, process.cwd (), cmd ).then ( postCommand ( program, fileOps ) ) )
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
     action ( program, 'clearCache', clearCacheAction, 'Clears the cache', this.minimalOptions ( configAndIssues ) )
