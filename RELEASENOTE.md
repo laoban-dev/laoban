@@ -17,3 +17,4 @@
 0.3.13 we have properties in laoban.json that can be accessed by package.json (project wide things like 'license' and 'repository')
 0.3.14 Restored the 'old default update' mechanism for legacy laoban installations
 0.3.15 Changed --clearcache to a command and improved error reporting/debugging for update
+0.3.16 Post processors added for update. Makes it much easier to reuse existing templates, and the user experience around files needing environment variables (like NPM_TOKEN) is much better

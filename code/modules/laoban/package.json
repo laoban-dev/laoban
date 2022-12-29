@@ -1,17 +1,24 @@
 {
-  "name":        "laoban",
+  "name": "laoban",
   "description": "A cli for managing projects that have many npm packages",
-  "version":     "0.3.15",
-  "bin":{
+  "version": "0.3.16",
+  "bin": {
     "laoban": "dist/index.js"
   },
-  "keywords": ["monorepo","devops"],
+  "keywords": [
+    "monorepo",
+    "devops"
+  ],
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
   "dependencies": {
     "fs-extra": "^9.0.1",
     "commander": "^6.2.0",
-    "@phil-rice/variables":"0.3.15","@phil-rice/generations":"0.3.15","@phil-rice/validation":"0.3.15","@phil-rice/debug":"0.3.15","@phil-rice/files":"0.3.15",
+    "@phil-rice/variables": "0.3.16",
+    "@phil-rice/generations": "0.3.16",
+    "@phil-rice/validation": "0.3.16",
+    "@phil-rice/debug": "0.3.16",
+    "@phil-rice/files": "0.3.16",
     "typescript": "^4.0.5"
   },
   "devDependencies": {
@@ -34,7 +41,7 @@
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
- "browserslist": {
+  "browserslist": {
     "development": [
       "last 1 chrome version",
       "last 1 firefox version",

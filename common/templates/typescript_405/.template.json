@@ -1,9 +1,12 @@
 {
   "files": [
-    {"file": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/.npmrc", "target": ".npmrc"},
+    {
+      "file": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/.npmrc", "target": ".npmrc",
+      "postProcess": "checkEnv(NPM_TOKEN)"
+    },
     {"file": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/babel.config.json", "target": "babel.config.json"},
     {"file": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/jest.config.json", "target": "jest.config.json"},
-    {"file": "package.json", "type": "${}"},
+    {"file": "package.json", "type": "${}", "postProcess": "json"},
     "tsconfig.json"
   ]
 }

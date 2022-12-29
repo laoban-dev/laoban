@@ -1,4 +1,5 @@
 import { DebugCommands } from "@phil-rice/debug";
+import { safeArray } from "./utils";
 
 export interface CopyFileFns {
   loadFileOrUrl: ( fileOrUrl: string ) => Promise<string>
@@ -209,7 +210,27 @@ interface TemplateFileDetails {
   file: string
   target?: string
   type: string
+  postProcess?: string | string[]
 }
+const postProcessOne = ( context: string ) => ( text: string, p: string ): string => {
+  if ( p === 'json' ) try {
+    return JSON.stringify ( JSON.parse ( text ), null, 2 )
+  } catch ( e ) {
+    console.error ( `Cannot parse post processing json ${context}`, e )
+    throw e
+  }
+  if ( p.match ( /^checkEnv\(.*\)$/ ) ) {
+    const env = p.slice ( 9, -1 )
+    if ( process.env[ env ] === undefined ) console.error ( `${context}\n    requires the env variable [${env} to exist and it doesn't. This might cause problems]` )
+    return text
+  }
+  throw Error ( `${context}. Don't know how to post process with ${p}. Legal values are 'json' and 'checkEnv(xxx) - which checks the environment variable has a value` )
+};
+function postProcess ( context: string, t: CopyFileDetails, text: string ): string {
+  if ( !isTemplateFileDetails ( t ) ) return text
+  return safeArray ( t.postProcess ).reduce ( postProcessOne ( context ), text )
+}
+
 export function isTemplateFileDetails ( t: CopyFileDetails ): t is TemplateFileDetails {
   const a: any = t
   return a.file !== undefined
@@ -235,7 +256,8 @@ export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootU
     const fullname = fileName.includes ( '://' ) ? fileName : rootUrl + '/' + fileName
     const text = await fileOps.loadFileOrUrl ( fullname )
     const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
-    return fileOps.saveFile ( targetRoot + '/' + target, txformed );
+    const postProcessed = postProcess ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, cfd, txformed )
+    return fileOps.saveFile ( targetRoot + '/' + target, postProcessed );
   }
 }
 
@@ -247,6 +269,6 @@ export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands,
   const cf = copyFileAndTransform ( fileOps, d, rootUrl, target, tx )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );
-    throw Error ( `Error ${context}\nFile ${JSON.stringify(f)}\n${e}` )
+    throw Error ( `Error ${context}\nFile ${JSON.stringify ( f )}\n${e}` )
   } ) ) ).then ( () => {} )
 }
