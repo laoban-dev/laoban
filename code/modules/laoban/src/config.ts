@@ -30,7 +30,8 @@ export function combineRawConfigs ( r1: RawConfig, r2: RawConfig ): RawConfig {
     parent: [ ...safeArray ( r1.parent ), ...safeArray ( r2.parent ) ],
     templates: combineTwoObjects ( r1.templates, r2.templates ),
     variables: combineTwoObjects ( r1.variables, r2.variables ),
-    scripts: combineTwoObjects ( r1.scripts, r2.scripts )
+    scripts: combineTwoObjects ( r1.scripts, r2.scripts ),
+    properties: combineTwoObjects ( r1.properties, r2.properties )
   }
 }
 export function combineRawConfigsAndFileOps ( r1: RawConfigAndFileOps, r2: RawConfigAndFileOps ): RawConfigAndFileOps {

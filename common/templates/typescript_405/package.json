@@ -1,11 +1,11 @@
 {
-${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.variables.template.json),
+${include(@laoban@/templates/typescript/package.json.variables.template.json),
   "dependencies": {
-${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.dependencies.template)
+${include(@laoban@/templates/typescript/package.json.dependencies.template)
     "typescript": "^4.0.5"
   },
   "devDependencies": {
-${include(https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/package.json.devdependencies.template)
+${include(@laoban@/templates/typescript/package.json.devdependencies.template)
     "@types/node": "^14.14.7",
     "@types/jest": "^26.0.15",
     "@testing-library/jest-dom": "^5.11.5",

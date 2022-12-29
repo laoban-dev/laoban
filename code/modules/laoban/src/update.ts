@@ -51,8 +51,8 @@ export function combineTransformFns ( ...fns: TransformTextFn[] ): TransformText
 export const includeAndTransformFile = ( context: string, dic: any, fileOps: FileOps ) =>
   combineTransformFns ( includeFiles ( fileOps ), transformFile ( context, dic ) )
 
-export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps,d: DebugCommands, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {
-  const prefix = templateUrl.includes ( '://' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
+export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {
+  const prefix = templateUrl.includes ( '://' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const url = prefix + '/.template.json';
   const target = p.directory
   function parseCopyFile ( controlFileAsString: string ): TemplateControlFile {
@@ -63,7 +63,7 @@ export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps,d: 
     }
   }
   const controlFileAsString = await fileOps.loadFileOrUrl ( url )
-  d.message(() =>[`control file is `, controlFileAsString])
+  d.message ( () => [ `control file is `, controlFileAsString ] )
   const controlFile = parseCopyFile ( controlFileAsString );
   return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
     includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ) ) ( safeArray ( controlFile.files ) )

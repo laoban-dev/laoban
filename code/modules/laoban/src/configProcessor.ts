@@ -7,7 +7,7 @@ import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { cachedFileOps, FileOps, fileOpsStats, isCachedFileOps, meteredFileOps, toArray } from "@phil-rice/utils";
+import { cachedFileOps, FileOps, fileOpsStats, isCachedFileOps, meteredFileOps, shortCutFileOps, toArray } from "@phil-rice/utils";
 import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
 import WritableStream = NodeJS.WritableStream;
 
@@ -21,7 +21,8 @@ export type MakeCacheFnFromLaobanDir = ( laobanDir: string ) => MakeCacheFn
 
 export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawConfigAndFileOps ): Promise<FileOps> => {
   const actualCache = findCache ( laobanDir, rawConfig.cacheDir, undefined )
-  return Promise.resolve ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ) )
+  return Promise.resolve ( shortCutFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ),
+    { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' } ) )
 };
 
 const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
@@ -34,9 +35,10 @@ const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
     const ps = toArray ( rawConfig.parents );
     if ( debug ) console.log ( `\nParents are`, ps )
     const withCache = await makeCache ( { rawConfig, fileOps } );
-    if ( ps.length === 0 ) return { rawConfig, fileOps: withCache }
+    let rawResult = { rawConfig, fileOps: withCache };
+    if ( ps.length === 0 ) return rawResult
     const configs: RawConfigAndFileOps[] = await Promise.all ( ps.map ( load ( withCache, makeCache, debug ) ) )
-    const result: RawConfigAndFileOps = { ...configs.reduce ( combineRawConfigsAndFileOps, { rawConfig, fileOps: withCache } ) };
+    const result: RawConfigAndFileOps = { ...[ ...configs, rawResult ].reduce ( combineRawConfigsAndFileOps ) };
     return result
   };
 }

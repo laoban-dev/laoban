@@ -1,14 +1,15 @@
 {
   "packageManager": "yarn",
   "templates":      {
-    "typescript": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript_405"
+    "typescript": "@laoban@/templates/typescript_405"
   },
   "parents":        [
-    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/core.laoban.json",
-    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/typescript.laoban.json",
-    "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/typescript.publish.laoban.json"
+    "@laoban@/laoban.json/core.laoban.json",
+    "@laoban@/laoban.json/typescript.laoban.json",
+    "@laoban@/laoban.json/typescript.publish.laoban.json"
   ],
   "properties":     {
-    "repository": "git@github.com:phil-rice/laoban.git"
+    "repository": "git@github.com:phil-rice/laoban.git",
+    "license": "MIT"
   }
 }

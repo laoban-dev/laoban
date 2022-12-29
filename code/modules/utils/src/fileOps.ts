@@ -1,5 +1,5 @@
 import { DebugCommands } from "@phil-rice/debug";
-import { safeArray } from "./utils";
+import { NameAnd, safeArray } from "./utils";
 
 export interface CopyFileFns {
   loadFileOrUrl: ( fileOrUrl: string ) => Promise<string>
@@ -39,7 +39,6 @@ export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boo
 };
 
 export interface MeteredFileOps extends FileOps {
-
   digestCount (): number
   lastDigested (): string
   loadFileOrUrlCount (): number
@@ -153,6 +152,29 @@ export const emptyFileOps: FileOps = {
   isDirectory (): Promise<boolean> {return Promise.resolve ( false )},
   isFile: (): Promise<boolean> => {return Promise.resolve ( false )},
   removeDirectory: (): Promise<void> => Promise.resolve ()
+}
+
+export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<string> ): FileOps {
+  function processFile ( s: string ): string {
+    return s.replace ( /^@([^@]*)@/g, ( full ) => {
+      let name = full.slice ( 1, -1 );
+      const result = nameAndPrefix[ name ]
+      if ( result === undefined )
+        throw new Error ( `Cannot handle filename ${s}. It has the @${name}@. Legal names are ${Object.keys ( nameAndPrefix )}` )
+      return result
+    } )
+  }
+  return {
+    digest: fileOps.digest,
+    isFile: ( filename: string ) => fileOps.isFile ( processFile ( filename ) ),
+    isDirectory: ( filename: string ) => fileOps.isDirectory ( processFile ( filename ) ),
+    removeDirectory: ( filename: string, recursive: boolean ) => fileOps.removeDirectory ( processFile ( filename ), recursive ),
+    loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ) ),
+    createDir: dir => fileOps.createDir ( processFile ( dir ) ),
+    saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFile ( filename ), text ),
+    listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) )
+
+  }
 }
 
 export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheFileOps ): ( fileOrUrl: string ) => Promise<string> {
