@@ -1,5 +1,5 @@
 {
-  "javascript":     "@laoban@/javascript_core",
-  "typescript":     "@laoban@/typescript",
-  "typescript_405": "@laoban@/typescript_405"
+  "javascript":     "@laoban@/init/javascript_core",
+  "typescript":     "@laoban@/init/typescript",
+  "typescript_405": "@laoban@/init/typescript_405"
 }
