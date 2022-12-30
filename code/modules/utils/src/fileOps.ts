@@ -24,9 +24,9 @@ export async function findMatchingK ( list: string[], filter: ( s: string ) => P
   return ps.filter ( se => se.exists ).map ( se => se.string )
 
 }
+const addPrefix = ( s1: string ) => ( s2: string ) => s1 === '' ? s2 : s1 + '/' + s2
 export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boolean ) => ( root: string ): Promise<string[]> => {
   const children = async ( parent: string ): Promise<string[]> => {
-    const addPrefix = ( s1: string ) => ( s2: string ) => s1 === '' ? s2 : s1 + '/' + s2
     const files: string[] = await fileOps.listFiles ( parent )
     const withParent = files.filter ( d => !stopDirFilter ( d ) ).map ( addPrefix ( parent ) )
     const directories: string[] = await findMatchingK ( withParent, fileOps.isDirectory )
@@ -37,6 +37,21 @@ export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boo
   };
   return children ( root )
 };
+
+export const findChildDirs = ( fileOps: FileOps,ignoreFilters: (s: string)=> boolean, foundDirFilters: ( s: string ) => Promise<boolean> ) => ( name: string ): Promise<string[]> => {
+  const find = async ( parent: string ): Promise<string[]> => {
+    const found = await foundDirFilters ( parent )
+    // console.log ( 'found', parent, found )
+    if ( found ) return Promise.resolve ( [ parent ] )
+    const children = await fileOps.listFiles ( parent ).then( list => list.filter(dir => !ignoreFilters(dir)).map ( addPrefix ( parent ) ) )
+    const directories: string[] = await findMatchingK ( children, fileOps.isDirectory )
+    let result: string[] = []
+    const directoryResults = await Promise.all ( directories.map ( find ) )
+    directoryResults.forEach ( found => found.forEach ( f => result.push ( f ) ) )
+    return result
+  }
+  return find ( name )
+}
 export const parseJson = <T> ( context: string ) => ( s: string ): T => {
   try {
     return JSON.parse ( s )
@@ -48,12 +63,12 @@ export function loadWithParents<T> ( context: string, loader: ( url ) => Promise
   return url => loader ( url ).then ( async json => {
     const t: T = parse ( `${context}. Url ${url}` ) ( json )
     const parentUrls: string[] = findChildrenUrls ( t );
-    console.log(`loaded from ${url}`, t)
-    console.log(`parentUrls`, parentUrls)
+    console.log ( `loaded from ${url}`, t )
+    console.log ( `parentUrls`, parentUrls )
     let parents = await Promise.all ( parentUrls.map ( loadWithParents ( context, loader, parse, findChildrenUrls, fold ) ) );
-    console.log(`parents`, parents)
+    console.log ( `parents`, parents )
     let resultArray = [ ...parents, t ];
-    console.log(`resultArray`, resultArray)
+    console.log ( `resultArray`, resultArray )
     let result = resultArray.reduce ( fold );
     console.log ( `loadWithParents ${url}  => parents ${parentUrls} => `, parents, ' Result', result )
     return result;
