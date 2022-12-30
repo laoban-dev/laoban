@@ -2,7 +2,7 @@ import { Generations, ShellResult } from "./executors";
 import { Writable } from "stream";
 // @ts-ignore
 import { Debug } from "@phil-rice/debug";
-import { combineTwoObjects, FileOps, NameAnd, safeArray, safeObject } from "@phil-rice/utils";
+import { combineTwoObjects, FileOps, NameAnd, safeArray, safeObject, unique } from "@phil-rice/utils";
 
 
 export interface ConfigVariables {
@@ -17,7 +17,6 @@ export interface ConfigVariables {
   status: string;
   profile: string;
   packageManager: string;
-  parent?: string | string[];
   variables?: { [ name: string ]: string }
   properties?: NameAnd<string>
 }
@@ -25,17 +24,21 @@ export interface RawConfig extends ConfigVariables {
   scripts?: ScriptDefns
 }
 export function combineRawConfigs ( r1: RawConfig, r2: RawConfig ): RawConfig {
-  return {
+  if ( r1 === undefined ) return r2;
+  if ( r2 === undefined ) return r1;
+  let result = {
     ...r1, ...r2,
-    parent: [ ...safeArray ( r1.parent ), ...safeArray ( r2.parent ) ],
+    parents: unique([ ...safeArray ( r1.parents ), ...safeArray ( r2.parents ) ],url=>url),
     templates: combineTwoObjects ( r1.templates, r2.templates ),
     variables: combineTwoObjects ( r1.variables, r2.variables ),
     scripts: combineTwoObjects ( r1.scripts, r2.scripts ),
     properties: combineTwoObjects ( r1.properties, r2.properties )
-  }
+  };
+  console.log ( 'combineRawConfigs', r1, r2, result )
+  return result
 }
 export function combineRawConfigsAndFileOps ( r1: RawConfigAndFileOps, r2: RawConfigAndFileOps ): RawConfigAndFileOps {
-  return { rawConfig: combineRawConfigs ( r1.rawConfig, r2.rawConfig ), fileOps: r1.fileOps }
+  return { rawConfig: combineRawConfigs ( r1.rawConfig, r2.rawConfig ), fileOps: r2.fileOps }
 }
 
 export interface PackageJson {

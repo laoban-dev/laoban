@@ -1,4 +1,4 @@
-import { combineRawConfigsAndFileOps, CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, Envs, RawConfig, RawConfigAndFileOps, RawConfigAndFileOpsAndIssues, ScriptDefn, ScriptDefns, ScriptDetails } from "./config";
+import { combineRawConfigs, combineRawConfigsAndFileOps, CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, Envs, RawConfig, RawConfigAndFileOps, RawConfigAndFileOpsAndIssues, ScriptDefn, ScriptDefns, ScriptDetails } from "./config";
 import * as path from "path";
 import { laobanFile, loabanConfigName } from "./Files";
 import * as os from "os";
@@ -7,7 +7,7 @@ import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { cachedFileOps, FileOps, fileOpsStats, isCachedFileOps, meteredFileOps, shortCutFileOps, toArray } from "@phil-rice/utils";
+import { cachedFileOps, FileOps, fileOpsStats, loadWithParents, meteredFileOps, parseJson, safeArray, shortCutFileOps, toArray } from "@phil-rice/utils";
 import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
 import WritableStream = NodeJS.WritableStream;
 
@@ -16,15 +16,24 @@ export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
   if ( cacheDir !== undefined ) return path.join ( laobanDir, cacheDir )
   return path.join ( laobanDir, '.cache' )
 }
-export type MakeCacheFn = ( rawConfig: RawConfigAndFileOps ) => Promise<FileOps>
+export type MakeCacheFn = ( rawConfig: RawConfigAndFileOps ) => FileOps
 export type MakeCacheFnFromLaobanDir = ( laobanDir: string ) => MakeCacheFn
 
-export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawConfigAndFileOps ): Promise<FileOps> => {
+export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawConfigAndFileOps ): FileOps => {
   const actualCache = findCache ( laobanDir, rawConfig.cacheDir, undefined )
-  return Promise.resolve ( shortCutFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ),
-    { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' } ) )
+  return shortCutFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ),
+    { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' } )
 };
 
+// const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => async ( url: string ): Promise<RawConfigAndFileOps> => {
+//   const parse = ( context ) => ( json: string ): RawConfigAndFileOps => {
+//     const rawConfig = parseJson<RawConfig> ( context ) ( json )
+//     return { rawConfig, fileOps: makeCache ( { rawConfig, fileOps } ) }
+//   }
+//   return await loadWithParents<RawConfigAndFileOps> ( ``, fileOps.loadFileOrUrl, parse, raw => safeArray ( raw.rawConfig.parents ), combineRawConfigsAndFileOps ) ( url )
+// }
+//
+//
 const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
   return async ( filename ): Promise<RawConfigAndFileOps> => {
     if ( debug ) console.log ( `About to try and load ${filename}`, fileOpsStats ( fileOps ) )
@@ -34,7 +43,7 @@ const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
     // console.log ( `load ${filename}`, rawConfig.templates )
     const ps = toArray ( rawConfig.parents );
     if ( debug ) console.log ( `\nParents are`, ps )
-    const withCache = await makeCache ( { rawConfig, fileOps } );
+    const withCache = makeCache ( { rawConfig, fileOps } );
     let rawResult = { rawConfig, fileOps: withCache };
     if ( ps.length === 0 ) return rawResult
     const configs: RawConfigAndFileOps[] = await Promise.all ( ps.map ( load ( withCache, makeCache, debug ) ) )
@@ -114,9 +123,9 @@ function addScripts ( dic: any, scripts: ScriptDefns ) {
 }
 export function configProcessor ( laoban: string, outputStream: WritableStream, rawConfig: RawConfig ): Config {
   var result: any = { laobanDirectory: laoban, outputStream, laobanConfig: path.join ( laoban, loabanConfigName ) }
-  function add ( name: string, raw: any , defaultvalue?: string) {
+  function add ( name: string, raw: any, defaultvalue?: string ) {
     try {
-      const value = raw[name]?raw[name]:defaultvalue
+      const value = raw[ name ] ? raw[ name ] : defaultvalue
       result[ name ] = derefence ( `processing config ${name}`, result, value, { throwError: true, variableDefn: dollarsBracesVarDefn } )
     } catch ( e ) {
       console.error ( e );

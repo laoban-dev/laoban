@@ -37,6 +37,28 @@ export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boo
   };
   return children ( root )
 };
+export const parseJson = <T> ( context: string ) => ( s: string ): T => {
+  try {
+    return JSON.parse ( s )
+  } catch ( e ) {
+    throw new Error ( `Invalid JSON for ${context}: ${s}` )
+  }
+};
+export function loadWithParents<T> ( context: string, loader: ( url ) => Promise<string>, parse: ( context: string ) => ( json: string ) => T, findChildrenUrls: ( t: T ) => string[], fold: ( t1: T, t2: T ) => T ): ( url: string ) => Promise<T> {
+  return url => loader ( url ).then ( async json => {
+    const t: T = parse ( `${context}. Url ${url}` ) ( json )
+    const parentUrls: string[] = findChildrenUrls ( t );
+    console.log(`loaded from ${url}`, t)
+    console.log(`parentUrls`, parentUrls)
+    let parents = await Promise.all ( parentUrls.map ( loadWithParents ( context, loader, parse, findChildrenUrls, fold ) ) );
+    console.log(`parents`, parents)
+    let resultArray = [ ...parents, t ];
+    console.log(`resultArray`, resultArray)
+    let result = resultArray.reduce ( fold );
+    console.log ( `loadWithParents ${url}  => parents ${parentUrls} => `, parents, ' Result', result )
+    return result;
+  } )
+}
 
 export interface MeteredFileOps extends FileOps {
   digestCount (): number
@@ -160,7 +182,15 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
       let name = full.slice ( 1, -1 );
       const result = nameAndPrefix[ name ]
       if ( result === undefined )
-        throw new Error ( `Cannot handle filename ${s}. It has the @${name}@. Legal names are ${Object.keys ( nameAndPrefix )}` )
+        throw new Error ( `
+    Cannot
+    handle
+    filename ${s}.It
+    has
+    the
+  @${name}@.Legal
+    names
+    are ${Object.keys ( nameAndPrefix )}` )
       return result
     } )
   }
@@ -217,15 +247,20 @@ export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
   return a.cached === true
 }
 
-export function cachedFileOps ( fileOps: FileOps, cacheDir: string | undefined ): FileOps | CachedFileOps {
-  if ( cacheDir === undefined || isCachedFileOps ( fileOps ) ) return fileOps
-  let cacheHits = 0
-  let cacheMisses = 0
+function create ( fileOps: FileOps, original: FileOps, cacheDir: string ) {
+  let cacheHits = isCachedFileOps ( fileOps ) ? fileOps.cacheHits () : 0
+  let cacheMisses = isCachedFileOps ( fileOps ) ? fileOps.cacheMisses () : 0
   let ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
   return {
     ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cacheDir, ops ),
-    cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits, original: fileOps, cacheDir
+    cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits, original, cacheDir
   }
+}
+
+export function cachedFileOps ( fileOps: FileOps, cacheDir: string | undefined ): FileOps | CachedFileOps {
+  if ( cacheDir === undefined ) return fileOps
+  if ( isCachedFileOps ( fileOps ) ) return fileOps.cacheDir === cacheDir ? fileOps : create ( fileOps, fileOps.original, cacheDir );
+  return create ( fileOps, fileOps, cacheDir );
 }
 
 interface TemplateFileDetails {
@@ -238,12 +273,27 @@ const postProcessOne = ( context: string ) => ( text: string, p: string ): strin
   if ( p === 'json' ) try {
     return JSON.stringify ( JSON.parse ( text ), null, 2 )
   } catch ( e ) {
-    console.error ( `Cannot parse post processing json ${context}`, e )
+    console.error ( `
+    Cannot
+    parse
+    post
+    processing
+    json ${context}`, e )
     throw e
   }
   if ( p.match ( /^checkEnv\(.*\)$/ ) ) {
     const env = p.slice ( 9, -1 )
-    if ( process.env[ env ] === undefined ) console.error ( `${context}\n    requires the env variable [${env} to exist and it doesn't. This might cause problems]` )
+    if ( process.env[ env ] === undefined ) console.error ( `${context}
+  \n
+    requires
+    the
+    env
+    variable [${env} to
+    exist
+    and
+    it
+    doesn
+    't. This might cause problems]` )
     return text
   }
   throw Error ( `${context}. Don't know how to post process with ${p}. Legal values are 'json' and 'checkEnv(xxx) - which checks the environment variable has a value` )

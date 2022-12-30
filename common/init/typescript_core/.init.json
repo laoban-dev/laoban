@@ -1,13 +1,7 @@
 {
   "laoban.json":          {
     "packageManager": "yarn",
-    "parents":        [
-      "https://raw.githubusercontent.com/phil-rice/laoban/master/common/laoban.json/core.laoban.json"
-    ],
-    "properties":     {
-      "license":    "${projectJson.license}",
-      "repository": "${projectJson.repository}"
-    }
+
   },
   "project.details.json": [
     {

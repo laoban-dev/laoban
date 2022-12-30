@@ -1,24 +1,53 @@
-import { ConfigAndIssues } from "./config";
+import { combineRawConfigs, ConfigAndIssues } from "./config";
 import path from "path";
 import { output } from "./utils";
-import { FileOps } from "@phil-rice/utils";
+import { FileOps, loadWithParents, NameAnd, parseJson, safeArray } from "@phil-rice/utils";
+
+interface ProjectDetailsJson {
+  guardFile: string
+  variableFiles: NameAnd<any>
+  contents: any
+}
+interface InitFileContents {
+  parents?: string | string[]
+  "laoban.json": any;
+  "project.details.json": ProjectDetailsJson[]
+}
+function combineInitContents ( i1: InitFileContents, i2: InitFileContents ): InitFileContents {
+  console.log ( 'Trying to merge', i1, '\nand\n', i2 )
+  return {
+    "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
+    "project.details.json": [ ...safeArray ( i1[ "project.details.json" ] ), ...safeArray ( i2[ "project.details.json" ] ) ]
+  }
+}
+
+
+async function findInitFileContents ( fileOps: FileOps, configAndIssues: ConfigAndIssues, cmd: any ): Promise<InitFileContents> {
+  const types = cmd.types
+  const listTypes = cmd.listtypes
+  if ( types.length === 0 ) return Promise.reject ( `No types specified. Run with --listtypes to see available types` )
+
+  let initUrl = configAndIssues.config.inits;
+  const inits = parseJson ( `init ${initUrl}` ) ( await fileOps.loadFileOrUrl ( initUrl ) )
+  if ( listTypes ) return Promise.reject ( `Listing types from  ${initUrl}\n${JSON.stringify ( inits, null, 2 )}` )
+  const errors = types.filter ( t => Object.keys ( inits ).indexOf ( t ) === -1 )
+  if ( errors.length > 0 ) return Promise.reject ( `The following types are not defined : ${errors.join ( ', ' )}. Legal values are ${JSON.stringify ( Object.keys ( inits ) )}` )
+
+  const typeUrls = types.map ( t => inits[ t ] )
+  const loadInits = loadWithParents<InitFileContents> ( ``,
+    url => fileOps.loadFileOrUrl ( url + '/.init.json' ),
+    parseJson,
+    init => safeArray ( init.parents ),
+    combineInitContents )
+
+  const initContents: InitFileContents[] = await Promise.all <InitFileContents> ( typeUrls.map ( loadInits ) )
+  return initContents.reduce ( combineInitContents )
+}
 
 export async function init ( fileOps: FileOps, configAndIssues: ConfigAndIssues, dir: string, cmd: any ): Promise<void> {
   const force = cmd.force
-  const types = cmd.types
-  const listTypes = cmd.listtypes
-  const inits = JSON.parse ( await fileOps.loadFileOrUrl ( configAndIssues.config.inits ) )
-  if ( listTypes ) {
-    configAndIssues.outputStream.write ( `Listing types from  ${(configAndIssues.config.inits)}\n${JSON.stringify ( inits, null, 2 )}` );
-    return Promise.resolve ()
-  }
-  const errors = types.filter ( t => Object.keys ( inits ).indexOf ( t ) === -1 )
-  if ( errors.length > 0 ) {
-    console.error ( `The following types are not defined : ${errors.join ( ', ' )}. Legal values are ${JSON.stringify ( Object.keys ( inits ) )}` )
-    return Promise.resolve ()
-  }
-  const actualInits = Promise.all ( Object.values(inits).map ( fileOps.loadFileOrUrl ) )
-  console.log ( 'init', actualInits )
+  const initContents = await findInitFileContents ( fileOps, configAndIssues, cmd )
+  console.log('initContents', JSON.stringify(initContents,null,2))
   let file = path.join ( dir, 'laoban.json' );
   if ( !force && configAndIssues.config ) return Promise.resolve ( output ( configAndIssues ) ( `This project already has a laoban.json in ${configAndIssues.config.laobanDirectory}. Use --force if you need to create one here` ) )
   return fileOps.saveFile ( file, defaultLaobanJson )
