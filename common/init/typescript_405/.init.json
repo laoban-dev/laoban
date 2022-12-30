@@ -1,6 +1,6 @@
 {
   "parents":     [
-    "@laoban@/init/javascript_core"
+    "@laoban@/init/typescript_core"
   ],
   "laoban.json": {
     "templates": {

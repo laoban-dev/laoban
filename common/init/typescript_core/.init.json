@@ -1,4 +1,7 @@
 {
+  "parents":     [
+    "@laoban@/init/javascript_core"
+  ],
   "laoban.json":          {
     "packageManager": "yarn",
     "parents":        [
