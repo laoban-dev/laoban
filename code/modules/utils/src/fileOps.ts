@@ -63,12 +63,10 @@ export function loadWithParents<T> ( context: string, loader: ( url ) => Promise
   return url => loader ( url ).then ( async json => {
     const t: T = parse ( `${context}. Url ${url}` ) ( json )
     const parentUrls: string[] = findChildrenUrls ( t );
-    console.log ( `loaded from ${url}`, t )
-    console.log ( `parentUrls`, parentUrls )
-    let parents = await Promise.all ( parentUrls.map ( loadWithParents ( context, loader, parse, findChildrenUrls, fold ) ) );
-    console.log ( `parents`, parents )
-    let resultArray = [ ...parents, t ];
-    console.log ( `resultArray`, resultArray )
+    // console.log ( `loaded from ${url}`, t ,`parentUrls`, parentUrls )
+    const parents = await Promise.all ( parentUrls.map ( loadWithParents ( context, loader, parse, findChildrenUrls, fold ) ) );
+    // console.log ( `parents`, parents )
+    const resultArray = [ ...parents, t ];
     let result = resultArray.reduce ( fold );
     console.log ( `loadWithParents ${url}  => parents ${parentUrls} => `, parents, ' Result', result )
     return result;
@@ -194,7 +192,7 @@ export const emptyFileOps: FileOps = {
 export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<string> ): FileOps {
   function processFile ( s: string ): string {
     return s.replace ( /^@([^@]*)@/g, ( full ) => {
-      let name = full.slice ( 1, -1 );
+      const name = full.slice ( 1, -1 );
       const result = nameAndPrefix[ name ]
       if ( result === undefined )
         throw new Error ( `
@@ -265,7 +263,7 @@ export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
 function create ( fileOps: FileOps, original: FileOps, cacheDir: string ) {
   let cacheHits = isCachedFileOps ( fileOps ) ? fileOps.cacheHits () : 0
   let cacheMisses = isCachedFileOps ( fileOps ) ? fileOps.cacheMisses () : 0
-  let ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
+  const ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
   return {
     ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cacheDir, ops ),
     cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits, original, cacheDir

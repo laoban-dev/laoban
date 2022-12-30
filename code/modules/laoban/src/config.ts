@@ -34,7 +34,7 @@ export function combineRawConfigs ( r1: RawConfig, r2: RawConfig ): RawConfig {
     scripts: combineTwoObjects ( r1.scripts, r2.scripts ),
     properties: combineTwoObjects ( r1.properties, r2.properties )
   };
-  console.log ( 'combineRawConfigs', r1, r2, result )
+  // console.log ( 'combineRawConfigs', r1, r2, result )
   return result
 }
 export function combineRawConfigsAndFileOps ( r1: RawConfigAndFileOps, r2: RawConfigAndFileOps ): RawConfigAndFileOps {

@@ -13,13 +13,16 @@ interface InitFileContents {
   "laoban.json": any;
   "project.details.json": ProjectDetailsJson[]
 }
-function combineInitContents ( i1: InitFileContents, i2: InitFileContents ): InitFileContents {
-  console.log ( 'Trying to merge', i1, '\nand\n', i2 )
-  return {
+const combineInitContents = ( summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
+  let result = {
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
     "project.details.json": [ ...safeArray ( i1[ "project.details.json" ] ), ...safeArray ( i2[ "project.details.json" ] ) ]
-  }
-}
+  };
+  console.log ( 'Merging      ', summary ( i1 ), )
+  console.log ( '   with      ', summary ( i2 ) )
+  console.log ( '   producing ', JSON.stringify(result) )
+  return result
+};
 
 
 async function findInitFileContents ( fileOps: FileOps, configAndIssues: ConfigAndIssues, cmd: any ): Promise<InitFileContents> {
@@ -38,16 +41,16 @@ async function findInitFileContents ( fileOps: FileOps, configAndIssues: ConfigA
     url => fileOps.loadFileOrUrl ( url + '/.init.json' ),
     parseJson,
     init => safeArray ( init.parents ),
-    combineInitContents )
+    combineInitContents ( i => `Parents ${i.parents}` ) )
 
   const initContents: InitFileContents[] = await Promise.all <InitFileContents> ( typeUrls.map ( loadInits ) )
-  return initContents.reduce ( combineInitContents )
+  return initContents.reduce ( combineInitContents(i=>`Reducing Parents ${i.parents}`) )
 }
 
 export async function init ( fileOps: FileOps, configAndIssues: ConfigAndIssues, dir: string, cmd: any ): Promise<void> {
   const force = cmd.force
   const initContents = await findInitFileContents ( fileOps, configAndIssues, cmd )
-  console.log('initContents', JSON.stringify(initContents,null,2))
+  console.log ( 'initContents', JSON.stringify ( initContents, null, 2 ) )
   let file = path.join ( dir, 'laoban.json' );
   if ( !force && configAndIssues.config ) return Promise.resolve ( output ( configAndIssues ) ( `This project already has a laoban.json in ${configAndIssues.config.laobanDirectory}. Use --force if you need to create one here` ) )
   return fileOps.saveFile ( file, defaultLaobanJson )
