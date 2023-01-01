@@ -18,6 +18,7 @@
         "name":        "${projectJson.name}",
         "description": "${projectJson.description}",
         "details":     {
+          "ts": "found",
           "publish": false,
           "test":    true,
           "links":   []

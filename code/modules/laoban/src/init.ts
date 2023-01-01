@@ -9,8 +9,8 @@ interface ProjectDetailsJson {
 }
 function combineProjectDetailsJson ( i1: ProjectDetailsJson, i2: ProjectDetailsJson ): ProjectDetailsJson {
   return {
-    variableFiles: { ...safeObject(i1.variableFiles), ...safeObject(i2.variableFiles) },
-    contents: { ...safeObject(i1.contents), ...safeObject(i2.contents) }
+    variableFiles: { ...safeObject(i1?.variableFiles), ...safeObject(i2?.variableFiles) },
+    contents: { ...safeObject(i1?.contents), ...safeObject(i2?.contents) }
   }
 }
 export interface InitFileContents {
