@@ -8,7 +8,7 @@ interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
   contents: any
 }
-interface InitFileContents {
+export interface InitFileContents {
   parents?: string | string[]
   "laoban.json": any;
   "project.details.json": ProjectDetailsJson[]
@@ -18,19 +18,18 @@ const combineInitContents = ( summary: ( i: InitFileContents ) => string ) => ( 
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
     "project.details.json": [ ...safeArray ( i1[ "project.details.json" ] ), ...safeArray ( i2[ "project.details.json" ] ) ]
   };
-  console.log ( 'Merging      ', summary ( i1 ), )
-  console.log ( '   with      ', summary ( i2 ) )
-  console.log ( '   producing ', JSON.stringify(result) )
+  // console.log ( 'Merging      ', summary ( i1 ), )
+  // console.log ( '   with      ', summary ( i2 ) )
+  // console.log ( '   producing ', JSON.stringify(result) )
   return result
 };
 
 
-async function findInitFileContents ( fileOps: FileOps, configAndIssues: ConfigAndIssues, cmd: any ): Promise<InitFileContents> {
+export async function findInitFileContents ( fileOps: FileOps, initUrl: string, cmd: any ): Promise<InitFileContents> {
   const types = cmd.types
   const listTypes = cmd.listtypes
   if ( types.length === 0 ) return Promise.reject ( `No types specified. Run with --listtypes to see available types` )
 
-  let initUrl = configAndIssues.config.inits;
   const inits = parseJson ( `init ${initUrl}` ) ( await fileOps.loadFileOrUrl ( initUrl ) )
   if ( listTypes ) return Promise.reject ( `Listing types from  ${initUrl}\n${JSON.stringify ( inits, null, 2 )}` )
   const errors = types.filter ( t => Object.keys ( inits ).indexOf ( t ) === -1 )
@@ -49,8 +48,8 @@ async function findInitFileContents ( fileOps: FileOps, configAndIssues: ConfigA
 
 export async function init ( fileOps: FileOps, configAndIssues: ConfigAndIssues, dir: string, cmd: any ): Promise<void> {
   const force = cmd.force
-  const initContents = await findInitFileContents ( fileOps, configAndIssues, cmd )
-  console.log ( 'initContents', JSON.stringify ( initContents, null, 2 ) )
+  const initContents = await findInitFileContents ( fileOps, configAndIssues.config.inits, cmd )
+  // console.log ( 'initContents', JSON.stringify ( initContents, null, 2 ) )
   let file = path.join ( dir, 'laoban.json' );
   if ( !force && configAndIssues.config ) return Promise.resolve ( output ( configAndIssues ) ( `This project already has a laoban.json in ${configAndIssues.config.laobanDirectory}. Use --force if you need to create one here` ) )
   return fileOps.saveFile ( file, defaultLaobanJson )

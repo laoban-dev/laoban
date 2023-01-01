@@ -47,3 +47,5 @@ project/
 coverage/
 
 .cache/
+.laoban.test.json
+.project.details.test.json

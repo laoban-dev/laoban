@@ -7,7 +7,7 @@ import { Validate } from "@phil-rice/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { cachedFileOps, FileOps, fileOpsStats, loadWithParents, meteredFileOps, parseJson, safeArray, shortCutFileOps, toArray } from "@phil-rice/utils";
+import { cachedFileOps, FileOps, fileOpsStats, loadWithParents, meteredFileOps, parseJson, safeArray, shortCutFileOps, shortCuts, toArray } from "@phil-rice/utils";
 import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
 import WritableStream = NodeJS.WritableStream;
 
@@ -21,8 +21,7 @@ export type MakeCacheFnFromLaobanDir = ( laobanDir: string ) => MakeCacheFn
 
 export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawConfigAndFileOps ): FileOps => {
   const actualCache = findCache ( laobanDir, rawConfig.cacheDir, undefined )
-  return shortCutFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ),
-    { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' } )
+  return shortCutFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ), shortCuts )
 };
 
 // const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => async ( url: string ): Promise<RawConfigAndFileOps> => {

@@ -63,4 +63,11 @@ export const toArray = <T> ( t: undefined | T | T[] ): T[] => {
   return [ t ]
 }
 
+export const chain = <From, To> ( ...fns: (( from: From ) => To | undefined)[] ): ( from: From ) => To | undefined => ( from: From ) => {
+  for ( let fn of fns ) {
+    let result = fn ( from )
+    if ( result !== undefined ) return result
+  }
+  return undefined
+}
 

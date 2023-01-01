@@ -1,21 +1,24 @@
 import { status } from "./status";
 import { FileOps } from "@phil-rice/utils";
+import { init } from "./init";
 
 export class LaobanAdmin {
   private params: string[];
   private program: any;
   private parsed: any;
-  public constructor ( fileOps: FileOps,directory: string, params: string[] ) {
+  public constructor ( fileOps: FileOps, directory: string, params: string[] ) {
     this.params = params;
     const version = require ( "../../package.json" ).version
-    var program = require ( 'commander' )
-      .arguments ( '' )
-      .option ( '-c, --cachestats', "show how the cache was impacted by this command", false )
-      .option ( '--load.laoban.debug' ).version ( version )//
+    let program = require ( 'commander' )
     this.program = program
 
     program.command ( 'status' ).description ( 'Gives a summary of the status of laoban installations' )
-      .action ( cmd => status (fileOps, directory ) )
+      .action ( cmd => status ( fileOps, directory ) )
+    program.command ( 'init' ).description ( 'Gives a summary of the status of laoban installations' )
+      .action ( cmd => init ( fileOps, directory, cmd ) )
+      .option ( '-t,--types <types...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", [ 'typescript' ] )
+      .option ( '-l, --listtypes', "lists the types of projects that can be created (and doesn't create anything)", false )
+      .option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded", "@laoban@/init/allInits.json" )
 
   }
 
