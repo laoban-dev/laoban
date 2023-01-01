@@ -1,10 +1,11 @@
 import { combineTwoObjects, FileOps, loadWithParents, NameAnd, parseJson, safeArray, safeObject } from "@phil-rice/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./status";
 import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
-import { LocationAnd } from "./fileLocations";
+import { laobanJsonAndLocation, laobanJsonLocations, LocationAnd } from "./fileLocations";
 import path from "path";
 import { includeAndTransformFile } from "laoban/dist/src/update";
 import { combineRawConfigs } from "laoban/dist/src/config";
+import { findLaoban, findLaobanOrUndefined } from "laoban/dist/src/Files";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -135,6 +136,7 @@ async function findTemplatePackageJsonLookup ( fileOps: FileOps, init: initFileC
 }
 
 interface SuccessfullInitData {
+  existingLaobanFile: string,
   suggestions: SuccessfullInitSuggestions
   initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails
   laoban: string
@@ -150,8 +152,15 @@ function isSuccessfulInitData ( data: InitData ): data is SuccessfullInitData {
   return isSuccessfulInitSuggestions ( data.suggestions )
 }
 
+export async function findLaobanUpOrDown ( fileOps: FileOps, directory: string ): Promise<string> {
+  const goingUp = findLaobanOrUndefined ( directory )
+  if ( goingUp !== undefined ) return Promise.resolve ( goingUp )
+  let jsonLocations = await laobanJsonLocations ( fileOps, directory );
+  return jsonLocations.map ( l => path.join ( directory, l ) )?.[ 0 ]
+}
 export async function gatherInitData ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ): Promise<InitData> {
-  const suggestions: InitSuggestions = await suggestInit ( fileOps, directory )
+  const existingLaobanFile = await findLaobanUpOrDown ( fileOps, directory )
+  const suggestions: InitSuggestions = await suggestInit ( fileOps, directory, existingLaobanFile )
   const rawInitFileContents: InitFileContents = await findInitFileContents ( fileOps, cmd.initurl, cmd );
   const laoban = await createLaobanJsonContents ( rawInitFileContents, suggestions );
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
@@ -160,7 +169,7 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
     const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails = { ...rawInitFileContents, laoban: parsedLaoBan, projectDetails: projectDetailsTemplate }
     const templatePackageJsonLookup = await findTemplatePackageJsonLookup ( fileOps, initFileContents, parsedLaoBan )
     const projectDetails: LocationAnd<string>[] = makeAllProjectDetails ( templatePackageJsonLookup, initFileContents, suggestions.packageJsonDetails );
-    return { suggestions, parsedLaoBan, initFileContents, laoban, projectDetails }
+    return { existingLaobanFile, suggestions, parsedLaoBan, initFileContents, laoban, projectDetails }
   } else
     return { suggestions, initFileContents: rawInitFileContents }
 }
@@ -209,9 +218,9 @@ export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOp
       reportInitData ( initData, files )
       console.log ()
       files.forEach ( f => console.log ( `Created ${f.location}` ) )
-      console.log()
+      console.log ()
       console.log ( 'Dry run complete' )
-      console.log()
+      console.log ()
       console.log ( 'This created files .loaban.test.json and .project.details.test.json in the project directories' )
       console.log ( 'To create the actual files use --force' )
     } else if ( cmd.force ) {

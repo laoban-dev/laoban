@@ -1,6 +1,7 @@
 import { chain, FileOps, unique } from "@phil-rice/utils";
 import { gitLocation, gitLocationsUnderHere, isLocationAnd, LocationAnd, LocationAndContents, LocationAndErrors, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
 import path from "path";
+import { findLaobanOrUndefined } from "laoban/dist/src/Files";
 
 export async function reportOnGit ( fileOps: FileOps, directory: string, gitRepo: string ): Promise<void> {
 
@@ -80,8 +81,18 @@ export type InitSuggestions = SuccessfullInitSuggestions | FailedInitSuggestions
 
 interface PackageJsonDetailsAndGitRepo {
   directory: string
+  existingLaobanFile: string | undefined
   details: PackageJsonDetails
   gitRepo: string | undefined
+}
+function suggestFromExistingLaobanJson ( { existingLaobanFile, details, directory }: PackageJsonDetailsAndGitRepo ): InitSuggestions | undefined {
+  if ( existingLaobanFile !== undefined ) {
+    return {
+      comments: [ `Found an existing laoban.json file at ${existingLaobanFile}` ],
+      laobanJsonLocation: existingLaobanFile,
+      packageJsonDetails: withoutWorkspacesUnderLaobanJson ( details, existingLaobanFile )
+    }
+  }
 }
 function suggestFromGitRepo ( { gitRepo, details }: PackageJsonDetailsAndGitRepo ): InitSuggestions | undefined {
   if ( gitRepo !== undefined ) return {
@@ -90,11 +101,15 @@ function suggestFromGitRepo ( { gitRepo, details }: PackageJsonDetailsAndGitRepo
     comments: [ `Found a git repo. This is usually a good place for the laoban.json file` ]
   }
 }
+function withoutWorkspacesUnderLaobanJson ( details: PackageJsonDetails, laobanJsonLocation: string ) {
+  let searchString = path.join ( laobanJsonLocation );
+  return details.withoutWorkspaces.filter ( s => s.location.startsWith ( searchString ) );
+}
 function suggestFromSingleWorkspaceJson ( { details }: PackageJsonDetailsAndGitRepo ): InitSuggestions | undefined {
   if ( details.withWorkspaces.length === 1 ) {
     const notIn = details.withoutWorkspaces
     let laobanJsonLocation = path.join ( details.withWorkspaces[ 0 ].directory );
-    const packageDetailsJsonLocation = details.withoutWorkspaces.filter ( s => s.location.startsWith ( laobanJsonLocation ) )
+    const packageDetailsJsonLocation = withoutWorkspacesUnderLaobanJson ( details, laobanJsonLocation )
     const spareWorkspaces = details.withoutWorkspaces.filter ( s => !s.location.startsWith ( laobanJsonLocation ) )
     return {
       laobanJsonLocation,
@@ -119,7 +134,7 @@ function noIdeaWhatToDo ( { details, directory }: PackageJsonDetailsAndGitRepo )
     packageJsonDetails: details.withoutWorkspaces
   }
 }
-export const suggestInitSuggestions = chain ( suggestFromSingleWorkspaceJson, suggestFromGitRepo, noWorkspaces, noIdeaWhatToDo )
+export const suggestInitSuggestions = chain ( suggestFromExistingLaobanJson, suggestFromSingleWorkspaceJson, suggestFromGitRepo, noWorkspaces, noIdeaWhatToDo )
 
 export async function reportOnPackageJson ( params: PackageJsonDetailsAndGitRepo ): Promise<void> {
   const { details } = params
@@ -130,13 +145,14 @@ export async function reportOnPackageJson ( params: PackageJsonDetailsAndGitRepo
   console.log ( ' -- ' )
 }
 
-export async function suggestInit ( fileOps: FileOps, directory: string ): Promise<InitSuggestions> {
+export async function suggestInit ( fileOps: FileOps, directory: string, existingLaobanFile: string ): Promise<InitSuggestions> {
   const gitRepo = await gitLocation ( fileOps, directory );
   const packageJsonDetails = await findPackageJsonDetails ( fileOps, directory )
-  let params = { gitRepo, details: packageJsonDetails, directory };
+  let params = { gitRepo, details: packageJsonDetails, directory, existingLaobanFile };
   return suggestInitSuggestions ( params )
 }
 export async function status ( fileOps: FileOps, directory: string ) {
-  const suggestions = await suggestInit ( fileOps, directory )
+  const existingLaobanFile = findLaobanOrUndefined ( directory )
+  const suggestions = await suggestInit ( fileOps, directory, existingLaobanFile )
   console.log ( 'suggestions', suggestions )
 }

@@ -58,6 +58,7 @@ export const findChildDirs = ( fileOps: FileOps, ignoreFilters: ( s: string ) =>
   return find ( name )
 }
 export const findChildDirsUnder = ( fileOps: FileOps, ignoreFilters: ( s: string ) => boolean, foundDirFilters: ( s: string ) => Promise<boolean> ) => async ( name: string ): Promise<string[]> => {
+  // console.log('checking', name)
   if ( !await fileOps.isDirectory ( name ) ) return []
   const dirs = await fileOps.listFiles ( name )
   let result: string[] = []

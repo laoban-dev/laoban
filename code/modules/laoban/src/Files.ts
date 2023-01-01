@@ -10,15 +10,20 @@ export let projectDetailsFile = 'project.details.json'
 
 export function laobanFile ( dir: string ) { return path.join ( dir, loabanConfigName )}
 
-export function findLaoban ( directory: string ): string {
+export function findLaobanOrUndefined ( directory: string ): string | undefined {
   function find ( dir: string ): string {
     let fullName = path.join ( dir, loabanConfigName );
     if ( fs.existsSync ( fullName ) ) return dir
     let parse = path.parse ( dir )
-    if ( parse.dir === parse.root ) {throw Error ( `Cannot find laoban.json. Started looking in ${directory}` )}
+    if ( parse.dir === parse.root ) return undefined
     return find ( parse.dir )
   }
   return find ( directory )
+}
+export function findLaoban ( directory: string ): string {
+  const dir = findLaobanOrUndefined ( directory )
+  if ( dir === undefined ) {throw Error ( `Cannot find laoban.json. Started looking in ${directory}` )}
+  return dir
 }
 
 interface ProjectDetailOptions {

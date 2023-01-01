@@ -1,4 +1,4 @@
-import { addPrefix, FileOps, findChildDirs, parseJson } from "@phil-rice/utils";
+import { addPrefix, FileOps, findChildDirs, findChildDirsUnder, parseJson } from "@phil-rice/utils";
 import path from "path";
 
 export const gitLocation = async ( fileOps: FileOps, directory: string ): Promise<string | undefined> => {
@@ -16,6 +16,10 @@ export const gitLocationsUnderHere = async ( fileOps: FileOps, directory: string
 
 export const packageJsonLocations = async ( fileOps: FileOps, directory: string ): Promise<string[]> =>
   findChildDirs ( fileOps, ignoreDirectories, n => fileOps.isFile ( path.join ( n, 'package.json' ) ) ) ( directory );
+
+export const laobanJsonLocations = async ( fileOps: FileOps, directory: string ): Promise<string[]> =>
+  findChildDirsUnder ( fileOps, ignoreDirectories, n => fileOps.isFile ( path.join ( n, 'laoban.json' ) ) ) ( directory );
+
 
 export const packageJsonLocationsUnder = async ( fileOps: FileOps, directory: string ): Promise<string[]> => {
   const rawChildren = await fileOps.listFiles ( directory )
