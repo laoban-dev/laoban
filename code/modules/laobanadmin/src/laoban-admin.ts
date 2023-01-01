@@ -9,7 +9,7 @@ export class LaobanAdmin {
   public constructor ( fileOps: FileOps, directory: string, params: string[] ) {
     this.params = params;
     const version = require ( "../../package.json" ).version
-    let program = require ( 'commander' )
+    let program = require ( 'commander' ).version ( version );
     this.program = program
 
     program.command ( 'status' ).description ( 'Gives a summary of the status of laoban installations' )

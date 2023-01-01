@@ -60,7 +60,9 @@ export async function findPackageJsonDetails ( fileOps: FileOps, directory: stri
   const firstDetails = partitionPackageJsons ( await packageJsonAndLocations ( 'Finding Package.jsons', fileOps, firstLocations ) )
   if ( firstDetails.withWorkspaces.length === 0 ) return firstDetails
   const secondLocationsDir = firstDetails.withWorkspaces.map ( ( { directory } ) => directory )
-  const secondLocations: string[] = (await Promise.all <string[]> ( secondLocationsDir.map ( directory => packageJsonLocationsUnder ( fileOps, directory ) ) )).flat ()
+  const secondLocationsRaw: string[][] = await Promise.all <string[]> ( secondLocationsDir.map ( directory => packageJsonLocationsUnder ( fileOps, directory ) ) )
+  let secondLocations: string[] = []
+  secondLocationsRaw.forEach ( s => secondLocations = secondLocations.concat ( s ) )
   const secondDetails = partitionPackageJsons ( await packageJsonAndLocations ( 'Finding Package.jsons under workspaces', fileOps, secondLocations ) )
   return combinePackageJsons ( firstDetails, secondDetails )
 }
