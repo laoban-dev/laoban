@@ -1,5 +1,5 @@
 import { combineTwoObjects, FileOps, loadWithParents, NameAnd, parseJson, safeArray, safeObject } from "@phil-rice/utils";
-import { InitSuggestions, isSuccessfulInitSuggestions, suggestInit } from "./status";
+import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./status";
 import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
 import { LocationAnd } from "./fileLocations";
 import path from "path";
@@ -38,9 +38,9 @@ const combineInitContents = ( summary: ( i: InitFileContents ) => string ) => ( 
 };
 
 
-export async function findInitFileContents ( fileOps: FileOps, initUrl: string, cmd: any ): Promise<InitFileContents> {
+export async function findInitFileContents ( fileOps: FileOps, initUrl: string, cmd: InitCmdOptions ): Promise<InitFileContents> {
   const types = cmd.types
-  const listTypes = cmd.listtypes
+  const listTypes = cmd.listTypes
   if ( types.length === 0 ) return Promise.reject ( `No types specified. Run with --listtypes to see available types` )
 
   const inits = parseJson ( `init ${initUrl}` ) ( await fileOps.loadFileOrUrl ( initUrl ) )
@@ -133,24 +133,105 @@ async function findTemplatePackageJsonLookup ( fileOps: FileOps, init: initFileC
   result[ template ] = parseJson ( `Finding template package json for template ${template} at ${templateUrl}` ) ( templateContents )
   return result
 }
-export async function init ( fileOps: FileOps, directory: string, cmd: any ) {
-  const dryRun = cmd.dryrun;
 
+interface SuccessfullInitData {
+  suggestions: SuccessfullInitSuggestions
+  initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails
+  laoban: string
+  parsedLaoBan: any
+  projectDetails: LocationAnd<string>[]
+}
+interface FailedInitData {
+  suggestions: FailedInitSuggestions
+  initFileContents: InitFileContents
+}
+type InitData = SuccessfullInitData | FailedInitData
+function isSuccessfulInitData ( data: InitData ): data is SuccessfullInitData {
+  return isSuccessfulInitSuggestions ( data.suggestions )
+}
+
+export async function gatherInitData ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ): Promise<InitData> {
   const suggestions: InitSuggestions = await suggestInit ( fileOps, directory )
-  const initFileContents: InitFileContents = await findInitFileContents ( fileOps, cmd.initurl, cmd );
-  const laoban = await createLaobanJsonContents ( initFileContents, suggestions );
+  const rawInitFileContents: InitFileContents = await findInitFileContents ( fileOps, cmd.initurl, cmd );
+  const laoban = await createLaobanJsonContents ( rawInitFileContents, suggestions );
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
     const parsedLaoBan = parseJson<any> ( 'laoban.json' ) ( laoban );
-    const projectDetailsTemplate = initFileContents[ "project.details.json" ].contents || {}
-    const initWith: initFileContentsWithParsedLaobanJsonAndProjectDetails = { ...initFileContents, laoban: parsedLaoBan, projectDetails: projectDetailsTemplate }
-    let laobanFileName = path.join ( suggestions.laobanJsonLocation, dryRun ? '.laoban.test.json' : 'laoban.json' );
-    await fileOps.saveFile ( laobanFileName, laoban )
-    const templatePackageJsonLookup = await findTemplatePackageJsonLookup ( fileOps, initWith, parsedLaoBan )
-    const projectDetails = makeAllProjectDetails ( templatePackageJsonLookup, initWith, suggestions.packageJsonDetails );
-    await Promise.all ( projectDetails.map ( p => {
-      const json = parseJson<any> ( `Project details for ${p.directory}` ) ( p.contents )
-      const contents = JSON.stringify ( json.contents, null, 2 )
-      return fileOps.saveFile ( path.join ( p.directory, dryRun ? '.project.details.test.json' : 'project.details.json' ), contents );
-    } ) )
-  } else console.log ( 'Could not work out how to create', JSON.stringify ( suggestions, null, 2 ) )
+    const projectDetailsTemplate = rawInitFileContents[ "project.details.json" ].contents || {}
+    const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails = { ...rawInitFileContents, laoban: parsedLaoBan, projectDetails: projectDetailsTemplate }
+    const templatePackageJsonLookup = await findTemplatePackageJsonLookup ( fileOps, initFileContents, parsedLaoBan )
+    const projectDetails: LocationAnd<string>[] = makeAllProjectDetails ( templatePackageJsonLookup, initFileContents, suggestions.packageJsonDetails );
+    return { suggestions, parsedLaoBan, initFileContents, laoban, projectDetails }
+  } else
+    return { suggestions, initFileContents: rawInitFileContents }
+}
+
+export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolean ): LocationAnd<string>[] {
+  let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.laoban.test.json' : 'laoban.json' );
+  const laoban: LocationAnd<any> = { location: laobanFileName, contents: initData.laoban, directory: initData.suggestions.laobanJsonLocation }
+  const projectDetails: LocationAnd<any>[] = initData.projectDetails.map ( p => {
+    const json = parseJson<any> ( `Project details for ${p.directory}` ) ( p.contents )
+    const contents = JSON.stringify ( json.contents, null, 2 )
+    return { directory: p.directory, location: path.join ( p.directory, dryRun ? '.project.details.test.json' : 'project.details.json' ), contents }
+  } );
+  return [ laoban, ...projectDetails ]
+}
+async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string> [] ): Promise<void> {
+  await Promise.all ( data.map ( async ( { location, contents } ) => fileOps.saveFile ( location, contents ) ) )
+}
+
+export function reportInitData ( initData: SuccessfullInitData, files: LocationAnd<string>[] ): void {
+  initData.suggestions.comments.forEach ( c => console.log ( c ) )
+}
+interface InitCmdOptions {
+  dryrun: boolean
+  types: string[]
+  listTypes: boolean
+  initurl: string
+  force: boolean
+}
+export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ) {
+  if ( cmd.dryrun && cmd.force ) {
+    console.log ( 'Cannot have --dryrun and --force' )
+    return
+  }
+  if ( cmd.listTypes ) {
+    const init = await fileOps.loadFileOrUrl ( cmd.initurl )
+    console.log ( init )
+    return
+  }
+  const dryRun = cmd.dryrun;
+  const initData = await gatherInitData ( fileOps, directory, cmd )
+  if ( isSuccessfulInitData ( initData ) ) {
+    const files: LocationAnd<string>[] = filesAndContents ( initData, dryRun )
+    if ( cmd.force || cmd.dryrun ) await saveInitDataToFiles ( fileOps, files );
+    if ( cmd.dryrun ) {
+      console.log ()
+      reportInitData ( initData, files )
+      console.log ()
+      files.forEach ( f => console.log ( `Created ${f.location}` ) )
+      console.log()
+      console.log ( 'Dry run complete' )
+      console.log()
+      console.log ( 'This created files .loaban.test.json and .project.details.test.json in the project directories' )
+      console.log ( 'To create the actual files use --force' )
+    } else if ( cmd.force ) {
+      reportInitData ( initData, files )
+      files.forEach ( f => console.log ( `Created ${f.location}` ) )
+    } else {
+      console.log ( 'Would create files' )
+      console.log ( '==================' )
+      files.forEach ( f => {
+        console.log
+        console.log ( f.location );
+        console.log ( ''.padStart ( f.location.length, '-' ) );
+        console.log ( f.contents );
+      } )
+      reportInitData ( initData, files )
+      console.log ()
+      console.log ( 'To actually create the files use --force. To see them "in situ" before creating them use --dryrun' )
+
+    }
+
+  } else
+    console.log ( 'Could not work out how to create', JSON.stringify ( initData.suggestions, null, 2 ) )
 }

@@ -17,9 +17,10 @@ export class LaobanAdmin {
     program.command ( 'init' ).description ( 'Gives a summary of the status of laoban installations' )
       .action ( cmd => init ( fileOps, directory, cmd ) )
       .option ( '-t,--types <types...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", [ 'typescript' ] )
-      .option ( '-l, --listtypes', "lists the types of projects that can be created (and doesn't create anything)", false )
+      .option ( '-l, --listTypes', "lists the types of projects that can be created (and doesn't create anything)", false )
       .option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded", "@laoban@/init/allInits.json" )
       .option ( '-d,--dryrun', 'The dry run creates files .laoban.test.json and .project.details.test.json to allow previews and comparisons', false )
+      .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
 
   }
 
