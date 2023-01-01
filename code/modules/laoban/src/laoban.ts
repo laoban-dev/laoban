@@ -5,7 +5,7 @@ import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValida
 import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
-import { loadVersionFile, modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
+import { loadVersionFile } from "./modifyPackageJson";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus } from "./status";
 import * as os from "os";
 import { execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, make, streamName, timeIt } from "./executors";
@@ -16,7 +16,6 @@ import { shellReporter } from "./report";
 import { Writable } from "stream";
 import { CommanderStatic } from "commander";
 import { addDebug } from "@phil-rice/debug";
-import { init } from "./init";
 import { FileOps, fileOpsStats, safeObject } from "@phil-rice/utils";
 import { copyTemplateDirectory } from "./update";
 
@@ -204,11 +203,6 @@ export class Cli {
         } ) )
       }, description, ...options )
     }
-    program.command ( 'init' ).description ( 'creates a laoban.json and a template directory in the current dir' )
-      .option ( '-t,--types <types...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", ['typescript'] )
-      .option ( '-l, --listtypes', "lists the types of projects that can be created (and doesn't create anything)", false )
-      .option ( '-f,--force ', "will overwrite existing laoban.json" , false)
-      .action ( cmd => init ( fileOps, configAndIssues, process.cwd (), cmd ).then ( postCommand ( program, fileOps ) ) )
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
     action ( program, 'clearCache', clearCacheAction, 'Clears the cache', this.minimalOptions ( configAndIssues ) )
@@ -235,6 +229,7 @@ export class Cli {
       log ( "  If you are 'in' a project (the current directory has a project.details.json') then commands are executed by default just for the current project " );
       log ( "     but if you are not 'in' a project, the commands are executed for all projects" );
       log ( '  You can ask for help for a command by "laoban <cmd> --help"' );
+      log ( '  To configure and setup laoban the "laoban-admin" tool can be loaded using "npm i -g laoban-admin"' );
       log ( '' );
       log ( 'Common command options (not every command)' );
       log ( '  -a    do it in all projects (default is to execute the command in the current project' );
