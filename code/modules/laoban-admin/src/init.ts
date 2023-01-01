@@ -1,4 +1,4 @@
-import { FileOps } from "@phil-rice/utils";
+import { FileOps, parseJson } from "@phil-rice/utils";
 import { findInitFileContents, InitFileContents } from "laoban/dist/src/init";
 import { InitSuggestions, isSuccessfulInitSuggestions, suggestInit } from "./status";
 import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
@@ -21,16 +21,19 @@ export function makeProjectDetails ( initFileContents: InitFileContents, package
   const originalPackageJson = packageJsonDetails.contents;
   const deps = { ...originalPackageJson.dependencies } || {}
   const devDeps = originalPackageJson.devDependencies || {};
-  const bins = originalPackageJson.bins || {}
+  const bins = originalPackageJson.bin || {}
   const links = Object.keys ( deps ).filter ( name => allProjectNames.indexOf ( name ) !== -1 );
   links.forEach ( name => delete deps[ name ] );
+  console.log ( 'project.details.json', packageJsonDetails.directory, 'deps', deps, 'devDeps', devDeps, 'bins', bins, 'links', links )
 
   let projectDetails = initFileContents[ "project.details.json" ];
-  projectDetails[ "details" ] = projectDetails[ "details" ] || []
-  projectDetails[ "details" ][ "links" ] = links;
-  projectDetails[ "details" ][ "extraDeps" ] = deps;
-  projectDetails[ "details" ][ "extraDevDeps" ] = devDeps;
-  projectDetails[ "details" ][ "extraBins" ] = bins;
+  const contents = projectDetails.contents
+  const details = contents.details || []
+  details[ "links" ] = links;
+  details[ "extraDeps" ] = deps;
+  details[ "extraDevDeps" ] = devDeps;
+  details[ "extraBins" ] = bins;
+  contents[ "details" ] = details;
   const projectDetailsString = JSON.stringify ( projectDetails, null, 2 )
   const directory = packageJsonDetails.directory;
   const dic: any = {}
@@ -55,13 +58,16 @@ export async function init ( fileOps: FileOps, directory: string, cmd: any ) {
   console.log ( 'laoban.json', laoban )
   console.log ( '----' )
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
-    console.log('laobanFileName',  suggestions.laobanJsonLocation)
+    console.log ( 'laobanFileName', suggestions.laobanJsonLocation )
     let laobanFileName = path.join ( suggestions.laobanJsonLocation, '.laoban.test.json' );
-    console.log('laobanFileName', laobanFileName)
+    console.log ( 'laobanFileName', laobanFileName )
     await fileOps.saveFile ( laobanFileName, laoban )
     const projectDetails = makeAllProjectDetails ( initFileContents, suggestions.packageJsonDetails );
-    console.log ( 'project.details.json', projectDetails )
-    console.log ( 'project.details.json', projectDetails )
-    await Promise.all ( projectDetails.map ( p => fileOps.saveFile ( path.join ( p.directory, '.project.details.test.json' ), p.contents ) ) )
+    // console.log ( 'project.details.json', projectDetails )
+    await Promise.all ( projectDetails.map ( p => {
+      const json = parseJson<any> ( `Project details for ${p.directory}` ) ( p.contents )
+      const contents = JSON.stringify ( json.contents, null, 2 )
+      return fileOps.saveFile ( path.join ( p.directory, '.project.details.test.json' ), contents );
+    } ) )
   } else console.log ( 'Could not work out how to create', JSON.stringify ( suggestions, null, 2 ) )
 }

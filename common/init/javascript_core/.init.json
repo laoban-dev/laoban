@@ -7,6 +7,9 @@
     "properties":     {
       "license":    "${projectJson.license}",
       "repository": "${projectJson.repository}"
+    },
+    "templates": {
+      "notemplate": "@laoban@/templates/notemplate"
     }
   },
   "project.details.json":     {
@@ -16,7 +19,6 @@
         "name":        "${projectJson.name}",
         "description": "${projectJson.description}",
         "details":     {
-          "js": "found",
           "publish": false,
           "test":    true,
           "links":   []

@@ -1,16 +1,17 @@
 import { combineRawConfigs, ConfigAndIssues } from "./config";
 import path from "path";
 import { output } from "./utils";
-import { FileOps, loadWithParents, NameAnd, parseJson, safeArray, safeObject } from "@phil-rice/utils";
+import { combineTwoObjects, FileOps, loadWithParents, NameAnd, parseJson, safeArray, safeObject } from "@phil-rice/utils";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
   contents: any
 }
 function combineProjectDetailsJson ( i1: ProjectDetailsJson, i2: ProjectDetailsJson ): ProjectDetailsJson {
+  const combineDetails = ( i1: any, i2: any ): any => combineTwoObjects ( safeObject ( i1?.details ), safeObject ( i2?.details ) );
   return {
-    variableFiles: { ...safeObject(i1?.variableFiles), ...safeObject(i2?.variableFiles) },
-    contents: { ...safeObject(i1?.contents), ...safeObject(i2?.contents) }
+    variableFiles: { ...safeObject ( i1?.variableFiles ), ...safeObject ( i2?.variableFiles ) },
+    contents: { ...safeObject ( i1?.contents ), ...safeObject ( i2?.contents ), details: combineDetails ( i1?.contents, i2?.contents ) }
   }
 }
 export interface InitFileContents {
@@ -21,7 +22,7 @@ export interface InitFileContents {
 const combineInitContents = ( summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
   let result = {
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
-    "project.details.json": combineProjectDetailsJson( i1[ "project.details.json" ] , i2[ "project.details.json" ] )
+    "project.details.json": combineProjectDetailsJson ( i1[ "project.details.json" ], i2[ "project.details.json" ] )
   };
   // console.log ( 'Merging      ', summary ( i1 ), )
   // console.log ( '   with      ', summary ( i2 ) )
@@ -48,7 +49,7 @@ export async function findInitFileContents ( fileOps: FileOps, initUrl: string, 
     combineInitContents ( i => `Parents ${i.parents}` ) )
 
   const initContents: InitFileContents[] = await Promise.all <InitFileContents> ( typeUrls.map ( loadInits ) )
-  return initContents.reduce ( combineInitContents(i=>`Reducing Parents ${i.parents}`) )
+  return initContents.reduce ( combineInitContents ( i => `Reducing Parents ${i.parents}` ) )
 }
 
 export async function init ( fileOps: FileOps, configAndIssues: ConfigAndIssues, dir: string, cmd: any ): Promise<void> {
