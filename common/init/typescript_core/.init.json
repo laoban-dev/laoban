@@ -9,7 +9,7 @@
       "@laoban@/laoban.json/typescript.publish.laoban.json"
     ]
   },
-  "project.details.json": [
+  "project.details.json":
     {
       "guardfile":     "project.json",
       "variableFiles": {"projectJson": "project.json"},
@@ -24,5 +24,4 @@
         }
       }
     }
-  ]
 }

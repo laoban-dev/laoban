@@ -55,8 +55,12 @@ export async function init ( fileOps: FileOps, directory: string, cmd: any ) {
   console.log ( 'laoban.json', laoban )
   console.log ( '----' )
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
-    await fileOps.saveFile ( path.join ( initFileContents[ "laoban.json" ].directory, '.laoban.test.json' ), laoban )
+    console.log('laobanFileName',  suggestions.laobanJsonLocation)
+    let laobanFileName = path.join ( suggestions.laobanJsonLocation, '.laoban.test.json' );
+    console.log('laobanFileName', laobanFileName)
+    await fileOps.saveFile ( laobanFileName, laoban )
     const projectDetails = makeAllProjectDetails ( initFileContents, suggestions.packageJsonDetails );
+    console.log ( 'project.details.json', projectDetails )
     console.log ( 'project.details.json', projectDetails )
     await Promise.all ( projectDetails.map ( p => fileOps.saveFile ( path.join ( p.directory, '.project.details.test.json' ), p.contents ) ) )
   } else console.log ( 'Could not work out how to create', JSON.stringify ( suggestions, null, 2 ) )

@@ -1,22 +1,27 @@
 import { combineRawConfigs, ConfigAndIssues } from "./config";
 import path from "path";
 import { output } from "./utils";
-import { FileOps, loadWithParents, NameAnd, parseJson, safeArray } from "@phil-rice/utils";
+import { FileOps, loadWithParents, NameAnd, parseJson, safeArray, safeObject } from "@phil-rice/utils";
 
 interface ProjectDetailsJson {
-  guardFile: string
   variableFiles: NameAnd<any>
   contents: any
+}
+function combineProjectDetailsJson ( i1: ProjectDetailsJson, i2: ProjectDetailsJson ): ProjectDetailsJson {
+  return {
+    variableFiles: { ...safeObject(i1.variableFiles), ...safeObject(i2.variableFiles) },
+    contents: { ...safeObject(i1.contents), ...safeObject(i2.contents) }
+  }
 }
 export interface InitFileContents {
   parents?: string | string[]
   "laoban.json": any;
-  "project.details.json": ProjectDetailsJson[]
+  "project.details.json": ProjectDetailsJson
 }
 const combineInitContents = ( summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
   let result = {
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
-    "project.details.json": [ ...safeArray ( i1[ "project.details.json" ] ), ...safeArray ( i2[ "project.details.json" ] ) ]
+    "project.details.json": combineProjectDetailsJson( i1[ "project.details.json" ] , i2[ "project.details.json" ] )
   };
   // console.log ( 'Merging      ', summary ( i1 ), )
   // console.log ( '   with      ', summary ( i2 ) )

@@ -9,9 +9,7 @@
       "repository": "${projectJson.repository}"
     }
   },
-  "project.details.json": [
-    {
-      "guardfile":     "project.json",
+  "project.details.json":     {
       "variableFiles": {"projectJson": "project.json"},
       "contents":      {
         "template":    "typescript",
@@ -24,5 +22,4 @@
         }
       }
     }
-  ]
 }
