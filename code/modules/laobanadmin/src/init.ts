@@ -178,7 +178,7 @@ export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolea
   let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.laoban.test.json' : 'laoban.json' );
   const laoban: LocationAnd<any> = { location: laobanFileName, contents: initData.laoban, directory: initData.suggestions.laobanJsonLocation }
   const projectDetails: LocationAnd<any>[] = initData.projectDetails.map ( p => {
-    const json = parseJson<any> ( `Project details for ${p.directory}` ) ( p.contents )
+    const json = parseJson<any> ( () => `Project details for ${p.directory}` ) ( p.contents )
     const contents = JSON.stringify ( json.contents, null, 2 )
     return { directory: p.directory, location: path.join ( p.directory, dryRun ? '.project.details.test.json' : 'project.details.json' ), contents }
   } );
@@ -199,6 +199,7 @@ interface InitCmdOptions {
   force: boolean
 }
 export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ) {
+  const clearDirectory = path.join ( directory )
   if ( cmd.dryrun && cmd.force ) {
     console.log ( 'Cannot have --dryrun and --force' )
     return
@@ -209,7 +210,7 @@ export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOp
     return
   }
   const dryRun = cmd.dryrun;
-  const initData = await gatherInitData ( fileOps, directory, cmd )
+  const initData = await gatherInitData ( fileOps, clearDirectory, cmd )
   if ( isSuccessfulInitData ( initData ) ) {
     const files: LocationAnd<string>[] = filesAndContents ( initData, dryRun )
     if ( cmd.force || cmd.dryrun ) await saveInitDataToFiles ( fileOps, files );

@@ -65,11 +65,12 @@ export const findChildDirsUnder = ( fileOps: FileOps, ignoreFilters: ( s: string
   await Promise.all ( dirs.map ( dir => findChildDirs ( fileOps, ignoreFilters, foundDirFilters ) ( dir ).then ( found => result.push ( ...found ) ) ) )
   return result
 }
-export const parseJson = <T> ( context: string ) => ( s: string ): T => {
+export const parseJson = <T> ( context: string | (() => string) ) => ( s: string ): T => {
   try {
     return JSON.parse ( s )
   } catch ( e ) {
-    throw new Error ( `Invalid JSON for ${context}: ${s}` )
+    const realContext = typeof context === 'function' ? context () : context
+    throw new Error ( `Invalid JSON for ${realContext}: ${s}` )
   }
 };
 export function loadWithParents<T> ( context: string, loader: ( url ) => Promise<string>, parse: ( context: string ) => ( json: string ) => T, findChildrenUrls: ( t: T ) => string[], fold: ( t1: T, t2: T ) => T ): ( url: string ) => Promise<T> {

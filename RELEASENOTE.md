@@ -19,3 +19,4 @@
 0.3.15 Changed --clearcache to a command and improved error reporting/debugging for update
 0.3.16 Post processors added for update. Makes it much easier to reuse existing templates, and the user experience around files needing environment variables (like NPM_TOKEN) is much better
 0.3.17 properties can be defined in parent laoban.jsons and merged in
+0.3.24 Added laoban-admin init
