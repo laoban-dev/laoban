@@ -1,10 +1,5 @@
 {
   "scripts": {
-    "ls-tsc":      {
-      "description": "lists projects that will be tsced",
-      "guard":       "${projectDetails.details.tsc}",
-      "commands":    ["js:process.cwd()"]
-    },
     "tsc":         {
       "description": "runs tsc",
       "guard":       "${projectDetails.details.tsc}",
@@ -13,6 +8,11 @@
     "tsc-noguard": {
       "description": "runs tsc without a guard",
       "commands":    [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
+    },
+    "ls-tsc":      {
+      "description": "lists projects that will be tsced",
+      "guard":       "${projectDetails.details.tsc}",
+      "commands":    ["js:process.cwd()"]
     }
   }
 }

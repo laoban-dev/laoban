@@ -2,6 +2,7 @@
   "packageManager": "yarn",
   "parents": [
     "@laoban@/laoban.json/core.laoban.json",
+    "@laoban@/laoban.json/javascript.laoban.json",
     "@laoban@/laoban.json/typescript.laoban.json",
     "@laoban@/laoban.json/typescript.publish.laoban.json"
   ],
