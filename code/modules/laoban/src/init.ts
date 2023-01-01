@@ -19,6 +19,10 @@ export interface InitFileContents {
   "laoban.json": any;
   "project.details.json": ProjectDetailsJson
 }
+export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends InitFileContents {
+  laoban: any
+  projectDetails: any
+}
 const combineInitContents = ( summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
   let result = {
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),

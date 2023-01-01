@@ -19,6 +19,7 @@ export class LaobanAdmin {
       .option ( '-t,--types <types...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", [ 'typescript' ] )
       .option ( '-l, --listtypes', "lists the types of projects that can be created (and doesn't create anything)", false )
       .option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded", "@laoban@/init/allInits.json" )
+      .option ( '-d,--dryrun', 'The dry run creates files .laoban.test.json and .project.details.test.json to allow previews and comparisons', false )
 
   }
 

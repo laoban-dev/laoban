@@ -48,7 +48,7 @@ export function combineTransformFns ( ...fns: TransformTextFn[] ): TransformText
   return ( type, text ) => fns.reduce <Promise<string>> ( async ( acc, fn ) => fn ( type, await acc ), Promise.resolve ( text ) )
 }
 
-export const includeAndTransformFile = ( context: string, dic: any, fileOps: FileOps ) =>
+export const includeAndTransformFile = ( context: string, dic: any, fileOps: FileOps ):TransformTextFn =>
   combineTransformFns ( includeFiles ( fileOps ), transformFile ( context, dic ) )
 
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {

@@ -20,7 +20,6 @@ export const packageJsonLocations = async ( fileOps: FileOps, directory: string 
 export const packageJsonLocationsUnder = async ( fileOps: FileOps, directory: string ): Promise<string[]> => {
   const rawChildren = await fileOps.listFiles ( directory )
   const children: string[] = rawChildren.filter ( dir => !ignoreDirectories ( dir ) ).map ( addPrefix ( directory ) );
-  console.log ( 'children', children )
   const stringArrayArray: string[][] = await Promise.all<string[]> ( children.map ( findChildDirs ( fileOps, ignoreDirectories, n => fileOps.isFile ( path.join ( n, 'package.json' ) ) ) ) )
   return stringArrayArray.flat ()
 }
