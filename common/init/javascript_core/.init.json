@@ -2,7 +2,8 @@
   "laoban.json":          {
     "packageManager": "yarn",
     "parents":        [
-      "@laoban@/laoban.json/core.laoban.json"
+      "@laoban@/laoban.json/core.laoban.json",
+      "@laoban@/laoban.json/javascript.laoban.json"
     ],
     "properties":     {
       "license":    "${projectJson.license}",

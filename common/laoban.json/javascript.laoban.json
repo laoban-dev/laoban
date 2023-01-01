@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "test":         {
+      "description": "runs ${packageManager} test",
+      "guard":       "${projectDetails.details.test}",
+      "commands":    [{"name": "test", "command": "${packageManager} test", "status": true}]
+    },
+    "test-noguard": {
+      "description": "runs ${packageManager} test",
+      "commands":    [{"name": "test", "command": "${packageManager} test", "status": true}]
+    },
+    "ls-tests":     {
+      "description": "lists the projects with tests in them",
+      "guard":       "${projectDetails.details.test}",
+      "commands":    ["js:process.cwd()"]
+    }
+  }
+}
