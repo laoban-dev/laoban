@@ -25,7 +25,6 @@ export class LaobanAdmin {
   }
 
   start () {
-    // console.log('starting', argv)
     if ( this.params.length == 2 ) {
       this.program.outputHelp ();
       return Promise.resolve ()
