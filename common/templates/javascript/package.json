@@ -11,7 +11,7 @@
   "dependencies": {
         ${compose(
             projectDetails.details.extraDeps:object:indent4,
-            projectDetails.details.links:map<<>>(i=>"<<i>>": "<<version>>"
+            projectDetails.details.links:map<<>>(i=>"<<i>>": "<<version>>")
          )}
   },
   "devDependencies": {

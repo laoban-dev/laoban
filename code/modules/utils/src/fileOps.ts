@@ -1,5 +1,5 @@
 import { DebugCommands } from "@phil-rice/debug";
-import { combineTwoObjects, level1CombineTwoObjects, NameAnd, safeArray } from "./utils";
+import { level1CombineTwoObjects, NameAnd, safeArray } from "./utils";
 
 export const shortCuts: NameAnd<string> = { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' };
 
@@ -286,7 +286,7 @@ interface TemplateFileDetails {
   type: string
   postProcess?: string | string[]
 }
-const postProcessOne = ( context: string, fileOps: FileOps ) => async ( text: string, p: string ): Promise<string> => {
+const postProcessOne = ( context: string, fileOps: FileOps, tx: ( type: string, text: string ) => Promise<string> ) => async ( text: string, p: string ): Promise<string> => {
   if ( p === 'json' ) try {
     return JSON.stringify ( JSON.parse ( text ), null, 2 )
   } catch ( e ) {
@@ -302,17 +302,18 @@ const postProcessOne = ( context: string, fileOps: FileOps ) => async ( text: st
   if ( p.match ( /^jsonMergeInto\(.*\)$/ ) ) {
     const file = p.slice ( 14, -1 )
     const fileContents = await fileOps.loadFileOrUrl ( file )
+    const txedContents = await tx ( '${}', fileContents )
     const myJson = parseJson<any> ( context ) ( text )
-    const fileJson = parseJson<any> ( context ) ( fileContents )
+    const fileJson = parseJson<any> ( context ) ( txedContents )
     const result = level1CombineTwoObjects ( fileJson, myJson )
     return JSON.stringify ( result, null, 2 )
   }
 
   throw Error ( `${context}. Don't know how to post process with ${p}. Legal values are 'json' and 'checkEnv(xxx) - which checks the environment variable has a value` )
 };
-async function postProcess ( context: string, fileOps: FileOps, t: CopyFileDetails, text: string ): Promise<string> {
+async function postProcess ( context: string, fileOps: FileOps, tx: ( type: string, text: string ) => Promise<string>, t: CopyFileDetails, text: string ): Promise<string> {
   if ( !isTemplateFileDetails ( t ) ) return text
-  return safeArray ( t.postProcess ).reduce ( ( accP: Promise<string>, v ) => accP.then ( acc => postProcessOne ( context, fileOps ) ( acc, v ) ), Promise.resolve ( text ) )
+  return safeArray ( t.postProcess ).reduce ( ( accP: Promise<string>, v ) => accP.then ( acc => postProcessOne ( context, fileOps, tx ) ( acc, v ) ), Promise.resolve ( text ) )
 }
 
 export function isTemplateFileDetails ( t: CopyFileDetails ): t is TemplateFileDetails {
@@ -340,7 +341,7 @@ export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootU
     const fullname = fileName.includes ( '://' ) ? fileName : rootUrl + '/' + fileName
     const text = await fileOps.loadFileOrUrl ( fullname )
     const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
-    const postProcessed = await postProcess ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, cfd, txformed )
+    const postProcessed = await postProcess ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, tx, cfd, txformed )
     return fileOps.saveFile ( targetRoot + '/' + target, postProcessed );
   }
 }
