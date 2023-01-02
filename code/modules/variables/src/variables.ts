@@ -38,7 +38,6 @@ interface DereferenceOptions {
 export function derefence ( context: string, dic: any, s: string, options?: DereferenceOptions ) {
   if ( options?.variableDefn === undefined ) return s;
   const regex = options.variableDefn.regex
-  let groups: RegExpMatchArray = s.match ( regex )
   return s.replace ( regex, match => {
     let result = replaceVar ( context, match, dic, options );
     return result;
@@ -53,16 +52,31 @@ export function findVar ( dic: any, ref: string ): any {
     return parts.reduce ( ( acc, part ) => acc[ firstSegment ( part, ':' ) ], dic )
   } catch ( e ) {return undefined}
 }
-export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
-  const withoutStartEnd = options.variableDefn.removeStartEnd ( ref )
+function composeVar ( context: string, dic: any, composeString: string, options: DereferenceOptions, commaIfNeeded: boolean ): string {
+  const index = composeString.indexOf ( '(' )
+  const withoutStartEnd = composeString.slice ( index+1, -1 )
+  console.log ( 'composeVar', withoutStartEnd )
+  const parts = withoutStartEnd.split ( ',' )
+  // console.log ( 'parts', parts )
+  let raw = parts.map ( s => replaceVarOfTrimmed ( context + ` part of ${composeString}`, dic, s.trim(), options ) ).join ( ',' );
+  const result = commaIfNeeded && raw.trim ().length > 0 ? raw + ',' : raw
+  return result
+}
+function replaceVarOfTrimmed ( context: string, dic: any, withoutStartEnd: string, options: DereferenceOptions ) {
   const obj = findVar ( dic, withoutStartEnd )
   const last = lastSegment ( withoutStartEnd, '.' )
   const { result, error } = processVariable ( context, dic, last, obj, options )
   if ( error !== undefined ) {
-    if ( options?.throwError ) {throw new Error ( context + ` Ref is ${ref}\n` + safeArray ( error ).join ( ',' ) )} else
-      return `//LAOBAN-UPDATE-ERROR ${context} for ref [${ref}]. ${error}. Value was ${JSON.stringify ( obj )}`
+    if ( options?.throwError ) {throw new Error ( context + safeArray ( error ).join ( ',' ) )} else
+      return `//LAOBAN-UPDATE-ERROR ${context}. ${error}. Value was ${JSON.stringify ( obj )}`
   }
   return result
+}
+export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
+  const withoutStartEnd = options.variableDefn.removeStartEnd ( ref ).trim()
+  if ( withoutStartEnd.startsWith ( 'compose(' ) && withoutStartEnd.endsWith ( ')' ) ) return composeVar ( context, dic, withoutStartEnd, options, false )
+  if ( withoutStartEnd.startsWith ( 'composeWithCommaIfNeeded(' ) && withoutStartEnd.endsWith ( ')' ) ) return composeVar ( context, dic, withoutStartEnd, options, true )
+  return replaceVarOfTrimmed ( context + ` Ref is ${ref}`, dic, withoutStartEnd, options );
 }
 function findIndentString ( parts: string[] ): ProcessedVariableResult {
   const indent = parts.find ( s => s.startsWith ( 'indent' ) );
@@ -95,6 +109,7 @@ export function processVariable ( context: string, dic: any, nameWithCommands: s
         dirWithVar[ variable ] = s
         let newContext = `${context} processing item ${i} in list [${s}]`;
         let result = derefence ( newContext, dirWithVar, mapFn, { ...options, variableDefn: doubleXmlVariableDefn } );
+        // console.log('mapped', nameWithCommands,'s',s, 'variable is', variable,'result',result)
         return result;
       } )
       const result = mapped.toString () + comma

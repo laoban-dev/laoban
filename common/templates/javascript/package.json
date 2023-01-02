@@ -1,0 +1,43 @@
+{
+  "name":        "${projectDetails.name}",
+  "description": "${projectDetails.description}",
+  "version":     "${version}",
+  "bin":{
+    ${projectDetails.details.extraBins:object:indent4}
+  },
+  "keywords": [${projectDetails.details.keywords:map<<>>(kw=>"<<kw>>")}],
+  "license": "${properties.license}",
+  "repository": "${properties.repository}",
+  "dependencies": {
+        ${compose(
+            projectDetails.details.extraDeps:object:indent4,
+            projectDetails.details.links:map<<>>(i=>"<<i>>": "<<version>>"
+         )}
+  },
+  "devDependencies": {
+      ${projectDetails.details.extraDevDeps:object:indent4}
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
+  ],
+  "main": "dist/index",
+  "types": "dist/index",
+  "scripts": {
+    "test": "jest --config jest.config.json",
+    "test:watch": "npm run test -- --watch"
+  },
+  "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ],
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ]
+  }
+}
