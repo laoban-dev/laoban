@@ -1,7 +1,7 @@
 {
   "name": "@phil-rice/validation",
   "description": "A library for validating json",
-  "version": "0.3.27",
+  "version": "0.3.28",
   "bin": {},
   "keywords": [],
   "license": "MIT",
