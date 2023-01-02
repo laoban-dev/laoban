@@ -9,12 +9,10 @@
   "license": "${properties.license}",
   "repository": "${properties.repository}",
   "dependencies": {
-        a
         ${compose(
             projectDetails.details.extraDeps:object:indent4,
             projectDetails.details.links:map<<>>(i=>"<<i>>": "<<version>>")
          )}
-        b
   },
   "devDependencies": {
       ${projectDetails.details.extraDevDeps:object:indent4}
