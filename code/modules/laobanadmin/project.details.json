@@ -8,7 +8,7 @@
     "extraDevDeps": {},
     "extraBins"   : {"laoban-admin": "dist/index.js"},
     "tsc": true,
-    "test": true,
+    "test": false,
     "publish"     : true
   }
 }

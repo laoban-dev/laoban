@@ -54,11 +54,11 @@ export function findVar ( dic: any, ref: string ): any {
 }
 function composeVar ( context: string, dic: any, composeString: string, options: DereferenceOptions, commaIfNeeded: boolean ): string {
   const index = composeString.indexOf ( '(' )
-  const withoutStartEnd = composeString.slice ( index+1, -1 )
-  console.log ( 'composeVar', withoutStartEnd )
+  const withoutStartEnd = composeString.slice ( index + 1, -1 )
+  // console.log ( 'composeVar', withoutStartEnd )
   const parts = withoutStartEnd.split ( ',' )
   // console.log ( 'parts', parts )
-  let raw = parts.map ( s => replaceVarOfTrimmed ( context + ` part of ${composeString}`, dic, s.trim(), options ) ).join ( ',' );
+  let raw = parts.map ( s => replaceVarOfTrimmed ( context + ` part of ${composeString}`, dic, s.trim (), options ) ).map ( s => s.trim () ).filter ( s => s.length > 0 ).join ( ',' );
   const result = commaIfNeeded && raw.trim ().length > 0 ? raw + ',' : raw
   return result
 }
@@ -73,7 +73,7 @@ function replaceVarOfTrimmed ( context: string, dic: any, withoutStartEnd: strin
   return result
 }
 export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
-  const withoutStartEnd = options.variableDefn.removeStartEnd ( ref ).trim()
+  const withoutStartEnd = options.variableDefn.removeStartEnd ( ref ).trim ()
   if ( withoutStartEnd.startsWith ( 'compose(' ) && withoutStartEnd.endsWith ( ')' ) ) return composeVar ( context, dic, withoutStartEnd, options, false )
   if ( withoutStartEnd.startsWith ( 'composeWithCommaIfNeeded(' ) && withoutStartEnd.endsWith ( ')' ) ) return composeVar ( context, dic, withoutStartEnd, options, true )
   return replaceVarOfTrimmed ( context + ` Ref is ${ref}`, dic, withoutStartEnd, options );

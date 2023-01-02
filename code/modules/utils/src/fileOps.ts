@@ -302,14 +302,14 @@ const postProcessOne = ( context: string, fileOps: FileOps, tx: ( type: string, 
   if ( p.match ( /^jsonMergeInto\(.*\)$/ ) ) {
     const file = p.slice ( 14, -1 )
     const fileContents = await fileOps.loadFileOrUrl ( file )
-    console.log ( 'jsonMergeInto', file, fileContents )
+    // console.log ( 'jsonMergeInto', file, fileContents )
     const txedContents = await tx ( '${}', fileContents )
-    console.log ( 'txedContents', txedContents )
+    // console.log ( 'txedContents', txedContents )
     const myJson = parseJson<any> ( context ) ( text )
-    console.log ( 'myJson', myJson )
+    // console.log ( 'myJson', myJson )
     const fileJson = parseJson<any> ( context ) ( txedContents )
     const result = level1CombineTwoObjects ( fileJson, myJson )
-    console.log ( 'result', result )
+    // console.log ( 'result', result )
     return JSON.stringify ( result, null, 2 )
   }
 
