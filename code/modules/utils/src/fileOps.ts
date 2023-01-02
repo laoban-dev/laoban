@@ -339,7 +339,7 @@ export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootU
   return async ( cfd ) => {
     const fileName = fileNameFrom ( cfd );
     const target = targetFrom ( cfd )
-    const fullname = fileName.includes ( '://' ) ? fileName : rootUrl + '/' + fileName
+    const fullname = fileName.includes ( '://' )  || fileName.startsWith('@')? fileName : rootUrl + '/' + fileName
     const text = await fileOps.loadFileOrUrl ( fullname )
     const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
     const postProcessed = await postProcess ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, tx, cfd, txformed )
