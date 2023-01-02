@@ -2,10 +2,10 @@
 ${include(@laoban@/templates/typescript/package.json.variables.template.json),
   "dependencies": {
 ${include(@laoban@/templates/typescript/package.json.dependencies.template)
-    "typescript": "^4.0.5"
   },
   "devDependencies": {
 ${include(@laoban@/templates/typescript/package.json.devdependencies.template)
+    "typescript": "^4.0.5",
     "@types/node": "^14.14.7",
     "@types/jest": "^26.0.15",
     "@testing-library/jest-dom": "^5.11.5",

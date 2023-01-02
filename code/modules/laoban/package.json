@@ -1,7 +1,7 @@
 {
   "name": "laoban",
   "description": "A cli for managing projects that have many npm packages",
-  "version": "0.3.25",
+  "version": "0.3.26",
   "bin": {
     "laoban": "dist/index.js"
   },
@@ -14,11 +14,11 @@
   "dependencies": {
     "fs-extra": "^9.0.1",
     "commander": "^6.2.0",
-    "@phil-rice/variables": "0.3.25",
-    "@phil-rice/generations": "0.3.25",
-    "@phil-rice/validation": "0.3.25",
-    "@phil-rice/debug": "0.3.25",
-    "@phil-rice/files": "0.3.25",
+    "@phil-rice/variables": "0.3.26",
+    "@phil-rice/generations": "0.3.26",
+    "@phil-rice/validation": "0.3.26",
+    "@phil-rice/debug": "0.3.26",
+    "@phil-rice/files": "0.3.26",
     "typescript": "^4.0.5"
   },
   "devDependencies": {

@@ -199,7 +199,8 @@ interface InitCmdOptions {
   force: boolean
 }
 export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ) {
-  const clearDirectory = path.join ( directory )
+  const clearDirectory = path.join ( directory ).replace(/\\/g, '/')
+  console.log(clearDirectory)
   if ( cmd.dryrun && cmd.force ) {
     console.log ( 'Cannot have --dryrun and --force' )
     return
