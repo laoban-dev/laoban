@@ -1,5 +1,5 @@
 import { DebugCommands } from "@phil-rice/debug";
-import { level1CombineTwoObjects, NameAnd, safeArray } from "./utils";
+import { deepCombineTwoObjects, NameAnd, safeArray } from "./utils";
 
 export const shortCuts: NameAnd<string> = { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' };
 
@@ -300,16 +300,13 @@ const postProcessOne = ( context: string, fileOps: FileOps, tx: ( type: string, 
     return text
   }
   if ( p.match ( /^jsonMergeInto\(.*\)$/ ) ) {
-    const file = p.slice ( 14, -1 )
-    const fileContents = await fileOps.loadFileOrUrl ( file )
-    // console.log ( 'jsonMergeInto', file, fileContents )
-    const txedContents = await tx ( '${}', fileContents )
-    // console.log ( 'txedContents', txedContents )
+    const commaSeparatedFiles = p.slice ( 14, -1 )
+    const files = commaSeparatedFiles.split ( ',' )
+    const fileJson: string[] = await Promise.all<string> ( files.map ( name =>
+      fileOps.loadFileOrUrl ( name ).then ( content => tx ( '${}', content ) ).then ( parseJson ( `${context} file ${name}` ) ) ) )
     const myJson = parseJson<any> ( context ) ( text )
-    // console.log ( 'myJson', myJson )
-    const fileJson = parseJson<any> ( context ) ( txedContents )
-    const result = level1CombineTwoObjects ( fileJson, myJson )
-    // console.log ( 'result', result )
+    const result = [ ...fileJson, myJson ].reduce ( deepCombineTwoObjects )
+    // console.log('size:', files.length)
     return JSON.stringify ( result, null, 2 )
   }
 

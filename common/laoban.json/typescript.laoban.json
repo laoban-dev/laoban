@@ -1,5 +1,8 @@
 {
-  "scripts": {
+  "templates": {
+    "typescript": "@laoban@/templates/typescript"
+  },
+  "scripts":   {
     "tsc":         {
       "description": "runs tsc",
       "guard":       "${projectDetails.details.tsc}",

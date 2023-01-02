@@ -1,0 +1,17 @@
+{
+  "markers":              ["json:projectJson.dependencies.react"],
+  "parents":              [
+    "@laoban@/init/typescript"
+  ],
+  "laoban.json":          {
+    "packageManager": "yarn",
+    "parents":        [
+      "@laoban@/laoban.json/react.laoban.json"
+    ]
+  },
+  "project.details.json": {
+    "contents":  {
+      "template": "typescript_react"
+    }
+  }
+}

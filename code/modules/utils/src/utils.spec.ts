@@ -1,4 +1,4 @@
-import { fromEntries, level1CombineTwoObjects, mapObject, mapObjectKeys, removeEmptyArrays, safeArray, unique } from "./utils";
+import { fromEntries, deepCombineTwoObjects, mapObject, mapObjectKeys, removeEmptyArrays, safeArray, unique } from "./utils";
 
 describe ( 'safeArray', () => {
   it ( "should return the array if defined", () => {
@@ -64,12 +64,12 @@ describe ( 'unique', () => {
 
 describe ( 'level1CombineTwoObjects', () => {
     it ( 'should combine two objects - shallow only', () => {
-      expect ( level1CombineTwoObjects ( { a: 1 }, { b: 2, x: { q: 1 } } ) ).toEqual (
+      expect ( deepCombineTwoObjects ( { a: 1 }, { b: 2, x: { q: 1 } } ) ).toEqual (
         { "a": 1, "b": 2, "x": { "q": 1 } } )
-      expect ( level1CombineTwoObjects ( { a: 1, b: 2 }, { b: 3 } ) ).toEqual ( { a: 1, b: 3 } )
+      expect ( deepCombineTwoObjects ( { a: 1, b: 2 }, { b: 3 } ) ).toEqual ( { a: 1, b: 3 } )
     } )
     it ( 'should combine two objects - deeper', () => {
-      expect ( level1CombineTwoObjects ( { a: { b: 1, c: 2 } }, { p: 2, a: { b: 2, d: 3 } } ) ).toEqual ( {
+      expect ( deepCombineTwoObjects ( { a: { b: 1, c: 2 } }, { p: 2, a: { b: 2, d: 3 } } ) ).toEqual ( {
         "a": { "b": 2, "c": 2, "d": 3 },
         "p": 2
       } )

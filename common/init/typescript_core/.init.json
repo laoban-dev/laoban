@@ -1,4 +1,5 @@
 {
+  "markers":              ["json:projectJson.devDependencies.typescript"],
   "parents":              [
     "@laoban@/init/javascript_core"
   ],

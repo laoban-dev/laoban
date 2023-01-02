@@ -1,11 +1,11 @@
 import { combineTwoObjects, FileOps, loadWithParents, NameAnd, parseJson, safeArray, safeObject } from "@phil-rice/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./status";
 import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
-import { laobanJsonAndLocation, laobanJsonLocations, LocationAnd } from "./fileLocations";
+import { laobanJsonLocations, LocationAnd } from "./fileLocations";
 import path from "path";
 import { includeAndTransformFile } from "laoban/dist/src/update";
 import { combineRawConfigs } from "laoban/dist/src/config";
-import { findLaoban, findLaobanOrUndefined } from "laoban/dist/src/Files";
+import { findLaobanOrUndefined } from "laoban/dist/src/Files";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
