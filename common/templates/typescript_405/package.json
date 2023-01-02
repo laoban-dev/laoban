@@ -1,10 +1,5 @@
 {
-${include(@laoban@/templates/typescript/package.json.variables.template.json),
-  "dependencies": {
-${include(@laoban@/templates/typescript/package.json.dependencies.template)
-  },
   "devDependencies": {
-${include(@laoban@/templates/typescript/package.json.devdependencies.template)
     "typescript": "^4.0.5",
     "@types/node": "^14.14.7",
     "@types/jest": "^26.0.15",
@@ -12,28 +7,5 @@ ${include(@laoban@/templates/typescript/package.json.devdependencies.template)
     "@testing-library/user-event": "^12.2.0",
     "jest": "^26.6.0",
     "ts-jest": "^26.4.4"
-  },
-  "files": [
-    "dist/index.js",
-    "dist/index.d.ts",
-    "dist/src/"
-  ],
-  "main": "dist/index",
-  "types": "dist/index",
-  "scripts": {
-    "test": "jest --config jest.config.json",
-    "test:watch": "npm run test -- --watch"
-  },
- "browserslist": {
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ],
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ]
   }
 }
