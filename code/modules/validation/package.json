@@ -6,10 +6,9 @@
   "keywords": [],
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
-  "dependencies": {
-    "typescript": "^4.0.5"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "typescript": "^4.0.5",
     "@types/node": "^14.14.7",
     "@types/jest": "^26.0.15",
     "@testing-library/jest-dom": "^5.11.5",

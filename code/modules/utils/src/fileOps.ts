@@ -207,15 +207,7 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
       const name = full.slice ( 1, -1 );
       const result = nameAndPrefix[ name ]
       if ( result === undefined )
-        throw new Error ( `
-    Cannot
-    handle
-    filename ${s}.It
-    has
-    the
-  @${name}@.Legal
-    names
-    are ${Object.keys ( nameAndPrefix )}` )
+        throw new Error ( `Cannot handle filename ${s}. It has the @${name}@. Legal names are ${Object.keys ( nameAndPrefix )}` )
       return result
     } )
   }
@@ -298,27 +290,13 @@ const postProcessOne = ( context: string ) => ( text: string, p: string ): strin
   if ( p === 'json' ) try {
     return JSON.stringify ( JSON.parse ( text ), null, 2 )
   } catch ( e ) {
-    console.error ( `
-    Cannot
-    parse
-    post
-    processing
-    json ${context}`, e )
+    console.error ( `Cannot parse post processing json ${context}`, e )
+    console.error('json is', text)
     throw e
   }
   if ( p.match ( /^checkEnv\(.*\)$/ ) ) {
     const env = p.slice ( 9, -1 )
-    if ( process.env[ env ] === undefined ) console.error ( `${context}
-  \n
-    requires
-    the
-    env
-    variable [${env} to
-    exist
-    and
-    it
-    doesn
-    't. This might cause problems]` )
+    if ( process.env[ env ] === undefined ) console.error ( `${context}\n requires the env variable [${env} to exist and it doesn't. This might cause problems]` )
     return text
   }
   throw Error ( `${context}. Don't know how to post process with ${p}. Legal values are 'json' and 'checkEnv(xxx) - which checks the environment variable has a value` )
