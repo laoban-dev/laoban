@@ -10,7 +10,7 @@
       "repository": "${projectJson.repository}"
     },
     "templates": {
-      "javascript": "@laoban@/templates/javascript"
+      "javascript": "@laoban@/templates/javascript_core"
     }
   },
   "project.details.json":     {
