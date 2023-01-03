@@ -151,11 +151,13 @@ export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileCon
 
 async function findTemplatePackageJsonLookup ( fileOps: FileOps, init: initFileContentsWithParsedLaobanJsonAndProjectDetails[], parsedLaoBan: any ): Promise<NameAnd<any>> {
   const result: NameAnd<any> = {}
-  await Promise.all ( init.map ( async ( { projectDetails } ) => {
+  await Promise.all ( init.map ( async ( { projectDetails,location } ) => {
     const template = projectDetails.template
     if ( result[ template ] === undefined ) {//earlier ones take precedence
       const templateLookup = parsedLaoBan.templates
       let templateUrl = templateLookup[ template ];
+      if (templateUrl===undefined)
+        throw Error(`Error finding template ${template}. Init is ${location}\nKnown templates are ${JSON.stringify(templateLookup,null,2)}`)
       const templatePackageJson = await fileOps.loadFileOrUrl ( path.join ( templateUrl, 'package.json' ) )
       const templateContents = await includeAndTransformFile ( ``, { projectDetails }, fileOps ) ( '${}', templatePackageJson ) // we are only have the dependancies, so we don't need to do anything about the variables, but we do need the inclues
       result[ template ] = parseJson ( `Finding template package json for template ${template} at ${templateUrl}` ) ( templateContents )

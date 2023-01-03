@@ -7,10 +7,13 @@
     "packageManager": "yarn",
     "parents":        [
       "@laoban@/laoban.json/react.laoban.json"
-    ]
+    ],
+    "templates":   {
+      "typescript_react": "@laoban@/templates/typescript_react"
+    }
   },
   "project.details.json": {
-    "contents":  {
+    "contents": {
       "template": "typescript_react"
     }
   }
