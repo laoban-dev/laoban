@@ -73,9 +73,9 @@ export const parseJson = <T> ( context: string | (() => string) ) => ( s: string
     throw new Error ( `Invalid JSON for ${realContext}: ${s}` )
   }
 };
-export function loadWithParents<T> ( context: string, loader: ( url ) => Promise<string>, parse: ( context: string ) => ( json: string ) => T, findChildrenUrls: ( t: T ) => string[], fold: ( t1: T, t2: T ) => T ): ( url: string ) => Promise<T> {
+export function loadWithParents<T> ( context: string, loader: ( url ) => Promise<string>, parse: ( context: string ) => ( json: string ,location: string) => T, findChildrenUrls: ( t: T ) => string[], fold: ( t1: T, t2: T ) => T ): ( url: string ) => Promise<T> {
   return url => loader ( url ).then ( async json => {
-    const t: T = parse ( `${context}. Url ${url}` ) ( json )
+    const t: T = parse ( `${context}. Url ${url}` ) ( json, url )
     const parentUrls: string[] = findChildrenUrls ( t );
     const parents = await Promise.all ( parentUrls.map ( loadWithParents ( context, loader, parse, findChildrenUrls, fold ) ) );
     const resultArray = [ ...parents, t ];

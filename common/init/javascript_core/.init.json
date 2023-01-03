@@ -16,7 +16,7 @@
   "project.details.json":     {
       "variableFiles": {"projectJson": "project.json"},
       "contents":      {
-        "template":    "typescript",
+        "template":    "javascript",
         "name":        "${projectJson.name}",
         "description": "${projectJson.description}",
         "details":     {

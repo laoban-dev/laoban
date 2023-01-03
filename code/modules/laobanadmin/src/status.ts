@@ -1,5 +1,5 @@
 import { chain, FileOps, unique } from "@phil-rice/utils";
-import { gitLocation, gitLocationsUnderHere, isLocationAnd, LocationAnd, LocationAndContents, LocationAndErrors, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
+import { gitLocation, gitLocationsUnderHere, isLocationAndErrors, isLocationAndParsed, LocationAnd, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
 import path from "path";
 import { findLaobanOrUndefined } from "laoban/dist/src/Files";
 
@@ -24,26 +24,26 @@ export async function reportOnGit ( fileOps: FileOps, directory: string, gitRepo
 }
 
 interface PackageJsonDetails {
-  withWorkspaces: LocationAnd<any>[]
-  withoutWorkspaces: LocationAnd<any>[]
+  withWorkspaces: LocationAndParsed<any>[]
+  withoutWorkspaces: LocationAndParsed<any>[]
   withErrors: LocationAndErrors[]
 
 }
 
-function partitionPackageJsons ( packageJsons: LocationAndContents<any>[] ): PackageJsonDetails {
-  const withWorkspaces: LocationAnd<any>[] = []
-  const withoutWorkspaces: LocationAnd<any>[] = []
+function partitionPackageJsons ( packageJsons: LocationAndParsedOrErrors<any>[] ): PackageJsonDetails {
+  const withWorkspaces: LocationAndParsed<any>[] = []
+  const withoutWorkspaces: LocationAndParsed<any>[] = []
   const withErrors: LocationAndErrors[] = []
   packageJsons.forEach ( p => {
-    if ( isLocationAnd ( p ) ) {
-      if ( packageJsonHasWorkspaces ( p.contents ) ) {
+    if ( isLocationAndParsed ( p ) )
+      if ( packageJsonHasWorkspaces ( p.contents ) )
         withWorkspaces.push ( p )
-      } else {
+      else {
         withoutWorkspaces.push ( p )
       }
-    } else {
+    else if ( isLocationAndErrors ( p ) )
       withErrors.push ( p )
-    }
+    else throw new Error ( `Unexpected type ${p}` )
   } )
   return { withWorkspaces, withoutWorkspaces, withErrors }
 }
@@ -56,7 +56,7 @@ function combinePackageJsons ( p1: PackageJsonDetails, p2: PackageJsonDetails ):
 }
 
 export async function findPackageJsonDetails ( fileOps: FileOps, directory: string ): Promise<PackageJsonDetails> {
-  const firstLocations = await packageJsonLocations ( fileOps, directory )
+  const firstLocations: string[] = await packageJsonLocations ( fileOps, directory )
   const firstDetails = partitionPackageJsons ( await packageJsonAndLocations ( 'Finding Package.jsons', fileOps, firstLocations ) )
   if ( firstDetails.withWorkspaces.length === 0 ) return firstDetails
   const secondLocationsDir = firstDetails.withWorkspaces.map ( ( { directory } ) => directory )
@@ -70,7 +70,7 @@ export async function findPackageJsonDetails ( fileOps: FileOps, directory: stri
 export interface SuccessfullInitSuggestions {
   comments: string[]
   laobanJsonLocation: string
-  packageJsonDetails: LocationAnd<any>[]
+  packageJsonDetails: LocationAndParsed<any>[]
 }
 export function isSuccessfulInitSuggestions ( suggestions: InitSuggestions ): suggestions is SuccessfullInitSuggestions {
   const a: any = suggestions;
@@ -99,13 +99,13 @@ function suggestFromExistingLaobanJson ( { existingLaobanFile, details, director
 function suggestFromGitRepo ( { gitRepo, details }: PackageJsonDetailsAndGitRepo ): InitSuggestions | undefined {
   if ( gitRepo !== undefined ) return {
     laobanJsonLocation: gitRepo,
-    packageJsonDetails: details.withoutWorkspaces,
+    packageJsonDetails: withoutWorkspacesUnderLaobanJson ( details, gitRepo ),
     comments: [ `Found a git repo. This is usually a good place for the laoban.json file` ]
   }
 }
 function withoutWorkspacesUnderLaobanJson ( details: PackageJsonDetails, laobanJsonLocation: string ) {
   let searchString = path.join ( laobanJsonLocation );
-  return details.withoutWorkspaces.filter ( s => s.location.startsWith ( searchString ) );
+  return details.withoutWorkspaces.filter ( s => s.location.startsWith ( searchString ) )
 }
 function suggestFromSingleWorkspaceJson ( { details }: PackageJsonDetailsAndGitRepo ): InitSuggestions | undefined {
   if ( details.withWorkspaces.length === 1 ) {
@@ -126,14 +126,14 @@ function noWorkspaces ( { details: details, directory }: PackageJsonDetailsAndGi
   if ( details.withWorkspaces.length === 0 ) return {
     comments: [ 'There is no git repo or package.json with workspaces, so the current directory is suggested' ],
     laobanJsonLocation: directory,
-    packageJsonDetails: details.withoutWorkspaces
+    packageJsonDetails: withoutWorkspacesUnderLaobanJson ( details, directory )
   }
 }
 function noIdeaWhatToDo ( { details, directory }: PackageJsonDetailsAndGitRepo ): InitSuggestions | undefined {
   return {
     comments: [ `Resorting to default: suggesting the current directory  ` ],
     laobanJsonLocation: directory,
-    packageJsonDetails: details.withoutWorkspaces
+    packageJsonDetails: withoutWorkspacesUnderLaobanJson ( details, directory )
   }
 }
 export const suggestInitSuggestions = chain ( suggestFromExistingLaobanJson, suggestFromSingleWorkspaceJson, suggestFromGitRepo, noWorkspaces, noIdeaWhatToDo )
