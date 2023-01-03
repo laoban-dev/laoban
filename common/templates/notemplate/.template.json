@@ -1,4 +1,9 @@
 {
   "files": [
+    {
+      "file":        "package.json",
+      "type":        "${}",
+      "postProcess": "jsonMergeInto(@laoban@/templates/javascript/package.json)"
+    }
   ]
 }
