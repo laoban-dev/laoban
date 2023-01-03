@@ -10,13 +10,13 @@
       "repository": "${projectJson.repository}"
     },
     "templates": {
-      "notemplate": "@laoban@/templates/notemplate"
+      "javascript": "@laoban@/templates/notemplate"
     }
   },
   "project.details.json":     {
       "variableFiles": {"projectJson": "project.json"},
       "contents":      {
-        "template":    "notemplate",
+        "template":    "javascript",
         "name":        "${projectJson.name}",
         "description": "${projectJson.description}",
         "details":     {

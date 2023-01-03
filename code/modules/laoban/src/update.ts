@@ -65,7 +65,7 @@ export async function loadTemplateControlFile ( context: string, fileOps: FileOp
 export async function loadOneFileFromTemplateControlFileDetails ( context: string, fileOps: FileOps, templateControlFileUrl: string, tx?: ( type: string, text: string ) => Promise<string> ): Promise<string> {
   const controlFile: TemplateControlFile = await loadTemplateControlFile ( context, fileOps, undefined, templateControlFileUrl )
   const cfdForPackageJson = controlFile.files.find ( cfd => fileNameFrom ( cfd ) === 'package.json' )
-  if ( cfdForPackageJson === undefined ) throw Error ( `${context}. Cannot find package.json in file ${templateControlFileUrl}` )
+  if ( cfdForPackageJson === undefined ) throw Error ( `${context}. Cannot find package.json in file ${templateControlFileUrl}\nControl file is ${JSON.stringify(controlFile,null,2)}` )
   const { target, postProcessed } = await loadFileFromDetails ( context, fileOps, templateControlFileUrl, tx, cfdForPackageJson )
   return postProcessed
 
