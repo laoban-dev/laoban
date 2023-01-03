@@ -1,14 +1,14 @@
 {
   "name": "@phil-rice/files",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
-  "version": "0.3.28",
+  "version": "0.3.29",
   "bin": {},
   "keywords": [],
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
   "dependencies": {
     "node-fetch": "2.6.1",
-    "@phil-rice/utils": "0.3.28"
+    "@phil-rice/utils": "0.3.29"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.6.2",
