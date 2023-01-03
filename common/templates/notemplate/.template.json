@@ -1,9 +1,8 @@
 {
   "files": [
     {
-      "file":        "package.json",
-      "type":        "${}",
-      "postProcess": "jsonMergeInto(@laoban@/templates/javascript/package.json)"
+      "file":        "@laoban@/templates/javascript/package.json",
+      "type":        "${}"
     }
   ]
 }

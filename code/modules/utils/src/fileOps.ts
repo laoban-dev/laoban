@@ -73,7 +73,7 @@ export const parseJson = <T> ( context: string | (() => string) ) => ( s: string
     throw new Error ( `Invalid JSON for ${realContext}: ${s}` )
   }
 };
-export function loadWithParents<T> ( context: string, loader: ( url ) => Promise<string>, parse: ( context: string ) => ( json: string ,location: string) => T, findChildrenUrls: ( t: T ) => string[], fold: ( t1: T, t2: T ) => T ): ( url: string ) => Promise<T> {
+export function loadWithParents<T> ( context: string, loader: ( url ) => Promise<string>, parse: ( context: string ) => ( json: string, location: string ) => T, findChildrenUrls: ( t: T ) => string[], fold: ( t1: T, t2: T ) => T ): ( url: string ) => Promise<T> {
   return url => loader ( url ).then ( async json => {
     const t: T = parse ( `${context}. Url ${url}` ) ( json, url )
     const parentUrls: string[] = findChildrenUrls ( t );
@@ -335,14 +335,24 @@ export function targetFrom ( f: CopyFileDetails ): string {
 
 export type CopyFileDetails = string | TemplateFileDetails
 
+export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, tx: ( type: string, text: string ) => Promise<string>, cfd: string | TemplateFileDetails ) {
+  const fileName = fileNameFrom ( cfd );
+  const target = targetFrom ( cfd )
+  function calcFileName () {
+    if ( fileName.includes ( '://' ) || fileName.startsWith ( '@' ) ) return fileName
+    if ( rootUrl ) return rootUrl + '/' + fileName;
+    throw Error ( `trying to load ${JSON.stringify ( cfd )} without a rootUrl` )
+  }
+  const fullname = calcFileName ()
+  const text = await fileOps.loadFileOrUrl ( fullname )
+  const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
+  const postProcessed = await postProcess ( context, fileOps, tx, cfd, txformed )
+  return { target, postProcessed };
+}
+
 export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fd: CopyFileDetails ) => Promise<void> {
   return async ( cfd ) => {
-    const fileName = fileNameFrom ( cfd );
-    const target = targetFrom ( cfd )
-    const fullname = fileName.includes ( '://' )  || fileName.startsWith('@')? fileName : rootUrl + '/' + fileName
-    const text = await fileOps.loadFileOrUrl ( fullname )
-    const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
-    const postProcessed = await postProcess ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, tx, cfd, txformed )
+    const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, rootUrl, tx, cfd );
     return fileOps.saveFile ( targetRoot + '/' + target, postProcessed );
   }
 }

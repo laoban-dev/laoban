@@ -1,4 +1,4 @@
-import { CopyFileDetails, copyFiles, FileOps, safeArray, safeObject } from "@phil-rice/utils";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, safeArray, safeObject } from "@phil-rice/utils";
 import path from "path";
 import { ConfigWithDebug, ProjectDetailsAndDirectory, ProjectDetailsDirectoryPropertiesAndVersion } from "./config";
 import * as fse from "fs-extra";
@@ -20,7 +20,7 @@ export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: Config
     return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.projectDetails ) ) )
   } )
 }
-interface TemplateControlFile {
+export interface TemplateControlFile {
   files: CopyFileDetails[]
 }
 export const includeFiles = ( fileOps: FileOps ): TransformTextFn => async ( type: string, text: string ): Promise<string> => {
@@ -48,23 +48,33 @@ export function combineTransformFns ( ...fns: TransformTextFn[] ): TransformText
   return ( type, text ) => fns.reduce <Promise<string>> ( async ( acc, fn ) => fn ( type, await acc ), Promise.resolve ( text ) )
 }
 
-export const includeAndTransformFile = ( context: string, dic: any, fileOps: FileOps ):TransformTextFn =>
+export const includeAndTransformFile = ( context: string, dic: any, fileOps: FileOps ): TransformTextFn =>
   combineTransformFns ( includeFiles ( fileOps ), transformFile ( context, dic ) )
 
+export async function loadTemplateControlFile ( context: string, fileOps: FileOps, laobanDirectory: string | undefined, templateControlFileUrl: string ): Promise<TemplateControlFile> {
+  function findPrefix () {
+    if ( templateControlFileUrl.includes ( '://' ) || templateControlFileUrl.startsWith ( '@' ) ) return templateControlFileUrl
+    if ( laobanDirectory ) path.join ( laobanDirectory, templateControlFileUrl );
+    throw Error ( `${context}. Cannot access ${templateControlFileUrl} as it is not a url` )
+  }
+  const prefix = findPrefix ()
+  const url = prefix + '/.template.json';
+  return fileOps.loadFileOrUrl ( url ).then ( parseJson ( context + `\n from url ${url}` ) );
+}
+
+export async function loadOneFileFromTemplateControlFileDetails ( context: string, fileOps: FileOps, templateControlFileUrl: string, tx?: ( type: string, text: string ) => Promise<string> ): Promise<string> {
+  const controlFile: TemplateControlFile = await loadTemplateControlFile ( context, fileOps, undefined, templateControlFileUrl )
+  const cfdForPackageJson = controlFile.files.find ( cfd => fileNameFrom ( cfd ) === 'package.json' )
+  if ( cfdForPackageJson === undefined ) throw Error ( `${context}. Cannot find package.json in file ${templateControlFileUrl}` )
+  const { target, postProcessed } = await loadFileFromDetails ( context, fileOps, templateControlFileUrl, tx, cfdForPackageJson )
+  return postProcessed
+
+}
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {
   const prefix = templateUrl.includes ( '://' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
-  const url = prefix + '/.template.json';
+  const controlFile = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps, laobanDirectory, prefix );
+  d.message ( () => [ `control file is `, controlFile ] )
   const target = p.directory
-  function parseCopyFile ( controlFileAsString: string ): TemplateControlFile {
-    try {
-      return JSON.parse ( controlFileAsString );
-    } catch ( e ) {
-      throw new Error ( `Error copying template file in ${p.directory} from url ${url}\n${controlFileAsString}\n` )
-    }
-  }
-  const controlFileAsString = await fileOps.loadFileOrUrl ( url )
-  d.message ( () => [ `control file is `, controlFileAsString ] )
-  const controlFile = parseCopyFile ( controlFileAsString );
   return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
     includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ) ) ( safeArray ( controlFile.files ) )
 }

@@ -3,7 +3,7 @@ import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, Su
 import { derefence, dollarsBracesVarDefn, findVar, processVariable, replaceVar } from "@phil-rice/variables";
 import { laobanJsonLocations, LocationAnd, LocationAndParsed } from "./fileLocations";
 import path from "path";
-import { includeAndTransformFile } from "laoban/dist/src/update";
+import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "laoban/dist/src/update";
 import { combineRawConfigs } from "laoban/dist/src/config";
 import { findLaobanOrUndefined } from "laoban/dist/src/Files";
 
@@ -117,8 +117,8 @@ export interface ProjectDetailsAndTemplate extends LocationAnd<string> {
 function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], packageJson: LocationAndParsed<any> ) {
   // console.log(initFileContents.map(i => i.location))
   const evaluateMarker = ( m: string ) => {
-    if (!m.startsWith('json:')) throw Error(`Illegal marker ${m}. Must start with json:`)
-    let markerWithoutPrefix = m.substring(5);
+    if ( !m.startsWith ( 'json:' ) ) throw Error ( `Illegal marker ${m}. Must start with json:` )
+    let markerWithoutPrefix = m.substring ( 5 );
     // console.log(markerWithoutPrefix )
     let dic = { projectJson: packageJson.contents };
     let result = findVar ( dic, markerWithoutPrefix );
@@ -132,7 +132,7 @@ function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaoban
     return valid
   } )
   let result = found || initFileContents[ 0 ];
-  console.log('result', found!== undefined, result.projectDetails.template, result.location)
+  console.log ( 'result', found !== undefined, result.projectDetails.template, result.location )
   return result;
 }
 export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], packageJsonDetails: LocationAndParsed<any>[] ): ProjectDetailsAndTemplate[] => {
@@ -149,17 +149,20 @@ export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileCon
   } );
 };
 
+async function loadSingleFileFromTemplate ( fileOps: FileOps, templateUrl: string, fileName: string ) {
+
+}
 async function findTemplatePackageJsonLookup ( fileOps: FileOps, init: initFileContentsWithParsedLaobanJsonAndProjectDetails[], parsedLaoBan: any ): Promise<NameAnd<any>> {
   const result: NameAnd<any> = {}
-  await Promise.all ( init.map ( async ( { projectDetails,location } ) => {
+  await Promise.all ( init.map ( async ( { projectDetails, location } ) => {
     const template = projectDetails.template
     if ( result[ template ] === undefined ) {//earlier ones take precedence
       const templateLookup = parsedLaoBan.templates
       let templateUrl = templateLookup[ template ];
-      if (templateUrl===undefined)
-        throw Error(`Error finding template ${template}. Init is ${location}\nKnown templates are ${JSON.stringify(templateLookup,null,2)}`)
-      const templatePackageJson = await fileOps.loadFileOrUrl ( path.join ( templateUrl, 'package.json' ) )
-      const templateContents = await includeAndTransformFile ( ``, { projectDetails }, fileOps ) ( '${}', templatePackageJson ) // we are only have the dependancies, so we don't need to do anything about the variables, but we do need the inclues
+      if ( templateUrl === undefined ) throw Error ( `Error finding template ${template}. Init is ${location}` )
+      const context = `Transforming file ${templateUrl} for ${location}\nKnown templates are ${JSON.stringify ( templateLookup, null, 2 )}`
+      const templatePackageJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) )
+      const templateContents = await includeAndTransformFile ( context, { projectDetails }, fileOps ) ( '${}', templatePackageJson )
       result[ template ] = parseJson ( `Finding template package json for template ${template} at ${templateUrl}` ) ( templateContents )
     }
   } ) )
