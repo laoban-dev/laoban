@@ -22,3 +22,4 @@
 0.3.24 Added laoban-admin init
 0.3.29 'laoban-admin init --types typescript javascript' will detect the appropriate template
 0.3.30 cleaned up parameters for 'laoban-admin init'
+0.3.32 adding 'laoban-admin projects' to list all projects

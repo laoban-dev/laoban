@@ -148,20 +148,16 @@ function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaoban
   const evaluateMarker = ( m: string ) => {
     if ( !m.startsWith ( 'json:' ) ) throw Error ( `Illegal marker ${m}. Must start with json:` )
     let markerWithoutPrefix = m.substring ( 5 );
-    // console.log(markerWithoutPrefix )
     let dic = { projectJson: packageJson.contents };
     let result = findVar ( dic, markerWithoutPrefix );
-    console.log ( 'evaluateMarker', markerWithoutPrefix, result )
     return result;
   };
   const found = initFileContents.find ( ( ifc, i ) => {
     const markers = safeArray ( ifc.markers )
     const valid = markers.reduce ( ( acc, m ) => evaluateMarker ( m ) && acc, true )
-    // console.log ( '  markers for', packageJson.directory, markers, valid, ifc.location )
     return valid
   } )
   let result = found || findRequestedIFCForLaoban ( initFileContents, type );
-  console.log ( 'result', found !== undefined, result.projectDetails.template, result.location )
   return result;
 }
 export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, packageJsonDetails: LocationAndParsed<any>[] ): ProjectDetailsAndTemplate[] => {
