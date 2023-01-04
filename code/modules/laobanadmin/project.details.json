@@ -6,7 +6,9 @@
     "links"       : ["laoban"],
     "extraDeps"   : {   "commander": "^6.2.0"  },
     "extraDevDeps": {},
-    "extraBins"   : {"laoban-admin": "dist/index.js"},
+    "extraBins"   : {
+      "laoban": "node_modules/laoban/dist/index.js",
+      "laoban-admin": "dist/index.js"},
     "tsc": true,
     "test": false,
     "publish"     : true

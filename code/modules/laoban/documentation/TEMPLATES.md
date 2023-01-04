@@ -1,7 +1,8 @@
 # Templates
 
-Each [project](PROJECTS.md) has a `template`. This template tells us 'what sort of project it is'.
-For example we might want the following: 
+Each [project](PROJECTS.md) has a `template`. This template tells us 'what sort of project it is'. For example we might
+want the following:
+
 * Java projects (for the backend)
 * Typescript non react projects (which are libraries)
 * Typescript react projects (for the front end)
@@ -9,82 +10,110 @@ For example we might want the following:
 Here we would have three templates. `java`, `typescript` and `react`.
 
 ## What do templates do...
-A template is a list of files that will be copied into our project every time 
-we execute the `laoban update` command. The files can be configured to be modified
-during the update command
 
-This allows us to manage all these files centrally, but allows us to have local variations
-For example. Typical files in a template include
+A template is a list of files that will be copied into our project every time we execute the `laoban update` command.
+The files can be configured to be modified during the update command
+
+This allows us to manage all these files centrally, but allows us to have local variations For example. Typical files in
+a template include
+
 * project.json
 * pom.xml
 * babel.config.json
 * ts-config.json
 
 ## Why are they cool
-As soon as you want to upgrade a version of a dependency in many projects, you discover the
-joy of the templates. They are 'managed' in the template, type `laoban update` and it is the
-same as editing the `package.json` everywhere. 
 
-With them it is now trivial to create sub libraries which is great for increasing code
-quality (libraries typically force us to create nice interfaces and decouple our code). Normally
-this is painful in the javascript ecosystem
+As soon as you want to upgrade a version of a dependency in many projects, you discover the joy of the templates. They
+are 'managed' in the template, type `laoban update` and it is the same as editing the `package.json` everywhere.
+
+With them it is now trivial to create sub libraries which is great for increasing code quality (libraries typically
+force us to create nice interfaces and decouple our code). Normally this is painful in the javascript ecosystem
 
 ## Templates and [project.details.json](PROJECTS.md)
+
 Often the files in the template will be modified by the data in the `project.details.json`
 file. For example the name of the project is needed in `pom.xml` and `project.json`.
 
-## Local templates
-Often when starting we just want really simple templates. In this case we create a folder (usually
-called `templates`). Under it we create a directory with the name of the template. And in this 
-we just put the files we want copied. 
+## Templates are in the `laoban.json` file
 
-By default  `laoban` will 'do sensible things' to `project.json`
-
-## Remote templates
-As our projects mature, or if we are in a big organisation, we might want to have centralised
-control of these templates. For example as company we might want to say `this is what a react project should look like`.
-
-For these we can use a slightly more sophisticated approach to template management by
-editing [laoban.json](LAOBAN.JSON.md) and adding a `templates` section. (Note 
-that this is totally optioanal: you will know if you need to do it, if in doubt just use the simple
-approach)
+In the `laoban.json` file we have a `templates` section. For example:
 
 ```json
-{"templates": {
-   "react": "https://some url that points to the template",
-   "java": "it can point to a directory as well (relative to the root of your project"
-}
+{
+  "templates": {
+    "javascript":       "./templates/javascript",
+    "typescript":       "@laoban@/templates/typescript_405",
+    "typescript_react": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript_react/.template.json"
+  }
 }
 ```
-This isn't an either/or. You can have a `templates` and still have local directory templates.
 
-## Template control files
+* The first is the declaration of a `local template` that lives in the `monorepo`.
+* The second is a url. The `@laoban@` is a shortcut
+  for `https://raw.githubusercontent.com/phil-rice/laoban/master/common`
+* The third is also a url
 
-When we are using the `templates` approach rather than a directory, then we need a `template control file`
+### The file `.template.json`
 
-Suppose we have 
-```json
-  "templates":      {
-    "remoteTypescript": "https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript",
-    "localTypescript": "templates/typescript"
-  },
-``` 
+The url specified in the `templates` section of `laoban.json` has 'template.json' appended to it. There should be a file
+defined there. Typical contents might be:
 
-There must be a `template control file` at the url or directory plus `.template.json`.
-This is a list of files that will be copied to the destination.
-
-
-In this case at this [file location](https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript/.template.json)
 ```json
 {
   "files": [
-    ".npmrc",
-    "babel.config.json",
-    "jest.config.json",
-    "package.json",
-    "tsconfig.json"
+    "tsconfig.json",
+    {
+      "file":        "@laoban@/templates/typescript/.npmrc",
+      "target":      ".npmrc",
+      "postProcess": "checkEnv(NPM_TOKEN)"
+    },
+    {
+      "file":   "@laoban@/templates/typescript/babel.config.json",
+      "target": "babel.config.json"
+    },
+    {
+      "file":   "@laoban@/templates/typescript/jest.config.json",
+      "target": "jest.config.json"
+    },
+    {
+      "file":        "package.json",
+      "type":        "${}",
+      "postProcess": "jsonMergeInto(@laoban@/templates/javascript/package.json,@laoban@/templates/typescript_405/package.json)"
+    }
   ]
 }
 ```
 
-It doesn't have to be a url in `templates` it can be a directory instead
+Let's look at these in more details
+
+### Just a filename
+
+```json
+  {
+  "files": [
+    "tsconfig.json"
+  ]
+}
+```
+The same url prefix is put in front of this, and that file is 'just copied'. In this 
+example. `https://raw.githubusercontent.com/phil-rice/laoban/master/common/templates/typescript_405/tsconfig.json` is
+copied to `tsconfig.json`
+
+### file and target
+```json
+    {
+      "file":   "@laoban@/templates/typescript/babel.config.json",
+      "target": "babel.config.json"
+    }
+```
+In this example the file is copied from the `file` to the `target`. The `file` is a url or 
+actual file, and the target is where the file is to be copied to in the target project
+
+### file/target and post process
+Sometimes we want to 'post process' the file. There are currently three post processors
+
+* `json`. This will turn the file into json and backend. This has the property of getting rid of any duplicates and pretty printing the file
+* `checkEnv(...)`. This checks that the environment variable in the bracket exists. This gives your user a much nicer experience as the error message tells them they need to set up their environment variable
+* `jsonMergeInto(file1,file2)` The parent files are loaded and then there is a json merge. This makes it very easy to make 'master files' and just record the small differences
+

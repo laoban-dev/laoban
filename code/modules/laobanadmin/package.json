@@ -1,8 +1,9 @@
 {
   "name": "@laoban/admin",
   "description": "Configures and manages laoban projects",
-  "version": "0.3.32",
+  "version": "0.3.33",
   "bin": {
+    "laoban": "node_modules/laoban/dist/index.js",
     "laoban-admin": "dist/index.js"
   },
   "keywords": [],
@@ -10,7 +11,7 @@
   "repository": "git@github.com:phil-rice/laoban.git",
   "dependencies": {
     "commander": "^6.2.0",
-    "laoban": "0.3.32"
+    "laoban": "0.3.33"
   },
   "devDependencies": {
     "typescript": "^4.0.5",

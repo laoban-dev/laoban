@@ -11,7 +11,8 @@
     "repository": "git@github.com:phil-rice/laoban.git"
   },
   "templates": {
-    "notemplate": "@laoban@/templates/notemplate",
-    "typescript": "@laoban@/templates/typescript_405"
+    "javascript": "@laoban@/templates/javascript",
+    "typescript": "@laoban@/templates/typescript_405",
+    "typescript_react": "@laoban@/templates/typescript_react"
   }
 }

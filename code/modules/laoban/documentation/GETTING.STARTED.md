@@ -7,6 +7,12 @@ After you have [installed](INSTALLING.LAOBAN.md) `laoban` you will need to
 * Create a templates directory 
   * Add a template for each type of project.
 
+# The easy way
+
+Install and use [`laoban-admin`](https://www.npmjs.com/package/@laoban/admin)
+
+# The 'do it yourself way'
+
 ## Setting up `laoban.json`
 Details of this file can be found [here](LAOBAN.JSON.md). If you are working with typescript and using yarn
 a reasonable start is 

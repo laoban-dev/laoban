@@ -1,11 +1,13 @@
 # Laoban
 
-Laoban or 老板 is chinese for 'boss'. It is a tool for controlling multiple projects. While it is language agnostic it
-probably offers the most value to javascript/typescript projects in a monorepo.
+Laoban or 老板 is chinese for 'boss'. It is a tool for controlling multiple projects. While it is fairly language agnostic it
+probably offers the most value to javascript/typescript projects in a __monorepo__.
+
+If you have tried to use `lerna` or `yarn workspaces` and found them lacking then this might be for you.
 
 
 ## Getting started with a laoban managed project
-* If you want to install it `npm i -g laoban@latest`
+* If you want to install it `npm i -g @laoban/admin@latest`
 * If you are new to a project that is managed by `laoban` then start [here](LAOBAN.EXISTING.md)
 * If you want to try out `laoban` on your project start [here](GETTING.STARTED.md)
 
@@ -49,9 +51,11 @@ Laoban makes the following easy:
 
 ## Other package managers
 
-Laoban is not opinionated. Replacing `npm` with `yarn`  in the config will let you use all the features with yarn. If
+Laoban is not very opinionated about which one to use. Replacing `npm` with `yarn`  in the config will let you use all the features with yarn. If
 you want to use it with maven or sbt or... it works fine (although those tools already have much of the capabliities
-that laoban brings to the javascript world)
+that laoban brings to the javascript world). By 'very opinionated' we mean 
+'you should be using yarn in a monorepo world, but if you don't want to you can use npm... but your 
+live will be much harder'
 
 # What are the 'golden moments'
 
