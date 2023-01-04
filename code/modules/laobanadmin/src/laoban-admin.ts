@@ -16,10 +16,11 @@ export class LaobanAdmin {
       .action ( cmd => status ( fileOps, directory ) )
     program.command ( 'init' ).description ( 'Gives a summary of the status of laoban installations' )
       .action ( cmd => init ( fileOps, directory, cmd ) )
-      .option ( '-t,--types <types...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", [ 'typescript' ] )
-      .option ( '-l, --listTypes', "lists the types of projects that can be created (and doesn't create anything)", false )
-      .option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded", "@laoban@/init/allInits.json" )
+      .option ( '-t,--type <type>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes",  'typescript'  )
+      .option ( '-l,--legaltypes <legal...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes. Defaults to the list returned by --listtypes",  )
       .option ( '-d,--dryrun', 'The dry run creates files .laoban.test.json and .project.details.test.json to allow previews and comparisons', false )
+      .option ( '--listTypes', "lists the types of projects that can be created (and doesn't create anything)", false )
+      .option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded. Used for testing and or if you have your own set", "@laoban@/init/allInits.json" )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
 
   }

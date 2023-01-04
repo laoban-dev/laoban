@@ -21,3 +21,4 @@
 0.3.17 properties can be defined in parent laoban.jsons and merged in
 0.3.24 Added laoban-admin init
 0.3.29 'laoban-admin init --types typescript javascript' will detect the appropriate template
+0.3.30 cleaned up parameters for 'laoban-admin init'

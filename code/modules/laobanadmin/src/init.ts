@@ -19,6 +19,7 @@ function combineProjectDetailsJson ( i1: ProjectDetailsJson, i2: ProjectDetailsJ
   }
 }
 export interface InitFileContents {
+  type: string
   location: string
   parents?: string | string[]
   markers?: string | string[]
@@ -29,34 +30,57 @@ export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends I
   laoban: any
   projectDetails: any
 }
-const combineInitContents = ( summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
+const combineInitContents = ( type: string, summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
   return {
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
     "project.details.json": combineProjectDetailsJson ( i1[ "project.details.json" ], i2[ "project.details.json" ] ),
     markers: safeArray ( i1.markers ).concat ( safeArray ( i2.markers ) ),
-    location: `${i1.location} and ${i2.location}`
+    location: `${i1.location} and ${i2.location}`,
+    type
   }
 };
 
-
-export async function findInitFileContents ( fileOps: FileOps, initUrl: string, cmd: InitCmdOptions ): Promise<InitFileContents[]> {
-  const types = cmd.types
-  const listTypes = cmd.listTypes
-  if ( types.length === 0 ) return Promise.reject ( `No types specified. Run with --listtypes to see available types` )
-
+export async function findTypes ( fileOps: FileOps, cmd: InitCmdOptions ) {
+  function error ( msg: string | string[] ) {
+    safeArray ( msg ).forEach ( m => console.error ( m ) )
+    process.exit ( 1 )
+  }
+  const initUrl = cmd.initurl
   const inits = parseJson ( `init ${initUrl}` ) ( await fileOps.loadFileOrUrl ( initUrl ) )
-  if ( listTypes ) return Promise.reject ( `Listing types from  ${initUrl}\n${JSON.stringify ( inits, null, 2 )}` )
+  const types = cmd.legaltypes || Object.keys ( inits )
+  if ( types.length === 0 ) {
+    const why = cmd.type ? `You specified --legaltypes but no actual types` : `No types found at ${initUrl}`
+    error ( `No types defined. specified. ${why}` )
+  }
   const errors = types.filter ( t => Object.keys ( inits ).indexOf ( t ) === -1 )
   if ( errors.length > 0 ) return Promise.reject ( `The following types are not defined : ${errors.join ( ', ' )}. Legal values are ${JSON.stringify ( Object.keys ( inits ) )}` )
+  const type = cmd.type || types[ 0 ];
+  if ( !types.includes ( type ) ) error ( `Type [${type}] is not legal. Legal values are ${types.join(',')}` )
 
+  const listTypes = cmd.listTypes
+  if ( listTypes ) {
+    const msgs: string[] = []
+    msgs.push ( `Legal types from ${initUrl} are ${JSON.stringify ( inits, null, 2 )}` )
+    if ( cmd.legaltypes ) msgs.push ( `You specified --legaltypes of [${cmd.legaltypes}] so only those types will be used` )
+    error ( msgs )
+  }
   const typeUrls = types.map ( t => inits[ t ] )
+  return { type, typeUrls }
+}
+
+interface TypeAndIFC {
+  allInitFileContents: InitFileContents[]
+  type: string
+}
+export async function findInitFileContents ( fileOps: FileOps, cmd: InitCmdOptions ): Promise<TypeAndIFC> {
+  const { type, typeUrls } = await findTypes ( fileOps, cmd )
   const loadInits = loadWithParents<InitFileContents> ( ``,
     url => fileOps.loadFileOrUrl ( url + '/.init.json' ),
     context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url }),
     init => safeArray ( init.parents ),
-    combineInitContents ( i => `Parents ${i.parents}` ) )
+    combineInitContents ( type, i => `Parents ${i.parents}` ) )
 
-  return await Promise.all <InitFileContents> ( typeUrls.map ( loadInits ) )
+  return { type, allInitFileContents: await Promise.all <InitFileContents> ( typeUrls.map ( loadInits ) ) }
 }
 
 async function createLaobanJsonContents ( initFileContents: InitFileContents, suggestions: InitSuggestions ): Promise<string> {
@@ -114,7 +138,12 @@ export interface ProjectDetailsAndTemplate extends LocationAnd<string> {
   template: string
   templatePackageJson: any
 }
-function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], packageJson: LocationAndParsed<any> ) {
+function findRequestedIFCForLaoban<F extends InitFileContents> ( initFileContents: F[], type: string ): F {
+  let result = initFileContents.find ( ifc => ifc.type === type );
+  if ( result === undefined ) throw new Error ( `Could not find type ${type} in ${JSON.stringify ( initFileContents.map ( ifc => ifc.type ) )}` )
+  return result
+}
+function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, packageJson: LocationAndParsed<any> ) {
   // console.log(initFileContents.map(i => i.location))
   const evaluateMarker = ( m: string ) => {
     if ( !m.startsWith ( 'json:' ) ) throw Error ( `Illegal marker ${m}. Must start with json:` )
@@ -131,14 +160,14 @@ function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaoban
     // console.log ( '  markers for', packageJson.directory, markers, valid, ifc.location )
     return valid
   } )
-  let result = found || initFileContents[ 0 ];
+  let result = found || findRequestedIFCForLaoban ( initFileContents, type );
   console.log ( 'result', found !== undefined, result.projectDetails.template, result.location )
   return result;
 }
-export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], packageJsonDetails: LocationAndParsed<any>[] ): ProjectDetailsAndTemplate[] => {
+export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, packageJsonDetails: LocationAndParsed<any>[] ): ProjectDetailsAndTemplate[] => {
   const allProjectNames = findAllProjectNames ( packageJsonDetails );
   return packageJsonDetails.map ( p => {
-    let theBestIfc = findAppropriateIfc ( initFileContents, p );
+    let theBestIfc = findAppropriateIfc ( initFileContents, type, p );
     const template = theBestIfc.projectDetails.template
     const templatePackageJson = templateLookup[ template ] || {}
     return ({
@@ -154,12 +183,14 @@ async function loadSingleFileFromTemplate ( fileOps: FileOps, templateUrl: strin
 }
 async function findTemplatePackageJsonLookup ( fileOps: FileOps, init: initFileContentsWithParsedLaobanJsonAndProjectDetails[], parsedLaoBan: any ): Promise<NameAnd<any>> {
   const result: NameAnd<any> = {}
-  await Promise.all ( init.map ( async ( { projectDetails, location } ) => {
+  await Promise.all ( init.map ( async ( { projectDetails, type, location } ) => {
     const template = projectDetails.template
     if ( result[ template ] === undefined ) {//earlier ones take precedence
       const templateLookup = parsedLaoBan.templates
       let templateUrl = templateLookup[ template ];
-      if ( templateUrl === undefined ) throw Error ( `Error finding template ${template}. Init is ${location}` )
+      if ( templateUrl === undefined )
+        throw Error ( `Error finding template  ${template}. Init is ${location}\nTemplate lookup is ${JSON.stringify ( templateLookup, null, 2 )}
+        Is this because you asked for a --type that doesnt support the template ${template} ?` )
       const context = `Transforming file ${templateUrl} for ${location}\nKnown templates are ${JSON.stringify ( templateLookup, null, 2 )}`
       const templatePackageJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) )
       const templateContents = await includeAndTransformFile ( context, { projectDetails }, fileOps ) ( '${}', templatePackageJson )
@@ -200,16 +231,16 @@ function findInitFileContentsFor ( initFileContents: InitFileContents[], parsedL
   } )
 }
 export async function gatherInitData ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ): Promise<InitData> {
+  const { type, allInitFileContents } = await findInitFileContents ( fileOps, cmd );
   const existingLaobanFile = await findLaobanUpOrDown ( fileOps, directory )
   const suggestions: InitSuggestions = await suggestInit ( fileOps, directory, existingLaobanFile )
-  const allInitFileContents: InitFileContents[] = await findInitFileContents ( fileOps, cmd.initurl, cmd );
-  const firstInitFileContents = allInitFileContents[ 0 ];
+  const firstInitFileContents = findRequestedIFCForLaoban(allInitFileContents, type)
   const laoban = await createLaobanJsonContents ( firstInitFileContents, suggestions );
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
     const parsedLaoBan = parseJson<any> ( 'laoban.json' ) ( laoban );
     const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[] = findInitFileContentsFor ( allInitFileContents, parsedLaoBan );
     const templatePackageJsonLookup = await findTemplatePackageJsonLookup ( fileOps, initFileContents, parsedLaoBan )
-    const projectDetails: ProjectDetailsAndTemplate[] = makeAllProjectDetails ( templatePackageJsonLookup, initFileContents, suggestions.packageJsonDetails );
+    const projectDetails: ProjectDetailsAndTemplate[] = makeAllProjectDetails ( templatePackageJsonLookup, initFileContents, type, suggestions.packageJsonDetails );
     return { existingLaobanFile, suggestions, parsedLaoBan, initFileContents, laoban, projectDetails }
   } else
     return { suggestions, initFileContents: allInitFileContents }
@@ -233,22 +264,18 @@ export function reportInitData ( initData: SuccessfullInitData, files: LocationA
   initData.suggestions.comments.forEach ( c => console.log ( c ) )
 }
 interface InitCmdOptions {
-  dryrun: boolean
-  types: string[]
-  listTypes: boolean
+  dryrun?: boolean
+  type?: string
+  legaltypes: string[]
+  listTypes?: boolean
   initurl: string
-  force: boolean
+  force?: boolean
 }
 export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ) {
   const clearDirectory = path.join ( directory ).replace ( /\\/g, '/' )
   console.log ( clearDirectory )
   if ( cmd.dryrun && cmd.force ) {
     console.log ( 'Cannot have --dryrun and --force' )
-    return
-  }
-  if ( cmd.listTypes ) {
-    const init = await fileOps.loadFileOrUrl ( cmd.initurl )
-    console.log ( init )
     return
   }
   const dryRun = cmd.dryrun;
