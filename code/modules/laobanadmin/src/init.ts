@@ -40,7 +40,7 @@ const combineInitContents = ( type: string, summary: ( i: InitFileContents ) => 
   }
 };
 
-export async function findTypes ( fileOps: FileOps, cmd: InitCmdOptions ) {
+export async function findTypes ( fileOps: FileOps, cmd: TypeCmdOptions ) {
   function error ( msg: string | string[] ) {
     safeArray ( msg ).forEach ( m => console.error ( m ) )
     process.exit ( 1 )
@@ -55,7 +55,7 @@ export async function findTypes ( fileOps: FileOps, cmd: InitCmdOptions ) {
   const errors = types.filter ( t => Object.keys ( inits ).indexOf ( t ) === -1 )
   if ( errors.length > 0 ) return Promise.reject ( `The following types are not defined : ${errors.join ( ', ' )}. Legal values are ${JSON.stringify ( Object.keys ( inits ) )}` )
   const type = cmd.type || types[ 0 ];
-  if ( !types.includes ( type ) ) error ( `Type [${type}] is not legal. Legal values are ${types.join(',')}` )
+  if ( !types.includes ( type ) ) error ( `Type [${type}] is not legal. Legal values are ${types.join ( ',' )}` )
 
   const listTypes = cmd.listTypes
   if ( listTypes ) {
@@ -72,11 +72,11 @@ interface TypeAndIFC {
   allInitFileContents: InitFileContents[]
   type: string
 }
-export async function findInitFileContents ( fileOps: FileOps, cmd: InitCmdOptions ): Promise<TypeAndIFC> {
+export async function findInitFileContents ( fileOps: FileOps, cmd: TypeCmdOptions ): Promise<TypeAndIFC> {
   const { type, typeUrls } = await findTypes ( fileOps, cmd )
   const loadInits = loadWithParents<InitFileContents> ( ``,
     url => fileOps.loadFileOrUrl ( url + '/.init.json' ),
-    context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url }),
+    context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url, type }),
     init => safeArray ( init.parents ),
     combineInitContents ( type, i => `Parents ${i.parents}` ) )
 
@@ -206,14 +206,14 @@ interface SuccessfullInitData {
   initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[]
   laoban: string
   parsedLaoBan: any
-  projectDetails: LocationAnd<string>[]
+  projectDetails: ProjectDetailsAndTemplate[]
 }
 interface FailedInitData {
   suggestions: FailedInitSuggestions
   initFileContents: InitFileContents[]
 }
-type InitData = SuccessfullInitData | FailedInitData
-function isSuccessfulInitData ( data: InitData ): data is SuccessfullInitData {
+export type InitData = SuccessfullInitData | FailedInitData
+export function isSuccessfulInitData ( data: InitData ): data is SuccessfullInitData {
   return isSuccessfulInitSuggestions ( data.suggestions )
 }
 
@@ -234,7 +234,7 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
   const { type, allInitFileContents } = await findInitFileContents ( fileOps, cmd );
   const existingLaobanFile = await findLaobanUpOrDown ( fileOps, directory )
   const suggestions: InitSuggestions = await suggestInit ( fileOps, directory, existingLaobanFile )
-  const firstInitFileContents = findRequestedIFCForLaoban(allInitFileContents, type)
+  const firstInitFileContents = findRequestedIFCForLaoban ( allInitFileContents, type )
   const laoban = await createLaobanJsonContents ( firstInitFileContents, suggestions );
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
     const parsedLaoBan = parseJson<any> ( 'laoban.json' ) ( laoban );
@@ -263,12 +263,14 @@ async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string>
 export function reportInitData ( initData: SuccessfullInitData, files: LocationAnd<string>[] ): void {
   initData.suggestions.comments.forEach ( c => console.log ( c ) )
 }
-interface InitCmdOptions {
-  dryrun?: boolean
+export interface TypeCmdOptions {
   type?: string
   legaltypes: string[]
-  listTypes?: boolean
   initurl: string
+  listTypes?: boolean
+}
+interface InitCmdOptions extends TypeCmdOptions {
+  dryrun?: boolean
   force?: boolean
 }
 export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ) {
