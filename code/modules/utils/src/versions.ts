@@ -16,6 +16,7 @@ function compareVersions ( version1: number[], version2: number[] ): number {
   }
   return 0;
 }
+
 export function findHighestVersion(vs: string[]){
   if (vs.length === 0) return undefined;
   const ordered = vs.sort((a,b)=>compareVersions(getVersionArray(a),getVersionArray(b)))

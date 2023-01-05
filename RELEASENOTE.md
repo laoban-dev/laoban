@@ -26,3 +26,4 @@
 0.3.33 `npm i -g @laoban/admin@latest` also installs laoban
 
 0.4.1 No longer properly support the templateDir
+0.4.2 Now suggest a version number with `laoban-admin init`
