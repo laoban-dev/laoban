@@ -2,7 +2,7 @@
   "packageManager": "yarn",
   "templateDir":    "${laobanDirectory}/template",
   "templates":      {
-    "notemplate":       "@laoban@/templates/notemplate"
+    "javascript":       "@laoban@/templates/javascript"
   },
   "versionFile":    "${templateDir}/version.txt",
   "log":            ".log",
