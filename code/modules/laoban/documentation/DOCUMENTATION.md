@@ -11,6 +11,6 @@
 * [Command line arguments](documentation/COMMAND.LINE.ARGUMENTS.md)
 
 # Laoban admin documentation
-* [All Laoban documentation]()
+* [All Laoban documentation](../../laobanadmin/documentation/DOCUMENTATION.md)
 * [Laoban admin with existing projects](../../laobanadmin/documentation/Existing.md)
 * [Laoban admin with greenfield projects](../../laobanadmin/documentation/Greenfield.md)
