@@ -1,10 +1,9 @@
 {
   "packageManager": "yarn",
-  "templateDir":    "${laobanDirectory}/template",
   "templates":      {
     "javascript":       "@laoban@/templates/javascript"
   },
-  "versionFile":    "${templateDir}/version.txt",
+  "versionFile":    "${laobanDirectory}/version.txt",
   "log":            ".log",
   "status":         ".status",
   "profile":        ".profile",
