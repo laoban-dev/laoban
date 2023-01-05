@@ -5,23 +5,14 @@ probably offers the most value to javascript/typescript projects in a __monorepo
 
 If you have tried to use `lerna` or `yarn workspaces` and found them lacking then this might be for you.
 
-
 ## Getting started with a laoban managed project
 * If you want to install it `npm i -g @laoban/admin@latest`
 * If you are new to a project that is managed by `laoban` then start [here](LAOBAN.EXISTING.md)
 * If you want to try out `laoban` on your project start [here](GETTING.STARTED.md)
 
-# Further documentation
-* [Cheat Sheet](documentation/CHEATSHEET.md)
-* [Laoban and Yarn](documentation/YARN.md)
-* [laoban.json](documentation/LAOBAN.JSON.md)
-* [Logs](documentation/LOGS.md)
-* [Projects](documentation/PROJECTS.md)
-* [Scripts](documentation/SCRIPTS.md)
-* [Templates](documentation/TEMPLATES.md)
-* [Variables](documentation/VARIABLES.md)
-* [Command line arguments](documentation/COMMAND.LINE.ARGUMENTS.md)
+# Documentation
 
+Documentation is [here](https://github.com/phil-rice/laoban/tree/master/code/modules/laoban/documentation/DOCUMENTATION.md) 
 
 ## Motivation
 
