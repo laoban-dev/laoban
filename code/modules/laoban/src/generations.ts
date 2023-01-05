@@ -1,8 +1,8 @@
 import { HasOutputStream, ScriptInContextAndDirectory } from "./config";
 import { output } from "./utils";
-import { uniqueLoops } from "@phil-rice/generations";
-import { topologicalSort, TopologicalSortTypeClasses } from "@phil-rice/generations";
-import { Debug } from "@phil-rice/debug";
+import { uniqueLoops } from "@laoban/generations";
+import { topologicalSort, TopologicalSortTypeClasses } from "@laoban/generations";
+import { Debug } from "@laoban/debug";
 
 
 interface GenerationCalc {

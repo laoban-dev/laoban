@@ -1,6 +1,6 @@
 {
   "template":    "typescript",
-  "name":        "@phil-rice/files",
+  "name":        "@laoban/files",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
   "details":     {
     "publish":      true,
@@ -8,6 +8,6 @@
     "test":         true,
     "extraDeps":    {"node-fetch": "2.6.1"},
     "extraDevDeps": {"@types/node-fetch": "^2.6.2"},
-    "links":        ["@phil-rice/utils"]
+    "links":        ["@laoban/utils"]
   }
 }

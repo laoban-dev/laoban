@@ -2,14 +2,14 @@ import { CommandDefn, Config, ConfigWithDebug, Details, PackageJson, ProjectDeta
 import * as path from "path";
 import { flatten, groupBy, removeDuplicates } from "./utils";
 // @ts-ignore
-import { Validate } from "@phil-rice/validation";
+import { Validate } from "@laoban/validation";
 import { checkLoadingTemplates } from "./loadingTemplates";
-import { FileOps } from "@phil-rice/utils";
+import { FileOps } from "@laoban/utils";
 
 
 export function validateLaobanJson ( v: Validate<RawConfig> ): Validate<RawConfig> {
   return v.isString ( 'versionFile', `The versionFile is the location of the 'project version number', used during update` )
-    .isNameAnd('templates', 'The template directory is where the templates that are used in project.details.json are used').//
+    .isNameAnd('templates', 'The templates object defines the names of the templates, and the urls of those templates').//
     isString ( 'log', `This is used to say what the name of the log file in the project directory. It is typically '.log'. The output from commands is written here` ).//
     isString ( 'status', `This is the file used to record the success or failure of commands (such as 'test')` ).//
     isString ( 'profile', 'This is used to record how long things took to run' ).//

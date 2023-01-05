@@ -1,6 +1,6 @@
 import { findAllLoopsFor, RawLoops } from "./cyclicGraphDetection";
-import { fromEntries, NameAnd, safeArray } from "@phil-rice/utils";
-import { Debug } from "@phil-rice/debug";
+import { fromEntries, NameAnd, safeArray } from "@laoban/utils";
+import { Debug } from "@laoban/debug";
 
 export type NameViewOfGraph = NameAnd<string[]>
 

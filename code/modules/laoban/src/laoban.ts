@@ -15,8 +15,8 @@ import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDec
 import { shellReporter } from "./report";
 import { Writable } from "stream";
 import { CommanderStatic } from "commander";
-import { addDebug } from "@phil-rice/debug";
-import { FileOps, fileOpsStats, safeObject } from "@phil-rice/utils";
+import { addDebug } from "@laoban/debug";
+import { FileOps, fileOpsStats, safeObject } from "@laoban/utils";
 import { copyTemplateDirectory } from "./update";
 
 

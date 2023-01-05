@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { HasLaobanDirectory, ProjectDetailsAndDirectory } from "./config";
-import { Debug } from "@phil-rice/debug";
-import { childDirs, FileOps, findMatchingK } from "@phil-rice/utils";
+import { Debug } from "@laoban/debug";
+import { childDirs, FileOps, findMatchingK } from "@laoban/utils";
 
 
 export let loabanConfigName = 'laoban.json'

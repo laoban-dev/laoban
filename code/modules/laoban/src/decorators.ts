@@ -4,7 +4,7 @@ import { chain, flatten, output, partition, writeTo } from "./utils";
 import { splitGenerationsByLinksUsingGenerations } from "./generations";
 import * as fs from "fs";
 import { CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult } from "./executors";
-import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
+import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 
 export type CommandDecorator = ( e: ExecuteCommand ) => ExecuteCommand
 export type ScriptDecorator = ( e: ExecuteScript ) => ExecuteScript
@@ -208,15 +208,19 @@ export class CommandDecorators {
       let s = d.scriptInContext.debug ( 'scripts' )
       let g = d.scriptInContext.debug ( 'guard' )
       let guard = dec.guard ( d )
-      g.message ( () => [ `Guard ${d.detailsAndDirectory.directory} ${d.scriptInContext.details.name}.[${guard}]=${dec?.valid ( guard, d )}` ] )
-      return (guard === undefined || dec.valid ( guard, d )) ? e ( d ) : s.k ( () => `Script killed by guard ${dec.name}`, () => Promise.resolve ( [] ) )
+      let valid = dec?.valid ?.( guard, d );
+      let name = d.scriptInContext.details.name;
+      g.message ( () => [ `Guardxx ${d.detailsAndDirectory.directory} ${name}.[${guard}]=${dec?.valid ( guard, d )}` ] )
+      return (guard === undefined || valid) ? e ( d ) : s.k ( () => `Script killed by guard ${dec.name}`, () => Promise.resolve ( [] ) )
     }
 
   static guard: GuardDecorator = {
     name: 'guard',
     guard: d => d.scriptInContext.details.guard,
     valid: ( g, d ) => {
-      return derefence ( `Guard for ${d.scriptInContext?.details?.name}`, d.details.dic, g, { allowUndefined: true, throwError: true, undefinedIs: '', variableDefn: dollarsBracesVarDefn } ) != '';}
+      let value = derefence ( `Guard for ${d.scriptInContext?.details?.name}`, d.details.dic, g, { allowUndefined: true, throwError: true, undefinedIs: '', variableDefn: dollarsBracesVarDefn } );
+      if (value === 'false') return false
+      return value != '';}
   }
   static osGuard: GuardDecorator = {
     name: 'osGuard',

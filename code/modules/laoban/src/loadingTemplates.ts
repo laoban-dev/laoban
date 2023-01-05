@@ -1,4 +1,4 @@
-import { FileOps, flatten, loadFileFromDetails, NameAnd, parseJson } from "@phil-rice/utils";
+import { FileOps, flatten, loadFileFromDetails, NameAnd, parseJson } from "@laoban/utils";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails, loadTemplateControlFile } from "./update";
 import { Config, ConfigWithDebug } from "./config";
 

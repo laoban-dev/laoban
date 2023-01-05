@@ -24,3 +24,5 @@
 0.3.30 cleaned up parameters for 'laoban-admin init'
 0.3.32 adding 'laoban-admin projects' to list all projects
 0.3.33 `npm i -g @laoban/admin@latest` also installs laoban
+
+0.4.1 No longer properly support the templateDir

@@ -1,10 +1,10 @@
-import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, safeArray, safeObject } from "@phil-rice/utils";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, safeArray, safeObject } from "@laoban/utils";
 import path from "path";
 import { ConfigWithDebug, ProjectDetailsAndDirectory, ProjectDetailsDirectoryPropertiesAndVersion } from "./config";
 import * as fse from "fs-extra";
-import { derefence, dollarsBracesVarDefn, VariableDefn } from "@phil-rice/variables";
+import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables";
 import { modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
-import { DebugCommands } from "@phil-rice/debug";
+import { DebugCommands } from "@laoban/debug";
 
 
 export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryPropertiesAndVersion, template: string, target: string ): Promise<void> {

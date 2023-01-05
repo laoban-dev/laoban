@@ -2,7 +2,7 @@ import {Config, ConfigWithDebug, ProjectDetails} from "./config";
 import * as path from "path";
 import * as fs from "fs";
 // @ts-ignore
-import {Debug} from "@phil-rice/debug";
+import {Debug} from "@laoban/debug";
 
 // export function loadPackageJsonInTargetDirectory( config: ConfigWithDebug, projectDetails: ProjectDetails): Promise<any> {
 //     let file = path.join(projectDetails.deta, projectDetails.template, 'package.json')

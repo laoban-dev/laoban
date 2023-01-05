@@ -1,6 +1,6 @@
 import { cannonicalLoop, findAllLoopsFor, removeIfSamePath, removeIfSuperLoop, throwExceptionIfLoopsFor, uniqueLoops } from "./cyclicGraphDetection";
 import { topologicalSort, topologicalSortNames, TopologicalSortTypeClasses } from "./topologicalSort";
-import { NullDebugCommands } from "@phil-rice/debug";
+import { NullDebugCommands } from "@laoban/debug";
 
 interface Thing {
   name: string,

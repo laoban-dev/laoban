@@ -1,9 +1,9 @@
 {
   "template"   : "typescript",
-  "name"       : "@phil-rice/utils",
+  "name"       : "@laoban/utils",
   "description": "Those miscellaneous utilities and types that every project needs",
   "details"    : {
-    "links"       : ["@phil-rice/debug"],
+    "links"       : ["@laoban/debug"],
     "extraDeps"   : {    },
     "extraDevDeps": {},
     "tsc": true,

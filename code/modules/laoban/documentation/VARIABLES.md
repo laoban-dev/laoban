@@ -30,7 +30,7 @@ On my windows machine this gives the following
   "projectDirectory": "C:\\git\\laoban\\code\\modules\\variables",
   "projectDetails": {
     "template": "typescript",
-    "name": "@phil-rice/variables",
+    "name": "@laoban/variables",
     "description": "A library that can dereference ${xxx} in strings",
     "details": {
       "publish": true

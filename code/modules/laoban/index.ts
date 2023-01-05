@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { makeStandardCli } from "./src/laoban";
-import { fileOps } from "@phil-rice/files";
+import { fileOps } from "@laoban/files";
 import { makeCache } from "./src/configProcessor";
 
 

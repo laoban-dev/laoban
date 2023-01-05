@@ -1,6 +1,6 @@
 import { cachedFileOps, childDirs, copyFile, copyFiles, emptyFileOps, fileOpsStats, meteredFileOps, MeteredFileOps } from "./fileOps";
 import { lastSegment } from "./strings";
-import { NullDebugCommands } from "@phil-rice/debug";
+import { NullDebugCommands } from "@laoban/debug";
 
 const foundFileOps = (): MeteredFileOps => meteredFileOps ( {
   ...emptyFileOps,

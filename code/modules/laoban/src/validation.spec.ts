@@ -10,8 +10,8 @@ import { validateProjectDetailsAndTemplates } from "./validation";
 import { loadConfigOrIssues, loadLoabanJsonAndValidate, makeCache } from "./configProcessor";
 import { dirsIn, testRoot } from "./fixture";
 // @ts-ignore
-import { addDebug } from "@phil-rice/debug";
-import { fileOps } from "@phil-rice/files";
+import { addDebug } from "@laoban/debug";
+import { fileOps } from "@laoban/files";
 
 const laobanDir = findLaoban ( process.cwd () )
 
@@ -36,7 +36,7 @@ describe ( "validate directories", () => {
           let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().trim ()
           let config = addDebug ( undefined, () => {} ) ( configOrIssues.config )
           return ProjectDetailFiles.workOutProjectDetails ( fileOps, config, {} ).//
-            then ( pds => validateProjectDetailsAndTemplates ( config, pds ) ).//
+            then ( pds => validateProjectDetailsAndTemplates (fileOps, config, pds ) ).//
             then ( actual => {
                 let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
                 expect ( actual ).toEqual ( expected )

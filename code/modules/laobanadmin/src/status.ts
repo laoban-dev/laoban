@@ -1,5 +1,5 @@
-import { chain, FileOps, unique } from "@phil-rice/utils";
-import { gitLocation, gitLocationsUnderHere, isLocationAndErrors, isLocationAndParsed, LocationAnd, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
+import { chain, FileOps, isLocationAndErrors, isLocationAndParsed, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors, unique } from "@laoban/utils";
+import { gitLocation, gitLocationsUnderHere, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
 import path from "path";
 import { findLaobanOrUndefined } from "laoban/dist/src/Files";
 

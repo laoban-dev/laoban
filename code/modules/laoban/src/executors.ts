@@ -6,7 +6,7 @@ import * as path from "path";
 import { chain, flatten, writeTo } from "./utils";
 import { Writable } from "stream";
 import { CommandDecorator } from "./decorators";
-import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
+import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 
 export interface RawShellResult {
   err: any

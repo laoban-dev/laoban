@@ -1,6 +1,6 @@
 {
   "template":    "typescript",
-  "name":        "@phil-rice/validation",
+  "name":        "@laoban/validation",
   "description": "A library for validating json",
   "details":     {
     "publish": true,

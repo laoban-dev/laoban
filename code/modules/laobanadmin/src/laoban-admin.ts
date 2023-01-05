@@ -1,7 +1,8 @@
 import { status } from "./status";
-import { FileOps, NameAnd } from "@phil-rice/utils";
+import { FileOps, NameAnd } from "@laoban/utils";
 import { init } from "./init";
 import { projects } from "./projects";
+import { createTemplates } from "./createTemplates";
 
 function typeOptions<T> ( envs: NameAnd<string>,p: T ): T {
   const a: any = p
@@ -33,6 +34,9 @@ export class LaobanAdmin {
     typeOptions (envs,program.command ( 'projects' )
       .description ( 'Gives a summary of the projects that laoban-admin has detected' )
       .action ( cmd => projects ( fileOps, directory, cmd ) ))
+ // typeOptions (envs,program.command ( 'template-create' )
+ //      .description ( 'Turns the current directory into a template. The parent directory name must have the word `template` in it' )
+ //      .action ( cmd => createTemplates ( fileOps, directory, cmd ) ))
 
 
   }

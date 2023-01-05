@@ -1,5 +1,5 @@
 /** ref is like ${xxx} and this returns dic[xxx]. */
-import { firstSegment, lastSegment, safeArray } from "@phil-rice/utils";
+import { firstSegment, lastSegment, safeArray } from "@laoban/utils";
 
 export interface VariableDefn {
   regex: RegExp
@@ -38,10 +38,11 @@ interface DereferenceOptions {
 export function derefence ( context: string, dic: any, s: string, options?: DereferenceOptions ) {
   if ( options?.variableDefn === undefined ) return s;
   const regex = options.variableDefn.regex
-  return s.replace ( regex, match => {
+  let result = s.replace ( regex, match => {
     let result = replaceVar ( context, match, dic, options );
     return result;
   } );
+  return result;
 }
 
 

@@ -1,5 +1,5 @@
 import { promises } from "fs";
-import { FileOps } from "@phil-rice/utils";
+import { FileOps } from "@laoban/utils";
 import fetch from 'node-fetch';
 import { createHash } from "crypto";
 

@@ -1,5 +1,7 @@
-import { DebugCommands } from "@phil-rice/debug";
+import { DebugCommands } from "@laoban/debug";
 import { deepCombineTwoObjects, NameAnd, safeArray } from "./utils";
+import { LocationAndContents } from "./locationAnd";
+
 
 export const shortCuts: NameAnd<string> = { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' };
 
@@ -40,6 +42,14 @@ export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boo
   return children ( root )
 };
 
+
+export async function loadAllFilesIn ( fileOps: FileOps, directory: string ): Promise<LocationAndContents<string>[]> {
+  const contents = await fileOps.listFiles ( directory )
+  const files = await findMatchingK ( contents, fileOps.isFile )
+  return await Promise.all<LocationAndContents<string>> ( files.map ( location => fileOps.loadFileOrUrl ( location ).then (
+    contents => ({ location, directory, contents }),
+    raw => ({ location: location, raw, errors: [ `Error loading ${location}. ${raw}` ] }) ) ) )
+}
 export const findChildDirs = ( fileOps: FileOps, ignoreFilters: ( s: string ) => boolean, foundDirFilters: ( s: string ) => Promise<boolean> ) => async ( name: string ): Promise<string[]> => {
   const find = async ( parent: string ): Promise<string[]> => {
     // console.log ( 'found', parent )

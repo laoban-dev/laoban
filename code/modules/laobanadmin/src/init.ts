@@ -1,7 +1,7 @@
-import { combineTwoObjects, FileOps, loadWithParents, NameAnd, parseJson, safeArray, safeObject } from "@phil-rice/utils";
+import { combineTwoObjects, FileOps, loadWithParents, LocationAnd, LocationAndParsed, NameAnd, parseJson, safeArray, safeObject } from "@laoban/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./status";
-import { derefence, dollarsBracesVarDefn, findVar, processVariable, replaceVar } from "@phil-rice/variables";
-import { laobanJsonLocations, LocationAnd, LocationAndParsed } from "./fileLocations";
+import { derefence, dollarsBracesVarDefn, findVar, processVariable, replaceVar } from "@laoban/variables";
+import { laobanJsonLocations, } from "./fileLocations";
 import path from "path";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "laoban/dist/src/update";
 import { combineRawConfigs } from "laoban/dist/src/config";

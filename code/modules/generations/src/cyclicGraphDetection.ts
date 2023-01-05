@@ -1,4 +1,4 @@
-import { mapObjectKeys, NameAnd, removeEmptyArrays, safeArray, unique } from "@phil-rice/utils";
+import { mapObjectKeys, NameAnd, removeEmptyArrays, safeArray, unique } from "@laoban/utils";
 
 var flatMap = require ( 'array.prototype.flatmap' )
 

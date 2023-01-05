@@ -5,7 +5,7 @@ import { findLaoban } from "./Files";
 import os from "os";
 import { makeStandardCli } from "./laoban";
 import { Writable } from "stream";
-import { fileOps } from "@phil-rice/files";
+import { fileOps } from "@laoban/files";
 import { makeCache } from "./configProcessor";
 
 

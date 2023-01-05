@@ -12,7 +12,7 @@ has a [`laoban.json`](LAOBAN.JSON.md) file in it.
   "description": "A cli for managing projects that have many npm packages",
   "details":     {
     "links": [
-      "@phil-rice/variables", "@phil-rice/generations", "@phil-rice/validation", "@phil-rice/debug", "@phil-rice/files"
+      "@laoban/variables", "@laoban/generations", "@laoban/validation", "@laoban/debug", "@laoban/files"
     ],
     "tsc":   true,
     "test":  true,
@@ -39,14 +39,14 @@ laoban projects
 ```
 If we examine the results of this in the `laoban` project itself
 ```text
-C:\git\laoban\code\modules\debug       => @phil-rice/debug       (remoteTypescript)
-C:\git\laoban\code\modules\files       => @phil-rice/files       (typescript      ) depends on [@phil-rice/utils]
-C:\git\laoban\code\modules\generations => @phil-rice/generations (typescript      ) depends on [@phil-rice/debug,@phil-rice/utils]
-C:\git\laoban\code\modules\laoban      => laoban                 (typescript      ) depends on [@phil-rice/variables,@phil-rice/generations,@phil-rice/validation,@phil-rice/debug,@phil-rice/
+C:\git\laoban\code\modules\debug       => @laoban/debug       (remoteTypescript)
+C:\git\laoban\code\modules\files       => @laoban/files       (typescript      ) depends on [@laoban/utils]
+C:\git\laoban\code\modules\generations => @laoban/generations (typescript      ) depends on [@laoban/debug,@laoban/utils]
+C:\git\laoban\code\modules\laoban      => laoban                 (typescript      ) depends on [@laoban/variables,@laoban/generations,@laoban/validation,@laoban/debug,@laoban/
 files]
-C:\git\laoban\code\modules\utils       => @phil-rice/utils       (typescript      )
-C:\git\laoban\code\modules\validation  => @phil-rice/validation  (typescript      )
-C:\git\laoban\code\modules\variables   => @phil-rice/variables   (typescript      )
+C:\git\laoban\code\modules\utils       => @laoban/utils       (typescript      )
+C:\git\laoban\code\modules\validation  => @laoban/validation  (typescript      )
+C:\git\laoban\code\modules\variables   => @laoban/variables   (typescript      )
 ```
 Each line corresponds to a project. We can see the directory and the npm name of the project.
 The value in (brackets) is the [template](TEMPLATES.md) of the project

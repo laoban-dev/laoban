@@ -10,6 +10,8 @@ Probably the -t should be derived... From the list of specified -l.
 
 # New features
 
+## create a .templates file for a directory
+
 ## create the versions.txt file
 
 

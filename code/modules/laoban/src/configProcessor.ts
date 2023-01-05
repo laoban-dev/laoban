@@ -3,12 +3,12 @@ import * as path from "path";
 import { laobanFile, loabanConfigName } from "./Files";
 import * as os from "os";
 // @ts-ignore
-import { Validate } from "@phil-rice/validation";
+import { Validate } from "@laoban/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { cachedFileOps, FileOps, fileOpsStats, loadWithParents, meteredFileOps, parseJson, safeArray, shortCutFileOps, shortCuts, toArray } from "@phil-rice/utils";
-import { derefence, dollarsBracesVarDefn } from "@phil-rice/variables";
+import { cachedFileOps, FileOps, fileOpsStats, loadWithParents, meteredFileOps, parseJson, safeArray, shortCutFileOps, shortCuts, toArray } from "@laoban/utils";
+import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import WritableStream = NodeJS.WritableStream;
 
 export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
@@ -131,7 +131,6 @@ export function configProcessor ( laoban: string, outputStream: WritableStream, 
       throw Error ( `Failed to add ${name} to config. Error is ${e}` )
     }
   }
-  add ( "templateDir", rawConfig )
   add ( "versionFile", rawConfig )
   add ( "log", rawConfig )
   add ( "status", rawConfig )
@@ -139,7 +138,7 @@ export function configProcessor ( laoban: string, outputStream: WritableStream, 
   add ( "cacheDir", { ...rawConfig, cacheDir: findCache ( laoban, undefined, rawConfig.cacheDir ) } )
   add ( "profile", rawConfig )
   add ( "packageManager", rawConfig )
-  result.properties = rawConfig.properties ? rawConfig.properties : {}
+  if (rawConfig.templateDir) result.templateDir = rawConfig.templateDir;  result.properties = rawConfig.properties ? rawConfig.properties : {}
   result.templates = rawConfig.templates ? rawConfig.templates : {}
   result.sessionDir = rawConfig.sessionDir ? rawConfig.sessionDir : path.join ( laoban, '.session' )
   result.throttle = rawConfig.throttle ? rawConfig.throttle : 0
