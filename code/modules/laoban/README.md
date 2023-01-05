@@ -7,8 +7,8 @@ If you have tried to use `lerna` or `yarn workspaces` and found them lacking the
 
 ## Getting started with a laoban managed project
 * If you want to install it `npm i -g @laoban/admin@latest`
-* If you are new to a project that is managed by `laoban` then start [here](LAOBAN.EXISTING.md)
-* If you want to try out `laoban` on your project start [here](GETTING.STARTED.md)
+* If you are new to a project that is managed by `laoban` then start [here](https://laoban-github.github.io/laoban/LAOBAN.EXISTING.html)
+* If you want to try out `laoban` on your project start [here](https://laoban-github.github.io/laoban/GETTING.STARTED.html)
 
 # Documentation
 

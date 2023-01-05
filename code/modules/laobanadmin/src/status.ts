@@ -153,7 +153,6 @@ export async function suggestInit ( fileOps: FileOps, directory: string, existin
   const packageJsonDetails = await findPackageJsonDetails ( fileOps, directory )
   let params = { gitRepo, details: packageJsonDetails, directory, existingLaobanFile };
   let version = findHighestVersion ( packageJsonDetails.withoutWorkspaces.map ( p => p.contents.version ) );
-  console.log ( 'highestVersion', version )
   return { version, ...suggestInitSuggestions ( params ) }
 }
 export async function status ( fileOps: FileOps, directory: string ) {
