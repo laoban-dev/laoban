@@ -22,6 +22,7 @@ export async function projects ( fileOps: FileOps, directory: string, cmd: Proje
       const template = p.template
       console.log ( '   ', p.directory.padEnd ( longestDirLength ), template );
     } )
+    console.log ( 'Suggested version number is ', suggestions.version )
   } else {
     console.log ( 'Had problems with the configuration' )
     const { suggestions } = initData;

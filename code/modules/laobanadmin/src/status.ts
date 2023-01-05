@@ -1,4 +1,4 @@
-import { chain, FileOps, isLocationAndErrors, isLocationAndParsed, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors, unique } from "@laoban/utils";
+import { chain, FileOps, findHighestVersion, isLocationAndErrors, isLocationAndParsed, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors, unique } from "@laoban/utils";
 import { gitLocation, gitLocationsUnderHere, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
 import path from "path";
 import { findLaobanOrUndefined } from "laoban/dist/src/Files";
@@ -68,6 +68,7 @@ export async function findPackageJsonDetails ( fileOps: FileOps, directory: stri
 }
 
 export interface SuccessfullInitSuggestions {
+  version: string
   comments: string[]
   laobanJsonLocation: string
   packageJsonDetails: LocationAndParsed<any>[]
@@ -151,7 +152,9 @@ export async function suggestInit ( fileOps: FileOps, directory: string, existin
   const gitRepo = await gitLocation ( fileOps, directory );
   const packageJsonDetails = await findPackageJsonDetails ( fileOps, directory )
   let params = { gitRepo, details: packageJsonDetails, directory, existingLaobanFile };
-  return suggestInitSuggestions ( params )
+  let version = findHighestVersion ( packageJsonDetails.withoutWorkspaces.map ( p => p.contents.version ) );
+  console.log ( 'highestVersion', version )
+  return { version, ...suggestInitSuggestions ( params ) }
 }
 export async function status ( fileOps: FileOps, directory: string ) {
   const existingLaobanFile = findLaobanOrUndefined ( directory )

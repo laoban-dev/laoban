@@ -11,7 +11,7 @@ export interface ProjectDetailsAndLocations {
 export function checkTemplates ( pdLs: ProjectDetailsAndLocations[], templates: NameAnd<string> ): string[] {
   return flatten ( pdLs.map ( ( { projectDetails, location } ) => {
     const template = projectDetails.template
-    return templates[ template ] ? [ `Project at ${location} has template ${template} which is not in the templates list. Legal values are ${Object.keys ( templates )}` ] : [];
+    return templates[ template ] === undefined ? [ `Project at ${location} has template ${template} which is not in the templates list. Legal values are ${Object.keys ( templates )}` ] : [];
   } ) )
 }
 
@@ -45,8 +45,8 @@ export async function checkLoadingTemplates ( context: string, fileOps: FileOps,
 
 export async function findTemplatePackageJsonLookup ( fileOps: FileOps, pdLs: ProjectDetailsAndLocations[], parsedLaoBan: any ): Promise<NameAnd<any>> {
   const result: NameAnd<any> = {}
-  const templateErrors = checkTemplates ( pdLs, parsedLaoBan.templates )
-  if ( Array.isArray ( templateErrors ) ) throw Error ( templateErrors.join ( ', ' ) )
+  const templateErrors: string[] = checkTemplates ( pdLs, parsedLaoBan.templates )
+  if ( templateErrors.length>0) throw Error ( JSON.stringify ( templateErrors, null, 2 ) )
   await Promise.all ( pdLs.map ( async ( { projectDetails, location } ) => {
     const template = projectDetails.template
     if ( result[ template ] === undefined ) {//earlier ones take precedence

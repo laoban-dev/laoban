@@ -197,6 +197,7 @@ export function isSuccessfulInitData ( data: InitData ): data is SuccessfullInit
   return isSuccessfulInitSuggestions ( data.suggestions )
 }
 
+
 export async function findLaobanUpOrDown ( fileOps: FileOps, directory: string ): Promise<string> {
   const goingUp = findLaobanOrUndefined ( directory )
   if ( goingUp !== undefined ) return Promise.resolve ( goingUp )
@@ -234,7 +235,12 @@ export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolea
     const contents = JSON.stringify ( json.contents, null, 2 )
     return { directory: p.directory, location: path.join ( p.directory, dryRun ? '.project.details.test.json' : 'project.details.json' ), contents }
   } );
-  return [ laoban, ...projectDetails ]
+  const version: LocationAnd<any> = {
+    location: path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.version.test.txt' : '.version.txt' ),
+    contents: initData.suggestions.version || '0.0.0',
+    directory: initData.suggestions.laobanJsonLocation
+  }
+  return [ laoban, ...projectDetails, version ]
 }
 async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string> [] ): Promise<void> {
   await Promise.all ( data.map ( async ( { location, contents } ) => fileOps.saveFile ( location, contents ) ) )
@@ -273,7 +279,7 @@ export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOp
       console.log ()
       console.log ( 'Dry run complete' )
       console.log ()
-      console.log ( 'This created files .loaban.test.json and .project.details.test.json in the project directories' )
+      console.log ( 'This created files .loaban.test.json, .versions.txt, .project.details.test.json in the project directories' )
       console.log ( 'To create the actual files use --force' )
     } else if ( cmd.force ) {
       reportInitData ( initData, files )
