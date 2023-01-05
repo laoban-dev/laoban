@@ -88,9 +88,9 @@ const profileAction: ProjectAction<void> = ( config: Config, cmd: any, pds: Proj
       prettyPrintProfiles ( output ( config ), 'average', data, p => (p.average / 1000).toFixed ( 3 ) )
     } )
 
-const validationAction = ( params: string[] ): Action<Config | void> =>
+const validationAction = ( fileOps: FileOps, params: string[] ): Action<Config | void> =>
   ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => ProjectDetailFiles.workOutProjectDetails ( fileOps, config, cmd )
-    .then ( ds => validateProjectDetailsAndTemplates ( config, ds ) )
+    .then ( ds => validateProjectDetailsAndTemplates ( fileOps, config, ds ) )
     .then ( issues => abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } ), displayError ( config.outputStream ) )
 
 //TODO This looks like it needs a clean up. It has abort logic and display error logic.
@@ -147,7 +147,7 @@ export class Cli {
         option ( '-g, --generationPlan', "instead of executing shows the generation plan", false ).//
         option ( '-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle.toString () ).//
         option ( '-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false ).//
-        option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link,guard]" ).//
+        option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link,guard,templates]" ).//
         option ( '--sessionId <sessionId>', "specifies the session id, which is mainly used for logging" )
     }
   }
@@ -206,7 +206,7 @@ export class Cli {
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
     action ( program, 'clearCache', clearCacheAction, 'Clears the cache', this.minimalOptions ( configAndIssues ) )
-    action ( program, 'validate', validationAction ( this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
+    action ( program, 'validate', validationAction ( fileOps, this.params ), 'checks the laoban.json and the project.details.json', defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitary command (the rest of the command line).',
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]

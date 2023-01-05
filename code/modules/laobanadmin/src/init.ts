@@ -6,6 +6,7 @@ import path from "path";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "laoban/dist/src/update";
 import { combineRawConfigs } from "laoban/dist/src/config";
 import { findLaobanOrUndefined } from "laoban/dist/src/Files";
+import { findTemplatePackageJsonLookup, ProjectDetailsAndLocations } from "laoban/dist/src/loadingTemplates";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -26,7 +27,7 @@ export interface InitFileContents {
   "laoban.json": any;
   "project.details.json": ProjectDetailsJson
 }
-export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends InitFileContents {
+export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends InitFileContents, ProjectDetailsAndLocations {
   laoban: any
   projectDetails: any
 }
@@ -177,24 +178,7 @@ export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileCon
 async function loadSingleFileFromTemplate ( fileOps: FileOps, templateUrl: string, fileName: string ) {
 
 }
-async function findTemplatePackageJsonLookup ( fileOps: FileOps, init: initFileContentsWithParsedLaobanJsonAndProjectDetails[], parsedLaoBan: any ): Promise<NameAnd<any>> {
-  const result: NameAnd<any> = {}
-  await Promise.all ( init.map ( async ( { projectDetails, type, location } ) => {
-    const template = projectDetails.template
-    if ( result[ template ] === undefined ) {//earlier ones take precedence
-      const templateLookup = parsedLaoBan.templates
-      let templateUrl = templateLookup[ template ];
-      if ( templateUrl === undefined )
-        throw Error ( `Error finding template  ${template}. Init is ${location}\nTemplate lookup is ${JSON.stringify ( templateLookup, null, 2 )}
-        Is this because you asked for a --type that doesnt support the template ${template} ?` )
-      const context = `Transforming file ${templateUrl} for ${location}\nKnown templates are ${JSON.stringify ( templateLookup, null, 2 )}`
-      const templatePackageJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) )
-      const templateContents = await includeAndTransformFile ( context, { projectDetails }, fileOps ) ( '${}', templatePackageJson )
-      result[ template ] = parseJson ( `Finding template package json for template ${template} at ${templateUrl}` ) ( templateContents )
-    }
-  } ) )
-  return result
-}
+
 
 interface SuccessfullInitData {
   existingLaobanFile: string,
