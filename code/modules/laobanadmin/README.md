@@ -11,7 +11,7 @@ it.
 
 ## Documentation
 
-The documentation for laoban-admin is [here](https://github.com/phil-rice/laoban/tree/master/code/modules/laobanadmin/documentation/DOCUMENTATION.md)
+The documentation for laoban-admin is [here](https://laoban-github.github.io/laoban-admin/DOCUMENTATION.html)
 
 ## Installation
 

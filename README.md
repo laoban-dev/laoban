@@ -7,4 +7,4 @@ To install `npm i -g laoban@latest`
 
 To check it is installed `laoban --version`
 
-The documentation for it is [here](code/modules/laoban/README.md)
+The documentation for it is [here](https://laoban-github.github.io/)

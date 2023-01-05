@@ -12,7 +12,7 @@ If you have tried to use `lerna` or `yarn workspaces` and found them lacking the
 
 # Documentation
 
-Documentation is [here](https://github.com/phil-rice/laoban/tree/master/code/modules/laoban/documentation/DOCUMENTATION.md) 
+Documentation is [here](https://laoban-github.github.io/) 
 
 ## Motivation
 
