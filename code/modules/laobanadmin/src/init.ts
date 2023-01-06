@@ -89,7 +89,7 @@ async function createLaobanJsonContents ( initFileContents: InitFileContents, su
   const dic: any = {}
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
     if ( suggestions.packageJsonDetails.length === 0 ) console.log ( 'could not find package.json, so laoban.json will have errors in it!!' ); else
-      dic[ 'projectJson' ] = suggestions.packageJsonDetails[ 0 ].contents
+      dic[ 'packageJson' ] = suggestions.packageJsonDetails[ 0 ].contents
   }
 
   const laoban = derefence ( `Making laoban.json`, dic, rawLaoban, { variableDefn: dollarsBracesVarDefn } );
@@ -129,7 +129,7 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   const projectDetailsString = JSON.stringify ( projectDetails, null, 2 )
   const directory = packageJsonDetails.directory;
   const dic: any = {}
-  dic [ 'projectJson' ] = packageJsonDetails.contents
+  dic [ 'packageJson' ] = packageJsonDetails.contents
   return derefence ( `Making ${packageDetailsFile} for ${directory}`, dic, projectDetailsString, { variableDefn: dollarsBracesVarDefn } );
 }
 export function findAllProjectNames ( packageJsonDetails: LocationAnd<any>[] ): string[] {
