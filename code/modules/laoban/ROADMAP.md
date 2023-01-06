@@ -1,9 +1,9 @@
-# Clean up the naming
+# Clean up the naming - DONE
 
 Project is about the big thing
-Modules is about the small thing
+packages is about the small thing
 
-so module.details.json for example
+so packages.details.json for example
 And all the names
 
 And do it soon... then call it 1.0.0

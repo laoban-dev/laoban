@@ -70,6 +70,15 @@ describe ( "derefence", () => {
    "item": 2,"two":2}` )
     } )
   } )
+  describe ( "variable:object:comma:indentx like ${a:object:indentx} for an array", () => {
+    it ( 'should replace an object with the string w/o {}', () => {
+      const withArray = {...dic, a: ['V1', 'V2']}
+      expect ( derefence ( 'context', withArray, '{"one":1,[${a:object:indent3}],"two":2}', { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( `{"one":1,[   "V1",
+   "V2"],"two":2}` )
+    } )
+  } )
+
+
   describe ( "We should be able to process  {${projectDetails.details.links:map<<>>(i=>\"<<i>>\":\"<<version>>\")}}", () => {
     it ( 'should inline the mapped array', () => {
       expect ( derefence ( 'context', { ...dic, version: '1.2.3' },

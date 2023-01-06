@@ -1,5 +1,5 @@
 {
-  "markers":              ["json:projectJson.dependencies.react"],
+  "markers":              ["json:packageJson.dependencies.react"],
   "parents":              [
     "@laoban@/init/typescript"
   ],

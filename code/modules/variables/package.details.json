@@ -1,11 +1,16 @@
 {
-  "template":    "typescript",
-  "name":        "@laoban/variables",
+  "template": "typescript",
+  "name": "@laoban/variables",
   "description": "A library that can dereference ${xxx} in strings",
-  "details":     {
-    "publish": true,
-    "links": ["@laoban/utils"],
-    "tsc":     true,
-    "test":    true
+  "details": {
+    "publish": false,
+    "test": true,
+    "links": [
+      "@laoban/utils"
+    ],
+    "tsc": true,
+    "extraDeps": {},
+    "extraDevDeps": {},
+    "extraBins": {}
   }
 }

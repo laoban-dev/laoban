@@ -6,20 +6,21 @@
       "@laoban@/laoban.json/javascript.laoban.json"
     ],
     "properties":     {
-      "license":    "${projectJson.license}",
-      "repository": "${projectJson.repository}"
+      "license":    "${packageJson.license}",
+      "repository": "${packageJson.repository}"
     },
     "templates": {
       "javascript": "@laoban@/templates/javascript"
     }
   },
   "project.details.json":     {
-      "variableFiles": {"projectJson": "project.json"},
+      "variableFiles": {"packageJson": "project.json"},
       "contents":      {
         "template":    "javascript",
-        "name":        "${projectJson.name}",
-        "description": "${projectJson.description}",
+        "name":        "${packageJson.name}",
+        "description": "${packageJson.description}",
         "details":     {
+          "keywords": ["${packageJson.keywords:object:indent4}"],
           "publish": false,
           "test":    true,
           "links":   []

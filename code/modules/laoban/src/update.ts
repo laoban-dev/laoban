@@ -23,7 +23,7 @@ export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: Config
     const exists = await fileOps.isFile ( packageJsonFileName )
     if ( !exists ) return Promise.resolve ()
     const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( packageJsonFileName ) )
-    return d.k ( () => `${p.directory} saveProjectJsonFile`, () => savePackageJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.packageDetails ) ) )
+    return d.k ( () => `${p.directory} savePackageJsonFile`, () => savePackageJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.packageDetails ) ) )
   } )
 }
 export interface TemplateControlFile {

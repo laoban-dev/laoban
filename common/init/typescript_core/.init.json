@@ -1,5 +1,5 @@
 {
-  "markers":              ["json:projectJson.devDependencies.typescript"],
+  "markers":              ["json:packageJson.devDependencies.typescript"],
   "parents":              [
     "@laoban@/init/javascript_core"
   ],
@@ -12,11 +12,11 @@
   },
   "project.details.json": {
     "guardfile":     "project.json",
-    "variableFiles": {"projectJson": "project.json"},
+    "variableFiles": {"packageJson": "project.json"},
     "contents":      {
       "template":    "typescript",
-      "name":        "${projectJson.name}",
-      "description": "${projectJson.description}",
+      "name":        "${packageJson.name}",
+      "description": "${packageJson.description}",
       "details":     {
         "publish": false,
         "tsc":     true,

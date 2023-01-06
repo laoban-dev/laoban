@@ -149,7 +149,7 @@ function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaoban
   const evaluateMarker = ( m: string ) => {
     if ( !m.startsWith ( 'json:' ) ) throw Error ( `Illegal marker ${m}. Must start with json:` )
     let markerWithoutPrefix = m.substring ( 5 );
-    let dic = { projectJson: packageJson.contents };
+    let dic = { packageJson: packageJson.contents };
     let result = findVar ( dic, markerWithoutPrefix );
     return result;
   };

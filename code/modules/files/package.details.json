@@ -1,13 +1,20 @@
 {
-  "template":    "typescript",
-  "name":        "@laoban/files",
+  "template": "typescript",
+  "name": "@laoban/files",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
-  "details":     {
-    "publish":      true,
-    "tsc":          true,
-    "test":         true,
-    "extraDeps":    {"node-fetch": "2.6.1"},
-    "extraDevDeps": {"@types/node-fetch": "^2.6.2"},
-    "links":        ["@laoban/utils"]
+  "details": {
+    "publish": false,
+    "test": true,
+    "links": [
+      "@laoban/utils"
+    ],
+    "tsc": true,
+    "extraDeps": {
+      "node-fetch": "2.6.1"
+    },
+    "extraDevDeps": {
+      "@types/node-fetch": "^2.6.2"
+    },
+    "extraBins": {}
   }
 }
