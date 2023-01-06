@@ -1,7 +1,7 @@
 {
   "name": "laoban",
   "description": "A cli for managing projects that have many npm packages",
-  "version": "0.4.10",
+  "version": "1.0.0",
   "bin": {
     "laoban": "dist/index.js"
   },
@@ -14,11 +14,11 @@
   "dependencies": {
     "fs-extra": "^9.0.1",
     "commander": "^6.2.0",
-    "@laoban/variables": "0.4.10",
-    "@laoban/generations": "0.4.10",
-    "@laoban/validation": "0.4.10",
-    "@laoban/debug": "0.4.10",
-    "@laoban/files": "0.4.10"
+    "@laoban/variables": "1.0.0",
+    "@laoban/generations": "1.0.0",
+    "@laoban/validation": "1.0.0",
+    "@laoban/debug": "1.0.0",
+    "@laoban/files": "1.0.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.5",
