@@ -3,7 +3,7 @@
   "name": "@laoban/utils",
   "description": "Those miscellaneous utilities and types that every project needs",
   "details": {
-    "publish": false,
+    "publish": true,
     "test": true,
     "links": [
       "@laoban/debug"

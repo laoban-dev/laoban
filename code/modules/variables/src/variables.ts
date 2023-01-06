@@ -69,7 +69,7 @@ function replaceVarOfTrimmed ( context: string, dic: any, withoutStartEnd: strin
   const last = lastSegment ( withoutStartEnd, '.' )
   const { result, error } = processVariable ( context, dic, last, obj, options )
   if ( error !== undefined ) {
-      console.error('dic',dic)
+      // console.error('dic',dic)
     if ( options?.throwError ) {
       throw new Error ( context + safeArray ( error ).join ( ',' ) )} else {return `//LAOBAN-UPDATE-ERROR ${context}. ${error}. Value was ${JSON.stringify ( obj )}`}
   }
@@ -112,7 +112,7 @@ export function processVariable ( context: string, dic: any, nameWithCommands: s
         dirWithVar[ variable ] = s
         let newContext = `${context} processing item ${i} in list [${s}]`;
         let result = derefence ( newContext, dirWithVar, mapFn, { ...options, variableDefn: doubleXmlVariableDefn } );
-        console.log('mapped', nameWithCommands,'s',s, 'variable is', variable,'result',result)
+        // console.log('mapped', nameWithCommands,'s',s, 'variable is', variable,'result',result)
         return result;
       } )
       const result = mapped.toString () + comma

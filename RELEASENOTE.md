@@ -28,3 +28,6 @@
 0.4.1 No longer properly support the templateDir
 0.4.2 Now suggest a version number with `laoban-admin init`
 0.4.9 Can now have version numbers update with update using '--minor', '--major' or '--setVersion'
+
+1.0.2 Now using package.details.json instead of project.details.json. This is a breaking change.
+1.0.4 laoban-admin now picks up keywords from the package.json

@@ -3,7 +3,7 @@
   "name": "@laoban/admin",
   "description": "Configures and manages laoban projects",
   "details": {
-    "publish": false,
+    "publish": true,
     "test": true,
     "links": [
       "laoban"

@@ -3,7 +3,7 @@
   "name": "@laoban/variables",
   "description": "A library that can dereference ${xxx} in strings",
   "details": {
-    "publish": false,
+    "publish": true,
     "test": true,
     "links": [
       "@laoban/utils"

@@ -3,7 +3,7 @@
   "name": "@laoban/validation",
   "description": "A library for validating json",
   "details": {
-    "publish": false,
+    "publish": true,
     "test": true,
     "links": [],
     "tsc": true,
