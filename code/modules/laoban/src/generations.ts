@@ -3,7 +3,7 @@ import { output } from "./utils";
 import { uniqueLoops } from "@laoban/generations";
 import { topologicalSort, TopologicalSortTypeClasses } from "@laoban/generations";
 import { Debug } from "@laoban/debug";
-import { projectDetailsFile } from "./Files";
+import { packageDetailsFile } from "./Files";
 
 
 interface GenerationCalc {
@@ -35,7 +35,7 @@ export const splitGenerationsByLinks = ( debug: Debug ) => ( scds: ScriptInConte
   const message = debug ( 'scripts' ).message
   scds.forEach ( scd => {
     let projectDetails = scd.detailsAndDirectory.projectDetails;
-    if ( !projectDetails ) throw new Error ( `Cannot calculate generations as we have a directory without ${projectDetailsFile} [${scd.detailsAndDirectory.directory}]` )
+    if ( !projectDetails ) throw new Error ( `Cannot calculate generations as we have a directory without ${packageDetailsFile} [${scd.detailsAndDirectory.directory}]` )
     map.set ( projectDetails.name, scd )
   } )
   message ( () => [ 'keys in the map of names to projects', [ ...map.keys () ].sort () ] )

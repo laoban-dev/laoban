@@ -1,4 +1,4 @@
-import { findLaoban, ProjectDetailFiles, projectDetailsFile } from "./Files";
+import { findLaoban, ProjectDetailFiles, packageDetailsFile } from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate, MakeCacheFnFromLaobanDir } from "./configProcessor";
@@ -203,7 +203,7 @@ export class Cli {
 
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
     action ( program, 'clearCache', clearCacheAction, 'Clears the cache', this.minimalOptions ( configAndIssues ) )
-    action ( program, 'validate', validationAction ( fileOps, this.params ), `checks the laoban.json and the ${projectDetailsFile}`, defaultOptions )
+    action ( program, 'validate', validationAction ( fileOps, this.params ), `checks the laoban.json and the ${packageDetailsFile}`, defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitary command (the rest of the command line).',
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]
@@ -215,7 +215,7 @@ export class Cli {
     action ( program, 'projects', projectsAction, 'lists the projects under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
     projectAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ),
-      `overwrites the package.json based on the ${projectDetailsFile}, and copies other template files overwrite project's`,
+      `overwrites the package.json based on the ${packageDetailsFile}, and copies other template files overwrite project's`,
       extraUpdateOptions, defaultOptions )
 
 
@@ -226,7 +226,7 @@ export class Cli {
       let log = output ( configAndIssues )
       log ( '' );
       log ( 'Notes' );
-      log ( `  If you are 'in' a project (the current directory has a ${projectDetailsFile}') then commands are executed by default just for the current project ` );
+      log ( `  If you are 'in' a project (the current directory has a ${packageDetailsFile}') then commands are executed by default just for the current project ` );
       log ( "     but if you are not 'in' a project, the commands are executed for all projects" );
       log ( '  You can ask for help for a command by "laoban <cmd> --help"' );
       log ( '  To configure and setup laoban the "laoban-admin" tool can be loaded using "npm i -g laoban-admin"' );

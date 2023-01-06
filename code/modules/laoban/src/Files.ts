@@ -7,8 +7,8 @@ import { childDirs, FileOps, findMatchingK } from "@laoban/utils";
 
 export let loabanConfigName = 'laoban.json'
 export let loabanConfigTestName = '.laoban.test.json'
-export let projectDetailsFile = 'project.details.json'
-export let projectDetailsTestFile = '.project.details.test.json'
+export let packageDetailsFile = 'project.details.json'
+export let packageDetailsTestFile = '.project.details.test.json'
 
 export function laobanFile ( dir: string ) { return path.join ( dir, loabanConfigName )}
 
@@ -44,7 +44,7 @@ export class ProjectDetailFiles {
       if ( options.all ) return p.k ( () => "options.allProjects", () => ProjectDetailFiles.findAndLoadProjectDetailsFromChildren ( fileOps, root ) );
       if ( options.one ) return p.k ( () => "optionsOneProject", () => ProjectDetailFiles.loadProjectDetails ( process.cwd () ).then ( x => [ x ] ) )
       return ProjectDetailFiles.loadProjectDetails ( process.cwd () ).then ( pd => {
-          p.message ( () => [ "using default project rules. Looking in ", process.cwd (), 'pd.details', pd.projectDetails ? pd.projectDetails.name : `No ${projectDetailsFile} found` ] )
+          p.message ( () => [ "using default project rules. Looking in ", process.cwd (), 'pd.details', pd.projectDetails ? pd.projectDetails.name : `No ${packageDetailsFile} found` ] )
           return pd.projectDetails ?
             p.k ( () => 'Using project details from process.cwd()', () => ProjectDetailFiles.loadProjectDetails ( process.cwd () ) ).then ( x => [ x ] ) :
             p.k ( () => 'Using project details under root', () => ProjectDetailFiles.findAndLoadProjectDetailsFromChildren ( fileOps, root ) )
@@ -64,7 +64,7 @@ export class ProjectDetailFiles {
   }
 
   static loadProjectDetails ( root: string ): Promise<ProjectDetailsAndDirectory> {
-    let rootAndFileName = path.join ( root, projectDetailsFile );
+    let rootAndFileName = path.join ( root, packageDetailsFile );
     return new Promise<ProjectDetailsAndDirectory> ( ( resolve, reject ) => {
       fs.readFile ( rootAndFileName, ( err, data ) => {
           if ( err ) {resolve ( { directory: root } )} else {
@@ -84,7 +84,7 @@ export class ProjectDetailFiles {
     const findDescs = childDirs ( fileOps, s => s === 'node_modules' || s === '.git' || s === '.session' )
     const descs = await findDescs ( root )
 
-    let result = findMatchingK ( descs, s => fileOps.isFile ( path.join ( s, projectDetailsFile ) ) );
+    let result = findMatchingK ( descs, s => fileOps.isFile ( path.join ( s, packageDetailsFile ) ) );
     return result
   };
 }
