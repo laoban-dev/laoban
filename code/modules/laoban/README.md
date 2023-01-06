@@ -39,9 +39,9 @@ If you have tried to use `lerna` or `yarn workspaces` and found them lacking the
  
 # When is it suitable (or not) to use laoban
 
-* If you are a single developer with a single small javascript/typescript package there is no value in using laoban
-* If you are working on a package and maintaining libraries, or have split the package into multiple packages then laoban can help you manage them
-* If you are developing a large package that is big and ungainly, and you would like to split it up, but 'it's too hard' then 
+* If you are a single developer with a single small javascript/typescript project there is no value in using laoban
+* If you are working on a project and maintaining libraries, or have split the project into multiple packages then laoban can help you manage them
+* If you are developing a large project that is big and ungainly, and you would like to split it up, but 'it's too hard' then 
 laoban is ideal to help you
 * If you are a member of a company with standards (such as 'which version of node', 'which version of react') 
 then laoban is ideal to help you manage those standards
