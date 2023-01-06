@@ -25,7 +25,7 @@ export interface InitFileContents {
   parents?: string | string[]
   markers?: string | string[]
   "laoban.json": any;
-  "project.details.json": ProjectDetailsJson
+  "package.details.json": ProjectDetailsJson
 }
 export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends InitFileContents, PackageDetailsAndLocations {
   laoban: any
@@ -34,7 +34,7 @@ export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends I
 const combineInitContents = ( type: string, summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
   return {
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
-    "project.details.json": combineProjectDetailsJson ( i1[ "project.details.json" ], i2[ "project.details.json" ] ),
+    "package.details.json": combineProjectDetailsJson ( i1[ "package.details.json" ], i2[ "package.details.json" ] ),
     markers: safeArray ( i1.markers ).concat ( safeArray ( i2.markers ) ),
     location: `${i1.location} and ${i2.location}`,
     type
@@ -119,7 +119,7 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   links.forEach ( name => delete deps[ name ] );
   // console.log ( 'package.details.json', packageJsonDetails.directory, 'deps', deps, 'devDeps', devDeps, 'bins', bins, 'links', links )
 
-  let projectDetails = initFileContents[ "project.details.json" ];
+  let projectDetails = initFileContents[ "package.details.json" ];
   const contents = projectDetails.contents
   const details = contents.details || []
   details[ "links" ] = links;
@@ -208,7 +208,7 @@ export async function findLaobanUpOrDown ( fileOps: FileOps, directory: string )
 }
 function findInitFileContentsFor ( initFileContents: InitFileContents[], parsedLaoBan: any ): initFileContentsWithParsedLaobanJsonAndProjectDetails[] {
   return initFileContents.map ( oneIFC => {
-    const projectDetailsTemplate = oneIFC[ "project.details.json" ].contents || {}
+    const projectDetailsTemplate = oneIFC[ "package.details.json" ].contents || {}
     const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails = { ...oneIFC, laoban: parsedLaoBan, packageDetails: projectDetailsTemplate }
     return initFileContents;
   } )
@@ -230,12 +230,12 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
 }
 
 export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolean ): LocationAnd<string>[] {
-  let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? `.${packageDetailsTestFile}` : 'laoban.json' );
+  let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? packageDetailsTestFile : 'laoban.json' );
   const laoban: LocationAnd<any> = { location: laobanFileName, contents: initData.laoban, directory: initData.suggestions.laobanJsonLocation }
   const projectDetails: LocationAnd<any>[] = initData.projectDetails.map ( p => {
     const json = parseJson<any> ( () => `Project details for ${p.directory}` ) ( p.contents )
     const contents = JSON.stringify ( json.contents, null, 2 )
-    return { directory: p.directory, location: path.join ( p.directory, dryRun ? `.${packageDetailsTestFile}` : packageDetailsFile ), contents }
+    return { directory: p.directory, location: path.join ( p.directory, dryRun ? packageDetailsTestFile : packageDetailsFile ), contents }
   } );
   const version: LocationAnd<any> = {
     location: path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.version.test.txt' : '.version.txt' ),

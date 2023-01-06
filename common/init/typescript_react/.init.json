@@ -12,7 +12,7 @@
       "typescript_react": "@laoban@/templates/typescript_react"
     }
   },
-  "project.details.json": {
+  "package.details.json": {
     "contents": {
       "template": "typescript_react"
     }

@@ -15,7 +15,7 @@ If you have tried to use `lerna` or `yarn workspaces` and found them lacking the
 * Easy to have scripts execute in multiple packages simultaneously
 * Scripts execute in the 'right order' if there are dependencies between packages. (for example compilation needs the dependencies to be compiled first)
 * With 'guards' as some scripts aren't suitable for all packages
-* Maintains a 'status' across all packages, so tat you can see which packages have not compiled, tested or published successfully
+* Maintains a 'status' across all packages, so that you can see which packages have not compiled, tested or published successfully
 * Excellent logging of the scripts (you can easily find the log for 'this command' executed at 'this time' in 'this package')
 
 ## Easy publishing of packages
@@ -24,7 +24,7 @@ If you have tried to use `lerna` or `yarn workspaces` and found them lacking the
 
 ## Manage 'common' package structures (aka templates)
 
-* If half your packages use a dependency and you want to update that dependency you can do it in one place
+* If many of your packages use a dependency and you want to update that dependency you can do it in one place
 * If you have configuration files like jest.config, tsconfig.json, tslint.json, etc. you can manage them in one place
 * Easy to make your own 'templates'
 * Templates extend other templates, so you can have a 'base' template and then extend it with 'just the differences'

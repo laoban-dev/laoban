@@ -6,9 +6,13 @@
 The templates should be different to the laoban type. At the moment they are the same. This it's hard to explain `-t` and `-l`. 
 (It's hard to explain because the model is wrong)
 
-Probably the -t should be derived... From the list of specified -l. 
+Probably the -t should be derived... From the list of specified -l.
 
 # New features
+
+## laobin-admin init uses code to decide what to take from the package.json: change to variables
+This could easily be done by variables but at the moment we load the
+file from the init and then parse it. We would need to change this to dererence the variables before parsing it.
 
 ## create a .templates file for a directory
 

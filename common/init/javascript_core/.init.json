@@ -13,7 +13,7 @@
       "javascript": "@laoban@/templates/javascript"
     }
   },
-  "project.details.json":     {
+  "package.details.json":     {
       "variableFiles": {"packageJson": "project.json"},
       "contents":      {
         "template":    "javascript",

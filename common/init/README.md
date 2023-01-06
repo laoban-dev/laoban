@@ -12,7 +12,7 @@ This should create a suitable `laoban.json` and in every child directory that ha
 add a `package.details.json` extracting the name and description from the existing `package.json`.
 
 In the second example it's more complex. We need to merge things so that we can create the write parents in the
-`laoban.json` and different `project.details.json`
+`laoban.json` and different `package.details.json`
 
 It _should_ also populate the `dependencies` and `devDependencies` and some other things... 
 But really this should be done in a template. Still it gets going quickly.
