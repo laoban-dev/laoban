@@ -105,7 +105,7 @@ export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWi
       console.log ( 'Setting version to ', v )
       return v
     }
-    await fileOps.saveFile ( config.versionFile, cmd.setVersion )
+    await fileOps.saveFile ( config.versionFile,v )
     return v
   }
   if ( cmd.setVersion ) return setVersion ( cmd.setVersion )
