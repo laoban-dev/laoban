@@ -3,6 +3,7 @@ import { FileOps, NameAnd } from "@laoban/utils";
 import { init } from "./init";
 import { projects } from "./projects";
 import { createTemplates } from "./createTemplates";
+import { loabanConfigTestName, projectDetailsTestFile } from "laoban/dist/src/Files";
 
 function typeOptions<T> ( envs: NameAnd<string>,p: T ): T {
   const a: any = p
@@ -29,7 +30,7 @@ export class LaobanAdmin {
     typeOptions (envs,program.command ( 'init' )
       .description ( 'Gives a summary of the status of laoban installations' )
       .action ( cmd => init ( fileOps, directory, cmd ) )
-      .option ( '-d,--dryrun', 'The dry run creates files .laoban.test.json and .project.details.test.json to allow previews and comparisons', false )
+      .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${projectDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false ) )
     typeOptions (envs,program.command ( 'projects' )
       .description ( 'Gives a summary of the projects that laoban-admin has detected' )

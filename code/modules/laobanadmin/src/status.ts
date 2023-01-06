@@ -1,7 +1,7 @@
 import { chain, FileOps, findHighestVersion, isLocationAndErrors, isLocationAndParsed, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors, unique } from "@laoban/utils";
 import { gitLocation, gitLocationsUnderHere, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
 import path from "path";
-import { findLaobanOrUndefined } from "laoban/dist/src/Files";
+import { findLaobanOrUndefined, loabanConfigName } from "laoban/dist/src/Files";
 
 export async function reportOnGit ( fileOps: FileOps, directory: string, gitRepo: string ): Promise<void> {
 
@@ -91,7 +91,7 @@ interface PackageJsonDetailsAndGitRepo {
 function suggestFromExistingLaobanJson ( { existingLaobanFile, details, directory }: PackageJsonDetailsAndGitRepo ): InitSuggestions | undefined {
   if ( existingLaobanFile !== undefined ) {
     return {
-      comments: [ `Found an existing laoban.json file at ${existingLaobanFile}` ],
+      comments: [ `Found an existing ${loabanConfigName} file at ${existingLaobanFile}` ],
       laobanJsonLocation: existingLaobanFile,
       packageJsonDetails: withoutWorkspacesUnderLaobanJson ( details, existingLaobanFile )
     }
@@ -101,7 +101,7 @@ function suggestFromGitRepo ( { gitRepo, details }: PackageJsonDetailsAndGitRepo
   if ( gitRepo !== undefined ) return {
     laobanJsonLocation: gitRepo,
     packageJsonDetails: withoutWorkspacesUnderLaobanJson ( details, gitRepo ),
-    comments: [ `Found a git repo. This is usually a good place for the laoban.json file` ]
+    comments: [ `Found a git repo. This is usually a good place for the ${loabanConfigName} file` ]
   }
 }
 function withoutWorkspacesUnderLaobanJson ( details: PackageJsonDetails, laobanJsonLocation: string ) {
@@ -117,8 +117,8 @@ function suggestFromSingleWorkspaceJson ( { details }: PackageJsonDetailsAndGitR
     return {
       laobanJsonLocation,
       packageJsonDetails: packageDetailsJsonLocation,
-      comments: [ `Found a single package.json with workspaces. This is usually a good place for the laoban.json file`,
-        ...spareWorkspaces.map ( s => `Workspace ${s.location} is not 'covered' by the laoban.json file` )
+      comments: [ `Found a single package.json with workspaces. This is usually a good place for the ${loabanConfigName} file`,
+        ...spareWorkspaces.map ( s => `Workspace ${s.location} is not 'covered' by the ${loabanConfigName} file` )
       ]
     }
   }

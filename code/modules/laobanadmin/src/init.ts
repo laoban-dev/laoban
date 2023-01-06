@@ -5,7 +5,7 @@ import { laobanJsonLocations, } from "./fileLocations";
 import path from "path";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "laoban/dist/src/update";
 import { combineRawConfigs } from "laoban/dist/src/config";
-import { findLaobanOrUndefined } from "laoban/dist/src/Files";
+import { findLaobanOrUndefined, loabanConfigTestName, projectDetailsFile, projectDetailsTestFile } from "laoban/dist/src/Files";
 import { findTemplatePackageJsonLookup, ProjectDetailsAndLocations } from "laoban/dist/src/loadingTemplates";
 
 interface ProjectDetailsJson {
@@ -130,7 +130,7 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   const directory = packageJsonDetails.directory;
   const dic: any = {}
   dic [ 'projectJson' ] = packageJsonDetails.contents
-  return derefence ( `Making project.details.json for ${directory}`, dic, projectDetailsString, { variableDefn: dollarsBracesVarDefn } );
+  return derefence ( `Making ${projectDetailsFile} for ${directory}`, dic, projectDetailsString, { variableDefn: dollarsBracesVarDefn } );
 }
 export function findAllProjectNames ( packageJsonDetails: LocationAnd<any>[] ): string[] {
   return packageJsonDetails.map ( p => p.contents.name )
@@ -168,7 +168,7 @@ export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileCon
     const template = theBestIfc.projectDetails.template
     const templatePackageJson = templateLookup[ template ] || {}
     return ({
-      location: `${path.join ( p.directory, 'project.details.json' )}`, directory: p.directory,
+      location: `${path.join ( p.directory, projectDetailsFile )}`, directory: p.directory,
       contents: makeProjectDetails ( templatePackageJson, theBestIfc, p, allProjectNames ),
       template, templatePackageJson
     });
@@ -228,12 +228,12 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
 }
 
 export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolean ): LocationAnd<string>[] {
-  let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.laoban.test.json' : 'laoban.json' );
+  let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? `.${projectDetailsTestFile}` : 'laoban.json' );
   const laoban: LocationAnd<any> = { location: laobanFileName, contents: initData.laoban, directory: initData.suggestions.laobanJsonLocation }
   const projectDetails: LocationAnd<any>[] = initData.projectDetails.map ( p => {
     const json = parseJson<any> ( () => `Project details for ${p.directory}` ) ( p.contents )
     const contents = JSON.stringify ( json.contents, null, 2 )
-    return { directory: p.directory, location: path.join ( p.directory, dryRun ? '.project.details.test.json' : 'project.details.json' ), contents }
+    return { directory: p.directory, location: path.join ( p.directory, dryRun ? `.${projectDetailsTestFile}` : projectDetailsFile ), contents }
   } );
   const version: LocationAnd<any> = {
     location: path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.version.test.txt' : '.version.txt' ),
@@ -279,7 +279,7 @@ export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOp
       console.log ()
       console.log ( 'Dry run complete' )
       console.log ()
-      console.log ( 'This created files .loaban.test.json, .versions.txt, .project.details.test.json in the project directories' )
+      console.log ( `This created files ${loabanConfigTestName}, .versions.txt, ${projectDetailsTestFile} in the project directories` )
       console.log ( 'To create the actual files use --force' )
     } else if ( cmd.force ) {
       reportInitData ( initData, files )
