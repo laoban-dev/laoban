@@ -212,7 +212,7 @@ export class Cli {
     projectAction ( program, 'status', statusAction, 'shows the status of the project in the current directory', defaultOptions )
     projectAction ( program, 'compactStatus', compactStatusAction, 'crunches the status', defaultOptions )
     projectAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
-    action ( program, 'projects', projectsAction, 'lists the projects under the laoban directory', this.minimalOptions ( configAndIssues ) )
+    action ( program, 'packages', projectsAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
     projectAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ),
       `overwrites the package.json based on the ${packageDetailsFile}, and copies other template files overwrite project's`,
@@ -226,13 +226,13 @@ export class Cli {
       let log = output ( configAndIssues )
       log ( '' );
       log ( 'Notes' );
-      log ( `  If you are 'in' a project (the current directory has a ${packageDetailsFile}') then commands are executed by default just for the current project ` );
-      log ( "     but if you are not 'in' a project, the commands are executed for all projects" );
+      log ( `  If you are 'in' a package (the current directory has a ${packageDetailsFile}') then commands are executed by default just for the current package ` );
+      log ( "     but if you are not 'in' a package, the commands are executed for all packages" );
       log ( '  You can ask for help for a command by "laoban <cmd> --help"' );
       log ( '  To configure and setup laoban the "laoban-admin" tool can be loaded using "npm i -g laoban-admin"' );
       log ( '' );
       log ( 'Common command options (not every command)' );
-      log ( '  -a    do it in all projects (default is to execute the command in the current project' );
+      log ( '  -a    do it in all packages (default is to execute the command in the current project' );
       log ( '  -d    do a dryrun and only print what would be executed, rather than executing it' );
       log ( '' )
       if ( configAndIssues.issues.length > 0 ) {

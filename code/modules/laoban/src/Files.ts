@@ -7,8 +7,8 @@ import { childDirs, FileOps, findMatchingK } from "@laoban/utils";
 
 export let loabanConfigName = 'laoban.json'
 export let loabanConfigTestName = '.laoban.test.json'
-export let packageDetailsFile = 'project.details.json'
-export let packageDetailsTestFile = '.project.details.test.json'
+export let packageDetailsFile = 'package.details.json'
+export let packageDetailsTestFile = '.package.details.test.json'
 
 export function laobanFile ( dir: string ) { return path.join ( dir, loabanConfigName )}
 
