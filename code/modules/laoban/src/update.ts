@@ -1,12 +1,18 @@
-import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, safeArray, safeObject } from "@laoban/utils";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, nextMajorVersion, nextVersion, parseJson, safeArray, safeObject } from "@laoban/utils";
 import path from "path";
-import { ConfigWithDebug, ProjectDetailsAndDirectory, ProjectDetailsDirectoryPropertiesAndVersion } from "./config";
+import { ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ProjectDetailsDirectoryPropertiesAndVersion } from "./config";
 import * as fse from "fs-extra";
 import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables";
-import { modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
+import { loadVersionFile, modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 
 
+interface UpdateCmdOptions {
+  setVersion?: string;
+  minor?: string
+  major?: string
+  dryrun?: boolean
+}
 export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryPropertiesAndVersion, template: string, target: string ): Promise<void> {
   let src = path.join ( config.templateDir, template );
   let d = config.debug ( 'update' );
@@ -65,25 +71,58 @@ export async function loadTemplateControlFile ( context: string, fileOps: FileOp
 export async function loadOneFileFromTemplateControlFileDetails ( context: string, fileOps: FileOps, templateControlFileUrl: string, tx?: ( type: string, text: string ) => Promise<string> ): Promise<string> {
   const controlFile: TemplateControlFile = await loadTemplateControlFile ( context, fileOps, undefined, templateControlFileUrl )
   const cfdForPackageJson = controlFile.files.find ( cfd => fileNameFrom ( cfd ) === 'package.json' )
-  if ( cfdForPackageJson === undefined ) throw Error ( `${context}. Cannot find package.json in file ${templateControlFileUrl}\nControl file is ${JSON.stringify(controlFile,null,2)}` )
+  if ( cfdForPackageJson === undefined ) throw Error ( `${context}. Cannot find package.json in file ${templateControlFileUrl}\nControl file is ${JSON.stringify ( controlFile, null, 2 )}` )
   const { target, postProcessed } = await loadFileFromDetails ( context, fileOps, templateControlFileUrl, tx, cfdForPackageJson )
   return postProcessed
 
 }
-export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory ): Promise<void> {
+export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory, dryrun: boolean ): Promise<void> {
   const prefix = templateUrl.includes ( '://' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const controlFile = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps, laobanDirectory, prefix );
   d.message ( () => [ `control file is `, controlFile ] )
   const target = p.directory
   return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
-    includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ) ) ( safeArray ( controlFile.files ) )
+    includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ), dryrun ) ( safeArray ( controlFile.files ) )
 }
-export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryPropertiesAndVersion ): Promise<void> {
+export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryPropertiesAndVersion, dryrun: boolean ): Promise<void> {
   let d = config.debug ( 'update' )
   const template = p.projectDetails.template
   const target = p.directory
   const namedTemplateUrl = safeObject ( config.templates )[ template ]
   d.message ( () => [ `namedTemplateUrl in ${target} for ${template} is ${namedTemplateUrl} (should be undefined if using local template)` ] )
   if ( namedTemplateUrl === undefined ) return copyTemplateDirectoryByConfig ( fileOps, config, p, template, target )
-  return copyTemplateDirectoryFromConfigFile ( fileOps, d, config.laobanDirectory, namedTemplateUrl, p )
+  return copyTemplateDirectoryFromConfigFile ( fileOps, d, config.laobanDirectory, namedTemplateUrl, p, dryrun )
+}
+
+export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWithDebug, cmd: UpdateCmdOptions ) {
+
+  const set = [ cmd.setVersion, cmd.minor, cmd.major ].filter ( x => x !== undefined )
+  if ( set.length > 1 ) throw Error ( `Cannot set version and increment version at the same time` )
+  let d = config.debug ( 'update' )
+  async function setVersion ( v: string ) {
+    d.message ( () => [ `Setting version to ${cmd.setVersion}` ] )
+    if ( cmd.dryrun ) {
+      console.log ( 'Setting version to ', v )
+      return v
+    }
+    await fileOps.saveFile ( config.versionFile, cmd.setVersion )
+    return v
+  }
+  if ( cmd.setVersion ) return setVersion ( cmd.setVersion )
+  const version = await d.k ( () => `loadVersionFile`, () => loadVersionFile ( config ) )
+  if ( cmd.minor ) return setVersion ( nextVersion ( version ) )
+  if ( cmd.major ) return setVersion ( nextMajorVersion ( version ) )
+  return version
+}
+export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
+  let d = config.debug ( 'update' )
+
+  return Promise.all ( pds.map ( async p => {
+    const version = await updateVersionIfNeeded ( fileOps, config, cmd )
+    return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
+      copyTemplateDirectory ( fileOps, config,
+        { ...p, version, properties: safeObject ( config.properties ) }, cmd.dryrun ) )
+    // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
+    // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )
+  } ) )
 }

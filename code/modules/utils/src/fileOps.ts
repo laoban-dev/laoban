@@ -360,19 +360,20 @@ export async function loadFileFromDetails ( context: string, fileOps: FileOps, r
   return { target, postProcessed };
 }
 
-export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fd: CopyFileDetails ) => Promise<void> {
+export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, tx?: ( type: string, text: string ) => Promise<string>, dryrun?: boolean ): ( fd: CopyFileDetails ) => Promise<void> {
   return async ( cfd ) => {
     const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, rootUrl, tx, cfd );
+    if (dryrun) {console.log(`dryrun: would copy ${target} to ${targetRoot}/${target}`); return}
     return fileOps.saveFile ( targetRoot + '/' + target, postProcessed );
   }
 }
 
 
-export function copyFile ( fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string ): ( fd: CopyFileDetails ) => Promise<void> {
-  return copyFileAndTransform ( fileOps, d, rootUrl, target, undefined )
+export function copyFile ( fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, dryrun?: boolean ): ( fd: CopyFileDetails ) => Promise<void> {
+  return copyFileAndTransform ( fileOps, d, rootUrl, target, undefined, dryrun )
 }
-export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, tx?: ( type: string, text: string ) => Promise<string> ): ( fs: CopyFileDetails[] ) => Promise<void> {
-  const cf = copyFileAndTransform ( fileOps, d, rootUrl, target, tx )
+export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, tx?: ( type: string, text: string ) => Promise<string>, dryrun?: boolean ): ( fs: CopyFileDetails[], dryrun?: boolean ) => Promise<void> {
+  const cf = copyFileAndTransform ( fileOps, d, rootUrl, target, tx, dryrun )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );
     throw Error ( `Error ${context}\nFile ${JSON.stringify ( f )}\n${e}` )

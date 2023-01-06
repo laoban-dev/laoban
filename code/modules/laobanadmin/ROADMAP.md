@@ -12,15 +12,18 @@ Probably the -t should be derived... From the list of specified -l.
 
 ## create a .templates file for a directory
 
-## create the versions.txt file
+So to make a template just 'do it...'.
+Would be cool if can do parent and then work out the minimum to add...
 
+## create the versions.txt file
+Done
 
 
 ## Create `.package.test.json` with `--dryrun`
 
 Because this is actually what matters
 
-## Run laoban update after the 
+## Run laoban update after the init (this might be the same as above) 
 
 ## Auto detect git repo 
 

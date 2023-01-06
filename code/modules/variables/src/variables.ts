@@ -37,6 +37,7 @@ interface DereferenceOptions {
 /** If the string has ${a} in it, then that is replaced by the dic entry */
 export function derefence ( context: string, dic: any, s: string, options?: DereferenceOptions ) {
   if ( options?.variableDefn === undefined ) return s;
+  if (s === undefined)return s
   const regex = options.variableDefn.regex
   let result = s.replace ( regex, match => {
     let result = replaceVar ( context, match, dic, options );

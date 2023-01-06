@@ -17,7 +17,7 @@ import { Writable } from "stream";
 import { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
 import { FileOps, fileOpsStats, safeObject } from "@laoban/utils";
-import { copyTemplateDirectory } from "./update";
+import { copyTemplateDirectory, updateConfigFilesFromTemplates } from "./update";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
@@ -112,22 +112,19 @@ let projectsAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, 
     .catch ( displayError ( config.outputStream ) )
 }
 
-const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
-  let d = config.debug ( 'update' )
-
-  return Promise.all ( pds.map ( async p => {
-    const version = await d.k ( () => `${p.directory} loadVersionFile`, () => loadVersionFile ( config ) )
-    return d.k ( () => `${p.directory} copyTemplateDirectory`, () => copyTemplateDirectory ( fileOps, config, { ...p, version, properties: safeObject ( config.properties ) } ) )
-    // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
-    // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )
-  } ) )
-}
 
 function postCommand ( p: any, fileOps: FileOps ) {
   return res => {
     if ( p.cachestats ) console.log ( `Cache stats ${JSON.stringify ( fileOpsStats ( fileOps ), null, 2 )}\n` )
     return res
   };
+}
+
+function extraUpdateOptions ( program: CommanderStatic ) {
+  program.option ( '--setVersion <version>', 'sets the version' )
+  program.option ( '-m,--minor', 'update minor version' )
+  program.option ( '--major', 'update major version' )
+  return program
 }
 export class Cli {
   private program: any;
@@ -217,7 +214,10 @@ export class Cli {
     projectAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
     action ( program, 'projects', projectsAction, 'lists the projects under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
-    projectAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ), "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's", defaultOptions )
+    projectAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ),
+      "overwrites the package.json based on the project.details.json, and copies other template files overwrite project's",
+      extraUpdateOptions, defaultOptions )
+
 
     if ( configAndIssues.issues.length == 0 )
       configAndIssues.config.scripts.forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions ) )
