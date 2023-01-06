@@ -71,7 +71,7 @@ refactoring these scripts and making them more declarative.
 Laoban is not very opinionated about which one to use. Replacing `npm` with `yarn`  in the config will let you use all the features with yarn. If
 you want to use it with maven or sbt or... it works fine (although those other language tools already have much of the capabilities
 that laoban brings to the javascript world). By 'not very opinionated' we mean 
-*'you should be using yarn in a monorepo world, but if you don't want to you can use npm... but your 
+*'you should be using yarn workspaces in a monorepo world, but if you don't want to you can use npm... but your 
 life will be much harder'*
 
 # What are the 'golden moments'
