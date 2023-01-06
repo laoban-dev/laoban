@@ -20,7 +20,6 @@
         "name":        "${packageJson.name}",
         "description": "${packageJson.description}",
         "details":     {
-          "keywords": [${packageJson.keywords:object:indent4}],
           "publish": false,
           "test":    true,
           "links":   []

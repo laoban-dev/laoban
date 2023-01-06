@@ -111,6 +111,7 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   const originalPackageJson = packageJsonDetails.contents;
   const deps = { ...originalPackageJson.dependencies } || {}
   const devDeps = originalPackageJson.devDependencies || {};
+  const keywords = originalPackageJson.keywords || [];
   const bins = originalPackageJson.bin || {}
   const links = Object.keys ( deps ).filter ( name => allProjectNames.indexOf ( name ) !== -1 );
   removeFrom ( deps, templatePackageJson.dependencies )
@@ -125,6 +126,7 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   details[ "extraDeps" ] = deps;
   details[ "extraDevDeps" ] = devDeps;
   details[ "extraBins" ] = bins;
+  details[ "keywords" ] = keywords;
   contents[ "details" ] = details;
   const projectDetailsString = JSON.stringify ( projectDetails, null, 2 )
   const directory = packageJsonDetails.directory;
