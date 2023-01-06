@@ -1,0 +1,16 @@
+{
+  "template"   : "typescript",
+  "name"       : "@laoban/admin",
+  "description": "Configures and manages laoban projects",
+  "details"    : {
+    "links"       : ["laoban"],
+    "extraDeps"   : {   "commander": "^6.2.0"  },
+    "extraDevDeps": {},
+    "extraBins"   : {
+      "laoban": "node_modules/laoban/dist/index.js",
+      "laoban-admin": "dist/index.js"},
+    "tsc": true,
+    "test": false,
+    "publish"     : true
+  }
+}
