@@ -93,7 +93,7 @@ export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebu
   if ( namedTemplateUrl === undefined ) return copyTemplateDirectoryByConfig ( fileOps, config, p, template, target )
   return copyTemplateDirectoryFromConfigFile ( fileOps, d, config.laobanDirectory, namedTemplateUrl, p, dryrun )
 }
-
+let lastVersion: string | undefined = undefined
 export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWithDebug, cmd: UpdateCmdOptions ) {
 
   const set = [ cmd.setVersion, cmd.minor, cmd.major ].filter ( x => x !== undefined )
@@ -101,11 +101,12 @@ export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWi
   let d = config.debug ( 'update' )
   async function setVersion ( v: string ) {
     d.message ( () => [ `Setting version to ${cmd.setVersion}` ] )
+    if (lastVersion !== v) console.log ( 'Version number is now', v )
+    lastVersion= v
     if ( cmd.dryrun ) {
-      console.log ( 'Setting version to ', v )
       return v
     }
-    await fileOps.saveFile ( config.versionFile,v )
+    await fileOps.saveFile ( config.versionFile, v )
     return v
   }
   if ( cmd.setVersion ) return setVersion ( cmd.setVersion )

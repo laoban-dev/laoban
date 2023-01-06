@@ -27,3 +27,4 @@
 
 0.4.1 No longer properly support the templateDir
 0.4.2 Now suggest a version number with `laoban-admin init`
+0.4.9 Can now have version numbers update with update using '--minor', '--major' or '--setVersion'
