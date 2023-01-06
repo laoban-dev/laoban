@@ -1,8 +1,8 @@
-import { findLaoban, ProjectDetailFiles, packageDetailsFile } from "./Files";
+import { findLaoban, PackageDetailFiles, packageDetailsFile } from "./Files";
 import * as fs from "fs";
 import * as fse from "fs-extra";
 import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate, MakeCacheFnFromLaobanDir } from "./configProcessor";
-import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
+import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
 import { loadVersionFile } from "./modifyPackageJson";
@@ -10,7 +10,7 @@ import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrett
 import * as os from "os";
 import { execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, make, streamName, timeIt } from "./executors";
 import { output, Strings } from "./utils";
-import { validateProjectDetailsAndTemplates } from "./validation";
+import { validatePackageDetailsAndTemplates } from "./validation";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
 import { Writable } from "stream";
@@ -30,7 +30,7 @@ function openStream ( sc: ScriptInContextAndDirectoryWithoutStream ): ScriptInCo
   let logStream = fs.createWriteStream ( streamName ( sc ) );
   return { ...sc, logStream, streams: [ logStream ] }
 }
-function makeSc ( config: ConfigWithDebug, sessionId: string, details: ProjectDetailsAndDirectory[], script: ScriptDetails, cmd: any ) {
+function makeSc ( config: ConfigWithDebug, sessionId: string, details: PackageDetailsAndDirectory[], script: ScriptDetails, cmd: any ) {
   let sc: ScriptInContext = {
     debug: config.debug,
     sessionId,
@@ -67,7 +67,7 @@ let clearCacheAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: an
     console.log ( 'Cache directory is not defined in laoban.json' )
 }
 
-let statusAction: ProjectAction<void> = ( config: Config, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
+let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
         pds.map ( d => ({ directory: d.directory, compactedStatusMap: compactStatus ( path.join ( d.directory, config.status ) ) }) )
   let prettyPrintStatusData = toPrettyPrintData ( toStatusDetails ( compactedStatusMap ) );
@@ -75,11 +75,11 @@ let statusAction: ProjectAction<void> = ( config: Config, cmd: any, pds: Project
   return Promise.resolve ()
 }
 
-let compactStatusAction: ProjectAction<void[]> = ( config: Config, cmd: any, pds: ProjectDetailsAndDirectory[] ) =>
+let compactStatusAction: PackageAction<void[]> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) =>
   Promise.all ( pds.map ( d =>
     writeCompactedStatus ( path.join ( d.directory, config.status ), compactStatus ( path.join ( d.directory, config.status ) ) ) ) )
 
-const profileAction: ProjectAction<void> = ( config: Config, cmd: any, pds: ProjectDetailsAndDirectory[] ) =>
+const profileAction: PackageAction<void> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) =>
   Promise.all ( pds.map ( d => loadProfile ( config, d.directory ).then ( p => ({ directory: d.directory, profile: findProfilesFromString ( p ) }) ) ) ).//
     then ( p => {
       let data = prettyPrintProfileData ( p );
@@ -89,24 +89,24 @@ const profileAction: ProjectAction<void> = ( config: Config, cmd: any, pds: Proj
     } )
 
 const validationAction = ( fileOps: FileOps, params: string[] ): Action<Config | void> =>
-  ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => ProjectDetailFiles.workOutProjectDetails ( fileOps, config, cmd )
-    .then ( ds => validateProjectDetailsAndTemplates ( fileOps, config, ds ) )
+  ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
+    .then ( ds => validatePackageDetailsAndTemplates ( fileOps, config, ds ) )
     .then ( issues => abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } ), displayError ( config.outputStream ) )
 
 //TODO This looks like it needs a clean up. It has abort logic and display error logic.
 
 
-let projectsAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => {
-  return ProjectDetailFiles.workOutProjectDetails ( fileOps, config, { ...cmd, all: true } ).//
+let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => {
+  return PackageDetailFiles.workOutPackageDetails ( fileOps, config, { ...cmd, all: true } ).//
     then ( pds => {
       let dirWidth = Strings.maxLength ( pds.map ( p => p.directory ) )
-      let projWidth = Strings.maxLength ( pds.map ( p => p.projectDetails.name ) )
-      let templateWidth = Strings.maxLength ( pds.map ( p => p.projectDetails.template ) )
+      let projWidth = Strings.maxLength ( pds.map ( p => p.packageDetails.name ) )
+      let templateWidth = Strings.maxLength ( pds.map ( p => p.packageDetails.template ) )
 
       pds.forEach ( p => {
-        let links = p.projectDetails.details.links;
+        let links = p.packageDetails.details.links;
         let dependsOn = (links && links.length > 0) ? ` depends on [${links.join ()}]` : ""
-        output ( config ) ( `${p.directory.padEnd ( dirWidth )} => ${p.projectDetails.name.padEnd ( projWidth )} (${p.projectDetails.template.padEnd ( templateWidth )})${dependsOn}` )
+        output ( config ) ( `${p.directory.padEnd ( dirWidth )} => ${p.packageDetails.name.padEnd ( projWidth )} (${p.packageDetails.template.padEnd ( templateWidth )})${dependsOn}` )
       } )
     } )
     .catch ( displayError ( config.outputStream ) )
@@ -178,15 +178,15 @@ export class Cli {
               .then ( postCommand ( p, fileOps ) )
               .catch ( displayError ( configWithDebug.outputStream ) ) ) )
     }
-    function projectAction<T> ( p: any, name: string, a: ProjectAction<T>, description: string, ...options: (( p: any ) => any)[] ) {
+    function packageAction<T> ( p: any, name: string, a: PackageAction<T>, description: string, ...options: (( p: any ) => any)[] ) {
       return action ( p, name, ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) =>
-        ProjectDetailFiles.workOutProjectDetails ( fileOps, config, cmd )
+        PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
           .then ( pds => a ( config, cmd, pds ) )
           .catch ( displayError ( config.outputStream ) ), description, ...options )
     }
 
     function scriptAction<T> ( p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
-      return projectAction ( p, name, ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
+      return packageAction ( p, name, ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
         let script = scriptFn ()
         let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId ( new Date (), script.name, configAndIssues.params );
         let sessionDir = path.join ( config.sessionDir, sessionId );
@@ -209,12 +209,12 @@ export class Cli {
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]
     }), executeGenerations, defaultOptions )
 
-    projectAction ( program, 'status', statusAction, 'shows the status of the project in the current directory', defaultOptions )
-    projectAction ( program, 'compactStatus', compactStatusAction, 'crunches the status', defaultOptions )
-    projectAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
-    action ( program, 'packages', projectsAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
+    packageAction ( program, 'status', statusAction, 'shows the status of the project in the current directory', defaultOptions )
+    packageAction ( program, 'compactStatus', compactStatusAction, 'crunches the status', defaultOptions )
+    packageAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
+    action ( program, 'packages', packagesAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
-    projectAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ),
+    packageAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ),
       `overwrites the package.json based on the ${packageDetailsFile}, and copies other template files overwrite project's`,
       extraUpdateOptions, defaultOptions )
 

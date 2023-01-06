@@ -1,9 +1,9 @@
 import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, nextMajorVersion, nextVersion, parseJson, safeArray, safeObject } from "@laoban/utils";
 import path from "path";
-import { ConfigWithDebug, ProjectAction, ProjectDetailsAndDirectory, ProjectDetailsDirectoryPropertiesAndVersion } from "./config";
+import { ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, PackageDetailsDirectoryPropertiesAndVersion } from "./config";
 import * as fse from "fs-extra";
 import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables";
-import { loadVersionFile, modifyPackageJson, saveProjectJsonFile } from "./modifyPackageJson";
+import { loadVersionFile, modifyPackageJson, savePackageJsonFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 
 
@@ -13,7 +13,7 @@ interface UpdateCmdOptions {
   major?: string
   dryrun?: boolean
 }
-export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryPropertiesAndVersion, template: string, target: string ): Promise<void> {
+export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, template: string, target: string ): Promise<void> {
   let src = path.join ( config.templateDir, template );
   let d = config.debug ( 'update' );
   return d.k ( () => `copyTemplateDirectory directory from ${src}, to ${target}`, async () => {
@@ -23,7 +23,7 @@ export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: Config
     const exists = await fileOps.isFile ( packageJsonFileName )
     if ( !exists ) return Promise.resolve ()
     const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( packageJsonFileName ) )
-    return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.projectDetails ) ) )
+    return d.k ( () => `${p.directory} saveProjectJsonFile`, () => savePackageJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.packageDetails ) ) )
   } )
 }
 export interface TemplateControlFile {
@@ -76,7 +76,7 @@ export async function loadOneFileFromTemplateControlFileDetails ( context: strin
   return postProcessed
 
 }
-export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: ProjectDetailsAndDirectory, dryrun: boolean ): Promise<void> {
+export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: PackageDetailsAndDirectory, dryrun: boolean ): Promise<void> {
   const prefix = templateUrl.includes ( '://' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const controlFile = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps, laobanDirectory, prefix );
   d.message ( () => [ `control file is `, controlFile ] )
@@ -84,9 +84,9 @@ export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d:
   return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
     includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ), dryrun ) ( safeArray ( controlFile.files ) )
 }
-export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: ProjectDetailsDirectoryPropertiesAndVersion, dryrun: boolean ): Promise<void> {
+export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, dryrun: boolean ): Promise<void> {
   let d = config.debug ( 'update' )
-  const template = p.projectDetails.template
+  const template = p.packageDetails.template
   const target = p.directory
   const namedTemplateUrl = safeObject ( config.templates )[ template ]
   d.message ( () => [ `namedTemplateUrl in ${target} for ${template} is ${namedTemplateUrl} (should be undefined if using local template)` ] )
@@ -115,7 +115,7 @@ export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWi
   if ( cmd.major ) return setVersion ( nextMajorVersion ( version ) )
   return version
 }
-export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): ProjectAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => {
+export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let d = config.debug ( 'update' )
 
   return Promise.all ( pds.map ( async p => {

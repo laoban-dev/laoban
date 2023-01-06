@@ -1,4 +1,4 @@
-import { CommandDefn, Config, ConfigWithDebug, Details, PackageJson, ProjectDetails, ProjectDetailsAndDirectory, RawConfig, ScriptDefn } from "./config";
+import { CommandDefn, Config, ConfigWithDebug, Details, PackageJson, PackageDetails, PackageDetailsAndDirectory, RawConfig, ScriptDefn } from "./config";
 import * as path from "path";
 import { flatten, groupBy, removeDuplicates } from "./utils";
 // @ts-ignore
@@ -29,15 +29,15 @@ function validateCommand ( v: Validate<CommandDefn | string> ) {
 }
 
 
-export function validateProjectDetailsAndTemplates ( fileOps: FileOps, c: ConfigWithDebug, pds: ProjectDetailsAndDirectory[] ): Promise<string[]> {
-  let nameAndDirectories = pds.map ( pd => ({ name: pd.projectDetails.name, directory: pd.directory }) )
+export function validatePackageDetailsAndTemplates ( fileOps: FileOps, c: ConfigWithDebug, pds: PackageDetailsAndDirectory[] ): Promise<string[]> {
+  let nameAndDirectories = pds.map ( pd => ({ name: pd.packageDetails.name, directory: pd.directory }) )
   let grouped = groupBy ( nameAndDirectories, nd => nd.name )
   let duplicateErrors = flatten ( Object.keys ( grouped ).map ( key =>
     grouped[ key ].length > 1 ?
       [ `Have multiple projects with same mame`, ...grouped[ key ].map ( g => `${g.name} ${g.directory}` ) ] :
       [] ) )
   if ( duplicateErrors.length > 0 ) return Promise.resolve ( duplicateErrors )
-  let pdsIssues: string[] = flatten ( pds.map ( pd => validateProjectDetails ( Validate.validate ( `Project details in ${pd.directory}`, pd.projectDetails ) ).errors ) )
+  let pdsIssues: string[] = flatten ( pds.map ( pd => validatePackageDetails ( Validate.validate ( `Project details in ${pd.directory}`, pd.packageDetails ) ).errors ) )
 
   return pdsIssues.length > 0 ?
     Promise.resolve ( pdsIssues ) :
@@ -54,7 +54,7 @@ function validateTemplateDirectory ( context: string, c: Config, templateDir: st
     dirErrors )
 }
 
-function validateProjectDetails ( v: Validate<ProjectDetails> ) {
+function validatePackageDetails ( v: Validate<PackageDetails> ) {
   return v.isString ( "name" ).//
     isString ( "description" ).//
     isString ( "template" ).//

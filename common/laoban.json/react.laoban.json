@@ -5,15 +5,15 @@
   "scripts":   {
     "run-react": {
       "description": "${packageManager} start for all  projects that have a port defined in project.details.json",
-      "guard":       "${projectDetails.details.port}",
+      "guard":       "${packageDetails.details.port}",
       "commands":    ["${packageManager} start"],
-      "env":         {"PORT": "${projectDetails.details.port}"}
+      "env":         {"PORT": "${packageDetails.details.port}"}
     },
     "ls-react":  {
       "description": "lists the projects that have a port defined in project.details.json",
-      "guard":       "${projectDetails.details.port}",
+      "guard":       "${packageDetails.details.port}",
       "commands":    [
-        "js: '${projectDetails.name}'.padEnd(40)+ ' React ${projectDetails.details.port} Java ${projectDetails.details.javaPort}'"
+        "js: '${packageDetails.name}'.padEnd(40)+ ' React ${packageDetails.details.port} Java ${packageDetails.details.javaPort}'"
       ]
     }
   }

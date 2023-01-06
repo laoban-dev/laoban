@@ -1,4 +1,4 @@
-import {Config, ConfigWithDebug, ProjectDetails} from "./config";
+import {Config, ConfigWithDebug, PackageDetails} from "./config";
 import * as path from "path";
 import * as fs from "fs";
 // @ts-ignore
@@ -38,23 +38,24 @@ export function loadVersionFile(config: Config): Promise<string> {
 //         if (data) resolve(data.toString())
 //     }))
 // }
-export function saveProjectJsonFile(directory: string, packageJson: any): Promise<void> {
+export function savePackageJsonFile( directory: string, packageJson: any): Promise<void> {
     fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify(packageJson, null, 2) + "\n")
     return Promise.resolve()
 }
 
-export function modifyPackageJson(raw: any, version: string, projectDetails: ProjectDetails) {
+
+export function modifyPackageJson(raw: any, version: string, packageDetails: PackageDetails) {
     let result = {...raw}
-    Object.assign(result, projectDetails)
-    add(result, 'dependencies', projectDetails.details.extraDeps)
-    let links = projectDetails.details.links ? projectDetails.details.links : [];
+    Object.assign(result, packageDetails)
+    add(result, 'dependencies', packageDetails.details.extraDeps)
+    let links = packageDetails.details.links ? packageDetails.details.links : [];
     links.map(l => result['dependencies'][l] = version)
-    add(result, 'devDependencies', projectDetails.details.extraDevDeps)
-    add(result, 'bin', projectDetails.details.extraBins)
-    delete result.projectDetails
+    add(result, 'devDependencies', packageDetails.details.extraDevDeps)
+    add(result, 'bin', packageDetails.details.extraBins)
+    delete result.packageDetails
     result.version = version
-    result.name = projectDetails.name
-    result.description = projectDetails.description
+    result.name = packageDetails.name
+    result.description = packageDetails.description
     return result
 }
 

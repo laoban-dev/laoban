@@ -1,18 +1,12 @@
 {
-  "name": "@laoban/admin",
-  "description": "Configures and manages laoban projects",
-  "version": "0.4.10",
-  "bin": {
-    "laoban": "node_modules/laoban/dist/index.js",
-    "laoban-admin": "dist/index.js"
-  },
+  "name": "",
+  "description": "",
+  "version": "1.0.0",
+  "bin": {},
   "keywords": [],
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
-  "dependencies": {
-    "commander": "^6.2.0",
-    "laoban": "0.4.10"
-  },
+  "dependencies": {},
   "devDependencies": {
     "typescript": "^4.0.5",
     "@types/node": "^14.14.7",

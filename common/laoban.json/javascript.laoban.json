@@ -12,7 +12,7 @@
     },
     "ls-tests":     {
       "description": "lists the projects with tests in them",
-      "guard":       "${projectDetails.details.test}",
+      "guard":       "${packageDetails.details.test}",
       "commands":    ["js:process.cwd()"]
     }
   }

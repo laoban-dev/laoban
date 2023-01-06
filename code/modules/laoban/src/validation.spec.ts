@@ -5,8 +5,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { findLaoban, ProjectDetailFiles } from "./Files";
-import { validateProjectDetailsAndTemplates } from "./validation";
+import { findLaoban, PackageDetailFiles } from "./Files";
+import { validatePackageDetailsAndTemplates } from "./validation";
 import { loadConfigOrIssues, loadLoabanJsonAndValidate, makeCache } from "./configProcessor";
 import { dirsIn, testRoot } from "./fixture";
 // @ts-ignore
@@ -35,8 +35,8 @@ describe ( "validate directories", () => {
         it ( `should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
           let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().trim ()
           let config = addDebug ( undefined, () => {} ) ( configOrIssues.config )
-          return ProjectDetailFiles.workOutProjectDetails ( fileOps, config, {} ).//
-            then ( pds => validateProjectDetailsAndTemplates (fileOps, config, pds ) ).//
+          return PackageDetailFiles.workOutPackageDetails ( fileOps, config, {} ).//
+            then ( pds => validatePackageDetailsAndTemplates (fileOps, config, pds ) ).//
             then ( actual => {
                 let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
                 expect ( actual ).toEqual ( expected )

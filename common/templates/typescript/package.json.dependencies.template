@@ -1,2 +1,2 @@
-${projectDetails.details.extraDeps:object:comma:indent4}
-    ${projectDetails.details.links:comma:map<<>>(i=>"<<i>>":"<<version>>")}
+${packageDetails.details.extraDeps:object:comma:indent4}
+    ${packageDetails.details.links:comma:map<<>>(i=>"<<i>>":"<<version>>")}

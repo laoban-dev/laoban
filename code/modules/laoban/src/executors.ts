@@ -1,5 +1,5 @@
 import * as cp from 'child_process'
-import { CommandDefn, Envs, ProjectDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
+import { CommandDefn, Envs, PackageDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import { cleanUpEnv } from "./configProcessor";
 import * as path from "path";
 
@@ -30,7 +30,7 @@ export type GenerationsResult = GenerationResult[]
 
 export interface ShellCommandDetails<Cmd> {
   scriptInContext: ScriptInContext,
-  detailsAndDirectory: ProjectDetailsAndDirectory
+  detailsAndDirectory: PackageDetailsAndDirectory
   details: Cmd,
   streams: Writable[]
 }
@@ -64,7 +64,7 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectory ): S
   return flatten ( scd.scriptInContext.details.commands.map ( cmd => {
     let directory = calculateDirectory ( scd.detailsAndDirectory.directory, cmd )
     function makeShellDetails ( link?: string ) {
-      let dic = { ...scd.scriptInContext.config, projectDirectory: scd.detailsAndDirectory.directory, projectDetails: scd.detailsAndDirectory.projectDetails, link }
+      let dic = { ...scd.scriptInContext.config, packageDirectory: scd.detailsAndDirectory.directory, packageDetails: scd.detailsAndDirectory.packageDetails, link }
       let name = scd.scriptInContext?.details?.name;
       let env = cleanUpEnv ( `Script ${name}.env`, dic, scd.scriptInContext.details.env );
       let resultForOneCommand: ShellCommandDetails<CommandDetails> = {
@@ -79,7 +79,7 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectory ): S
       };
       return resultForOneCommand;
     }
-    let rawlinks = scd.detailsAndDirectory.projectDetails.details.links;
+    let rawlinks = scd.detailsAndDirectory.packageDetails.details.links;
     let links = rawlinks ? rawlinks : []
     // console.log('links are', links)
     return cmd.eachLink ? links.map ( makeShellDetails ) : [ makeShellDetails () ]

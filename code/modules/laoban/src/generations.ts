@@ -17,8 +17,8 @@ export function calculateAllGenerations ( scds: ScriptInContextAndDirectory[] ):
 
 export const typeClassForTopologicalSort = ( debug: Debug ): TopologicalSortTypeClasses<ScriptInContextAndDirectory> => ({
   debug,
-  name: ( g: ScriptInContextAndDirectory ): string => g.detailsAndDirectory.projectDetails.name,
-  children: ( g: ScriptInContextAndDirectory ): string[] => g.detailsAndDirectory.projectDetails.details.links,
+  name: ( g: ScriptInContextAndDirectory ): string => g.detailsAndDirectory.packageDetails.name,
+  children: ( g: ScriptInContextAndDirectory ): string[] => g.detailsAndDirectory.packageDetails.details.links,
   loopMessage: ( gs, loops ) => {
     const message = uniqueLoops ( loops ).map ( l => `  ${l.join ( ' -> ' )}` ).join ( "\n" )
     throw Error ( `Cannot work out the 'order' for the project. There are 'cycles' in the project links:\n${message}` );
@@ -34,14 +34,14 @@ export const splitGenerationsByLinks = ( debug: Debug ) => ( scds: ScriptInConte
   let map = new Map<string, ScriptInContextAndDirectory> ()
   const message = debug ( 'scripts' ).message
   scds.forEach ( scd => {
-    let projectDetails = scd.detailsAndDirectory.projectDetails;
-    if ( !projectDetails ) throw new Error ( `Cannot calculate generations as we have a directory without ${packageDetailsFile} [${scd.detailsAndDirectory.directory}]` )
-    map.set ( projectDetails.name, scd )
+    let packageDetails = scd.detailsAndDirectory.packageDetails;
+    if ( !packageDetails ) throw new Error ( `Cannot calculate generations as we have a directory without ${packageDetailsFile} [${scd.detailsAndDirectory.directory}]` )
+    map.set ( packageDetails.name, scd )
   } )
   message ( () => [ 'keys in the map of names to projects', [ ...map.keys () ].sort () ] )
   if ( scds.length !== map.size )
     throw new Error ( `Cannot calculate generations: multiple projects with the same name
-        ${scds.map ( scd => `${scd.detailsAndDirectory.directory} => ${scd.detailsAndDirectory.projectDetails.name}` ).join ( ', ' )}` );
+        ${scds.map ( scd => `${scd.detailsAndDirectory.directory} => ${scd.detailsAndDirectory.packageDetails.name}` ).join ( ', ' )}` );
   if ( scds.length !== map.size ) throw new Error ( 'Cannot calculate generations: multiple projects with the same name' )
   let genNames = calculateAllGenerations ( scds ).generations
   message ( () => [ 'genNames', ...genNames ] )
@@ -60,7 +60,7 @@ export function prettyPrintGenerations ( hasStream: HasOutputStream, scds: Scrip
     log ( `Generation ${i}` )
     log ( '  ' + g.join ( ", " ) )
   } )
-  let missing = new Set ( scds.map ( p => p.detailsAndDirectory.projectDetails.name ) )
+  let missing = new Set ( scds.map ( p => p.detailsAndDirectory.packageDetails.name ) )
   gen.generations.forEach ( g => g.forEach ( n => missing.delete ( n ) ) )
   if ( missing.size > 0 ) {
     log ( '' )
@@ -71,7 +71,7 @@ export function prettyPrintGenerations ( hasStream: HasOutputStream, scds: Scrip
 
 function getChildrenRecurse ( pds: ScriptInContextAndDirectory[], existing: string[] ) {
   let thisTree = {}
-  pds.forEach ( p => thisTree[ p.detailsAndDirectory.projectDetails.name ] = new Set ( p.detailsAndDirectory.projectDetails.details.links ) )
+  pds.forEach ( p => thisTree[ p.detailsAndDirectory.packageDetails.name ] = new Set ( p.detailsAndDirectory.packageDetails.details.links ) )
   for ( let k in thisTree ) {
     if ( existing.includes ( k ) ) delete thisTree[ k ]
     else {

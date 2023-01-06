@@ -2,15 +2,15 @@ import { FileOps, flatten, loadFileFromDetails, NameAnd, parseJson } from "@laob
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails, loadTemplateControlFile } from "./update";
 import { Config, ConfigWithDebug } from "./config";
 
-export interface ProjectDetailsAndLocations {
-  projectDetails: any
+export interface PackageDetailsAndLocations {
+  packageDetails: any
   location: string
 }
 
 
-export function checkTemplates ( pdLs: ProjectDetailsAndLocations[], templates: NameAnd<string> ): string[] {
-  return flatten ( pdLs.map ( ( { projectDetails, location } ) => {
-    const template = projectDetails.template
+export function checkTemplates ( pdLs: PackageDetailsAndLocations[], templates: NameAnd<string> ): string[] {
+  return flatten ( pdLs.map ( ( { packageDetails, location } ) => {
+    const template = packageDetails.template
     return templates[ template ] === undefined ? [ `Project at ${location} has template ${template} which is not in the templates list. Legal values are ${Object.keys ( templates )}` ] : [];
   } ) )
 }
@@ -43,12 +43,12 @@ export async function checkLoadingTemplates ( context: string, fileOps: FileOps,
     return errors
 }
 
-export async function findTemplatePackageJsonLookup ( fileOps: FileOps, pdLs: ProjectDetailsAndLocations[], parsedLaoBan: any ): Promise<NameAnd<any>> {
+export async function findTemplatePackageJsonLookup ( fileOps: FileOps, pdLs: PackageDetailsAndLocations[], parsedLaoBan: any ): Promise<NameAnd<any>> {
   const result: NameAnd<any> = {}
   const templateErrors: string[] = checkTemplates ( pdLs, parsedLaoBan.templates )
   if ( templateErrors.length>0) throw Error ( JSON.stringify ( templateErrors, null, 2 ) )
-  await Promise.all ( pdLs.map ( async ( { projectDetails, location } ) => {
-    const template = projectDetails.template
+  await Promise.all ( pdLs.map ( async ( { packageDetails, location } ) => {
+    const template = packageDetails.template
     if ( result[ template ] === undefined ) {//earlier ones take precedence
       const templateLookup = parsedLaoBan.templates
       let templateUrl = templateLookup[ template ];
@@ -57,7 +57,7 @@ export async function findTemplatePackageJsonLookup ( fileOps: FileOps, pdLs: Pr
         Is this because you asked for a --type that doesnt support the template ${template} ?` )
       const context = `Transforming file ${templateUrl} for ${location}\nKnown templates are ${JSON.stringify ( templateLookup, null, 2 )}`
       const templatePackageJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) )
-      const templateContents = await includeAndTransformFile ( context, { projectDetails }, fileOps ) ( '${}', templatePackageJson )
+      const templateContents = await includeAndTransformFile ( context, { packageDetails: packageDetails }, fileOps ) ( '${}', templatePackageJson )
       result[ template ] = parseJson ( `Finding template package json for template ${template} at ${templateUrl}` ) ( templateContents )
     }
   } ) )

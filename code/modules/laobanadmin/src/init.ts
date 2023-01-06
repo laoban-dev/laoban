@@ -6,7 +6,7 @@ import path from "path";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "laoban/dist/src/update";
 import { combineRawConfigs } from "laoban/dist/src/config";
 import { findLaobanOrUndefined, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "laoban/dist/src/Files";
-import { findTemplatePackageJsonLookup, ProjectDetailsAndLocations } from "laoban/dist/src/loadingTemplates";
+import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "laoban/dist/src/loadingTemplates";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -27,9 +27,9 @@ export interface InitFileContents {
   "laoban.json": any;
   "project.details.json": ProjectDetailsJson
 }
-export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends InitFileContents, ProjectDetailsAndLocations {
+export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends InitFileContents, PackageDetailsAndLocations {
   laoban: any
-  projectDetails: any
+  packageDetails: any
 }
 const combineInitContents = ( type: string, summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
   return {
@@ -116,7 +116,7 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   removeFrom ( deps, templatePackageJson.dependencies )
   removeFrom ( devDeps, templatePackageJson.devDependencies )
   links.forEach ( name => delete deps[ name ] );
-  // console.log ( 'project.details.json', packageJsonDetails.directory, 'deps', deps, 'devDeps', devDeps, 'bins', bins, 'links', links )
+  // console.log ( 'package.details.json', packageJsonDetails.directory, 'deps', deps, 'devDeps', devDeps, 'bins', bins, 'links', links )
 
   let projectDetails = initFileContents[ "project.details.json" ];
   const contents = projectDetails.contents
@@ -165,7 +165,7 @@ export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileCon
   const allProjectNames = findAllProjectNames ( packageJsonDetails );
   return packageJsonDetails.map ( p => {
     let theBestIfc = findAppropriateIfc ( initFileContents, type, p );
-    const template = theBestIfc.projectDetails.template
+    const template = theBestIfc.packageDetails.template
     const templatePackageJson = templateLookup[ template ] || {}
     return ({
       location: `${path.join ( p.directory, packageDetailsFile )}`, directory: p.directory,
@@ -207,7 +207,7 @@ export async function findLaobanUpOrDown ( fileOps: FileOps, directory: string )
 function findInitFileContentsFor ( initFileContents: InitFileContents[], parsedLaoBan: any ): initFileContentsWithParsedLaobanJsonAndProjectDetails[] {
   return initFileContents.map ( oneIFC => {
     const projectDetailsTemplate = oneIFC[ "project.details.json" ].contents || {}
-    const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails = { ...oneIFC, laoban: parsedLaoBan, projectDetails: projectDetailsTemplate }
+    const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails = { ...oneIFC, laoban: parsedLaoBan, packageDetails: projectDetailsTemplate }
     return initFileContents;
   } )
 }

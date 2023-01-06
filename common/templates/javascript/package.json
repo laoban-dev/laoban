@@ -1,21 +1,21 @@
 {
-  "name":        "${projectDetails.name}",
-  "description": "${projectDetails.description}",
+  "name":        "${packageDetails.name}",
+  "description": "${packageDetails.description}",
   "version":     "${version}",
   "bin":{
-    ${projectDetails.details.extraBins:object:indent4}
+    ${packageDetails.details.extraBins:object:indent4}
   },
-  "keywords": [${projectDetails.details.keywords:map<<>>(kw=>"<<kw>>")}],
+  "keywords": [${packageDetails.details.keywords:map<<>>(kw=>"<<kw>>")}],
   "license": "${properties.license}",
   "repository": "${properties.repository}",
   "dependencies": {
         ${compose(
-            projectDetails.details.extraDeps:object:indent4,
-            projectDetails.details.links:map<<>>(i=>"<<i>>": "<<version>>")
+            packageDetails.details.extraDeps:object:indent4,
+            packageDetails.details.links:map<<>>(i=>"<<i>>": "<<version>>")
          )}
   },
   "devDependencies": {
-      ${projectDetails.details.extraDevDeps:object:indent4}
+      ${packageDetails.details.extraDevDeps:object:indent4}
   },
   "files": [
     "dist/index.js",

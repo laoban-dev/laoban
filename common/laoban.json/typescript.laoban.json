@@ -5,7 +5,7 @@
   "scripts":   {
     "tsc":         {
       "description": "runs tsc",
-      "guard":       "${projectDetails.details.tsc}",
+      "guard":       "${packageDetails.details.tsc}",
       "commands":    [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
     "tsc-noguard": {
@@ -14,7 +14,7 @@
     },
     "ls-tsc":      {
       "description": "lists projects that will be tsced",
-      "guard":       "${projectDetails.details.tsc}",
+      "guard":       "${packageDetails.details.tsc}",
       "commands":    ["js:process.cwd()"]
     }
   }

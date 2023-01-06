@@ -59,12 +59,12 @@ export interface ScriptDetails {
 
 export interface CommandContext {
   shellDebug: boolean,
-  directories: ProjectDetailsAndDirectory[]
+  directories: PackageDetailsAndDirectory[]
 }
 
 export interface ScriptInContextAndDirectoryWithoutStream {
   scriptInContext: ScriptInContext,
-  detailsAndDirectory: ProjectDetailsAndDirectory
+  detailsAndDirectory: PackageDetailsAndDirectory
 }
 export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectoryWithoutStream {
   logStream: Writable
@@ -90,7 +90,7 @@ export interface ScriptInContext {
 }
 
 export interface DirectoryAndResults {
-  detailsAndDirectory: ProjectDetailsAndDirectory
+  detailsAndDirectory: PackageDetailsAndDirectory
   results: ShellResult[]
 }
 export type ScriptProcessor = ( sc: ScriptInContext ) => Promise<DirectoryAndResults[]>
@@ -104,7 +104,7 @@ export interface HasOutputStream {
 }
 
 export type Action<T> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => Promise<T>
-export type ProjectAction<T> = ( config: ConfigWithDebug, cmd: any, pds: ProjectDetailsAndDirectory[] ) => Promise<T>
+export type PackageAction<T> = ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => Promise<T>
 export type ScriptAction<T> = ( config: ConfigWithDebug, cmd: any, generations: Generations ) => Promise<T>
 
 export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputStream {
@@ -159,14 +159,14 @@ export interface CommandDefn {
   directory?: string
 }
 
-export interface ProjectDetailsAndDirectory {
+export interface PackageDetailsAndDirectory {
   directory: string
-  projectDetails?: ProjectDetails
+  packageDetails?: PackageDetails
 }
-export interface ProjectDetailsDirectoryPropertiesAndVersion {
+export interface PackageDetailsDirectoryPropertiesAndVersion {
   version: string
   directory: string
-  projectDetails?: ProjectDetails
+  packageDetails?: PackageDetails
   properties: NameAnd<string>
 }
 
@@ -177,7 +177,7 @@ export interface Details {
   "extraDevDeps": any,
   extraBins: any
 }
-export interface ProjectDetails {
+export interface PackageDetails {
   "name": string,
   "description": string,
   template: string,
