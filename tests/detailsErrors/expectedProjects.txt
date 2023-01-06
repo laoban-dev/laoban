@@ -1,2 +1,0 @@
-Cannot parse the file <root>/detailsErrors/projects/detailsFileDoesntParse/project.details.json
-SyntaxError: Unexpected token D in JSON at position 3
