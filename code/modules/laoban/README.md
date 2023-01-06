@@ -93,21 +93,19 @@ life will be much harder'*
 
 # Typical usage
 
-## When loading a project with many subprojects from git
+## When loading a project with many  packages from git
 
 * git clone the project
-* `laoban tsc -asl`will compile the sub packages in the correct order
-* `laoban test` will test the sub packages
+* `laoban tsc -asl`will compile the packages in the correct order
+* `laoban test` will test the packages
 * `laoban status` will let you see which packages compiled and passed all their tests
 
 ## When publishing
 
-* Change the version in the template directory
-* `laoban update` will update all the packages to the new version number
+* `laoban update --minor` will update all the packages to the new minor version number (or you can use `--major` or `--setVersion xxx`)
 * `laoban publish` will publish all the packages
 
-
-# Why the name
+# Why the name `laoban`
 
 I tried every 'boss' or 'controller' work I could think of! Laoban or 老板 is chinese for 'boss' and wasn't taken
 on npmjs (although it was on github) 
