@@ -230,7 +230,7 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
 }
 
 export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolean ): LocationAnd<string>[] {
-  let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? packageDetailsTestFile : 'laoban.json' );
+  let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? loabanConfigTestName : 'laoban.json' );
   const laoban: LocationAnd<any> = { location: laobanFileName, contents: initData.laoban, directory: initData.suggestions.laobanJsonLocation }
   const projectDetails: LocationAnd<any>[] = initData.projectDetails.map ( p => {
     const json = parseJson<any> ( () => `Project details for ${p.directory}` ) ( p.contents )

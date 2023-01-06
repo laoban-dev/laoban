@@ -1,6 +1,6 @@
 import { FileOps, NameAnd } from "@laoban/utils";
 import { init } from "./init";
-import { projects } from "./projects";
+import { packages } from "./packages";
 import { loabanConfigTestName, packageDetailsTestFile } from "laoban/dist/src/Files";
 
 function typeOptions<T> ( envs: NameAnd<string>,p: T ): T {
@@ -30,9 +30,9 @@ export class LaobanAdmin {
       .action ( cmd => init ( fileOps, directory, cmd ) )
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false ) )
-    typeOptions (envs,program.command ( 'projects' )
-      .description ( 'Gives a summary of the projects that laoban-admin has detected' )
-      .action ( cmd => projects ( fileOps, directory, cmd ) ))
+    typeOptions (envs,program.command ( 'packages' )
+      .description ( 'Gives a summary of the packages that laoban-admin has detected' )
+      .action ( cmd => packages ( fileOps, directory, cmd ) ))
  // typeOptions (envs,program.command ( 'template-create' )
  //      .description ( 'Turns the current directory into a template. The parent directory name must have the word `template` in it' )
  //      .action ( cmd => createTemplates ( fileOps, directory, cmd ) ))

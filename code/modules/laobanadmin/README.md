@@ -2,7 +2,7 @@
 
 The tool laoban is used to manage projects in mono-repos.
 
-In order to make the experience of 'setting up the projects' easier, laoban-admin has been created. In most projects
+In order to make the experience of 'setting up the project' easier, laoban-admin has been created. In most projects
 this will only be used once, to set up the project.
 
 Laoban is used constantly: some users might use it a hundred times a day. It is optimised for this type of usage

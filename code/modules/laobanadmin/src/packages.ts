@@ -1,16 +1,17 @@
 import { gatherInitData, InitData, isSuccessfulInitData, TypeCmdOptions } from "./init";
 import { FileOps } from "@laoban/utils";
+import { loabanConfigName } from "laoban/dist/src/Files";
 
 interface ProjectCmdOptions extends TypeCmdOptions {
 
 }
 
-export async function projects ( fileOps: FileOps, directory: string, cmd: ProjectCmdOptions ) {
+export async function packages ( fileOps: FileOps, directory: string, cmd: ProjectCmdOptions ) {
   const initData: InitData = await gatherInitData ( fileOps, directory, cmd );
   if ( isSuccessfulInitData ( initData ) ) {
     const { suggestions, initFileContents } = initData;
     suggestions.comments.forEach ( c => console.log ( c ) )
-    console.log ( 'Would put laoban.json into ', suggestions.laobanJsonLocation, ' which allows the following templates', initData.parsedLaoBan.templates )
+    console.log ( `Would put ${loabanConfigName} into `, suggestions.laobanJsonLocation, ' which allows the following templates', initData.parsedLaoBan.templates )
     const dirs = initData.projectDetails.map ( p => p.directory )
     if ( dirs.length === 0 ) {
       console.log ( 'No projects found' )
