@@ -9,7 +9,7 @@ import { fileOps } from "@laoban/files";
 import { makeCache } from "./configProcessor";
 
 
-export let testRoot = path.resolve ( findLaoban ( process.cwd () ), '..', 'tests' );
+export let testRoot = path.resolve ( findLaoban ( process.cwd () ), '..', 'tests', 'config'  );
 export let fullPathsOfTestDirs = () => dirsIn ( 'test' ).map ( d => path.resolve ( d ) )
 export let pwd = os.type () == 'Windows' ? 'echo %CD%' : 'pwd'
 

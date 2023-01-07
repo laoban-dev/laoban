@@ -24,15 +24,6 @@ export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawC
   return shortCutFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ), shortCuts )
 };
 
-// const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => async ( url: string ): Promise<RawConfigAndFileOps> => {
-//   const parse = ( context ) => ( json: string ): RawConfigAndFileOps => {
-//     const rawConfig = parseJson<RawConfig> ( context ) ( json )
-//     return { rawConfig, fileOps: makeCache ( { rawConfig, fileOps } ) }
-//   }
-//   return await loadWithParents<RawConfigAndFileOps> ( ``, fileOps.loadFileOrUrl, parse, raw => safeArray ( raw.rawConfig.parents ), combineRawConfigsAndFileOps ) ( url )
-// }
-//
-//
 const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
   return async ( filename ): Promise<RawConfigAndFileOps> => {
     if ( debug ) console.log ( `About to try and load ${filename}`, fileOpsStats ( fileOps ) )

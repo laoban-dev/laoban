@@ -24,7 +24,7 @@ function doPwd ( cmd: string, expectedFile: string ) {
   } )
 
 }
-const  prefix = "node ../../code/modules/laoban/dist/index.js ";
+const  prefix = "node ../../../code/modules/laoban/dist/index.js ";
 doPwd ( prefix + "ls", 'expectedLs.txt' ) //tests dos execution
 doPwd ( prefix +"packages", 'expectedPackages.txt' ) //tests a command
 doPwd ( prefix + `run "js:process.cwd()"`, 'expectedPwds.txt' ) // tests javascript execution

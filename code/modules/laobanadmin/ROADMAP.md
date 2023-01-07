@@ -19,8 +19,7 @@ file from the init and then parse it. We would need to change this to dererence 
 So to make a template just 'do it...'.
 Would be cool if can do parent and then work out the minimum to add...
 
-## create the versions.txt file
-Done
+## create the versions.txt file --Done
 
 
 ## Create `.package.test.json` with `--dryrun`
