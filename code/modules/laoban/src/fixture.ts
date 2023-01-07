@@ -9,7 +9,8 @@ import { fileOps } from "@laoban/files";
 import { makeCache } from "./configProcessor";
 
 
-export let testRoot = path.resolve ( findLaoban ( process.cwd () ), '..', 'tests', 'config'  );
+export let testRoot = path.resolve ( findLaoban ( process.cwd () ), '..', 'tests' );
+export let configTestRoot = path.resolve ( testRoot, 'config' );
 export let fullPathsOfTestDirs = () => dirsIn ( 'test' ).map ( d => path.resolve ( d ) )
 export let pwd = os.type () == 'Windows' ? 'echo %CD%' : 'pwd'
 
@@ -64,17 +65,17 @@ function streamToString ( stream ) {
   } )
 }
 
-export function toArrayReplacingRoot ( s: string ): string[] {
-
+export function toArrayReplacingRoot (testRoot: string, s: string ): string[] {
   let rootMatch = new RegExp ( testRoot.replace ( /\\/g, "/" ), "g" )
-  return s.split ( '\n' ).map ( s => s.replace ( /\\/g, "/" ).trim () ).map ( s => s.replace ( rootMatch, "<root>" ) ).filter ( s => s.length > 0 )
+  return s.split ( '\n' ).map ( s => s.replace ( /\\/g, "/" ).trim () )
+    .map ( s => s.replace ( rootMatch, "<root>" ) ).filter ( s => s.length > 0 )
 }
 
 
 export function dirsIn ( root: string ) {
   return fs.readdirSync ( root ).//
-    map ( testDirName => path.join ( testRoot, testDirName ) ).//
+    map ( testDirName => path.join ( configTestRoot, testDirName ) ).//
     filter ( d => fs.statSync ( d ).isDirectory () ).//
-    map ( testDir => path.relative ( testRoot, testDir ) )
+    map ( testDir => path.relative ( configTestRoot, testDir ) )
 
 }

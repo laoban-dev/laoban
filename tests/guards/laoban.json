@@ -1,0 +1,49 @@
+{
+  "packageManager": "yarn",
+  "parents":        [
+    "@laoban@/laoban.json/core.laoban.json",
+    "@laoban@/laoban.json/javascript.laoban.json",
+    "@laoban@/laoban.json/typescript.laoban.json",
+    "@laoban@/laoban.json/typescript.publish.laoban.json"
+  ],
+  "properties":     {
+    "license":    "MIT",
+    "repository": "git@github.com:phil-rice/laoban.git"
+  },
+  "templates":      {
+    "javascript":       "@laoban@/templates/javascript",
+    "typescript":       "@laoban@/templates/typescript_405",
+    "typescript_react": "@laoban@/templates/typescript_react"
+  },
+  "scripts":        {
+    "ls":               {
+      "description": "lists all the projects if the guard is set",
+      "commands":    ["js:process.cwd()"],
+      "guard":       "${packageDetails.details.guard}"
+    },
+    "defaultTrueGuard": {
+      "description": "lists all the projects unless the guard is set to false",
+      "commands":    ["js:process.cwd()"],
+      "guard":       {
+        "guard": "${packageDetails.details.guard}", "default": true
+      }
+    },
+    "guardMatchingA":   {
+      "description": "lists all the projects unless the guardValue is set to A",
+      "commands":    ["js:process.cwd()"],
+      "guard":       {
+        "guard": "${packageDetails.details.valueGuard}", "value": "A"
+      }
+    },
+    "aAndBDifferent":   {
+      "description": "Echos either A or B depending on the value of the guard",
+      "commands":    [
+        {"command": "echo 'A ${packageDirectory}'", "guard": "${packageDetails.details.valueGuard}", "value": "A"},
+        {"command": "echo 'B ${packageDirectory}'", "guard": "${packageDetails.details.valueGuard}", "value": "B"},
+        {"command": "echo 'Undef ${packageDirectory}'", "guard": "${packageDetails.details.valueGuard}", "default": true}
+      ],
+      "guard":       {
+      }
+    }
+  }
+}

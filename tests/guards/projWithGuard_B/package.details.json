@@ -1,0 +1,14 @@
+{
+  "template":    "typescript",
+  "name":        "projWithGuardFalse",
+  "description": "A sample project",
+  "details":     {
+    "publish":      true,
+    "links":        [],
+    "extraDeps":    {},
+    "extraDevDeps": {},
+    "extraBins":    {},
+    "guard":        false,
+    "valueGuard":   "B"
+  }
+}

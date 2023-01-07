@@ -1,4 +1,4 @@
-import { ScriptInContext } from "./config";
+import { GuardDefn, guardFrom, isFullGuard, ScriptInContext } from "./config";
 import * as path from "path";
 import { chain, flatten, output, partition, writeTo } from "./utils";
 import { splitGenerationsByLinksUsingGenerations } from "./generations";
@@ -21,8 +21,8 @@ interface ToFileDecorator {
 
 interface GuardDecorator {
   name: string,
-  guard: ( d: ShellCommandDetails<CommandDetails> ) => any | undefined
-  valid: ( guard: any, d: ShellCommandDetails<CommandDetails> ) => any
+  guard: ( d: ShellCommandDetails<CommandDetails> ) => GuardDefn | undefined
+  valid: ( guard: GuardDefn | undefined, d: ShellCommandDetails<CommandDetails> ) => any
 }
 
 interface StdOutDecorator {
@@ -208,9 +208,10 @@ export class CommandDecorators {
       let s = d.scriptInContext.debug ( 'scripts' )
       let g = d.scriptInContext.debug ( 'guard' )
       let guard = dec.guard ( d )
-      let valid = dec?.valid ?.( guard, d );
+      let valid = dec?.valid?. ( guard, d );
       let name = d.scriptInContext.details.name;
       g.message ( () => [ `Guardxx ${d.detailsAndDirectory.directory} ${name}.[${guard}]=${dec?.valid ( guard, d )}` ] )
+
       return (guard === undefined || valid) ? e ( d ) : s.k ( () => `Script killed by guard ${dec.name}`, () => Promise.resolve ( [] ) )
     }
 
@@ -218,9 +219,16 @@ export class CommandDecorators {
     name: 'guard',
     guard: d => d.scriptInContext.details.guard,
     valid: ( g, d ) => {
-      let value = derefence ( `Guard for ${d.scriptInContext?.details?.name}`, d.details.dic, g, { allowUndefined: true, throwError: true, undefinedIs: '', variableDefn: dollarsBracesVarDefn } );
-      if (value === 'false') return false
-      return value != '';}
+      const guard = guardFrom ( g )
+      const context = `Guard for ${d.scriptInContext?.details?.name}`;
+      // if ( typeof guard !== 'string' ) throw Error ( `Guard for ${d.scriptInContext?.details?.name} is not a string` )
+      let value = derefence ( context, d.details.dic, guard, { allowUndefined: true, throwError: true, undefinedIs: '', variableDefn: dollarsBracesVarDefn } );
+      // console.log('guard is ', g, guard, value)
+      if ( isFullGuard ( g ) && g.default && value == '' ) return true
+      if ( isFullGuard ( g ) && g.value !== undefined ) return g.value === value
+      if ( value === 'false' ) return false
+      return value != '';
+    }
   }
   static osGuard: GuardDecorator = {
     name: 'osGuard',

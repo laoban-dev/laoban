@@ -28,7 +28,7 @@ export function combineRawConfigs ( r1: RawConfig, r2: RawConfig ): RawConfig {
   if ( r2 === undefined ) return r1;
   let result = {
     ...r1, ...r2,
-    parents: unique([ ...safeArray ( r1.parents ), ...safeArray ( r2.parents ) ],url=>url),
+    parents: unique ( [ ...safeArray ( r1.parents ), ...safeArray ( r2.parents ) ], url => url ),
     templates: combineTwoObjects ( r1.templates, r2.templates ),
     variables: combineTwoObjects ( r1.variables, r2.variables ),
     scripts: combineTwoObjects ( r1.scripts, r2.scripts ),
@@ -48,7 +48,7 @@ export interface PackageJson {
 export interface ScriptDetails {
   name: string,
   description: string,
-  guard?: string,
+  guard?: GuardDefn,
   osGuard?: string,
   pmGuard?: string,
   guardReason?: string,
@@ -138,9 +138,23 @@ export interface ScriptDefns {
 export interface Envs {
   [ name: string ]: string
 }
+export interface FullGuard {
+  guard?: string;
+  default?: string;
+  value?: string;
+}
+export type GuardDefn = string | FullGuard
+export function isFullGuard ( g: GuardDefn ): g is FullGuard {
+  return typeof g === 'object'
+}
+
+export const guardFrom = ( g: GuardDefn | undefined ): string|undefined => {
+  return isFullGuard ( g ) ? g.guard || g.default : g ;
+};
+
 export interface ScriptDefn {
   description: string,
-  guard?: string,
+  guard?: GuardDefn,
   osGuard?: string,
   pmGuard?: string,
   guardReason?: string,
@@ -148,6 +162,7 @@ export interface ScriptDefn {
   commands: (string | CommandDefn)[],
   env?: Envs
 }
+
 
 export interface CommandDefn {
   name?: string,
