@@ -3,18 +3,18 @@
     "typescript": "@laoban@/templates/typescript"
   },
   "scripts":   {
-    "tsc":         {
-      "description": "runs tsc",
-      "guard":       "${packageDetails.details.tsc}",
+    "compile":         {
+      "description": "Compiles the projects",
+      "guard":       {"value": "${packageDetails.details.compile}", "default": true},
       "commands":    [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
-    "tsc-noguard": {
-      "description": "runs tsc without a guard",
+    "compile-noguard": {
+      "description": "runs compile without a guard",
       "commands":    [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
-    "ls-tsc":      {
-      "description": "lists projects that will be tsced",
-      "guard":       "${packageDetails.details.tsc}",
+    "ls-compile":      {
+      "description": "lists projects that will be compiled",
+      "guard":       "${packageDetails.details.compile}",
       "commands":    ["js:process.cwd()"]
     }
   }

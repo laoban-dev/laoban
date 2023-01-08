@@ -1,9 +1,8 @@
 {
-
   "scripts": {
     "test":         {
       "description": "runs ${packageManager} test",
-      "guard":       "${projectDetails.details.test}",
+      "guard":       {"value": "${projectDetails.details.test}", "default": true},
       "commands":    [{"name": "test", "command": "${packageManager} test", "status": true}]
     },
     "test-noguard": {

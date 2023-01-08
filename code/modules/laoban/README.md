@@ -85,7 +85,7 @@ life will be much harder'*
       behaving in each package
 * Updating all the 'react' package settings in one go
     * You can update the template settings, then call `laoban update` 
-    * You can compile the changes in one command `laoban tsc`
+    * You can compile the changes in one command `laoban compile`
     * You can test the changes in one command `laoban test`
     * And now you can get a status of all the packages, knowing which have been impacted negatively with `laoban status`
 * Updating a global version number
@@ -96,7 +96,7 @@ life will be much harder'*
 ## When loading a project with many  packages from git
 
 * git clone the project
-* `laoban tsc -asl`will compile the packages in the correct order
+* `laoban compile -asl`will compile the packages in the correct order
 * `laoban test` will test the packages
 * `laoban status` will let you see which packages compiled and passed all their tests
 

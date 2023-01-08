@@ -5,7 +5,7 @@
       "guard":        "${packageDetails.details.publish}",
       "comment":      "why the --noEmit --outDir? Answer: using react_scripts we have to turn these off",
       "commands":     [
-        {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
+        {"name": "compile", "command": "tsc --noEmit false --outDir dist", "status": true},
         {"name": "pack", "command": "${packageManager} pack", "status": true}
       ],
       "inLinksOrder": true
@@ -14,7 +14,7 @@
       "description":  "publishes the projects to npmjs",
       "guard":        "${packageDetails.details.publish}",
       "commands":     [
-        {"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true},
+        {"name": "compile", "command": "tsc --noEmit false --outDir dist", "status": true},
         {"name": "pack", "command": "${packageManager} publish --access public", "status": true}
       ],
       "inLinksOrder": true

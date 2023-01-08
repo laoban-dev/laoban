@@ -19,7 +19,7 @@
       "description": "${packageJson.description}",
       "details":     {
         "publish": false,
-        "tsc":     true,
+        "compile":     true,
         "test":    true,
         "links":   []
       }
