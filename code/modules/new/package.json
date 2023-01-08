@@ -1,0 +1,40 @@
+{
+  "name":        "newP",
+  "description": "newDesc",
+  "version":     "1.0.8",
+  "bin":{
+    
+  },
+  "keywords": [],
+  "license": "MIT",
+  "repository": "git@github.com:phil-rice/laoban.git",
+  "dependencies": {
+        
+  },
+  "devDependencies": {
+      
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
+  ],
+  "main": "dist/index",
+  "types": "dist/index",
+  "scripts": {
+    "test": "jest --config jest.config.json",
+    "test:watch": "npm run test -- --watch"
+  },
+  "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ],
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ]
+  }
+}

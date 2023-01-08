@@ -1,0 +1,10 @@
+{
+  "template": "javascript",
+  "name": "newP",
+  "description": "newDesc",
+  "details": {
+    "publish": false,
+    "test": true,
+    "links": []
+  }
+}

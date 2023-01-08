@@ -10,8 +10,9 @@ And do it soon... then call it 1.0.0
 
 # guards 
 
-## osGuard and pmGuard shouldn't cause error unless guard message
+## osGuard and pmGuard shouldn't cause error unless guard message - DONE (deleted them and replaced them with normal guards)
 This allows multiple  commands to be given... for example one for windows and one for linux
+Deprecated
 
 ## guards should be able to be defined 'default true' - done
 
@@ -19,6 +20,6 @@ This allows multiple  commands to be given... for example one for windows and on
 
 ## guards should be able to compare a value. for example 'color=red' -done
 
-# restruct project so this depends on laoban-admin so that we just install it with `npm i -g laoban`
+# restructure project so this depends on laoban-admin so that we just install it with `npm i -g laoban`
 
 We still want to keep the two separate I think... 

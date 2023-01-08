@@ -33,9 +33,9 @@ Because this is actually what matters
 Also consider what to do if using git submodules etc... i.e. if there are child gits...
 This is true for normal laoban as well... so maybe handle it there... 
 
-## `laoban-admin newchild -t typescript`
+## `laoban-admin newchild -t typescript -d directory`
 
-This should make a new child project in the current directory. 
+This should make a new child project in the current directory (or in -d). 
 And run laoban update on it...
 
 ## Scripts
