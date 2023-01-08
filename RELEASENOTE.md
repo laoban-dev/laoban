@@ -31,3 +31,4 @@
 
 1.0.2 Now using package.details.json instead of project.details.json. This is a breaking change.
 1.0.4 laoban-admin now picks up keywords from the package.json
+1.0.7 Guards can now be used for commands as well as scripts
