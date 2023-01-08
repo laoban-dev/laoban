@@ -45,9 +45,9 @@ describe ( 'ls with guards', () => {
     const actual = toArrayReplacingRoot ( testDir, await execute ( testDir, prefix + ' guardMatchingA' ) )
     expect ( actual ).toEqual ( toArrayReplacingRoot ( testDir, "<root>\\projWithGuard_A" ) )
   } )
-  // it ( 'aAndBDifferent should list the packages differently depending on the guard value', async () => {
-  //   const actual = toArrayReplacingRoot ( testDir, await execute ( testDir, prefix + ' aAndBDifferent' ) )
-  //   expect ( actual ).toEqual ( toArrayReplacingRoot ( testDir, "<root>\\projWithGuard_A" ) )
-  // } )
+  it ( 'aAndBDifferent should list the packages differently depending on the guard value', async () => {
+    const actual = toArrayReplacingRoot ( testDir, await execute ( testDir, prefix + ' aAndBDifferent' ) )
+    expect ( actual ).toEqual ( toArrayReplacingRoot ( testDir, "A <root>/projWithGuard_A\nB <root>/projWithGuard_B" ) )
+  } )
 
 } )

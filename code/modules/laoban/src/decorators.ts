@@ -5,6 +5,7 @@ import { splitGenerationsByLinksUsingGenerations } from "./generations";
 import * as fs from "fs";
 import { CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult } from "./executors";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
+import { safeArray } from "@laoban/utils";
 
 export type CommandDecorator = ( e: ExecuteCommand ) => ExecuteCommand
 export type ScriptDecorator = ( e: ExecuteScript ) => ExecuteScript
@@ -22,7 +23,7 @@ interface ToFileDecorator {
 interface GuardDecorator {
   name: string,
   guard: ( d: ShellCommandDetails<CommandDetails> ) => GuardDefn | undefined
-  valid: ( guard: GuardDefn | undefined, d: ShellCommandDetails<CommandDetails> ) => any
+  valid: ( guardType: string, guard: GuardDefn | undefined, d: ShellCommandDetails<CommandDetails> ) => any
 }
 
 interface StdOutDecorator {
@@ -204,40 +205,58 @@ export class CommandDecorators {
 
 
   static guardDecorate: ( guardDecorator: GuardDecorator ) => CommandDecorator = dec => e =>
-    d => {
+    async d => {
       let s = d.scriptInContext.debug ( 'scripts' )
       let g = d.scriptInContext.debug ( 'guard' )
       let guard = dec.guard ( d )
-      let valid = dec?.valid?. ( guard, d );
+      let valid = dec?.valid?. ( dec.name, guard, d );
       let name = d.scriptInContext.details.name;
-      g.message ( () => [ `Guardxx ${d.detailsAndDirectory.directory} ${name}.[${guard}]=${dec?.valid ( guard, d )}` ] )
-
-      return (guard === undefined || valid) ? e ( d ) : s.k ( () => `Script killed by guard ${dec.name}`, () => Promise.resolve ( [] ) )
+      g.message ( () => [ `Guard ${dec.name} ${d.detailsAndDirectory.directory} ${name}=${valid}` ] )
+      return valid ? e ( d ) : s.k ( () => `Script killed by guard ${dec.name}`, () => Promise.resolve ( [] ) )
     }
 
   static guard: GuardDecorator = {
     name: 'guard',
     guard: d => d.scriptInContext.details.guard,
-    valid: ( g, d ) => {
-      const guard = guardFrom ( g )
-      const context = `Guard for ${d.scriptInContext?.details?.name}`;
-      // if ( typeof guard !== 'string' ) throw Error ( `Guard for ${d.scriptInContext?.details?.name} is not a string` )
-      let value = derefence ( context, d.details.dic, guard, { allowUndefined: true, throwError: true, undefinedIs: '', variableDefn: dollarsBracesVarDefn } );
-      // console.log('guard is ', g, guard, value)
-      if ( isFullGuard ( g ) && g.default && value == '' ) return true
-      if ( isFullGuard ( g ) && g.value !== undefined ) return g.value === value
-      if ( value === 'false' ) return false
-      return value != '';
+    valid: ( guardType: string, guardForScript, d ) => {
+      let s = d.scriptInContext.debug ( 'scripts' )
+      let guardDebug = d.scriptInContext.debug ( 'guard' )
+      let guardForCommand: GuardDefn | undefined = d.details.command.guard
+      let name = d.scriptInContext.details.name;
+
+      const context = ( guardType: string, guard: GuardDefn | GuardDefn[] | undefined ) =>
+        `${guardType} ${d.detailsAndDirectory.directory} ${name}.(${guardType})[${guard ? safeArray ( guard ).map ( g => JSON.stringify ( g ) ).join ( ',' ) : 'undefined'}]`
+      let dic = d.details.dic;
+      let validForScript = guardForScript === undefined || evaluateGuard ( context ( 'script ', guardForScript ), guardForScript, dic );
+      let validForCommand = guardForCommand === undefined || evaluateGuard ( context ( 'command ', guardForCommand ), guardForCommand, dic );
+
+      let valid = validForScript && validForCommand;
+
+      guardDebug.message ( () => [ `${(context ( '', [ guardForScript, guardForCommand ] ))} script=${validForScript} command=${validForCommand} value=${valid}` ] )
+      return valid
     }
   }
   static osGuard: GuardDecorator = {
     name: 'osGuard',
     guard: d => d.details.command.osGuard,
-    valid: ( g, d ) => g === d.scriptInContext.config.os
+    valid: ( guardType: string, g, d ) => g === g=== undefined||d.scriptInContext.config.os
   }
   static pmGuard: GuardDecorator = {
     name: 'pmGuard',
     guard: d => d.details.command.pmGuard,
-    valid: ( g, d ) => g === d.scriptInContext.config.packageManager
+    valid: ( guardType: string, g, d ) => g === g=== undefined||d.scriptInContext.config.packageManager
   }
+}
+function evaluateGuard ( context: string, g: GuardDefn | undefined, dic: any ): boolean {
+  const rawValue = guardFrom ( g )
+  if ( typeof rawValue !== 'string' )
+    if ( isFullGuard ( g ) ) {throw Error ( `Guard ${context} has a value that is not a string` )} else { throw Error ( `Guard ${context} is not a string` ) }
+
+  let value = derefence ( context, dic, rawValue, { allowUndefined: true, throwError: true, undefinedIs: '', variableDefn: dollarsBracesVarDefn } );
+  // console.log ( `In guard ${context} g is ${JSON.stringify(g)} rawValue is [${rawValue}] value is ${value}`)
+  // console.log('dic is ',Object.keys(dic))
+  if ( isFullGuard ( g ) && g.default && value == '' ) return true
+  if ( isFullGuard ( g ) && g.equals !== undefined ) return g.equals === value
+  if ( value === 'false' ) return false
+  return value != '';
 }

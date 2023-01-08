@@ -139,17 +139,17 @@ export interface Envs {
   [ name: string ]: string
 }
 export interface FullGuard {
-  guard?: string;
+  value: string;
   default?: string;
-  value?: string;
+  equals?: string;
 }
 export type GuardDefn = string | FullGuard
 export function isFullGuard ( g: GuardDefn ): g is FullGuard {
   return typeof g === 'object'
 }
 
-export const guardFrom = ( g: GuardDefn | undefined ): string|undefined => {
-  return isFullGuard ( g ) ? g.guard || g.default : g ;
+export const guardFrom = ( g: GuardDefn | undefined ): string | undefined => {
+  return isFullGuard ( g ) ? g.value || g.default : g;
 };
 
 export interface ScriptDefn {
@@ -169,6 +169,7 @@ export interface CommandDefn {
   command: string,
   status?: boolean,
   eachLink?: boolean,
+  guard?: GuardDefn,
   osGuard?: string,
   pmGuard?: string,
   directory?: string

@@ -161,7 +161,7 @@ export let execInSpawn: RawCommandExecutor = ( d: ShellCommandDetails<CommandDet
     //TODO refactor this so that the catch is just for the spawn
     try {
       let debug = d.scriptInContext.debug ( 'scripts' )
-      debug.message ( () => [ `spawning ${d.details.commandString}. Options are ${JSON.stringify ( { ...options, shell: true } )}` ] )
+      debug.message ( () => [ `spawning ${d.details.commandString}. Options are ${JSON.stringify ( { ...options,env:undefined, shell: true } )}` ] )
       let child = cp.spawn ( d.details.commandString, { ...options, shell: true } )
       child.stdout.on ( 'data', data => writeTo ( d.streams, data ) )//Why not pipe? because the lifecycle of the streams are different
       child.stderr.on ( 'data', data => writeTo ( d.streams, data ) )
