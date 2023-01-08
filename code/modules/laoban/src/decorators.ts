@@ -137,7 +137,8 @@ export class CommandDecorators {
   static normalDecorator ( a: AppendToFileIf ): CommandDecorator {
     return chain ( [
       CommandDecorators.dryRun,
-      ...[ CommandDecorators.guard, CommandDecorators.pmGuard, CommandDecorators.osGuard ].map ( CommandDecorators.guardDecorate ),
+      // ...[ CommandDecorators.guard, CommandDecorators.pmGuard, CommandDecorators.osGuard ].map ( CommandDecorators.guardDecorate ),
+      ...[ CommandDecorators.guard ].map ( CommandDecorators.guardDecorate ),
       CommandDecorators.log,
       ...[ CommandDecorators.status, CommandDecorators.profile ].map ( CommandDecorators.fileDecorate ( a ) ),
       ...[ CommandDecorators.variablesDisplay, CommandDecorators.shellDisplay ].map ( CommandDecorators.stdOutDecorator )
@@ -236,16 +237,16 @@ export class CommandDecorators {
       return valid
     }
   }
-  static osGuard: GuardDecorator = {
-    name: 'osGuard',
-    guard: d => d.details.command.osGuard,
-    valid: ( guardType: string, g, d ) => g === g=== undefined||d.scriptInContext.config.os
-  }
-  static pmGuard: GuardDecorator = {
-    name: 'pmGuard',
-    guard: d => d.details.command.pmGuard,
-    valid: ( guardType: string, g, d ) => g === g=== undefined||d.scriptInContext.config.packageManager
-  }
+  // static osGuard: GuardDecorator = {
+  //   name: 'osGuard',
+  //   guard: d => d.details.command.osGuard,
+  //   valid: ( guardType: string, g, d ) => g === g=== undefined||d.scriptInContext.config.os
+  // }
+  // static pmGuard: GuardDecorator = {
+  //   name: 'pmGuard',
+  //   guard: d => d.details.command.pmGuard,
+  //   valid: ( guardType: string, g, d ) => g === g=== undefined||d.scriptInContext.config.packageManager
+  // }
 }
 function evaluateGuard ( context: string, g: GuardDefn | undefined, dic: any ): boolean {
   const rawValue = guardFrom ( g )
