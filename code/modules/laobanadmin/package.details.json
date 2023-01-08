@@ -8,7 +8,7 @@
     "links": [
       "laoban"
     ],
-    "tsc": true,
+    "compile": true,
     "extraDeps": {
       "commander": "^6.2.0"
     },
@@ -16,6 +16,7 @@
     "extraBins": {
       "laoban": "node_modules/laoban/dist/index.js",
       "laoban-admin": "dist/index.js"
-    }
+    },
+    "keywords": []
   }
 }

@@ -6,9 +6,10 @@
     "publish": true,
     "test": true,
     "links": [],
-    "tsc": true,
+    "compile": true,
     "extraDeps": {},
     "extraDevDeps": {},
-    "extraBins": {}
+    "extraBins": {},
+    "keywords": []
   }
 }

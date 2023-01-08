@@ -8,13 +8,14 @@
     "links": [
       "@laoban/utils"
     ],
-    "tsc": true,
+    "compile": true,
     "extraDeps": {
       "node-fetch": "2.6.1"
     },
     "extraDevDeps": {
       "@types/node-fetch": "^2.6.2"
     },
-    "extraBins": {}
+    "extraBins": {},
+    "keywords": []
   }
 }

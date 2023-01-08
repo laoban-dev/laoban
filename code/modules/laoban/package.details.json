@@ -12,7 +12,7 @@
       "@laoban/debug",
       "@laoban/files"
     ],
-    "tsc": true,
+    "compile": true,
     "extraDeps": {
       "fs-extra": "^9.0.1",
       "commander": "^6.2.0"
