@@ -136,8 +136,8 @@ export class CommandDecorators {
 
   static normalDecorator ( a: AppendToFileIf ): CommandDecorator {
     return chain ( [
-      ...[ CommandDecorators.guard, CommandDecorators.pmGuard, CommandDecorators.osGuard ].map ( CommandDecorators.guardDecorate ),
       CommandDecorators.dryRun,
+      ...[ CommandDecorators.guard, CommandDecorators.pmGuard, CommandDecorators.osGuard ].map ( CommandDecorators.guardDecorate ),
       CommandDecorators.log,
       ...[ CommandDecorators.status, CommandDecorators.profile ].map ( CommandDecorators.fileDecorate ( a ) ),
       ...[ CommandDecorators.variablesDisplay, CommandDecorators.shellDisplay ].map ( CommandDecorators.stdOutDecorator )
