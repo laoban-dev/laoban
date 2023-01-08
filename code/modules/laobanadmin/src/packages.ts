@@ -7,7 +7,7 @@ interface ProjectCmdOptions extends TypeCmdOptions {
 }
 
 export async function packages ( fileOps: FileOps, directory: string, cmd: ProjectCmdOptions ) {
-  const initData: InitData = await gatherInitData ( fileOps, directory, cmd );
+  const initData: InitData = await gatherInitData ( fileOps, directory, cmd, false );
   if ( isSuccessfulInitData ( initData ) ) {
     const { suggestions, initFileContents } = initData;
     suggestions.comments.forEach ( c => console.log ( c ) )

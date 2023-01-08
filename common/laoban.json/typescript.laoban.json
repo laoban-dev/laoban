@@ -6,11 +6,11 @@
     "compile":         {
       "description": "Compiles the projects",
       "guard":       {"value": "${packageDetails.details.compile}", "default": true},
-      "commands":    [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
+      "commands":    [{"name": "compile", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
     "compile-noguard": {
       "description": "runs compile without a guard",
-      "commands":    [{"name": "tsc", "command": "tsc --noEmit false --outDir dist", "status": true}]
+      "commands":    [{"name": "compile", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
     "ls-compile":      {
       "description": "lists projects that will be compiled",

@@ -33,4 +33,4 @@
 1.0.4 laoban-admin now picks up keywords from the package.json
 1.0.7 Guards can now be used for commands as well as scripts
 1.0.8 tsc renamed as compile, nicer --dryrun output
-1.0.9 Added `laoban-admin newpackage` to create a new package
+1.0.10 Added `laoban-admin newpackage` to create a new package
