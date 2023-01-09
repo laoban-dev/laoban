@@ -1,6 +1,6 @@
 {
   "templates": {
-    "typescript": "@laoban@/templates/typescript"
+    "typescript": "@laoban@/templates/typescript_405"
   },
   "scripts":   {
     "compile":         {
