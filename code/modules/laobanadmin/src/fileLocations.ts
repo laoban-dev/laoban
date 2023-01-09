@@ -9,7 +9,7 @@ export const gitLocation = async ( fileOps: FileOps, directory: string ): Promis
   return gitLocation ( fileOps, parentDir );
 }
 
-const ignoreDirectories = n => n === 'node_modules' || n.startsWith ( '.' ) || n === 'target';
+export const ignoreDirectories = n => n === 'node_modules' || n.startsWith ( '.' ) || n === 'target';
 
 export const gitLocationsUnderHere = async ( fileOps: FileOps, directory: string ): Promise<string[]> =>
   findChildDirs ( fileOps, ignoreDirectories, n => fileOps.isDirectory ( path.join ( n, '.git' ) ) ) ( directory );

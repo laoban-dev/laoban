@@ -89,3 +89,7 @@ export const chain = <From, To> ( ...fns: (( from: From ) => To | undefined)[] )
 export function flatten<T>(t: T[][]): T[] {
   return ([] as T[]).concat(...t)
 }
+
+export function flatMap<From,To>(ts: From[],fn: (from: From) => To[]): To[] {
+  return flatten(ts.map(fn))
+}

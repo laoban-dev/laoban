@@ -1,9 +1,10 @@
-import {  NameAnd } from "@laoban/utils";
+import { NameAnd } from "@laoban/utils";
 import { init } from "./init";
 import { packages } from "./packages";
 import { loabanConfigTestName, packageDetailsTestFile } from "laoban/dist/src/Files";
 import { newPackage } from "./newPackage";
 import { FileOps } from "@laoban/fileops";
+import { newTemplate } from "./newTemplate";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -27,11 +28,9 @@ export class LaobanAdmin {
   public constructor ( fileOps: FileOps, directory: string, envs: NameAnd<string>, params: string[] ) {
     this.params = params;
     const version = require ( "../../package.json" ).version
-    let program = require ( 'commander' ).version ( version );
-    this.program = program
+    let program = require ( 'commander' )
+    this.program = program.version ( version )
 
-    // program.command ( 'status' ).description ( 'Gives a summary of the status of laoban installations' )
-    //   .action ( cmd => status ( fileOpsNode, directory ) )
     initOptions ( envs, program.command ( 'init' )
       .description ( 'Gives a summary of the status of laoban installations' )
       .action ( cmd => init ( fileOps, directory, cmd ) )
@@ -48,9 +47,14 @@ export class LaobanAdmin {
       .option ( '--force', 'Will create even if the package already exists ', false )
       .action ( ( name, cmd ) => newPackage ( fileOps, directory, name, cmd ) )
 
-    // initOptions (envs,program.command ( 'template-create' )
-    //      .description ( 'Turns the current directory into a template. The parent directory name must have the word `template` in it' )
-    //      .action ( cmd => createTemplates ( fileOpsNode, directory, cmd ) ))
+    initOptions ( envs, program.command ( 'newtemplate' )
+      .description ( `Creates a templates from the specified directory` )
+      .action ( cmd => newTemplate ( fileOps, directory, cmd ) ) )
+
+      .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )
+      .option ( '-d,--dryrun', `Just displays the files that would be created` )
+      .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( directory, 'templates' ) )
+      .option ( '-n,--templatename <templatename>', `Where to put the template files` )
 
 
   }
