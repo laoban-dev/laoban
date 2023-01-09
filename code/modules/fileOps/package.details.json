@@ -1,0 +1,11 @@
+{
+  "template": "typescript",
+  "name": "@laoban/fileOps",
+  "description": "Utilities about files: not bound to any way of accessing files",
+  "details": {
+    "publish": false,
+    "test": true,
+    "links": [],
+    "compile": true
+  }
+}
