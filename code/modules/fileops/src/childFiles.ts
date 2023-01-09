@@ -1,0 +1,48 @@
+import { LocationAndContents } from "./locationAnd";
+import { FileOps, findMatchingK } from "./fileOps";
+
+export const addPrefix = ( s1: string ) => ( s2: string ) => s1 === '' ? s2 : s1 + '/' + s2
+export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boolean ) => ( root: string ): Promise<string[]> => {
+  const children = async ( parent: string ): Promise<string[]> => {
+    const files: string[] = await fileOps.listFiles ( parent )
+    const withParent = files.filter ( d => !stopDirFilter ( d ) ).map ( addPrefix ( parent ) )
+    const directories: string[] = await findMatchingK ( withParent, fileOps.isDirectory )
+    let result: string[] = [ ...directories ]
+    let descendents = await Promise.all ( result.map ( children ) )
+    descendents.forEach ( c => result.push ( ...c ) )
+    return result
+  };
+  return children ( root )
+};
+export async function loadAllFilesIn ( fileOps: FileOps, directory: string ): Promise<LocationAndContents<string>[]> {
+  const contents = await fileOps.listFiles ( directory )
+  const files = await findMatchingK ( contents, fileOps.isFile )
+  return await Promise.all<LocationAndContents<string>> ( files.map ( location => fileOps.loadFileOrUrl ( location ).then (
+    contents => ({ location, directory, contents }),
+    raw => ({ location: location, raw, errors: [ `Error loading ${location}. ${raw}` ] }) ) ) )
+}
+export const findChildDirs = ( fileOps: FileOps, ignoreFilters: ( s: string ) => boolean, foundDirFilters: ( s: string ) => Promise<boolean> ) => async ( name: string ): Promise<string[]> => {
+  const find = async ( parent: string ): Promise<string[]> => {
+    // console.log ( 'found', parent )
+    const isDir = await fileOps.isDirectory ( parent )
+    if ( !isDir ) return []
+    const found = await foundDirFilters ( parent )
+    // console.log ( 'found & filtered', parent, found )
+    if ( found ) return Promise.resolve ( [ parent ] )
+    const children = await fileOps.listFiles ( parent ).then ( list => list.filter ( dir => !ignoreFilters ( dir ) ).map ( addPrefix ( parent ) ) )
+    const directories: string[] = await findMatchingK ( children, fileOps.isDirectory )
+    let result: string[] = []
+    const directoryResults = await Promise.all ( directories.map ( find ) )
+    directoryResults.forEach ( found => found.forEach ( f => result.push ( f ) ) )
+    return result
+  }
+  return find ( name )
+}
+export const findChildDirsUnder = ( fileOps: FileOps, ignoreFilters: ( s: string ) => boolean, foundDirFilters: ( s: string ) => Promise<boolean> ) => async ( name: string ): Promise<string[]> => {
+  // console.log('checking', name)
+  if ( !await fileOps.isDirectory ( name ) ) return []
+  const dirs = await fileOps.listFiles ( name )
+  let result: string[] = []
+  await Promise.all ( dirs.map ( dir => findChildDirs ( fileOps, ignoreFilters, foundDirFilters ) ( dir ).then ( found => result.push ( ...found ) ) ) )
+  return result
+}

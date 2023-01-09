@@ -1,5 +1,4 @@
 import { DebugCommands } from "@laoban/debug";
-import { LocationAndContents } from "./locationAnd";
 import { deepCombineTwoObjects, NameAnd, safeArray } from "@laoban/utils";
 
 
@@ -33,53 +32,6 @@ export const findMatchingKFrom = <T> ( fileName: ( t: T ) => string ) => async (
 };
 export const findMatchingK: ( list: string[], filter: ( s: string ) => Promise<boolean> ) => Promise<string[]> = findMatchingKFrom<string> ( s => s )
 
-export const addPrefix = ( s1: string ) => ( s2: string ) => s1 === '' ? s2 : s1 + '/' + s2
-export const childDirs = ( fileOps: FileOps, stopDirFilter: ( s: string ) => boolean ) => ( root: string ): Promise<string[]> => {
-  const children = async ( parent: string ): Promise<string[]> => {
-    const files: string[] = await fileOps.listFiles ( parent )
-    const withParent = files.filter ( d => !stopDirFilter ( d ) ).map ( addPrefix ( parent ) )
-    const directories: string[] = await findMatchingK ( withParent, fileOps.isDirectory )
-    let result: string[] = [ ...directories ]
-    let descendents = await Promise.all ( result.map ( children ) )
-    descendents.forEach ( c => result.push ( ...c ) )
-    return result
-  };
-  return children ( root )
-};
-
-
-export async function loadAllFilesIn ( fileOps: FileOps, directory: string ): Promise<LocationAndContents<string>[]> {
-  const contents = await fileOps.listFiles ( directory )
-  const files = await findMatchingK ( contents, fileOps.isFile )
-  return await Promise.all<LocationAndContents<string>> ( files.map ( location => fileOps.loadFileOrUrl ( location ).then (
-    contents => ({ location, directory, contents }),
-    raw => ({ location: location, raw, errors: [ `Error loading ${location}. ${raw}` ] }) ) ) )
-}
-export const findChildDirs = ( fileOps: FileOps, ignoreFilters: ( s: string ) => boolean, foundDirFilters: ( s: string ) => Promise<boolean> ) => async ( name: string ): Promise<string[]> => {
-  const find = async ( parent: string ): Promise<string[]> => {
-    // console.log ( 'found', parent )
-    const isDir = await fileOps.isDirectory ( parent )
-    if ( !isDir ) return []
-    const found = await foundDirFilters ( parent )
-    // console.log ( 'found & filtered', parent, found )
-    if ( found ) return Promise.resolve ( [ parent ] )
-    const children = await fileOps.listFiles ( parent ).then ( list => list.filter ( dir => !ignoreFilters ( dir ) ).map ( addPrefix ( parent ) ) )
-    const directories: string[] = await findMatchingK ( children, fileOps.isDirectory )
-    let result: string[] = []
-    const directoryResults = await Promise.all ( directories.map ( find ) )
-    directoryResults.forEach ( found => found.forEach ( f => result.push ( f ) ) )
-    return result
-  }
-  return find ( name )
-}
-export const findChildDirsUnder = ( fileOps: FileOps, ignoreFilters: ( s: string ) => boolean, foundDirFilters: ( s: string ) => Promise<boolean> ) => async ( name: string ): Promise<string[]> => {
-  // console.log('checking', name)
-  if ( !await fileOps.isDirectory ( name ) ) return []
-  const dirs = await fileOps.listFiles ( name )
-  let result: string[] = []
-  await Promise.all ( dirs.map ( dir => findChildDirs ( fileOps, ignoreFilters, foundDirFilters ) ( dir ).then ( found => result.push ( ...found ) ) ) )
-  return result
-}
 
 export const parseJson = <T> ( context: string | (() => string) ) => ( s: string ): T => {
   try {
@@ -99,110 +51,6 @@ export function loadWithParents<T> ( context: string, loader: ( url ) => Promise
     // console.log ( `loadWithParents ${url}  => parents ${parentUrls} => `, parents, ' Result', result )
     return result;
   } )
-}
-
-export interface MeteredFileOps extends FileOps {
-  digestCount (): number
-  lastDigested (): string
-  loadFileOrUrlCount (): number
-  lastLoadedFile (): string
-
-  createDirCount (): number
-  lastCreatedDir (): string
-
-  saveFileCount (): number
-  savedFiles (): [ string, string ][]
-  lastSavedFileName (): string
-  lastSavedFile (): string
-
-  listFilesCount (): number
-
-  removeDirectoryCount (): number
-  lastRemoveDirectory (): string
-}
-export function fileOpsStats ( fileOps: FileOps ): any {
-  const result: any = {}
-  if ( isMeteredFileOps ( fileOps ) ) {
-    const { saveFileCount, loadFileOrUrlCount, createDirCount, removeDirectoryCount } = fileOps
-    result.saveFileCount = saveFileCount ()
-    result.loadFileOrUrlCount = loadFileOrUrlCount ()
-    result.createDirCount = createDirCount ()
-    result.removeDirectoryCount = removeDirectoryCount ()
-  }
-  if ( isCachedFileOps ( fileOps ) ) {
-    result.cacheHits = fileOps.cacheHits ()
-    result.cacheMisses = fileOps.cacheMisses ()
-  }
-  return result
-}
-export function isMeteredFileOps ( fileOps: FileOps ): fileOps is MeteredFileOps {
-  const a: any = fileOps
-  return a.digestCount !== undefined
-}
-export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
-  if ( isMeteredFileOps ( fileOps ) ) return fileOps
-  let digestCount: number = 0;
-  let lastDigested: string = undefined
-
-  let loadFileOrUrlCount: number = 0;
-  let lastLoadedFile: string = undefined
-  let createDirCount: number = 0;
-  let lastCreatedDir: string = undefined;
-  let saveFileCount: number = 0;
-  let lastSavedFileName: string = undefined;
-  let lastSavedFile: string = undefined;
-  let listFilesCount: number = 0
-  let savedFiles: [ string, string ][] = []
-  let removeDirectoryCount: number = 0
-  let lastRemoveDirectory: string = undefined
-
-  return {
-    ...fileOps,
-    createDirCount: () => createDirCount,
-    digestCount: () => digestCount,
-    lastCreatedDir: () => lastCreatedDir,
-    lastSavedFile: () => lastSavedFile,
-    lastSavedFileName: () => lastSavedFileName,
-    lastDigested: () => lastDigested,
-    lastLoadedFile: () => lastLoadedFile,
-    loadFileOrUrlCount: () => loadFileOrUrlCount,
-    saveFileCount: () => saveFileCount,
-    listFilesCount: () => listFilesCount,
-    savedFiles: () => savedFiles,
-    removeDirectoryCount: () => removeDirectoryCount,
-    lastRemoveDirectory: (): string => lastRemoveDirectory,
-    createDir ( dir: string ): Promise<string | undefined> {
-      createDirCount += 1
-      lastCreatedDir = dir
-      return fileOps.createDir ( dir );
-    },
-    loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
-      loadFileOrUrlCount += 1
-      lastLoadedFile = fileOrUrl
-      return fileOps.loadFileOrUrl ( fileOrUrl )
-    },
-    digest ( s: string ): string {
-      digestCount += 1
-      lastDigested = s
-      return fileOps.digest ( s );
-    },
-    listFiles ( root: string ): Promise<string[]> {
-      listFilesCount += 1
-      return fileOps.listFiles ( root )
-    },
-    saveFile ( filename: string, text: string ): Promise<void> {
-      saveFileCount += 1
-      lastSavedFile = text
-      lastSavedFileName = filename
-      savedFiles.push ( [ filename, text ] )
-      return fileOps.saveFile ( filename, text )
-    },
-    removeDirectory ( filename: string, recursive: boolean ): Promise<void> {
-      removeDirectoryCount += 1
-      lastRemoveDirectory = filename
-      return fileOps.removeDirectory ( filename, recursive )
-    }
-  }
 }
 
 
@@ -240,62 +88,6 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
     listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) ),
     join: fileOps.join
   }
-}
-
-export function cachedLoad ( fileOps: FileOps, cache: string, ops: PrivateCacheFileOps ): ( fileOrUrl: string ) => Promise<string> {
-  if ( cache === undefined ) return fileOps.loadFileOrUrl
-  return fileOrUrl => {
-    if ( !fileOrUrl.includes ( '://' ) ) return fileOps.loadFileOrUrl ( fileOrUrl )
-    const digest = fileOps.digest ( fileOrUrl );
-    const cached = cache + '/' + digest
-    return fileOps.loadFileOrUrl ( cached ).then ( result => {
-        ops.cacheHit ();
-        return result;
-      },
-      async () => {
-        ops.cacheMiss ()
-        await fileOps.createDir ( cache )
-        const result = await fileOps.loadFileOrUrl ( fileOrUrl )
-        return fileOps.saveFile ( cached, result ).then ( () => result )
-      } )
-  }
-}
-
-export interface CachedFileOps extends FileOps {
-  original: FileOps
-  cacheDir: string
-  cached: true
-  cacheHits (): number,
-  cacheMisses (): number
-}
-
-export interface PrivateCacheFileOps {
-  cacheHit (),
-  cacheMiss ()
-}
-
-export function nonCached ( f: FileOps ): FileOps {
-  return isCachedFileOps ( f ) ? f.original : f
-}
-export function isCachedFileOps ( f: FileOps ): f is CachedFileOps {
-  const a: any = f
-  return a.cached === true
-}
-
-function create ( fileOps: FileOps, original: FileOps, cacheDir: string ) {
-  let cacheHits = isCachedFileOps ( fileOps ) ? fileOps.cacheHits () : 0
-  let cacheMisses = isCachedFileOps ( fileOps ) ? fileOps.cacheMisses () : 0
-  const ops: PrivateCacheFileOps = { cacheHit: () => cacheHits += 1, cacheMiss: () => cacheMisses += 1 }
-  return {
-    ...fileOps, loadFileOrUrl: cachedLoad ( fileOps, cacheDir, ops ),
-    cached: true, cacheMisses: () => cacheMisses, cacheHits: () => cacheHits, original, cacheDir
-  }
-}
-
-export function cachedFileOps ( fileOps: FileOps, cacheDir: string | undefined ): FileOps | CachedFileOps {
-  if ( cacheDir === undefined ) return fileOps
-  if ( isCachedFileOps ( fileOps ) ) return fileOps.cacheDir === cacheDir ? fileOps : create ( fileOps, fileOps.original, cacheDir );
-  return create ( fileOps, fileOps, cacheDir );
 }
 
 interface TemplateFileDetails {
