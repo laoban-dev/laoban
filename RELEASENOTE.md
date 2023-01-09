@@ -36,3 +36,4 @@
 1.0.11 Added `laoban-admin newpackage` to create a new package, and laoban config --all to show scripts
 1.0.12 bugfix caused by capitalisation in the package name
 1.0.17 Added `laoban-admin newtemplate` to create a new template
+1.0.18 Licenses added to the files
