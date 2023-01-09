@@ -1,5 +1,5 @@
 import { DebugCommands } from "@laoban/debug";
-import { deepCombineTwoObjects, NameAnd, safeArray } from "@laoban/utils";
+import { allButLastSegment, deepCombineTwoObjects, NameAnd, safeArray } from "@laoban/utils";
 
 
 export const shortCuts: NameAnd<string> = { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' };
@@ -172,7 +172,9 @@ export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootU
       console.log ( `dryrun: would copy ${target} to ${targetRoot}/${target}` );
       return
     }
-    return fileOps.saveFile ( targetRoot + '/' + target, postProcessed );
+    let filename = fileOps.join ( targetRoot + '/' + target );
+    await fileOps.createDir ( allButLastSegment ( filename ) )
+    return fileOps.saveFile ( filename, postProcessed );
   }
 }
 
