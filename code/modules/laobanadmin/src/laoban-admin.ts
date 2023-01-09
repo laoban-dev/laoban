@@ -3,7 +3,7 @@ import { init } from "./init";
 import { packages } from "./packages";
 import { loabanConfigTestName, packageDetailsTestFile } from "laoban/dist/src/Files";
 import { newPackage } from "./newPackage";
-import { FileOps } from "@laoban/fileOps";
+import { FileOps } from "@laoban/fileops";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];

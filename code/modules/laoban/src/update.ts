@@ -5,7 +5,7 @@ import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables
 import { loadVersionFile, modifyPackageJson, savePackageJsonFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 import { nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
-import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson } from "@laoban/fileOps";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson } from "@laoban/fileops";
 
 
 interface UpdateCmdOptions {

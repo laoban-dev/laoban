@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { LaobanAdmin } from "./src/laoban-admin";
-import { fileOpsNode } from "@laoban/filesOps-node";
-import { shortCutFileOps, shortCuts } from "@laoban/fileOps";
+import { fileOpsNode } from "@laoban/filesops-node";
+import { shortCutFileOps, shortCuts } from "@laoban/fileops";
 
 
 try {

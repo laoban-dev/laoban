@@ -6,7 +6,7 @@ import path from "path";
 import { combineRawConfigs } from "laoban/dist/src/config";
 import { findLaobanOrUndefined, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "laoban/dist/src/Files";
 import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "laoban/dist/src/loadingTemplates";
-import { FileOps, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileOps";
+import { FileOps, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>

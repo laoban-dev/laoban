@@ -1,7 +1,7 @@
 import { promises } from "fs";
 import fetch from 'node-fetch';
 import { createHash } from "crypto";
-import { FileOps } from "@laoban/fileOps";
+import { FileOps } from "@laoban/fileops";
 import path from "path";
 
 

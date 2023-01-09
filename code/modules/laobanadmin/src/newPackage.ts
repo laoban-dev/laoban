@@ -4,7 +4,7 @@ import path from "path";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { packageDetailsFile } from "laoban/dist/src/Files";
 import { execute } from "laoban/dist/src/fixture";
-import { FileOps } from "@laoban/fileOps";
+import { FileOps } from "@laoban/fileops";
 
 interface CreatePackageOptions extends TypeCmdOptions {
   force?: boolean

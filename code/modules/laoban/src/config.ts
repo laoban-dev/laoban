@@ -3,7 +3,7 @@ import { Writable } from "stream";
 // @ts-ignore
 import { Debug } from "@laoban/debug";
 import { combineTwoObjects,  NameAnd, safeArray, safeObject, unique } from "@laoban/utils";
-import { FileOps } from "@laoban/fileOps";
+import { FileOps } from "@laoban/fileops";
 
 
 export interface ConfigVariables {

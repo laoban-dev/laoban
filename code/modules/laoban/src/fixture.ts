@@ -7,7 +7,7 @@ import { makeStandardCli } from "./laoban";
 import { Writable } from "stream";
 
 import { makeCache } from "./configProcessor";
-import { fileOpsNode } from "@laoban/filesOps-node";
+import { fileOpsNode } from "@laoban/filesops-node";
 
 
 export let testRoot = path.resolve ( findLaoban ( process.cwd () ), '..', 'tests' );

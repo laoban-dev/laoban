@@ -2,7 +2,7 @@
 import { makeStandardCli } from "./src/laoban";
 
 import { makeCache } from "./src/configProcessor";
-import { fileOpsNode } from "@laoban/filesOps-node";
+import { fileOpsNode } from "@laoban/filesops-node";
 
 
 try {

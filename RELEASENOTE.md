@@ -34,3 +34,4 @@
 1.0.7 Guards can now be used for commands as well as scripts
 1.0.8 tsc renamed as compile, nicer --dryrun output
 1.0.11 Added `laoban-admin newpackage` to create a new package, and laoban config --all to show scripts
+1.0.12 bugfix caused by capitalisation in the package name

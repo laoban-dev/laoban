@@ -5,7 +5,7 @@ import { groupBy } from "./utils";
 import { Validate } from "@laoban/validation";
 import { checkLoadingTemplates } from "./loadingTemplates";
 import { flatten } from "@laoban/utils";
-import { FileOps } from "@laoban/fileOps";
+import { FileOps } from "@laoban/fileops";
 
 
 export function validateLaobanJson ( v: Validate<RawConfig> ): Validate<RawConfig> {

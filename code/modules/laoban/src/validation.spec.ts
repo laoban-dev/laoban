@@ -9,7 +9,7 @@ import { validatePackageDetailsAndTemplates } from "./validation";
 import { loadConfigOrIssues, loadLoabanJsonAndValidate, makeCache } from "./configProcessor";
 import { configTestRoot, dirsIn } from "./fixture";
 import { addDebug } from "@laoban/debug";
-import { fileOpsNode } from "@laoban/filesOps-node";
+import { fileOpsNode } from "@laoban/filesops-node";
 import { simplePath } from "@laoban/fileops";
 
 const laobanDir = findLaoban ( process.cwd () )

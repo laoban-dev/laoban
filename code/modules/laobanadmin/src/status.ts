@@ -2,7 +2,7 @@ import { chain, findHighestVersion, unique } from "@laoban/utils";
 import { gitLocation, gitLocationsUnderHere, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
 import path from "path";
 import { findLaobanOrUndefined, loabanConfigName } from "laoban/dist/src/Files";
-import { FileOps, isLocationAndErrors, isLocationAndParsed, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors } from "@laoban/fileOps";
+import { FileOps, isLocationAndErrors, isLocationAndParsed, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors } from "@laoban/fileops";
 
 export async function reportOnGit ( fileOps: FileOps, directory: string, gitRepo: string ): Promise<void> {
 

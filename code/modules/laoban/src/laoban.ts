@@ -18,7 +18,7 @@ import { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
 
 import { copyTemplateDirectory, updateConfigFilesFromTemplates } from "./update";
-import { FileOps, fileOpsStats } from "@laoban/fileOps";
+import { FileOps, fileOpsStats } from "@laoban/fileops";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {

@@ -7,7 +7,7 @@ import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { cachedFileOps, FileOps, fileOpsStats, meteredFileOps, shortCutFileOps, shortCuts } from "@laoban/fileOps";
+import { cachedFileOps, FileOps, fileOpsStats, meteredFileOps, shortCutFileOps, shortCuts } from "@laoban/fileops";
 import { lastSegment, toArray } from "@laoban/utils";
 import { Path } from "@laoban/fileops";
 import WritableStream = NodeJS.WritableStream;
