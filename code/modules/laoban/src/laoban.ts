@@ -56,7 +56,7 @@ function checkGuard ( config: ConfigWithDebug, script: ScriptDetails ): Promise<
 
 let configAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
   let simpleConfig = { ...config }
-  if (!cmd.all)delete simpleConfig.scripts
+  if ( !cmd.all ) delete simpleConfig.scripts
   delete simpleConfig.outputStream
   output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) )
   return Promise.resolve ()
@@ -156,7 +156,7 @@ export class Cli {
   }
 
   configOptions ( program: CommanderStatic ) {
-    return  program.option ( '--all', "Includes the scripts" )
+    return program.option ( '--all', "Includes the scripts" )
   }
 
 
@@ -288,7 +288,7 @@ const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaob
     const debug = params.includes ( '--load.laoban.debug' )
     const laoban = findLaoban ( process.cwd () )
     if ( debug ) console.log ( `Found laoban.json at ${laoban}\n` )
-    return loadConfigOrIssues ( outputStream, params, loadLoabanJsonAndValidate ( fileOps, makeCacheFn ( laoban ), debug ), debug ) ( laoban );
+    return loadConfigOrIssues ( fileOps, outputStream, params, loadLoabanJsonAndValidate ( fileOps, makeCacheFn ( laoban ), debug ), debug ) ( laoban );
   } catch ( e ) {
     return {
       outputStream,

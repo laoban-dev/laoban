@@ -9,7 +9,12 @@ export interface CopyFileFns {
   loadFileOrUrl: ( fileOrUrl: string ) => Promise<string>
   saveFile ( filename: string, text: string ): Promise<void>
 }
-export interface FileOps extends CopyFileFns {
+export interface Path {
+  join ( ...parts: string[] ): string
+}
+export const simplePath: Path = { join ( ...parts ): string {return parts.join ( '/' )} }
+
+export interface FileOps extends CopyFileFns, Path {
   digest ( s: string ): string
   createDir: ( dir: string ) => Promise<string | undefined>
   listFiles ( root: string ): Promise<string[]>
@@ -75,6 +80,7 @@ export const findChildDirsUnder = ( fileOps: FileOps, ignoreFilters: ( s: string
   await Promise.all ( dirs.map ( dir => findChildDirs ( fileOps, ignoreFilters, foundDirFilters ) ( dir ).then ( found => result.push ( ...found ) ) ) )
   return result
 }
+
 export const parseJson = <T> ( context: string | (() => string) ) => ( s: string ): T => {
   try {
     return JSON.parse ( s )
@@ -201,6 +207,7 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
 
 
 export const emptyFileOps: FileOps = {
+  ...simplePath,
   createDir (): Promise<string | undefined> {return Promise.resolve ( undefined );},
   loadFileOrUrl (): Promise<string> {return Promise.resolve ( "" );},
   digest (): string {return "";},
@@ -208,8 +215,9 @@ export const emptyFileOps: FileOps = {
   saveFile (): Promise<void> {return Promise.resolve ();},
   isDirectory (): Promise<boolean> {return Promise.resolve ( false )},
   isFile: (): Promise<boolean> => {return Promise.resolve ( false )},
-  removeDirectory: (): Promise<void> => Promise.resolve ()
+  removeDirectory: (): Promise<void> => Promise.resolve (),
 }
+
 
 export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<string> ): FileOps {
   function processFile ( s: string ): string {
@@ -229,8 +237,8 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
     loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ) ),
     createDir: dir => fileOps.createDir ( processFile ( dir ) ),
     saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFile ( filename ), text ),
-    listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) )
-
+    listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) ),
+    join: fileOps.join
   }
 }
 
@@ -363,7 +371,10 @@ export async function loadFileFromDetails ( context: string, fileOps: FileOps, r
 export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, tx?: ( type: string, text: string ) => Promise<string>, dryrun?: boolean ): ( fd: CopyFileDetails ) => Promise<void> {
   return async ( cfd ) => {
     const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, rootUrl, tx, cfd );
-    if (dryrun) {console.log(`dryrun: would copy ${target} to ${targetRoot}/${target}`); return}
+    if ( dryrun ) {
+      console.log ( `dryrun: would copy ${target} to ${targetRoot}/${target}` );
+      return
+    }
     return fileOps.saveFile ( targetRoot + '/' + target, postProcessed );
   }
 }

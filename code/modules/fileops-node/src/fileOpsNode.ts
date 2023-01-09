@@ -1,8 +1,8 @@
 import { promises } from "fs";
-import {  } from "@laoban/utils";
 import fetch from 'node-fetch';
 import { createHash } from "crypto";
 import { FileOps } from "@laoban/fileOps";
+import path from "path";
 
 
 function loadFile ( fileName: string ): Promise<string> {
@@ -34,5 +34,6 @@ export const fileOpsNode: FileOps = {
   createDir: dir => promises.mkdir ( dir, { recursive: true } ),
   saveFile: ( filename, text ) => promises.writeFile ( filename, text ),
   listFiles: ( root: string ): Promise<string[]> => promises.readdir ( root ),
-  removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => promises.rm ( filename, { recursive, force: true } )
+  removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => promises.rm ( filename, { recursive, force: true } ),
+  join ( ...parts ): string {return path.join ( ...parts )}
 }

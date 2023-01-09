@@ -2,6 +2,8 @@ import { firstSegment, lastSegment } from "./strings";
 
 describe ( "lastSegment", () => {
   it ( "should return the last segment of a string defined by the marker", () => {
+    expect ( lastSegment ( 'one\\two' ) ).toEqual ( 'two' )
+    expect ( lastSegment ( 'one/two' ) ).toEqual ( 'two' )
     expect ( lastSegment ( 'one/two', '/' ) ).toEqual ( 'two' )
     expect ( lastSegment ( 'one/two', '.' ) ).toEqual ( 'one/two' )
     expect ( lastSegment ( undefined, '.' ) ).toEqual ( undefined )

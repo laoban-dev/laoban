@@ -1,4 +1,3 @@
-import path from "path";
 import { FileOps } from "./fileOps";
 
 export interface LocationAndErrors {
@@ -41,7 +40,7 @@ export function partitionLocationAndContents<T> ( ls: LocationAndContents<T>[] )
   return { locationAnd, locationAndErrors }
 }
 export const fileContentAndLocation = <T> ( file: string, parser: ( s: string ) => T ) => async ( fileOps: FileOps, directory: string ): Promise<LocationAndParsedOrErrors<T>> => {
-  let location: string = path.join ( directory, file );
+  let location: string = fileOps.join ( directory, file );
   const original = await fileOps.loadFileOrUrl ( location )
   try {
     const contents = parser ( original )
