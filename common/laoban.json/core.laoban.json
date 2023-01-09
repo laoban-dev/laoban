@@ -12,7 +12,7 @@
       "description": "displays the tail of  log file. Best used with -s option", "commands": ["tail -5 ${log} "]
     },
     "clean": {
-      "description": "Cleans up laoban", "commands": [
+      "description": "Cleans up laoban (there will be an error message after executing it)", "commands": [
         {"command": "rm -f ${status}", "guard": {"value": "${os}", "equals": "Linux"}},
         {"command": "rm -f ${log}", "guard": {"value": "${os}", "equals": "Linux"}},
         {"command": "rm -f ${profile}", "guard": {"value": "${os}", "equals": "Linux"}},
