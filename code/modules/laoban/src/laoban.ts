@@ -56,7 +56,7 @@ function checkGuard ( config: ConfigWithDebug, script: ScriptDetails ): Promise<
 
 let configAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
   let simpleConfig = { ...config }
-  delete simpleConfig.scripts
+  if (!cmd.all)delete simpleConfig.scripts
   delete simpleConfig.outputStream
   output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) )
   return Promise.resolve ()
@@ -155,6 +155,10 @@ export class Cli {
       .option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]" )
   }
 
+  configOptions ( program: CommanderStatic ) {
+    return  program.option ( '--all', "Includes the scripts" )
+  }
+
 
   constructor ( configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
     const version = require ( "../../package.json" ).version
@@ -202,7 +206,7 @@ export class Cli {
       }, description, ...options )
     }
 
-    action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ) )
+    action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ), this.configOptions )
     action ( program, 'clearCache', clearCacheAction, 'Clears the cache', this.minimalOptions ( configAndIssues ) )
     action ( program, 'validate', validationAction ( fileOps, this.params ), `checks the laoban.json and the ${packageDetailsFile}`, defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
