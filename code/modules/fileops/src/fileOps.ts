@@ -10,8 +10,12 @@ export interface CopyFileFns {
 }
 export interface Path {
   join ( ...parts: string[] ): string
+  relative ( from: string, to: string ): string
 }
-export const simplePath: Path = { join ( ...parts ): string {return parts.join ( '/' )} }
+export const simplePath: Path = {
+  join ( ...parts ): string {return parts.join ( '/' )},
+  relative ( from: string, to: string ): string {return to} //not relative at all!
+}
 
 export interface FileOps extends CopyFileFns, Path {
   digest ( s: string ): string
@@ -86,7 +90,8 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
     createDir: dir => fileOps.createDir ( processFile ( dir ) ),
     saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFile ( filename ), text ),
     listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) ),
-    join: fileOps.join
+    join: fileOps.join,
+    relative: fileOps.relative
   }
 }
 

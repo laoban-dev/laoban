@@ -24,7 +24,7 @@ function loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
 }
 export const fileOpsNode: FileOps = {
   isDirectory: filename => promises.lstat ( filename ).then ( s =>
-      s.isDirectory (), e => false ),
+    s.isDirectory (), e => false ),
   isFile: filename => promises.lstat ( filename ).then ( s =>
     s.isFile (), e => false ),
   digest: ( s: string ): string => {
@@ -37,5 +37,6 @@ export const fileOpsNode: FileOps = {
   saveFile: ( filename, text ) => promises.writeFile ( filename, text ),
   listFiles: ( root: string ): Promise<string[]> => promises.readdir ( root ),
   removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => promises.rm ( filename, { recursive, force: true } ),
-  join ( ...parts ): string {return path.join ( ...parts )}
+  join ( ...parts ): string {return path.join ( ...parts )},
+  relative ( from: string, to: string ): string {return path.relative ( from, to )}
 }

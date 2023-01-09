@@ -255,7 +255,7 @@ export function reportInitData ( initData: SuccessfullInitData, files: LocationA
   initData.suggestions.comments.forEach ( c => console.log ( c ) )
 }
 export interface TypeCmdOptions {
-  type?: string
+  type: string
   legaltypes: string[]
   initurl: string
   listTypes?: boolean

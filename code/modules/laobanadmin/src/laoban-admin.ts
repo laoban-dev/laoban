@@ -41,6 +41,7 @@ export class LaobanAdmin {
       .action ( cmd => packages ( fileOps, directory, cmd ) ) )
     initOptions ( envs, program.command ( 'newpackage <init>' ) )
       .description ( 'Creates a new package under the current directory with the specified type' )
+      .option('--template <template>', 'The template to use. Defaults to the type')
       .option ( '-p,--packagename <packagename>', 'The name of the package, defaults to the directory name')
       .option ( '-d,--desc <desc>', 'The description of the package, defaults to an empty string')
       .option('--nuke', 'If the directory already exists, it will be deleted and recreated', false)

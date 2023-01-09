@@ -1,6 +1,7 @@
-import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, findChildFiles, loadAllFilesIn, partitionLocationAndContents } from "@laoban/fileops";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, findChildFiles, loadAllFilesIn, parseJson, partitionLocationAndContents } from "@laoban/fileops";
 import { NullDebugCommands } from "@laoban/debug";
 import { allButLastSegment, lastSegment, unique } from "@laoban/utils";
+import { findLaobanUpOrDown } from "./init";
 
 
 interface CreateTemplateOptions {
@@ -64,4 +65,19 @@ export async function newTemplate ( fileOps: FileOps, defaultDirectory: string, 
   const cf = copyFiles ( context, fileOps, NullDebugCommands, directory, target, async ( type, text ) => text, cmd.dryrun )
   await cf ( copyFileDetails, cmd.dryrun )
   await fileOps.saveFile ( fileOps.join ( target, '.template.json' ), templateJson )
+
+  const existingLaobanDirectory = await findLaobanUpOrDown ( fileOps, directory )
+  console.log('existingLaobanFile', existingLaobanDirectory)
+  if ( existingLaobanDirectory ) {
+    const laobanFileName = fileOps.join(existingLaobanDirectory, 'laoban.json')
+    const laobanFile =await fileOps.loadFileOrUrl ( laobanFileName )
+    const laoban = parseJson <any>(() => `Loading ${laobanFileName} in order to update templates`)( laobanFile )
+    const templates = laoban.templates || []
+    templates[templateName] = fileOps.relative(existingLaobanDirectory,target)
+    laoban.templates = templates
+    console.log('templates', templates)
+    let newLaobanContents = JSON.stringify(laoban, null, 2);
+    return fileOps.saveFile(laobanFileName, newLaobanContents)
+  }else
+     console.error('No laoban.json file found so cannot update templates in it')
 }

@@ -62,7 +62,8 @@ export async function loadTemplateControlFile ( context: string, fileOps: FileOp
   function findPrefix () {
     if ( templateControlFileUrl.includes ( '://' ) || templateControlFileUrl.startsWith ( '@' ) ) return templateControlFileUrl
     if ( laobanDirectory ) path.join ( laobanDirectory, templateControlFileUrl );
-    throw Error ( `${context}. Cannot access ${templateControlFileUrl} as it is not a url` )
+    return templateControlFileUrl
+    // throw Error ( `${context}. Cannot access ${templateControlFileUrl} as it is not a url` )
   }
   const prefix = findPrefix ()
   const url = prefix + '/.template.json';

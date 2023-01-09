@@ -1,16 +1,18 @@
-import {  } from "@laoban/utils";
-import { gatherInitData, isSuccessfulInitData, TypeCmdOptions } from "./init";
+import {} from "@laoban/utils";
+import { findInitFileContents, gatherInitData, isSuccessfulInitData, TypeCmdOptions } from "./init";
 import path from "path";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { packageDetailsFile } from "laoban/dist/src/Files";
 import { execute } from "laoban/dist/src/executors";
 import { FileOps } from "@laoban/fileops";
+import { updateConfigFilesFromTemplates } from "laoban/dist/src/update";
 
 interface CreatePackageOptions extends TypeCmdOptions {
   force?: boolean
   packagename?: string
   desc?: string
   nuke?: boolean
+  template?: string
 }
 
 export async function newPackage ( fileOps: FileOps, directory: string, name: string, cmd: CreatePackageOptions ): Promise<void> {
@@ -24,21 +26,22 @@ export async function newPackage ( fileOps: FileOps, directory: string, name: st
   if ( cmd.nuke ) await (fileOps.removeDirectory ( clearDirectory, true ))
 
   console.log ( 'cmd', name, cmd.type, 'initurl', cmd.initurl, 'listTypes', cmd.listTypes )
-  const initData = await gatherInitData ( fileOps, clearDirectory, cmd, true )
-  if ( isSuccessfulInitData ( initData ) ) {
-    console.log ( 'initData - loaded' )
-    const found = initData.initFileContents.find ( l => l[ "package.details.json" ].contents.template === cmd.type )
-    const dic = {
-      packageJson: {
-        name: cmd.packagename || path.basename ( clearDirectory ),
-        description: cmd.desc || ''
-      }
-    }
-    let packageDetailsJson = derefence ( `Making ${packageDetailsFile}`, dic, JSON.stringify ( found.packageDetails, null, 2 ), { variableDefn: dollarsBracesVarDefn } );
-    console.log ( packageDetailsJson )
-    await fileOps.createDir ( clearDirectory )
-    await fileOps.saveFile ( targetFile, packageDetailsJson )
-    await execute ( clearDirectory, `laoban update` )
+  const { type, allInitFileContents } = await findInitFileContents ( fileOps, cmd );
 
+  console.log ( 'initData - loaded' )
+  const found = allInitFileContents.find ( l => l[ "package.details.json" ].contents.template === cmd.type )
+  const dic = {
+    packageJson: {
+      name: cmd.packagename || path.basename ( clearDirectory ),
+      description: cmd.desc || ''
+    }
   }
+  let packageDetailsRawJson = found["package.details.json"].contents;
+  packageDetailsRawJson.template = cmd.template?cmd.template:cmd.type
+  let packageDetailsJson = derefence ( `Making ${packageDetailsFile}`, dic, JSON.stringify ( packageDetailsRawJson, null, 2 ), { variableDefn: dollarsBracesVarDefn } );
+  console.log ( packageDetailsJson )
+  await fileOps.createDir ( clearDirectory )
+  await fileOps.saveFile ( targetFile, packageDetailsJson )
+  await execute ( clearDirectory, `laoban update` ).then(res => console.log('laoban update\n', res))
+
 }
