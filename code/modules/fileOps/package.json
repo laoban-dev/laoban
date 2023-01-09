@@ -1,7 +1,7 @@
 {
-  "name": "@laoban/fileOps",
+  "name": "@laoban/fileops",
   "description": "Utilities about files: not bound to any way of accessing files",
-  "version": "1.0.9",
+  "version": "1.0.11",
   "bin": {},
   "keywords": [],
   "license": "MIT",

@@ -1,13 +1,13 @@
 {
   "template": "typescript",
-  "name": "@laoban/filesOps-node",
+  "name": "@laoban/filesops-node",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
   "details": {
     "publish": true,
     "test": true,
     "links": [
       "@laoban/utils",
-      "@laoban/fileOps"
+      "@laoban/fileops"
     ],
     "compile": true,
     "extraDeps": {

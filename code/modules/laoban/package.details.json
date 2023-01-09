@@ -10,7 +10,7 @@
       "@laoban/generations",
       "@laoban/validation",
       "@laoban/debug",
-      "@laoban/filesOps-node"
+      "@laoban/filesops-node"
     ],
     "compile": true,
     "extraDeps": {
