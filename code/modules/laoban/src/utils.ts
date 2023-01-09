@@ -1,9 +1,7 @@
 import {Writable} from "stream";
 import {HasOutputStream} from "./config";
 
-export function flatten<T>(list: T[][]): T[] {
-    return [].concat(...list)
-}
+
 export function removeDuplicates<T>(list: T[]): T[] {
     return [...new Set(list)]
 }

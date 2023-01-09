@@ -7,9 +7,10 @@ import { Validate } from "@laoban/validation";
 import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
-import { cachedFileOps, FileOps, fileOpsStats, loadWithParents, meteredFileOps, parseJson, safeArray, shortCutFileOps, shortCuts, toArray } from "@laoban/utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import WritableStream = NodeJS.WritableStream;
+import { cachedFileOps, FileOps, fileOpsStats, meteredFileOps, shortCutFileOps, shortCuts } from "@laoban/fileOps";
+import { toArray } from "@laoban/utils";
 
 export function findCache ( laobanDir, rawConfig, cacheDir: string ) {
   if ( rawConfig !== undefined ) return rawConfig

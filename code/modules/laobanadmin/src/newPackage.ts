@@ -1,9 +1,10 @@
-import { FileOps } from "@laoban/utils";
+import {  } from "@laoban/utils";
 import { gatherInitData, isSuccessfulInitData, TypeCmdOptions } from "./init";
 import path from "path";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { packageDetailsFile } from "laoban/dist/src/Files";
 import { execute } from "laoban/dist/src/fixture";
+import { FileOps } from "@laoban/fileOps";
 
 interface CreatePackageOptions extends TypeCmdOptions {
   force?: boolean

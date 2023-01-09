@@ -3,10 +3,11 @@ import { CommandDefn, Envs, PackageDetailsAndDirectory, ScriptInContext, ScriptI
 import { cleanUpEnv } from "./configProcessor";
 import * as path from "path";
 
-import { chain, flatten, writeTo } from "./utils";
+import { chain,  writeTo } from "./utils";
 import { Writable } from "stream";
 import { CommandDecorator } from "./decorators";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
+import { flatten } from "@laoban/utils";
 
 export interface RawShellResult {
   err: any

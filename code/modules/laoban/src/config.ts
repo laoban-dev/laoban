@@ -2,7 +2,8 @@ import { Generations, ShellResult } from "./executors";
 import { Writable } from "stream";
 // @ts-ignore
 import { Debug } from "@laoban/debug";
-import { combineTwoObjects, FileOps, NameAnd, safeArray, safeObject, unique } from "@laoban/utils";
+import { combineTwoObjects,  NameAnd, safeArray, safeObject, unique } from "@laoban/utils";
+import { FileOps } from "@laoban/fileOps";
 
 
 export interface ConfigVariables {

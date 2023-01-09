@@ -1,5 +1,5 @@
-import { addPrefix, fileContentAndLocation, fileContentAndLocations, FileOps, findChildDirs, findChildDirsUnder, parseJson } from "@laoban/utils";
 import path from "path";
+import { addPrefix, fileContentAndLocation, fileContentAndLocations, FileOps, findChildDirs, findChildDirsUnder, parseJson } from "@laoban/fileOps";
 
 export const gitLocation = async ( fileOps: FileOps, directory: string ): Promise<string | undefined> => {
   const gitDir = path.join ( directory, '.git' );

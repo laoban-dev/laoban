@@ -1,6 +1,6 @@
 import { gatherInitData, InitData, isSuccessfulInitData, TypeCmdOptions } from "./init";
-import { FileOps } from "@laoban/utils";
 import { loabanConfigName } from "laoban/dist/src/Files";
+import { FileOps } from "@laoban/fileOps";
 
 interface ProjectCmdOptions extends TypeCmdOptions {
 

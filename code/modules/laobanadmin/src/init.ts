@@ -1,4 +1,4 @@
-import { combineTwoObjects, FileOps, loadWithParents, LocationAnd, LocationAndParsed, NameAnd, parseJson, safeArray, safeObject } from "@laoban/utils";
+import { combineTwoObjects, NameAnd, safeArray, safeObject } from "@laoban/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./status";
 import { derefence, dollarsBracesVarDefn, findVar } from "@laoban/variables";
 import { laobanJsonLocations, } from "./fileLocations";
@@ -6,6 +6,7 @@ import path from "path";
 import { combineRawConfigs } from "laoban/dist/src/config";
 import { findLaobanOrUndefined, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "laoban/dist/src/Files";
 import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "laoban/dist/src/loadingTemplates";
+import { FileOps, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileOps";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>

@@ -5,8 +5,9 @@ import { findLaoban } from "./Files";
 import os from "os";
 import { makeStandardCli } from "./laoban";
 import { Writable } from "stream";
-import { fileOps } from "@laoban/files";
+
 import { makeCache } from "./configProcessor";
+import { fileOpsNode } from "@laoban/filesOps-node";
 
 
 export let testRoot = path.resolve ( findLaoban ( process.cwd () ), '..', 'tests' );
@@ -43,7 +44,7 @@ export function executeCli ( cwd: string, cmd: string ): Promise<string> {
   let data: string[] = []
   let stream: Writable = rememberWritable ( data )
   let args: string[] = [ ...process.argv.slice ( 0, 2 ), ...cmd.split ( ' ' ).slice ( 1 ) ];
-  return executeInChangedDirectory ( cwd, () => makeStandardCli ( fileOps, makeCache, stream, args ).then ( cli => cli.start () ).then ( () => data.join ( '' ) ) )
+  return executeInChangedDirectory ( cwd, () => makeStandardCli ( fileOpsNode, makeCache, stream, args ).then ( cli => cli.start () ).then ( () => data.join ( '' ) ) )
 }
 
 

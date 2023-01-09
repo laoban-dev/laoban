@@ -1,10 +1,11 @@
-import { CommandDefn, Config, ConfigWithDebug, Details, PackageJson, PackageDetails, PackageDetailsAndDirectory, RawConfig, ScriptDefn } from "./config";
+import { CommandDefn, Config, ConfigWithDebug, Details, PackageDetails, PackageDetailsAndDirectory, PackageJson, RawConfig, ScriptDefn } from "./config";
 import * as path from "path";
-import { flatten, groupBy, removeDuplicates } from "./utils";
+import { groupBy } from "./utils";
 // @ts-ignore
 import { Validate } from "@laoban/validation";
 import { checkLoadingTemplates } from "./loadingTemplates";
-import { FileOps } from "@laoban/utils";
+import { flatten } from "@laoban/utils";
+import { FileOps } from "@laoban/fileOps";
 
 
 export function validateLaobanJson ( v: Validate<RawConfig> ): Validate<RawConfig> {

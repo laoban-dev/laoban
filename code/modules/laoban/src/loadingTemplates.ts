@@ -1,6 +1,8 @@
-import { FileOps, flatten, loadFileFromDetails, NameAnd, parseJson } from "@laoban/utils";
+
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails, loadTemplateControlFile } from "./update";
 import { Config, ConfigWithDebug } from "./config";
+import { FileOps, loadFileFromDetails, parseJson } from "@laoban/fileOps";
+import { flatten, NameAnd } from "@laoban/utils";
 
 export interface PackageDetailsAndLocations {
   packageDetails: any

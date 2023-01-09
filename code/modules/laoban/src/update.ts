@@ -1,10 +1,11 @@
-import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, nextMajorVersion, nextVersion, parseJson, safeArray, safeObject } from "@laoban/utils";
 import path from "path";
 import { ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, PackageDetailsDirectoryPropertiesAndVersion } from "./config";
 import * as fse from "fs-extra";
 import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables";
 import { loadVersionFile, modifyPackageJson, savePackageJsonFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
+import { nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson } from "@laoban/fileOps";
 
 
 interface UpdateCmdOptions {
@@ -123,7 +124,7 @@ export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageActio
     return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
       copyTemplateDirectory ( fileOps, config,
         { ...p, version, properties: safeObject ( config.properties ) }, cmd.dryrun ) )
-    // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
+    // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOpsNode.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
     // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )
   } ) )
 }

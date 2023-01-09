@@ -18,7 +18,7 @@
     "@laoban/generations": "1.0.9",
     "@laoban/validation": "1.0.9",
     "@laoban/debug": "1.0.9",
-    "@laoban/files": "1.0.9"
+    "@laoban/filesOps-node": "1.0.9"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.5",

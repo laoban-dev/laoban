@@ -1,8 +1,9 @@
-import { FileOps, NameAnd } from "@laoban/utils";
+import {  NameAnd } from "@laoban/utils";
 import { init } from "./init";
 import { packages } from "./packages";
 import { loabanConfigTestName, packageDetailsTestFile } from "laoban/dist/src/Files";
 import { newPackage } from "./newPackage";
+import { FileOps } from "@laoban/fileOps";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -30,7 +31,7 @@ export class LaobanAdmin {
     this.program = program
 
     // program.command ( 'status' ).description ( 'Gives a summary of the status of laoban installations' )
-    //   .action ( cmd => status ( fileOps, directory ) )
+    //   .action ( cmd => status ( fileOpsNode, directory ) )
     initOptions ( envs, program.command ( 'init' )
       .description ( 'Gives a summary of the status of laoban installations' )
       .action ( cmd => init ( fileOps, directory, cmd ) )
@@ -49,7 +50,7 @@ export class LaobanAdmin {
 
     // initOptions (envs,program.command ( 'template-create' )
     //      .description ( 'Turns the current directory into a template. The parent directory name must have the word `template` in it' )
-    //      .action ( cmd => createTemplates ( fileOps, directory, cmd ) ))
+    //      .action ( cmd => createTemplates ( fileOpsNode, directory, cmd ) ))
 
 
   }

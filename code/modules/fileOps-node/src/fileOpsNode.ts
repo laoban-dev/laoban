@@ -1,7 +1,8 @@
 import { promises } from "fs";
-import { FileOps } from "@laoban/utils";
+import {  } from "@laoban/utils";
 import fetch from 'node-fetch';
 import { createHash } from "crypto";
+import { FileOps } from "@laoban/fileOps";
 
 
 function loadFile ( fileName: string ): Promise<string> {
@@ -21,7 +22,7 @@ function loadUrl ( fileOrUrl: string ): Promise<string> {
 function loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
   return fileOrUrl.includes ( "://" ) ? loadUrl ( fileOrUrl ) : loadFile ( fileOrUrl )
 }
-export const fileOps: FileOps = {
+export const fileOpsNode: FileOps = {
   isDirectory: filename => promises.lstat ( filename ).then ( s => s.isDirectory (), e => false ),
   isFile: filename => promises.lstat ( filename ).then ( s => true, e => false ),
   digest: ( s: string ): string => {

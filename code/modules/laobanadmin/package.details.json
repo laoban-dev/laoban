@@ -4,7 +4,7 @@
   "description": "Configures and manages laoban projects",
   "details": {
     "publish": true,
-    "test": true,
+    "test": false,
     "links": [
       "laoban"
     ],

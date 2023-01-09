@@ -1,11 +1,11 @@
 import { GuardDefn, guardFrom, isFullGuard, ScriptInContext } from "./config";
 import * as path from "path";
-import { chain, flatten, output, partition, writeTo } from "./utils";
+import { chain,  output, partition, writeTo } from "./utils";
 import { splitGenerationsByLinksUsingGenerations } from "./generations";
 import * as fs from "fs";
 import { CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult } from "./executors";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { safeArray } from "@laoban/utils";
+import { flatten, safeArray } from "@laoban/utils";
 
 export type CommandDecorator = ( e: ExecuteCommand ) => ExecuteCommand
 export type ScriptDecorator = ( e: ExecuteScript ) => ExecuteScript

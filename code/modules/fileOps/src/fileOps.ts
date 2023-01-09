@@ -1,6 +1,6 @@
 import { DebugCommands } from "@laoban/debug";
-import { deepCombineTwoObjects, NameAnd, safeArray } from "./utils";
 import { LocationAndContents } from "./locationAnd";
+import { deepCombineTwoObjects, NameAnd, safeArray } from "@laoban/utils";
 
 
 export const shortCuts: NameAnd<string> = { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' };

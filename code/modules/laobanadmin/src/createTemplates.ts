@@ -1,5 +1,6 @@
 import path from "node:path";
-import { FileOps, findChildDirs, loadAllFilesIn, partitionLocationAndContents } from "@laoban/utils";
+import { } from "@laoban/utils";
+import { FileOps, findChildDirs, loadAllFilesIn, partitionLocationAndContents } from "@laoban/fileOps";
 
 
 interface CreateTemplateOptions {

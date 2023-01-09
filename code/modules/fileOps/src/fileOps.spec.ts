@@ -1,6 +1,6 @@
 import { cachedFileOps, childDirs, copyFile, copyFiles, emptyFileOps, fileOpsStats, meteredFileOps, MeteredFileOps } from "./fileOps";
-import { lastSegment } from "./strings";
 import { NullDebugCommands } from "@laoban/debug";
+import { lastSegment } from "@laoban/utils";
 
 const foundFileOps = (): MeteredFileOps => meteredFileOps ( {
   ...emptyFileOps,
@@ -14,10 +14,10 @@ const notInCacheFileOps = (): MeteredFileOps => meteredFileOps ( {
 } )
 
 
-describe ( "fileOps", () => {
+describe ( "fileOpsNode", () => {
   describe ( "cached load", () => {
 
-    it ( "should use the fileOps for a filename", async () => {
+    it ( "should use the fileOpsNode for a filename", async () => {
       const fileOps = foundFileOps ();
       const cached = cachedFileOps ( fileOps, 'cache' );
       expect ( await cached.loadFileOrUrl ( 'filename' ) ).toEqual ( 'loaded_filename' )

@@ -16,8 +16,9 @@ import { shellReporter } from "./report";
 import { Writable } from "stream";
 import { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
-import { FileOps, fileOpsStats, safeObject } from "@laoban/utils";
+
 import { copyTemplateDirectory, updateConfigFilesFromTemplates } from "./update";
+import { FileOps, fileOpsStats } from "@laoban/fileOps";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
