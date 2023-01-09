@@ -98,9 +98,19 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
 interface TemplateFileDetails {
   file: string
   target?: string
-  type: string
+  type?: string
   postProcess?: string | string[]
 }
+function turnPackageJsonIntoTemplate ( text: string ) {
+  const packageJson = JSON.parse ( text );
+  if ( typeof packageJson.workspaces === 'object' ) return text
+  packageJson.name = "${packageDetails.name}"
+  packageJson.description = "${packageDetails.description}"
+  packageJson.license = "${properties.license}"
+  packageJson.repository = "${properties.repository}"
+  return JSON.stringify ( packageJson, null, 2 )
+}
+
 const postProcessOne = ( context: string, fileOps: FileOps, tx: ( type: string, text: string ) => Promise<string> ) => async ( text: string, p: string ): Promise<string> => {
   if ( p === 'json' ) try {
     return JSON.stringify ( JSON.parse ( text ), null, 2 )
@@ -109,6 +119,7 @@ const postProcessOne = ( context: string, fileOps: FileOps, tx: ( type: string, 
     console.error ( 'json is', text )
     throw e
   }
+  if ( p === 'turnIntoPackageJsonTemplate' ) return turnPackageJsonIntoTemplate ( text )
   if ( p.match ( /^checkEnv\(.*\)$/ ) ) {
     const env = p.slice ( 9, -1 )
     if ( process.env[ env ] === undefined ) console.error ( `${context}\n requires the env variable [${env} to exist and it doesn't. This might cause problems]` )

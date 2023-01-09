@@ -36,7 +36,10 @@ async function findFilesForTemplate ( fileOps: FileOps, directory: string, cmd: 
   return fileNames;
 }
 function makeDotTemplateJson ( fileNames: string[] ) {
-  const files = fileNames.map ( file => ({ file, target: file }) )
+  const files = fileNames.map ( file =>
+    lastSegment ( file ) === 'package.json' ?
+      { target: file, file: file, "type": "${}", "postProcess": "json" } :
+      { file, target: file } )
   const templateJson = JSON.stringify ( { files }, null, 2 )
   return templateJson;
 }
@@ -51,7 +54,7 @@ export async function newTemplate ( fileOps: FileOps, defaultDirectory: string, 
   const templateJson = makeDotTemplateJson ( fileNames );
   if ( cmd.dryrun ) console.log ( templateJson )
   const context = ``;
-  const copyFileDetails: CopyFileDetails[] = fileNames
+  const copyFileDetails: string[] = fileNames
   const templateName = cmd.templatename ? cmd.templatename : lastSegment ( directory )
   const target = fileOps.join ( cmd.template, templateName )
   if ( !cmd.dryrun ) console.log ( 'Making template in', target )
@@ -63,21 +66,28 @@ export async function newTemplate ( fileOps: FileOps, defaultDirectory: string, 
   else await Promise.all ( directoriesToCreate.map ( d => fileOps.createDir ( d ) ) )
 
   const cf = copyFiles ( context, fileOps, NullDebugCommands, directory, target, async ( type, text ) => text, cmd.dryrun )
-  await cf ( copyFileDetails, cmd.dryrun )
-  await fileOps.saveFile ( fileOps.join ( target, '.template.json' ), templateJson )
+  const copyFileDetailsWithPackageJsonSpecial: CopyFileDetails[] = copyFileDetails.map ( file =>
+    lastSegment ( file ) === 'package.json' ? { file, postProcess: "turnIntoPackageJsonTemplate" } : file )
+
+  const v = fileOps.join ( target, '.template.json' )
+  await cf ( copyFileDetailsWithPackageJsonSpecial, cmd.dryrun )
+
+  if ( cmd.dryrun ) console.log ( `Would write ${v} ` )
+  else await fileOps.saveFile ( v, templateJson )
 
   const existingLaobanDirectory = await findLaobanUpOrDown ( fileOps, directory )
-  console.log('existingLaobanFile', existingLaobanDirectory)
+  console.log ( 'existingLaobanFile', existingLaobanDirectory )
   if ( existingLaobanDirectory ) {
-    const laobanFileName = fileOps.join(existingLaobanDirectory, 'laoban.json')
-    const laobanFile =await fileOps.loadFileOrUrl ( laobanFileName )
-    const laoban = parseJson <any>(() => `Loading ${laobanFileName} in order to update templates`)( laobanFile )
-    const templates = laoban.templates || []
-    templates[templateName] = fileOps.relative(existingLaobanDirectory,target)
+    const laobanFileName = fileOps.join ( existingLaobanDirectory, 'laoban.json' )
+    const laobanFile = await fileOps.loadFileOrUrl ( laobanFileName )
+    const laoban = parseJson<any> ( () => `Loading ${laobanFileName} in order to update templates` ) ( laobanFile )
+    const templates = laoban.templates || {}
+    templates[ templateName ] = fileOps.relative ( existingLaobanDirectory, target )
     laoban.templates = templates
-    console.log('templates', templates)
-    let newLaobanContents = JSON.stringify(laoban, null, 2);
-    return fileOps.saveFile(laobanFileName, newLaobanContents)
-  }else
-     console.error('No laoban.json file found so cannot update templates in it')
+    console.log ( 'templates', templates )
+    let newLaobanContents = JSON.stringify ( laoban, null, 2 );
+    if ( !cmd.dryrun )
+      return fileOps.saveFile ( laobanFileName, newLaobanContents )
+  } else
+    console.error ( 'No laoban.json file found so cannot update templates in it' )
 }
