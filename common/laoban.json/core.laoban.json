@@ -1,7 +1,7 @@
 {
   "packageManager": "yarn",
   "templates":      {
-    "javascript":       "@laoban@/templates/javascript"
+    "javascript": "@laoban@/templates/javascript"
   },
   "versionFile":    "${laobanDirectory}/version.txt",
   "log":            ".log",
@@ -11,7 +11,21 @@
     "log":   {
       "description": "displays the tail of  log file. Best used with -s option", "commands": ["tail -5 ${log} "]
     },
-    "clean": {"description": "Cleans up laoban", "commands": ["rm -f .status", "rm -f .log", "rm -f .profile"]}
+    "clean": {
+      "description": "Cleans up laoban", "commands": [
+        {"command": "rm -f ${status}", "guard": {"value": "${os}", "equals": "Linux"}},
+        {"command": "rm -f ${log}", "guard": {"value": "${os}", "equals": "Linux"}},
+        {"command": "rm -f ${profile}", "guard": {"value": "${os}", "equals": "Linux"}},
+        {"command": "rm -rf ${laobanDirectory}/.session", "guard": {"value": "${os}", "equals": "Linux"}},
+        {"command": "rm -rf ${cacheDir}", "guard": {"value": "${os}", "equals": "Linux"}},
+
+        {"command": "del /f  ${status}", "guard": {"value": "${os}", "equals": "Windows_NT"}},
+        {"command": "del /f  ${log}", "guard": {"value": "${os}", "equals": "Windows_NT"}},
+        {"command": "del /f  ${profile}", "guard": {"value": "${os}", "equals": "Windows_NT"}},
+        {"command": "rmdir /s /q \"${laobanDirectory}/.session\"", "guard": {"value": "${os}", "equals": "Windows_NT"}},
+        {"command": "rmdir /s /q ${cacheDir}", "guard": {"value": "${os}", "equals": "Windows_NT"}}
+      ]
+    }
   },
   "properties":     {
     "license": "MIT"
