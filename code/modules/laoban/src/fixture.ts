@@ -15,14 +15,6 @@ export let configTestRoot = path.resolve ( testRoot, 'config' );
 export let fullPathsOfTestDirs = () => dirsIn ( 'test' ).map ( d => path.resolve ( d ) )
 export let pwd = os.type () == 'Windows' ? 'echo %CD%' : 'pwd'
 
-export function execute ( cwd: string, cmd: string ): Promise<string> {
-  // console.log('execute', cwd, cmd)
-  return new Promise<string> ( resolve => {
-    cp.exec ( cmd, { cwd }, ( error, stdout, stdErr ) => {
-      resolve ( (stdout.toString () + "\n" + stdErr).toString () )
-    } )
-  } )
-}
 
 function rememberWritable ( data: string[] ): Writable {
   return new Writable (

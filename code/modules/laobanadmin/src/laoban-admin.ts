@@ -50,13 +50,10 @@ export class LaobanAdmin {
     initOptions ( envs, program.command ( 'newtemplate' )
       .description ( `Creates a templates from the specified directory` )
       .action ( cmd => newTemplate ( fileOps, directory, cmd ) ) )
-
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
       .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( directory, 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
-
-
   }
 
   start () {

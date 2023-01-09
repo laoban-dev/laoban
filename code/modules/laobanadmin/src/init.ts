@@ -77,7 +77,7 @@ export async function findInitFileContents ( fileOps: FileOps, cmd: TypeCmdOptio
   const { type, typeUrls, inits } = await findTypes ( fileOps, cmd )
   const loadInits = loadWithParents<InitFileContents> ( ``,
     url => fileOps.loadFileOrUrl ( url + '/.init.json' ),
-    context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url }),
+    context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url ,type}),
     init => safeArray ( init.parents ),
     combineInitContents ( type, i => `Parents ${i.parents}` ) )
 
@@ -144,6 +144,7 @@ export interface ProjectDetailsAndTemplate extends LocationAnd<string> {
   templatePackageJson: any
 }
 function findRequestedIFCForLaoban<F extends InitFileContents> ( initFileContents: F[], type: string ): F {
+  if(!initFileContents|| safeArray(initFileContents).length===0 ) throw new Error(`Init file contents are: ${initFileContents}`)
   let result = initFileContents.find ( ifc => ifc.type === type );
   if ( result === undefined ) throw new Error ( `Could not find type ${type} in ${JSON.stringify ( initFileContents.map ( ifc => ifc.type ) )}` )
   return result

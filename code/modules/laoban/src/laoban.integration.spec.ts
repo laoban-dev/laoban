@@ -1,6 +1,7 @@
-import { configTestRoot, dirsIn, execute, executeCli, testRoot, toArrayReplacingRoot } from "./fixture";
+import { configTestRoot, dirsIn,  executeCli, testRoot, toArrayReplacingRoot } from "./fixture";
 import path from "path";
 import fs from "fs";
+import { execute } from "./executors";
 
 let experimental = false
 

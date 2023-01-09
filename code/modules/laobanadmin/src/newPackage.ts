@@ -3,7 +3,7 @@ import { gatherInitData, isSuccessfulInitData, TypeCmdOptions } from "./init";
 import path from "path";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { packageDetailsFile } from "laoban/dist/src/Files";
-import { execute } from "laoban/dist/src/fixture";
+import { execute } from "laoban/dist/src/executors";
 import { FileOps } from "@laoban/fileops";
 
 interface CreatePackageOptions extends TypeCmdOptions {

@@ -39,7 +39,7 @@ export function mapObjectKeys<T, T1> ( a: NameAnd<T>, fn: ( name: string ) => T1
 }
 
 export function safeArray<T> ( ts: T | T[] | undefined ): T[] {
-  if ( ts === undefined ) return []
+  if ( ts === undefined ||ts===null) return []
   if ( Array.isArray ( ts ) ) return ts
   return [ ts ];
 }

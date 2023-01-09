@@ -9,6 +9,15 @@ import { CommandDecorator } from "./decorators";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { flatten } from "@laoban/utils";
 
+export function execute ( cwd: string, cmd: string ): Promise<string> {
+  // console.log('execute', cwd, cmd)
+  return new Promise<string> ( resolve => {
+    cp.exec ( cmd, { cwd }, ( error, stdout, stdErr ) => {
+      resolve ( (stdout.toString () + "\n" + stdErr).toString () )
+    } )
+  } )
+}
+
 export interface RawShellResult {
   err: any
 }
