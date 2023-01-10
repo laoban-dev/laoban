@@ -12,13 +12,18 @@ const initUrl = ( envs: NameAnd<string> ) => {
   return env ? env : "@laoban@/init/allInits.json";
 };
 
-function initOptions<T> ( envs: NameAnd<string>, p: T ): T {
+function initUrlOption<T> ( envs: NameAnd<string>, p: T ): T {
   const a: any = p
   const defaultInitUrl = initUrl ( envs );
-  a.option ( '-t,--type <type>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", 'typescript' )
-    .option ( '-l,--legaltypes <legal...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes. Defaults to the list returned by --listtypes", )
-    .option ( '--listTypes', "lists the types of projects that can be created (and doesn't create anything)", false )
+    a.option ( '--listTypes', "lists the types of projects that can be created (and doesn't create anything)", false )
     .option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded. Used for testing and or if you have your own set", defaultInitUrl )
+    .option ( '-l,--legaltypes <legal...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes. Defaults to the list returned by --listtypes", )
+  return p
+}
+function initOptions<T> ( envs: NameAnd<string>, p: T ): T {
+  const a: any = initUrlOption(envs,p)
+  const defaultInitUrl = initUrl ( envs );
+  a.option ( '-t,--type <type>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", 'typescript' )
   return p
 }
 
@@ -26,7 +31,7 @@ export class LaobanAdmin {
   private params: string[];
   private program: any;
   private parsed: any;
-  public constructor ( fileOps: FileOps, directory: string, envs: NameAnd<string>, params: string[] ) {
+  public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[] ) {
     this.params = params;
     const version = require ( "../../package.json" ).version
     let program = require ( 'commander' )
@@ -34,12 +39,12 @@ export class LaobanAdmin {
 
     initOptions ( envs, program.command ( 'init' )
       .description ( 'Gives a summary of the status of laoban installations' )
-      .action ( cmd => init ( fileOps, directory, cmd ) )
+      .action ( cmd => init ( fileOps, currentDirectory, cmd ) )
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false ) )
-    initOptions ( envs, program.command ( 'packages' )
+    initUrlOption ( envs, program.command ( 'packages' )
       .description ( 'Gives a summary of the packages that laoban-admin has detected' )
-      .action ( cmd => packages ( fileOps, directory, cmd ) ) )
+      .action ( cmd => packages ( fileOps, currentDirectory, cmd ) ) )
     initOptions ( envs, program.command ( 'newpackage <init>' ) )
       .description ( 'Creates a new package under the current directory with the specified type' )
       .option('--template <template>', 'The template to use. Defaults to the type')
@@ -47,14 +52,14 @@ export class LaobanAdmin {
       .option ( '-d,--desc <desc>', 'The description of the package, defaults to an empty string')
       .option('--nuke', 'If the directory already exists, it will be deleted and recreated', false)
       .option ( '--force', 'Will create even if the package already exists ', false )
-      .action ( ( name, cmd ) => newPackage ( fileOps, directory, name, cmd ) )
+      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd ) )
 
-    initOptions ( envs, program.command ( 'newtemplate' )
+    initUrlOption ( envs, program.command ( 'newtemplate' )
       .description ( `Creates a templates from the specified directory` )
-      .action ( cmd => newTemplate ( fileOps, directory, cmd ) ) )
+      .action ( cmd => newTemplate ( fileOps, currentDirectory, cmd ) ) )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
-      .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( directory, 'templates' ) )
+      .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
   }
 
