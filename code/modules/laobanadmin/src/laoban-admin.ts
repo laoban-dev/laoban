@@ -59,7 +59,7 @@ export class LaobanAdmin {
       .action ( cmd => newTemplate ( fileOps, currentDirectory, cmd ) ) )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
-      .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, 'templates' ) )
+      .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, '..', 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
   }
 

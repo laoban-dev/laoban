@@ -1,8 +1,9 @@
 import { calculateNewTemplateOptions } from "./newTemplate";
 import { fileOpsNode } from "@laoban/filesops-node";
-import { findChildDirs, findChildFiles, simplePath } from "@laoban/fileops";
+import { copyFile, findChildDirs, findChildFiles, simplePath } from "@laoban/fileops";
 import { execute } from "laoban/dist/src/executors";
 import { testRoot, toArrayReplacingRoot } from "laoban/dist/src/fixture";
+import { NullDebugCommands } from "@laoban/debug";
 
 const path = simplePath // so that we don't get windows/linux path issues in our tests
 const fileOps = fileOpsNode
@@ -46,6 +47,7 @@ describe ( "new template - calculateNewTemplateOptions", () => {
 const prefix = 'node ../../../../code/modules/laobanadmin/dist/index.js '
 const testDir = path.join ( testRoot, 'newTemplate' )
 const passingDir = path.join ( testDir, 'passing' )
+const passingSourceDir = path.join ( passingDir, 'source' )
 
 async function compareExpectedActualFiles ( fileOps, expectedDir, actualDir ) {
   const expectedFiles = (await findChildFiles ( fileOps, () => false ) ( expectedDir )).sort ()
@@ -58,38 +60,53 @@ async function compareExpectedActualFiles ( fileOps, expectedDir, actualDir ) {
   } ) )
 }
 async function cleanTestDirectories () {
-  const files = (await fileOps.listFiles ( passingDir )).filter ( s => s !== 'expected' && s !== 'source'  && s !== 'laoban.json')
+  const files = (await fileOps.listFiles ( passingDir ))
+    .filter ( s => s !== 'expected' && s !== 'source'  && s !== 'laoban.json' && s !== 'laoban.starting.json')
   await Promise.all ( files.map ( async f => {
     const name = path.join ( passingDir, f )
     if ( fileOps.isDirectory ( name ) ) return fileOps.removeDirectory ( name, true )
   } ) )
   await fileOps.removeDirectory ( path.join ( passingDir, 'source', 'templates' ), true )
   await fileOps.removeDirectory ( path.join ( passingDir, 'source', 'thenewtemplatedir' ), true )
+  const laoban = await fileOps.loadFileOrUrl ( path.join ( passingDir, 'laoban.starting.json' ))
+  await fileOps.saveFile(path.join ( passingDir, 'laoban.json' ), laoban)
 }
 describe ( "integration tests for newtemplate", () => {
-  it ( "should create a new template under the templates subdir of current if no template dir given", async () => {
+  it ( "should create a new template in a templates dir that is a sibling of the current if no template dir given", async () => {
     await cleanTestDirectories ();
     const stdout = await execute (
-      path.join ( testDir, 'passing', 'source' ),
+      passingSourceDir,
       prefix + 'newtemplate' )
     expect ( toArrayReplacingRoot ( testDir, stdout ) ).toEqual ( [
-      "Making template in <root>/passing/source/templates/source",
+      "Making template in <root>/passing/templates/source",
       "existingLaobanFile <root>/passing",
-      "templates { something: 'here', source: 'source//templates//source' }"
+      "templates { something: 'here', source: 'templates//source' }"
     ])
-    await compareExpectedActualFiles ( fileOps, path.join ( passingDir, 'expected' ), path.join ( passingDir, 'source', 'templates', 'source' ) )
+    await compareExpectedActualFiles ( fileOps, path.join ( passingDir, 'expected' ), path.join ( passingDir, 'templates', 'source' ) )
   } )
-  it ( "should create a new template under the given templates dir", async () => {
+  it ( "should create a new template under the specified templates dir", async () => {
     await cleanTestDirectories ();
     const stdout = await execute (
-      path.join ( testDir, 'passing', 'source' ),
-      prefix + 'newtemplate -t thenewtemplatedir' )
+      passingSourceDir,
+      prefix + 'newtemplate -t ../thenewtemplatedir' )
     expect ( toArrayReplacingRoot ( testDir, stdout ) ).toEqual ( [
-      "Making template in thenewtemplatedir/source",
+      "Making template in ../thenewtemplatedir/source",
       "existingLaobanFile <root>/passing",
-      "templates { something: 'here', source: 'source//thenewtemplatedir//source' }"
+      "templates { something: 'here', source: 'thenewtemplatedir//source' }"
     ])
-    await compareExpectedActualFiles ( fileOps, path.join ( passingDir, 'expected' ), path.join ( passingDir, 'source', 'thenewtemplatedir', 'source' ) )
+    await compareExpectedActualFiles ( fileOps, path.join ( passingDir, 'expected' ), path.join ( passingDir, 'thenewtemplatedir', 'source' ) )
+  } )
+  it ( "should create a new template under the specified templates dir when a name is given", async () => {
+    await cleanTestDirectories ();
+    const stdout = await execute (
+      passingSourceDir,
+      prefix + 'newtemplate -t ../thenewtemplatedir -n tempname' )
+    expect ( toArrayReplacingRoot ( testDir, stdout ) ).toEqual ( [
+      "Making template in ../thenewtemplatedir/tempname",
+      "existingLaobanFile <root>/passing",
+      "templates { something: 'here', tempname: 'thenewtemplatedir//tempname' }"
+    ])
+    await compareExpectedActualFiles ( fileOps, path.join ( passingDir, 'expected' ), path.join ( passingDir, 'thenewtemplatedir', 'tempname' ) )
   } )
   it("should clean up at end", async () =>{
     await cleanTestDirectories()

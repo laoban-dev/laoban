@@ -62,7 +62,7 @@ async function updateLaobanWithNewTemplate ( fileOps: FileOps, cmd: CreateTempla
   } else
     console.error ( 'No laoban.json file found so cannot update templates in it' )
 }
-async function createNeededDirectories ( copyFileDetails: string[], fileOps: FileOps, target: string, cmd: CreateTemplateOptions ) {
+async function createNeededDirectoriesForFilesNames ( copyFileDetails: string[], fileOps: FileOps, target: string, cmd: CreateTemplateOptions ) {
   const directoriesToCreate = unique<string> ( copyFileDetails.map ( f => allButLastSegment ( fileNameFrom ( f ) ) ), f => f )
     .filter ( f => f !== '' )
     .map ( d => fileOps.join ( target, d ) )
@@ -101,11 +101,10 @@ export async function newTemplate ( fileOps: FileOps, currentDirectory: string, 
 
   if ( !cmd.dryrun ) console.log ( 'Making template in', target )
 
-  await createNeededDirectories ( fileNames, fileOps, target, cmd );
+  await createNeededDirectoriesForFilesNames ( fileNames, fileOps, target, cmd );
   await copyTemplateFilesToTemplate ( fileOps, directory, target, cmd, fileNames );
 
+  await updateLaobanWithNewTemplate ( fileOps, cmd, directory, templateName, target );
   const templateJson = makeDotTemplateJson ( fileNames );
   await saveDotTemplateJson ( cmd, templateJson, fileOps, target );
-
-  return await updateLaobanWithNewTemplate ( fileOps, cmd, directory, templateName, target );
 }

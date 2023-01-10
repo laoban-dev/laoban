@@ -1,15 +1,15 @@
 {
   "name": "@laoban/generations",
   "description": "A library that typologically sorts data into generations",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "bin": {},
   "keywords": [],
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
   "dependencies": {
     "array.prototype.flatmap": "^1.3.1",
-    "@laoban/debug": "1.0.19",
-    "@laoban/utils": "1.0.19"
+    "@laoban/debug": "1.0.20",
+    "@laoban/utils": "1.0.20"
   },
   "devDependencies": {
     "typescript": "^4.0.5",
