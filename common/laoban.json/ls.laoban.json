@@ -1,0 +1,34 @@
+{
+  "scripts": {
+    "ls":        {
+      "description": "lists all the projects",
+      "commands":    [
+        "js:process.cwd()"
+      ]
+    },
+    "ls-deps":   {
+      "description": "lists all the projects, and which other projects they depend on",
+      "commands":    [
+        "js:'${packageDetails.name}  => '.padEnd(30,' ') + '${packageDetails.details.links}'"
+      ]
+    },
+    "ls-names":  {
+      "description": "lists all the projects and their nams ",
+      "commands":    [
+        "js:`${process.cwd().padEnd(50)} ${packageDetails.name}`"
+      ]
+    }, "lsDist": {
+      "description": "check that the directory option works",
+      "commands":    [
+        {
+          "command":   "js:process.cwd()",
+          "directory": "dist"
+        },
+        {
+          "command":   "pwd",
+          "directory": "dist"
+        }
+      ]
+    }
+  }
+}

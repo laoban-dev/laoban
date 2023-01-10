@@ -1,0 +1,14 @@
+{
+  "scripts":        {
+  "mvn":                {
+    "description": "generates the type script and java projects",
+    "guard":       "${packageDetails.details.mvn}",
+    "commands":    [
+      {
+        "name":    "maven",
+        "command": "mvn clean install",
+        "status":  true
+      }
+    ]
+  }
+}}

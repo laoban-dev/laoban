@@ -1,0 +1,20 @@
+{
+  "envCheck": {
+    "description": "checks evn",
+    "commands":    [
+      "echo Linux: [${PORT}] windows: [%PORT%]"
+    ],
+    "guard":       "${packageDetails.details.port}",
+    "env":         {
+      "PORT": "${packageDetails.details.port}"
+    }
+  },
+  "slow": {
+    "description": "prints something, delays 2s, prints something",
+    "commands": [
+      "echo `pwd` 'start'",
+      "sleep 2s",
+      "echo `pwd` 'stop' "
+    ]
+  }
+}
