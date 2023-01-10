@@ -38,3 +38,6 @@
 1.0.17 Added `laoban-admin newtemplate` to create a new template
 1.0.18 Licenses added to the files
 1.0.22 adding `laoban-admin makeintotemplate` to turn the current directory into a template
+1.0.23 adding `laoban-admin makeintotemplate` now updates `laoban.json`
+1.0.26 adding `laoban-admin updatealltemplates` 
+1.1.0 removed laoban-admin as a separate project, and now it is part of laoban

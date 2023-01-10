@@ -2,8 +2,8 @@
 import { chain, findHighestVersion, unique } from "@laoban/utils";
 import { gitLocation, gitLocationsUnderHere, packageJsonAndLocations, packageJsonHasWorkspaces, packageJsonLocations, packageJsonLocationsUnder } from "./fileLocations";
 import path from "path";
-import { findLaobanOrUndefined, loabanConfigName } from "laoban/dist/src/Files";
 import { FileOps, isLocationAndErrors, isLocationAndParsed, LocationAndErrors, LocationAndParsed, LocationAndParsedOrErrors } from "@laoban/fileops";
+import { findLaobanOrUndefined, loabanConfigName } from "../Files";
 
 export async function reportOnGit ( fileOps: FileOps, directory: string, gitRepo: string ): Promise<void> {
 
@@ -157,7 +157,7 @@ export async function suggestInit ( fileOps: FileOps, directory: string, existin
   let version = findHighestVersion ( packageJsonDetails.withoutWorkspaces.map ( p => p.contents.version ) );
   return { version, ...suggestInitSuggestions ( params ) }
 }
-export async function status ( fileOps: FileOps, directory: string ) {
+export async function initStatus ( fileOps: FileOps, directory: string ) {
   const existingLaobanFile = findLaobanOrUndefined ( directory )
   const suggestions = await suggestInit ( fileOps, directory, existingLaobanFile )
   console.log ( 'suggestions', suggestions )

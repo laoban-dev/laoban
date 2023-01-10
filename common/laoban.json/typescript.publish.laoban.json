@@ -15,7 +15,7 @@
       "guard":        "${packageDetails.details.publish}",
       "commands":     [
         {"name": "compile", "command": "tsc --noEmit false --outDir dist", "status": true},
-        {"name": "pack", "command": "${packageManager} publish --access public", "status": true}
+        {"name": "publish", "command": "${packageManager} publish --access public", "status": true}
       ],
       "inLinksOrder": true
     },

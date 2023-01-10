@@ -1,16 +1,19 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, findChildFiles, loadAllFilesIn, parseJson, partitionLocationAndContents, Path } from "@laoban/fileops";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, findChildFiles, findMatchingK, loadAllFilesIn, parseJson, partitionLocationAndContents, Path } from "@laoban/fileops";
 import { NullDebugCommands } from "@laoban/debug";
 import { allButLastSegment, lastSegment, unique } from "@laoban/utils";
 import { findLaobanUpOrDown } from "./init";
+import { loabanConfigName } from "../Files";
 
 
-interface CreateTemplateOptions {
+interface MakeIntoTemplateOptions {
   dryrun?: boolean
   force?: boolean
   directory: string
-  template: string
   templatename?: string
+}
+interface CreateTemplateOptions extends MakeIntoTemplateOptions {
+  template: string
 }
 async function makeTemplateFor ( fileOps: FileOps, dir: string ) {
   const contents = await loadAllFilesIn ( fileOps, dir )
@@ -51,20 +54,18 @@ function makeDotTemplateJson ( fileNames: string[] ) {
 }
 async function updateLaobanWithNewTemplate ( fileOps: FileOps, cmd: CreateTemplateOptions, directory: string, templateName: string, target: string ) {
   const existingLaobanDirectory = await findLaobanUpOrDown ( fileOps, directory )
-  console.log ( 'existingLaobanFile', existingLaobanDirectory )
   if ( existingLaobanDirectory ) {
-    const laobanFileName = fileOps.join ( existingLaobanDirectory, 'laoban.json' )
+    const laobanFileName = fileOps.join ( existingLaobanDirectory, loabanConfigName )
     const laobanFile = await fileOps.loadFileOrUrl ( laobanFileName )
     const laoban = parseJson<any> ( () => `Loading ${laobanFileName} in order to update templates` ) ( laobanFile )
     const templates = laoban.templates || {}
     templates[ templateName ] = fileOps.relative ( existingLaobanDirectory, target )
     laoban.templates = templates
-    console.log ( 'templates', templates )
     let newLaobanContents = JSON.stringify ( laoban, null, 2 );
     if ( !cmd.dryrun )
       return fileOps.saveFile ( laobanFileName, newLaobanContents )
   } else
-    console.error ( 'No laoban.json file found so cannot update templates in it' )
+    console.error ( `No ${loabanConfigName} file found so cannot update templates in it` )
 }
 async function createNeededDirectoriesForFilesNames ( copyFileDetails: string[], fileOps: FileOps, target: string, cmd: CreateTemplateOptions ) {
   const directoriesToCreate = unique<string> ( copyFileDetails.map ( f => allButLastSegment ( fileNameFrom ( f ) ) ), f => f )
@@ -90,9 +91,13 @@ async function saveDotTemplateJson ( cmd: CreateTemplateOptions, templateJson: s
   if ( cmd.dryrun ) console.log ( `Would write ${templateJsonFileName} ` )
   else await fileOps.saveFile ( templateJsonFileName, templateJson )
 }
+function calculateTemplateName ( cmd: CreateTemplateOptions, directory: string ) {
+  const templateName = cmd.templatename ? cmd.templatename : lastSegment ( directory )
+  return templateName;
+}
 export function calculateNewTemplateOptions ( fileOps: Path, currentDirectory: string, cmd: CreateTemplateOptions ) {
   const directory = calculateDirectory ( fileOps, currentDirectory, cmd )
-  const templateName = cmd.templatename ? cmd.templatename : lastSegment ( directory )
+  const templateName = calculateTemplateName ( cmd, directory );
   const target = fileOps.join ( cmd.template, templateName )
   return { directory, templateName, target };
 }
@@ -106,7 +111,7 @@ export async function newTemplate ( fileOps: FileOps, currentDirectory: string, 
   const { directory, templateName, target } = calculateNewTemplateOptions ( fileOps, currentDirectory, cmd );
   await checkDirectoryExists ( fileOps, directory );
 
-  const fileNames: string[] = (await findFilesForTemplate ( fileOps, directory, cmd )).filter ( f => !f.endsWith ( 'package.details.json' ) );
+  const fileNames: string[] = (await findFilesForTemplate ( fileOps, directory, cmd )).filter ( f => !f.endsWith ( 'package.details.json' ) && !f.endsWith ( '.template.json' ) );
 
   if ( !cmd.dryrun ) console.log ( 'Making template in', target )
 
@@ -120,12 +125,12 @@ export async function newTemplate ( fileOps: FileOps, currentDirectory: string, 
 
 export async function makeIntoTemplate ( fileOps: FileOps, currentDirectory: string, cmd: CreateTemplateOptions ): Promise<void> {
   const directory = calculateDirectory ( fileOps, currentDirectory, cmd )
+  const templateName = calculateTemplateName ( cmd, directory );
   await checkDirectoryExists ( fileOps, directory );
   const fileNames: string[] = (await findFilesForTemplate ( fileOps, directory, cmd )).filter ( f => !f.endsWith ( 'package.details.json' ) );
   let dotTemplateJsonFileName = getTemplateJsonFileName ( fileOps, currentDirectory );
-  if (await fileOps.isFile ( dotTemplateJsonFileName ) ) {
+  if ( await fileOps.isFile ( dotTemplateJsonFileName ) ) {
     let existingAsString = await fileOps.loadFileOrUrl ( dotTemplateJsonFileName );
-    console.log ( 'existing', existingAsString )
     const existing = parseJson<any> ( () => `Loading ${dotTemplateJsonFileName} in order to update templates` ) ( existingAsString )
     const existingFiles = existing.files || []
     const newFiles = makeDotTemplateJsonObject ( fileNames )
@@ -137,5 +142,14 @@ export async function makeIntoTemplate ( fileOps: FileOps, currentDirectory: str
 
   } else
     await saveDotTemplateJson ( cmd, makeDotTemplateJson ( fileNames ), fileOps, directory );
+  await updateLaobanWithNewTemplate ( fileOps, cmd, directory, templateName, fileOps.join ( currentDirectory, templateName ) );
+}
 
+export async function updateAllTemplates ( fileOps: FileOps, currentDirectory: string, cmd: CreateTemplateOptions ): Promise<void> {
+  const directory = calculateDirectory ( fileOps, currentDirectory, cmd )
+  const filesAndDirs = await fileOps.listFiles ( directory )
+  const dirs = await findMatchingK ( filesAndDirs, async f => await fileOps.isDirectory ( fileOps.join ( directory, f ) ) )
+  console.log ( `Will update [${dirs}] under ${directory}` )
+  for ( const dir of dirs )
+    await makeIntoTemplate ( fileOps, directory, { ...cmd, directory: fileOps.join ( directory, dir ) } )
 }

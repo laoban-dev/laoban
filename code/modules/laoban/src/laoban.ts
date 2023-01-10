@@ -215,8 +215,8 @@ export class Cli {
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]
     }), executeGenerations, defaultOptions )
 
-    packageAction ( program, 'status', statusAction, 'shows the status of the project in the current directory', defaultOptions )
-    packageAction ( program, 'compactStatus', compactStatusAction, 'crunches the status', defaultOptions )
+    packageAction ( program, 'status', statusAction, 'shows the initStatus of the project in the current directory', defaultOptions )
+    packageAction ( program, 'compactStatus', compactStatusAction, 'crunches the initStatus', defaultOptions )
     packageAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
     action ( program, 'packages', packagesAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
@@ -235,7 +235,6 @@ export class Cli {
       log ( `  If you are 'in' a package (the current directory has a ${packageDetailsFile}') then commands are executed by default just for the current package ` );
       log ( "     but if you are not 'in' a package, the commands are executed for all packages" );
       log ( '  You can ask for help for a command by "laoban <cmd> --help"' );
-      log ( '  To configure and setup laoban the "laoban-admin" tool can be loaded using "npm i -g laoban-admin"' );
       log ( '' );
       log ( 'Common command options (not every command)' );
       log ( '  -a    do it in all packages (default is to execute the command in the current project' );

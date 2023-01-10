@@ -20,6 +20,6 @@ Deprecated
 
 ## guards should be able to compare a value. for example 'color=red' -done
 
-# restructure project so this depends on laoban-admin so that we just install it with `npm i -g laoban`
+# restructure project so this so that we just install it with `npm i -g laoban` --DONE
 
 We still want to keep the two separate I think... 

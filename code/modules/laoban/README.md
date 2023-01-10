@@ -5,7 +5,7 @@ probably offers the most value to javascript/typescript projects in a __monorepo
 
 
 * [Documentation](https://laoban-github.github.io)
-* Installation `npm i -g @laoban/admin@latest`
+* Installation `npm i -g laoban`
 
 # Capabilities
 

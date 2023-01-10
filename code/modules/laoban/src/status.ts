@@ -21,7 +21,7 @@ export function writeCompactedStatus(statusFile: string, statusMap: Map<string, 
     let keys = [...statusMap.keys()].sort()
     let compacted = keys.map(k => statusMap.get(k)).join("\n") + "\n"
     return fs.writeFile(statusFile, compacted, err => {
-        if (err) console.log('error compacting status', statusFile, statusMap, compacted)
+        if (err) console.log('error compacting initStatus', statusFile, statusMap, compacted)
     })
 }
 
