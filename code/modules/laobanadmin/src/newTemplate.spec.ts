@@ -72,17 +72,17 @@ async function cleanTestDirectories () {
   await fileOps.saveFile(path.join ( passingDir, 'laoban.json' ), laoban)
 }
 describe ( "integration tests for newtemplate", () => {
-  it ( "should create a new template in a templates dir that is a sibling of the current if no template dir given", async () => {
+  it ( "should create a new template in a templates subdir of current if no template dir given", async () => {
     await cleanTestDirectories ();
     const stdout = await execute (
       passingSourceDir,
       prefix + 'newtemplate' )
     expect ( toArrayReplacingRoot ( testDir, stdout ) ).toEqual ( [
-      "Making template in <root>/passing/templates/source",
+      "Making template in <root>/passing/source/templates/source",
       "existingLaobanFile <root>/passing",
-      "templates { something: 'here', source: 'templates//source' }"
+      "templates { something: 'here', source: 'source//templates//source' }"
     ])
-    await compareExpectedActualFiles ( fileOps, path.join ( passingDir, 'expected' ), path.join ( passingDir, 'templates', 'source' ) )
+    await compareExpectedActualFiles ( fileOps, path.join ( passingDir, 'expected' ), path.join ( passingDir, 'source', 'templates', 'source' ) )
   } )
   it ( "should create a new template under the specified templates dir", async () => {
     await cleanTestDirectories ();
