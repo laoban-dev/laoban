@@ -5,7 +5,8 @@ import { packages } from "./packages";
 import { loabanConfigTestName, packageDetailsTestFile } from "laoban/dist/src/Files";
 import { newPackage } from "./newPackage";
 import { FileOps } from "@laoban/fileops";
-import { newTemplate } from "./newTemplate";
+import { newTemplate, makeIntoTemplate } from "./newTemplate";
+import program from "commander";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -55,12 +56,19 @@ export class LaobanAdmin {
       .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd ) )
 
     initUrlOption ( envs, program.command ( 'newtemplate' )
-      .description ( `Creates a templates from the specified directory` )
+      .description ( `Creates a templates from the specified directory (copies files to template dir)` )
       .action ( cmd => newTemplate ( fileOps, currentDirectory, cmd ) ) )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
       .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
+    initUrlOption ( envs, program.command ( 'makeintotemplate' )
+      .description ( `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). Note if existing .template.json file exists will use data from it ` )
+      .action ( cmd => makeIntoTemplate ( fileOps, currentDirectory, cmd ) ) )
+      .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
+      .option ( '-d,--dryrun', `Just displays the files that would be created` )
+
+
   }
 
   start () {

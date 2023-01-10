@@ -37,4 +37,4 @@
 1.0.12 bugfix caused by capitalisation in the package name
 1.0.17 Added `laoban-admin newtemplate` to create a new template
 1.0.18 Licenses added to the files
-1.0.20 Bugfixes
+1.0.22 adding `laoban-admin makeintotemplate` to turn the current directory into a template

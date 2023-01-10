@@ -33,15 +33,19 @@ function calculateDirectory ( fileOps: Path, defaultDirectory: string, cmd: Crea
     return defaultDirectory
 }
 async function findFilesForTemplate ( fileOps: FileOps, directory: string, cmd: CreateTemplateOptions ) {
-  const ignoreDirectories = n => n === 'node_modules' || n === '.git'||n === '.idea'|| n === 'target' || n === 'dist'
+  const ignoreDirectories = n => n === 'node_modules' || n === '.git' || n === '.idea' || n === 'target' || n === 'dist'
   const fileNames = await findChildFiles ( fileOps, ignoreDirectories ) ( directory )
   return fileNames;
 }
-function makeDotTemplateJson ( fileNames: string[] ) {
+function makeDotTemplateJsonObject ( fileNames: string[] ) {
   const files = fileNames.map ( file =>
     lastSegment ( file ) === 'package.json' ?
       { target: file, file: file, "type": "${}", "postProcess": "json" } :
       { file, target: file } )
+  return files;
+}
+function makeDotTemplateJson ( fileNames: string[] ) {
+  const files = makeDotTemplateJsonObject ( fileNames );
   const templateJson = JSON.stringify ( { files }, null, 2 )
   return templateJson;
 }
@@ -77,9 +81,12 @@ async function copyTemplateFilesToTemplate ( fileOps: FileOps, directory: string
 
   await cf ( copyFileDetailsWithPackageJsonSpecial, cmd.dryrun )
 }
+function getTemplateJsonFileName ( fileOps: Path, target: string ) {
+  return fileOps.join ( target, '.template.json' );
+}
 async function saveDotTemplateJson ( cmd: CreateTemplateOptions, templateJson: string, fileOps: FileOps, target: string ) {
   if ( cmd.dryrun ) console.log ( templateJson )
-  const templateJsonFileName = fileOps.join ( target, '.template.json' )
+  const templateJsonFileName = getTemplateJsonFileName ( fileOps, target )
   if ( cmd.dryrun ) console.log ( `Would write ${templateJsonFileName} ` )
   else await fileOps.saveFile ( templateJsonFileName, templateJson )
 }
@@ -89,13 +96,15 @@ export function calculateNewTemplateOptions ( fileOps: Path, currentDirectory: s
   const target = fileOps.join ( cmd.template, templateName )
   return { directory, templateName, target };
 }
-export async function newTemplate ( fileOps: FileOps, currentDirectory: string, cmd: CreateTemplateOptions ): Promise<void> {
-  const { directory, templateName, target } = calculateNewTemplateOptions ( fileOps, currentDirectory, cmd );
-
+async function checkDirectoryExists ( fileOps: FileOps, directory: string ) {
   if ( !await fileOps.isDirectory ( directory ) ) {
     console.error ( `Directory ${directory} does not exist` );
     process.exit ( 1 )
   }
+}
+export async function newTemplate ( fileOps: FileOps, currentDirectory: string, cmd: CreateTemplateOptions ): Promise<void> {
+  const { directory, templateName, target } = calculateNewTemplateOptions ( fileOps, currentDirectory, cmd );
+  await checkDirectoryExists ( fileOps, directory );
 
   const fileNames: string[] = (await findFilesForTemplate ( fileOps, directory, cmd )).filter ( f => !f.endsWith ( 'package.details.json' ) );
 
@@ -107,4 +116,26 @@ export async function newTemplate ( fileOps: FileOps, currentDirectory: string, 
   await updateLaobanWithNewTemplate ( fileOps, cmd, directory, templateName, target );
   const templateJson = makeDotTemplateJson ( fileNames );
   await saveDotTemplateJson ( cmd, templateJson, fileOps, target );
+}
+
+export async function makeIntoTemplate ( fileOps: FileOps, currentDirectory: string, cmd: CreateTemplateOptions ): Promise<void> {
+  const directory = calculateDirectory ( fileOps, currentDirectory, cmd )
+  await checkDirectoryExists ( fileOps, directory );
+  const fileNames: string[] = (await findFilesForTemplate ( fileOps, directory, cmd )).filter ( f => !f.endsWith ( 'package.details.json' ) );
+  let dotTemplateJsonFileName = getTemplateJsonFileName ( fileOps, currentDirectory );
+  if (await fileOps.isFile ( dotTemplateJsonFileName ) ) {
+    let existingAsString = await fileOps.loadFileOrUrl ( dotTemplateJsonFileName );
+    console.log ( 'existing', existingAsString )
+    const existing = parseJson<any> ( () => `Loading ${dotTemplateJsonFileName} in order to update templates` ) ( existingAsString )
+    const existingFiles = existing.files || []
+    const newFiles = makeDotTemplateJsonObject ( fileNames )
+    const files = newFiles.map ( newFile => {
+      const existing = existingFiles.find ( existingFile => existingFile.file === newFile.file )
+      return existing ? existing : newFile;
+    } )
+    await saveDotTemplateJson ( cmd, JSON.stringify ( { files }, null, 2 ), fileOps, directory );
+
+  } else
+    await saveDotTemplateJson ( cmd, makeDotTemplateJson ( fileNames ), fileOps, directory );
+
 }
