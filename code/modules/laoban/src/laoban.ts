@@ -6,10 +6,9 @@ import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValida
 import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
-import { loadVersionFile } from "./modifyPackageJson";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus } from "./status";
 import * as os from "os";
-import { execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, make, streamName, timeIt } from "./executors";
+import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, streamName, timeIt } from "./executors";
 import { output, Strings } from "./utils";
 import { validatePackageDetailsAndTemplates } from "./validation";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
@@ -18,12 +17,14 @@ import { Writable } from "stream";
 import { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
 
-import { copyTemplateDirectory, updateConfigFilesFromTemplates } from "./update";
+import { updateConfigFilesFromTemplates } from "./update";
 import { FileOps, fileOpsStats } from "@laoban/fileops";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
-  outputStream.write ( (e.message ? e.message : e.toString ()).split ( '\n' ).slice ( 0, 2 ).join ( '\n' ) + "\n" );
+  let chunk = (e.message ? e.message : e.toString ()).split ( '\n' ).slice ( 0, 2 ).join ( '\n' ) + "\n";
+  if ( outputStream.writableEnded ) console.error ( chunk )
+  else outputStream.write ( chunk );
 }
 export const makeSessionId = ( d: Date, suffix: any, params: string[] ) =>
   d.toISOString ().replace ( /:/g, '.' ) + '.' + [ suffix, params.slice ( 3 ).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '.' );
@@ -104,7 +105,6 @@ let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, 
       let dirWidth = Strings.maxLength ( pds.map ( p => p.directory ) )
       let projWidth = Strings.maxLength ( pds.map ( p => p.packageDetails.name ) )
       let templateWidth = Strings.maxLength ( pds.map ( p => p.packageDetails.template ) )
-
       pds.forEach ( p => {
         let links = p.packageDetails.details.links;
         let dependsOn = (links && links.length > 0) ? ` depends on [${links.join ()}]` : ""
@@ -271,16 +271,23 @@ export class Cli {
   }
 }
 
-export function defaultExecutor ( a: AppendToFileIf ) { return make ( execInSpawn, execJS, timeIt, CommandDecorators.normalDecorator ( a ) )}
+const nameAndExecutors = ( fileOps: FileOps ) => nameAndCommandExecutor ( {
+  js: execJS,
+  file: execFile ( fileOps )
+}, execInSpawn )
+
+export function defaultExecutor ( a: AppendToFileIf, fileOps: FileOps ) {
+  return decorateExecutor ( nameAndExecutors ( fileOps ), timeIt, CommandDecorators.normalDecorator ( a ) )
+}
 let appendToFiles: AppendToFileIf = ( condition, name, contentGenerator ) =>
   condition ? fse.appendFile ( name, contentGenerator () ) : Promise.resolve ()
 
-let executeOne: ExecuteCommand = defaultExecutor ( appendToFiles )
-let executeOneScript: ExecuteScript = ScriptDecorators.normalDecorators () ( executeScript ( executeOne ) )
-let executeGeneration: ExecuteOneGeneration = GenerationDecorators.normalDecorators () ( executeOneGeneration ( executeOneScript ) )
+let executeOne = ( fileOps: FileOps ): ExecuteCommand => defaultExecutor ( appendToFiles, fileOps )
+let executeOneScript = ( fileOps: FileOps ): ExecuteScript => ScriptDecorators.normalDecorators () ( executeScript ( executeOne ( fileOps ) ) )
+let executeGeneration = ( fileOps: FileOps ): ExecuteOneGeneration => GenerationDecorators.normalDecorators () ( executeOneGeneration ( executeOneScript ( fileOps ) ) )
 
-export function executeGenerations ( outputStream: Writable ): ExecuteGenerations {
-  return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration, shellReporter ( outputStream ) ) )
+export function executeGenerations ( outputStream: Writable, fileOps: FileOps ): ExecuteGenerations {
+  return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration ( fileOps ), shellReporter ( outputStream ) ) )
 }
 
 const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {
@@ -302,5 +309,5 @@ const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaob
 export async function makeStandardCli ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir, outputStream: Writable, params: string[] ) {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCacheFn ) ( process.cwd (), params, outputStream )
   // console.log('makeStandardCli', configAndIssues.config)
-  return new Cli ( configAndIssues, executeGenerations ( outputStream ), abortWithReportIfAnyIssues );
+  return new Cli ( configAndIssues, executeGenerations ( outputStream, fileOps ), abortWithReportIfAnyIssues );
 }

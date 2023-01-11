@@ -13,17 +13,11 @@
     },
     "clean": {
       "description": "Cleans up laoban (there will be an error message after executing it)", "commands": [
-        {"command": "rm -f ${status}", "guard": {"value": "${os}", "equals": "Linux"}},
-        {"command": "rm -f ${log}", "guard": {"value": "${os}", "equals": "Linux"}},
-        {"command": "rm -f ${profile}", "guard": {"value": "${os}", "equals": "Linux"}},
-        {"command": "rm -rf ${laobanDirectory}/.session", "guard": {"value": "${os}", "equals": "Linux"}},
-        {"command": "rm -rf ${cacheDir}", "guard": {"value": "${os}", "equals": "Linux"}},
-
-        {"command": "del /f  ${status}", "guard": {"value": "${os}", "equals": "Windows_NT"}},
-        {"command": "del /f  ${log}", "guard": {"value": "${os}", "equals": "Windows_NT"}},
-        {"command": "del /f  ${profile}", "guard": {"value": "${os}", "equals": "Windows_NT"}},
-        {"command": "rmdir /s /q \"${laobanDirectory}/.session\"", "guard": {"value": "${os}", "equals": "Windows_NT"}},
-        {"command": "rmdir /s /q ${cacheDir}", "guard": {"value": "${os}", "equals": "Windows_NT"}}
+        {"command": "file:rm(${status})"},
+        {"command": "file:rm(${profile})"},
+        {"command": "file:rmDir(${laobanDirectory}/.session)"},
+        {"command": "file:rmDir(${cacheDir})"},
+        {"command": "file:rmLog()"}
       ]
     }
   },

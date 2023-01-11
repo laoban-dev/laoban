@@ -25,6 +25,7 @@ export interface FileOps extends CopyFileFns, Path {
   isDirectory ( filename: string ): Promise<boolean>
   isFile ( filename: string ): Promise<boolean>
   removeDirectory ( filename: string, recursive: boolean ): Promise<void>
+  removeFile ( filename: string ): Promise<void>
 }
 
 interface TAndExist<T> {
@@ -69,6 +70,7 @@ export const emptyFileOps: FileOps = {
   isDirectory (): Promise<boolean> {return Promise.resolve ( false )},
   isFile: (): Promise<boolean> => {return Promise.resolve ( false )},
   removeDirectory: (): Promise<void> => Promise.resolve (),
+  removeFile: (): Promise<void> => Promise.resolve ()
 }
 
 
@@ -86,6 +88,34 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
     digest: fileOps.digest,
     isFile: ( filename: string ) => fileOps.isFile ( processFile ( filename ) ),
     isDirectory: ( filename: string ) => fileOps.isDirectory ( processFile ( filename ) ),
+    removeFile: ( filename: string ) => fileOps.removeFile ( processFile ( filename ) ),
+    removeDirectory: ( filename: string, recursive: boolean ) => fileOps.removeDirectory ( processFile ( filename ), recursive ),
+    loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ) ),
+    createDir: dir => fileOps.createDir ( processFile ( dir ) ),
+    saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFile ( filename ), text ),
+    listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) ),
+    join: fileOps.join,
+    relative: fileOps.relative
+  }
+}
+
+export interface InDirectoryFileOps extends FileOps {
+  directory: string
+}
+export function isInDirectoryFileOps ( fileOps: FileOps ): fileOps is InDirectoryFileOps {
+  return (fileOps as InDirectoryFileOps).directory !== undefined
+}
+
+export function inDirectoryFileOps ( fileOps: FileOps, directory: string ): InDirectoryFileOps {
+  const processFile = ( s: string ): string =>
+    s.startsWith ( '/' ) || s.includes ( ':' ) ? s : fileOps.join ( directory, s );
+  if ( isInDirectoryFileOps ( fileOps ) ) return { ...fileOps, directory }
+  return {
+    directory,
+    digest: fileOps.digest,
+    isFile: ( filename: string ) => fileOps.isFile ( processFile ( filename ) ),
+    isDirectory: ( filename: string ) => fileOps.isDirectory ( processFile ( filename ) ),
+    removeFile: ( filename: string ) => fileOps.removeFile ( processFile ( filename ) ),
     removeDirectory: ( filename: string, recursive: boolean ) => fileOps.removeDirectory ( processFile ( filename ), recursive ),
     loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ) ),
     createDir: dir => fileOps.createDir ( processFile ( dir ) ),
@@ -107,6 +137,7 @@ function turnPackageJsonIntoTemplate ( text: string ) {
   if ( typeof packageJson.workspaces === 'object' ) return text
   packageJson.name = "${packageDetails.name}"
   packageJson.description = "${packageDetails.description}"
+  packageJson.version = "${packageDetails.version}"
   packageJson.license = "${properties.license}"
   packageJson.repository = "${properties.repository}"
   return JSON.stringify ( packageJson, null, 2 )

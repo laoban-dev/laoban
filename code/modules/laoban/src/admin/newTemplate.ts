@@ -43,7 +43,7 @@ async function findFilesForTemplate ( fileOps: FileOps, directory: string, cmd: 
 function makeDotTemplateJsonObject ( fileNames: string[] ) {
   const files = fileNames.map ( file =>
     lastSegment ( file ) === 'package.json' ?
-      { target: file, file: file, "type": "${}", "postProcess": "json" } :
+      { target: file, file: file, type: "${}",postProcess: "jsonMergeInto(@laoban@/templates/javascript/package.json)" } :
       { file, target: file } )
   return files;
 }

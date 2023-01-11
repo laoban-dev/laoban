@@ -4,11 +4,12 @@ import { CommandDefn, Envs, PackageDetailsAndDirectory, ScriptInContext, ScriptI
 import { cleanUpEnv } from "./configProcessor";
 import * as path from "path";
 
-import { chain,  writeTo } from "./utils";
+import { chain, writeTo } from "./utils";
 import { Writable } from "stream";
 import { CommandDecorator } from "./decorators";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { flatten } from "@laoban/utils";
+import { firstSegment, flatten, NameAnd } from "@laoban/utils";
+import { FileOps, inDirectoryFileOps } from "@laoban/fileops";
 
 export function execute ( cwd: string, cmd: string ): Promise<string> {
   // console.log('execute', cwd, cmd)
@@ -134,12 +135,14 @@ export type ExecuteOneGeneration = ( generation: Generation ) => Promise<Generat
 
 export type ExecuteGenerations = ( generations: Generations ) => Promise<GenerationsResult>
 
-type Finder = ( c: ShellCommandDetails<CommandDetails> ) => ExecuteCommand
-
-function jsOrShellFinder ( js: ExecuteCommand, shell: ExecuteCommand ): Finder {
-  return c => (c.details.commandString.startsWith ( 'js:' )) ? js : shell
-
+export function nameAndCommandExecutor ( lookup: NameAnd<RawCommandExecutor>, defaultExecutor: RawCommandExecutor ): RawCommandExecutor {
+  return d => {
+    let executorbyName = lookup[ firstSegment ( d.details.commandString, ':' ) ]
+    const executor = executorbyName ? executorbyName : defaultExecutor
+    return executor ( d );
+  }
 }
+
 export function timeIt ( e: RawCommandExecutor ): ExecuteCommand {
   return d => {
     let startTime = new Date ()
@@ -148,14 +151,12 @@ export function timeIt ( e: RawCommandExecutor ): ExecuteCommand {
 }
 
 
-export function make ( shell: RawCommandExecutor, js: RawCommandExecutor, timeIt: ( e: RawCommandExecutor ) => ExecuteCommand, ...decorators: CommandDecorator[] ): ExecuteCommand {
+export function decorateExecutor ( rawExecutor: RawCommandExecutor, timeIt: ( e: RawCommandExecutor ) => ExecuteCommand, ...decorators: CommandDecorator[] ): ExecuteCommand {
   let decorate = chain ( decorators )
-  let decoratedShell = decorate ( timeIt ( shell ) )
-  let decoratedJs = decorate ( timeIt ( js ) )
-  let finder = jsOrShellFinder ( decoratedJs, decoratedShell )
-  return c => {
+  let decoratedShell = decorate ( timeIt ( rawExecutor ) )
+  return c => { //TODO turn this into a decorator
     let s = c.scriptInContext.debug ( 'scripts' );
-    return s.k ( () => `executing ${c.details.commandString} in ${c.detailsAndDirectory.directory}`, () => finder ( c ) ( c ) );
+    return s.k ( () => `executing ${c.details.commandString} in ${c.detailsAndDirectory.directory}`, () => decoratedShell ( c ) );
   }
 }
 
@@ -172,7 +173,7 @@ export let execInSpawn: RawCommandExecutor = ( d: ShellCommandDetails<CommandDet
     //TODO refactor this so that the catch is just for the spawn
     try {
       let debug = d.scriptInContext.debug ( 'scripts' )
-      debug.message ( () => [ `spawning ${d.details.commandString}. Options are ${JSON.stringify ( { ...options,env:undefined, shell: true } )}` ] )
+      debug.message ( () => [ `spawning ${d.details.commandString}. Options are ${JSON.stringify ( { ...options, env: undefined, shell: true } )}` ] )
       let child = cp.spawn ( d.details.commandString, { ...options, shell: true } )
       child.stdout.on ( 'data', data => writeTo ( d.streams, data ) )//Why not pipe? because the lifecycle of the streams are different
       child.stderr.on ( 'data', data => writeTo ( d.streams, data ) )
@@ -216,3 +217,32 @@ export let execJS: RawCommandExecutor = d => {
     return Promise.resolve ( { err: e } )
   }
 }
+export const execFile = ( fileOps: FileOps ): RawCommandExecutor =>
+  async d => {
+    const fileOpsWithDir = inDirectoryFileOps ( fileOps, d.details.directory )
+    const regex = /^file:(\w+)\s*\(([^\)]*)\)$/
+    const match = d.details.commandString.match ( regex )
+    if ( !match ) throw Error ( `Command ${d.details.commandString} does not match ${regex}` )
+    const command = match[ 1 ]
+    const filename = match[ 2 ]
+    const fullFileName = fileOps.join ( d.details.directory, filename )
+    async function removeFileCommand () {
+      if ( await fileOpsWithDir.isFile ( fullFileName ) ) {
+        await fileOpsWithDir.removeFile ( fullFileName )
+      }
+    }
+    async function removeDirCommand () {
+      if ( await fileOpsWithDir.isDirectory ( fullFileName ) )
+        await fileOpsWithDir.removeDirectory ( filename, true )
+    }
+    async function removeLogCommand () {
+
+      d.streams.forEach ( s => s.end () )
+      await fileOpsWithDir.removeFile ( '.log' )
+    }
+    if ( command === 'rm' ) await removeFileCommand ();
+    else if ( command === 'rmDir' ) await removeDirCommand ();
+    else if ( command === 'rmLog' ) await removeLogCommand ();
+    else throw new Error ( `Unknown file command ${command}. Common commands are 'rm' & 'rmDir'` )
+    return { err: null }
+  }

@@ -4,6 +4,7 @@ import * as path from "path";
 import { HasLaobanDirectory, PackageDetailsAndDirectory } from "./config";
 import { Debug } from "@laoban/debug";
 import { childDirs, FileOps, findMatchingK } from "@laoban/fileops";
+import { findFileUp } from "@laoban/fileops";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -27,6 +28,11 @@ export function findLaoban ( directory: string ): string {
   const dir = findLaobanOrUndefined ( directory )
   if ( dir === undefined ) {throw Error ( `Cannot find laoban.json. Started looking in ${directory}` )}
   return dir
+}
+
+export async function findVersionNumber(fileOps: FileOps, dir: string): Promise<string> {
+  const packageJsonDir = await findFileUp ( dir, async s => fileOps.isFile(fileOps.join ( packageJsonDir, 'package.json' )) )
+  return fileOps.loadFileOrUrl ( fileOps.join ( packageJsonDir, 'package.json' ) ).then ( s => JSON.parse ( s ).version )
 }
 
 interface PackageDetailOptions {

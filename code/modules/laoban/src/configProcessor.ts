@@ -8,13 +8,13 @@ import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { cachedFileOps, FileOps, fileOpsStats, meteredFileOps, shortCutFileOps, shortCuts } from "@laoban/fileops";
+import { cachedFileOps, FileOps, fileOpsStats, inDirectoryFileOps, meteredFileOps, shortCutFileOps, shortCuts } from "@laoban/fileops";
 import { lastSegment, toArray } from "@laoban/utils";
 import { Path } from "@laoban/fileops";
 import WritableStream = NodeJS.WritableStream;
 
 // const path = simplePath
-export function findCache (path: Path, laobanDir, rawConfig, cacheDir: string ) {
+export function findCache ( path: Path, laobanDir, rawConfig, cacheDir: string ) {
   if ( rawConfig !== undefined ) return rawConfig
   if ( cacheDir !== undefined ) return path.join ( laobanDir, cacheDir )
   return path.join ( laobanDir, '.cache' )
@@ -24,7 +24,7 @@ export type MakeCacheFnFromLaobanDir = ( laobanDir: string ) => MakeCacheFn
 
 export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawConfigAndFileOps ): FileOps => {
   const actualCache = findCache ( fileOps, laobanDir, rawConfig.cacheDir, undefined )
-  return shortCutFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ), shortCuts )
+  return shortCutFileOps ( inDirectoryFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ), laobanDir ), shortCuts )
 };
 
 const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
@@ -49,7 +49,7 @@ export const loadLoabanJsonAndValidate = ( files: FileOps, makeCache: MakeCacheF
   const laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
     const { rawConfig, fileOps } = await load ( files, makeCache, debug ) ( laobanConfigFileName )
-    const issues = Validate.validate ( `In directory ${lastSegment( laobanDirectory )}, ${loabanConfigName}`, rawConfig );
+    const issues = Validate.validate ( `In directory ${lastSegment ( laobanDirectory )}, ${loabanConfigName}`, rawConfig );
     return { rawConfig, issues: validateLaobanJson ( issues ).errors, fileOps }
   } catch ( e ) {
     if ( debug ) console.error ( e )
@@ -67,7 +67,7 @@ export let abortWithReportIfAnyIssues: ConfigOrReportIssues = ( configAndIssues 
   } else return Promise.resolve ( { ...configAndIssues.config } )
 }
 
-export function loadConfigOrIssues (path: Path, outputStream: Writable, params: string[], fn: ( dir: string ) => Promise<RawConfigAndFileOpsAndIssues>, debug: boolean ): ( laoban: string ) => Promise<ConfigAndIssues> {
+export function loadConfigOrIssues ( path: Path, outputStream: Writable, params: string[], fn: ( dir: string ) => Promise<RawConfigAndFileOpsAndIssues>, debug: boolean ): ( laoban: string ) => Promise<ConfigAndIssues> {
   return laoban =>
     fn ( laoban ).then ( ( { rawConfig, issues, fileOps } ) => {
         if ( debug ) outputStream.write ( `rawConfig is\n${JSON.stringify ( rawConfig, null, 2 )}\nIssues are ${issues}\n` )
@@ -114,7 +114,7 @@ function addScripts ( dic: any, scripts: ScriptDefns ) {
     result.push ( cleanUpScript ( dic ) ( scriptName, scripts[ scriptName ] ) )
   return result;
 }
-export function configProcessor (path: Path, laoban: string, outputStream: WritableStream, rawConfig: RawConfig ): Config {
+export function configProcessor ( path: Path, laoban: string, outputStream: WritableStream, rawConfig: RawConfig ): Config {
   var result: any = { laobanDirectory: laoban, outputStream, laobanConfig: path.join ( laoban, loabanConfigName ) }
   function add ( name: string, raw: any, defaultvalue?: string ) {
     try {

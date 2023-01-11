@@ -33,7 +33,7 @@ export class LaobanAdmin {
   private parsed: any;
   public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[] ) {
     this.params = params;
-    const version = require ( "../../../../package.json" ).version
+    const version = require ( "../../../package.json" ).version
     let program = require ( 'commander' )
     this.program = program.version ( version )
 

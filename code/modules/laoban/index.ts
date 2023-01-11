@@ -4,6 +4,7 @@ import { makeStandardCli } from "./src/laoban";
 
 import { makeCache } from "./src/configProcessor";
 import { fileOpsNode } from "@laoban/filesops-node";
+import { findVersionNumber } from "./src/Files";
 
 
 try {

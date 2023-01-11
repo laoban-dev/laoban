@@ -41,3 +41,4 @@
 1.0.23 adding `laoban-admin makeintotemplate` now updates `laoban.json`
 1.0.26 adding `laoban-admin updatealltemplates` 
 1.1.0 removed laoban-admin as a separate project, and now it is part of laoban
+1.1.5 added file commands to allow os independant file manipulation in scripts

@@ -5,3 +5,4 @@ export  *  from "./src/meteredFileOps";
 export { cachedFileOps } from "./src/cachedFileOps";
 export *  from "./src/cachedFileOps";
 export *  from "./src/childFiles";
+export *  from "./src/findFile";

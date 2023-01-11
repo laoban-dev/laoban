@@ -38,6 +38,7 @@ export const fileOpsNode: FileOps = {
   saveFile: ( filename, text ) => promises.writeFile ( filename, text ),
   listFiles: ( root: string ): Promise<string[]> => promises.readdir ( root ),
   removeDirectory: ( filename: string, recursive: boolean ): Promise<void> => promises.rm ( filename, { recursive, force: true } ),
+  removeFile: ( filename: string ): Promise<void> => promises.rm ( filename, { force: true } ),
   join ( ...parts ): string {return path.join ( ...parts )},
   relative ( from: string, to: string ): string {return path.relative ( from, to )}
 }
