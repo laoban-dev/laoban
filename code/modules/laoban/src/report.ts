@@ -14,7 +14,6 @@ function reporter(outputStream: Writable, gen: GenerationResult, reportDecorator
         }))).then(() => logFile)
     })).then(fileNames => fileNames.map(logFile => {
         if (gen.length > 0) {
-            console.log('reporting on ')
             let report = {scd: gen[0].scd, text: fse.readFileSync(logFile).toString()}
             let message = reportDecorator(report).text;
             if (message.length > 0) log(message.trimRight())

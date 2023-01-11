@@ -9,7 +9,7 @@ import { Writable } from "stream";
 import { CommandDecorator } from "./decorators";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { firstSegment, flatten, NameAnd } from "@laoban/utils";
-import { FileOps, inDirectoryFileOps } from "@laoban/fileops";
+import { FileOps, InDirectoryFileOps, inDirectoryFileOps } from "@laoban/fileops";
 
 export function execute ( cwd: string, cmd: string ): Promise<string> {
   // console.log('execute', cwd, cmd)
@@ -217,32 +217,34 @@ export let execJS: RawCommandExecutor = d => {
     return Promise.resolve ( { err: e } )
   }
 }
+async function executeCommand ( fileOpsWithDir: FileOps, d: ShellCommandDetails<CommandDetails>, fullFileName: string, command: string ) {
+  async function removeFileCommand () {
+    if ( await fileOpsWithDir.isFile ( fullFileName ) ) {
+      await fileOpsWithDir.removeFile ( fullFileName )
+    }
+  }
+  async function removeDirCommand () {
+    if ( await fileOpsWithDir.isDirectory ( fullFileName ) )
+      await fileOpsWithDir.removeDirectory ( fullFileName, true ).catch(() =>{})
+  }
+  async function removeLogCommand () {
+    d.streams.forEach ( s => s.end () )
+    await fileOpsWithDir.removeFile ( '.log' )
+  }
+  if ( command === 'rm' ) await removeFileCommand ();
+  else if ( command === 'rmDir' ) await removeDirCommand ();
+  else if ( command === 'rmLog' ) await removeLogCommand ();
+  else throw new Error ( `Unknown file command ${command}. Common commands are 'rm' & 'rmDir'` )
+}
 export const execFile = ( fileOps: FileOps ): RawCommandExecutor =>
   async d => {
+    const debug = d.scriptInContext.debug ( 'files' )
     const fileOpsWithDir = inDirectoryFileOps ( fileOps, d.details.directory )
     const regex = /^file:(\w+)\s*\(([^\)]*)\)$/
     const match = d.details.commandString.match ( regex )
-    if ( !match ) throw Error ( `Command ${d.details.commandString} does not match ${regex}` )
+    if ( !match ) throw Error ( `Command [${d.details.commandString}] does not match ${regex}` )
     const command = match[ 1 ]
     const filename = match[ 2 ]
-    const fullFileName = fileOps.join ( d.details.directory, filename )
-    async function removeFileCommand () {
-      if ( await fileOpsWithDir.isFile ( fullFileName ) ) {
-        await fileOpsWithDir.removeFile ( fullFileName )
-      }
-    }
-    async function removeDirCommand () {
-      if ( await fileOpsWithDir.isDirectory ( fullFileName ) )
-        await fileOpsWithDir.removeDirectory ( filename, true )
-    }
-    async function removeLogCommand () {
-
-      d.streams.forEach ( s => s.end () )
-      await fileOpsWithDir.removeFile ( '.log' )
-    }
-    if ( command === 'rm' ) await removeFileCommand ();
-    else if ( command === 'rmDir' ) await removeDirCommand ();
-    else if ( command === 'rmLog' ) await removeLogCommand ();
-    else throw new Error ( `Unknown file command ${command}. Common commands are 'rm' & 'rmDir'` )
+    await debug.k ( () => `file: ${command} ${filename}`, () => executeCommand ( fileOpsWithDir, d, filename, command ) );
     return { err: null }
   }
