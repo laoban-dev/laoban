@@ -146,7 +146,7 @@ export class Cli {
         option ( '-g, --generationPlan', "instead of executing shows the generation plan", false ).//
         option ( '-t, --throttle <throttle>', "only this number of scripts will be executed in parallel", defaultThrottle.toString () ).//
         option ( '-l, --links', "the scripts will be put into generations based on links (doesn't work properly yet if validation errors)", false ).//
-        option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link,guard,templates,files, scripts]" ).//
+        option ( '--debug <debug>', "enables debugging. <debug> is a space separated list. legal values include [session,update,link,guard,templates,files, scripts]" ).//
         option ( '--sessionId <sessionId>', "specifies the session id, which is mainly used for logging" )
     }
   }
