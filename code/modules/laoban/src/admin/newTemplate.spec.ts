@@ -9,7 +9,7 @@ import { execute } from "../executors";
 import { findLaobanUpOrDown } from "./init";
 
 const path = simplePath // so that we don't get windows/linux path issues in our tests
-const fileOps = fileOpsNode
+const fileOps = fileOpsNode()
 
 describe ( "new template - calculateNewTemplateOptions", () => {
   const currentDirectory = 'C:\\laoban\\currentDirectory';

@@ -9,6 +9,9 @@ export interface CopyFileFns {
   loadFileOrUrl: ( fileOrUrl: string ) => Promise<string>
   saveFile ( filename: string, text: string ): Promise<void>
 }
+export interface LogFileFns {
+  log: ( filename: string, text: string ) => Promise<void>
+}
 export interface Path {
   join ( ...parts: string[] ): string
   relative ( from: string, to: string ): string
@@ -18,7 +21,7 @@ export const simplePath: Path = {
   relative ( from: string, to: string ): string {return to} //not relative at all!
 }
 
-export interface FileOps extends CopyFileFns, Path {
+export interface FileOps extends CopyFileFns, Path, LogFileFns {
   digest ( s: string ): string
   createDir: ( dir: string ) => Promise<string | undefined>
   listFiles ( root: string ): Promise<string[]>
@@ -70,7 +73,8 @@ export const emptyFileOps: FileOps = {
   isDirectory (): Promise<boolean> {return Promise.resolve ( false )},
   isFile: (): Promise<boolean> => {return Promise.resolve ( false )},
   removeDirectory: (): Promise<void> => Promise.resolve (),
-  removeFile: (): Promise<void> => Promise.resolve ()
+  removeFile: (): Promise<void> => Promise.resolve (),
+  log: () => Promise.resolve ()
 }
 
 
@@ -93,6 +97,7 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
     loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ) ),
     createDir: dir => fileOps.createDir ( processFile ( dir ) ),
     saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFile ( filename ), text ),
+    log: ( filename: string, text: string ) => fileOps.log ( processFile ( filename ), text ),
     listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) ),
     join: fileOps.join,
     relative: fileOps.relative
@@ -120,6 +125,7 @@ export function inDirectoryFileOps ( fileOps: FileOps, directory: string ): InDi
     loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ) ),
     createDir: dir => fileOps.createDir ( processFile ( dir ) ),
     saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFile ( filename ), text ),
+    log: ( filename: string, text: string ) => fileOps.log ( processFile ( filename ), text ),
     listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) ),
     join: fileOps.join,
     relative: fileOps.relative

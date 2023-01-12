@@ -14,12 +14,13 @@ import { fileOpsNode } from "@laoban/filesops-node";
 import { simplePath } from "@laoban/fileops";
 
 const laobanDir = findLaoban ( process.cwd () )
-const path= simplePath
+const path = simplePath
+const fileOps = fileOpsNode ();
 describe ( "validate laoban json", () => {
   dirsIn ( configTestRoot ).forEach ( testDir => {
     it ( `should check the laobon.json validation for ${testDir}`, () => {
       let expected = fs.readFileSync ( path.join ( configTestRoot, testDir, 'expectedValidationLaoban.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
-      loadConfigOrIssues ( path, process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOpsNode, makeCache ( laobanDir ), false ), false ) ( path.join ( configTestRoot, testDir ) ).then ( configOrIssues => {
+      loadConfigOrIssues ( path, process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps, makeCache ( laobanDir ), false ), false ) ( path.join ( configTestRoot, testDir ) ).then ( configOrIssues => {
         expect ( configOrIssues.issues ).toEqual ( expected )
       } )
     } )
@@ -28,13 +29,13 @@ describe ( "validate laoban json", () => {
 
 describe ( "validate directories", () => {
   dirsIn ( configTestRoot ).forEach ( testDir => {
-    loadConfigOrIssues ( path, process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOpsNode, makeCache ( laobanDir ), false ), false ) ( testDir ).then ( configOrIssues => {
+    loadConfigOrIssues ( path, process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps, makeCache ( laobanDir ), false ), false ) ( testDir ).then ( configOrIssues => {
       if ( configOrIssues.issues.length == 0 ) {
         it ( `should check the laoban.json and if that's ok, check the files under${testDir}`, async () => {
           let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().trim ()
           let config = addDebug ( undefined, () => {} ) ( configOrIssues.config )
-          return PackageDetailFiles.workOutPackageDetails ( fileOpsNode, config, {} ).//
-            then ( pds => validatePackageDetailsAndTemplates ( fileOpsNode, config, pds ) ).//
+          return PackageDetailFiles.workOutPackageDetails ( fileOps, config, {} ).//
+            then ( pds => validatePackageDetailsAndTemplates ( fileOps, config, pds ) ).//
             then ( actual => {
                 let expected = fs.readFileSync ( path.join ( testDir, 'expectedValidateProjectDetailsAndTemplate.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
                 expect ( actual ).toEqual ( expected )

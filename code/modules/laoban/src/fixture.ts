@@ -15,6 +15,7 @@ export let testRoot = path.resolve ( findLaoban ( process.cwd () ), '..', 'tests
 export let configTestRoot = path.resolve ( testRoot, 'config' );
 export let fullPathsOfTestDirs = () => dirsIn ( 'test' ).map ( d => path.resolve ( d ) )
 export let pwd = os.type () == 'Windows' ? 'echo %CD%' : 'pwd'
+const fileOps = fileOpsNode ();
 
 
 function rememberWritable ( data: string[] ): Writable {
@@ -37,7 +38,7 @@ export function executeCli ( cwd: string, cmd: string ): Promise<string> {
   let data: string[] = []
   let stream: Writable = rememberWritable ( data )
   let args: string[] = [ ...process.argv.slice ( 0, 2 ), ...cmd.split ( ' ' ).slice ( 1 ) ];
-  return executeInChangedDirectory ( cwd, () => makeStandardCli ( fileOpsNode, makeCache, stream, args ).then ( cli => cli.start () ).then ( () => data.join ( '' ) ) )
+  return executeInChangedDirectory ( cwd, () => makeStandardCli ( fileOps, makeCache, stream, args ).then ( cli => cli.start () ).then ( () => data.join ( '' ) ) )
 }
 
 
@@ -59,7 +60,7 @@ function streamToString ( stream ) {
   } )
 }
 
-export function toArrayReplacingRoot (testRoot: string, s: string ): string[] {
+export function toArrayReplacingRoot ( testRoot: string, s: string ): string[] {
   let rootMatch = new RegExp ( testRoot.replace ( /\\/g, "/" ), "g" )
   return s.split ( '\n' ).map ( s => s.replace ( /\\/g, "/" ).trim () )
     .map ( s => s.replace ( rootMatch, "<root>" ) ).filter ( s => s.length > 0 )

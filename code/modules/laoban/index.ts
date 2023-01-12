@@ -8,7 +8,7 @@ import { findVersionNumber } from "./src/Files";
 
 
 try {
-  makeStandardCli ( fileOpsNode, makeCache, process.stdout, process.argv ).then ( cli => cli.start () ).then ( () => {
+  makeStandardCli ( fileOpsNode(), makeCache, process.stdout, process.argv ).then ( cli => cli.start () ).then ( () => {
     process.setMaxListeners ( 30 ) // because commander adds many listeners: at least one per option, and we have more than 10 options
   } )
 } catch ( e ) {
