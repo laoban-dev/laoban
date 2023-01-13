@@ -10,5 +10,11 @@
   "properties":     {
     "license":    "MIT",
     "repository": "git@github.com:phil-rice/laoban.git"
+  },
+  "scripts":        {
+    "threethings": {
+      "description": "Executes three commands for tests",
+      "commands":    ["echo one", "echo two", "echo three"]
+    }
   }
 }

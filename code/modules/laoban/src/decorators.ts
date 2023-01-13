@@ -1,15 +1,15 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { GuardDefn, guardFrom, isFullGuard, ScriptInContext } from "./config";
 import * as path from "path";
-import { chain,  output, partition, writeTo } from "./utils";
+import { chain, output, partition, writeTo } from "./utils";
 import { splitGenerationsByLinksUsingGenerations } from "./generations";
 import * as fs from "fs";
-import { CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScript, Generations, ShellCommandDetails, ShellResult } from "./executors";
+import { CommandDetails, ExecuteCommand, ExecuteGeneration, ExecuteGenerations, ExecuteScriptWithStreams, Generations, ShellCommandDetails, ShellResult } from "./executors";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { flatten, safeArray } from "@laoban/utils";
 
 export type CommandDecorator = ( e: ExecuteCommand ) => ExecuteCommand
-export type ScriptDecorator = ( e: ExecuteScript ) => ExecuteScript
+export type ScriptDecorator = ( e: ExecuteScriptWithStreams ) => ExecuteScriptWithStreams
 export type GenerationDecorator = ( e: ExecuteGeneration ) => ExecuteGeneration
 export type GenerationsDecorator = ( e: ExecuteGenerations ) => ExecuteGenerations
 
@@ -64,13 +64,15 @@ function trimmedDirectory ( sc: ScriptInContext ) {
 export class ScriptDecorators {
 
   static normalDecorators (): ScriptDecorator {
-    return chain ( [ this.shellDecoratorForScript ] )
+    return s => s
+    // return chain( [ this.shellDecoratorForScript ] ) <--- if more than one use this
   }
-  static shellDecoratorForScript: ScriptDecorator = e => scd => {
-    if ( scd.scriptInContext.shell && !scd.scriptInContext.dryrun )
-      writeTo ( scd.streams, '*' + scd.detailsAndDirectory.directory + '\n' )
-    return e ( scd )
-  }
+  // static shellDecoratorForScript: ScriptDecorator = e => scd => {
+  //   console.log("shellDecoratorForScript", scd )
+  //   if ( scd.scriptInContext.shell && !scd.scriptInContext.dryrun )
+  //     scd.logStreams.write ( '*' + scd.detailsAndDirectory.directory + '\n' )
+  //   return e ( scd )
+  // }
 }
 
 export class GenerationDecorators {
@@ -162,27 +164,33 @@ export class CommandDecorators {
   }
   static log: CommandDecorator = e => d => {
     let log = path.join ( d.detailsAndDirectory.directory, d.scriptInContext.config.log )
-    let logStream = fs.createWriteStream ( log, { flags: 'a' } )
-    logStream.write ( `${d.scriptInContext.timestamp.toISOString ()} ${d.details.commandString}\n` )
-    let newD = { ...d, streams: [ ...d.streams, logStream ] }
+    let newLogString = fs.createWriteStream ( log, { flags: 'a' } )
+    newLogString.write ( `${d.scriptInContext.timestamp.toISOString ()} ${d.details.commandString}\n` )
+    let newD = { ...d, logStreams: [ ...d.logStreams, newLogString ] }
     return e ( newD ).then ( sr => {
-      sr.forEach ( res => logStream.write ( `Took ${res.duration}${res.err ? `, Error was [${res.err}]` : ''}\n` ) )
+      if ( sr.length === 1 ) {
+        const res = sr[ 0 ];
+        newLogString.write ( `Took ${res.duration}${res.err ? `, Error was [${res.err}]` : ''}\n` )
+      } else {
+        const duration = sr.reduce ( ( acc, res ) => acc + res.duration, 0 )
+        const errorCodes = sr.map ( res => res.err )
+        newLogString.write ( `Took ${duration}${errorCodes.length > 0 ? `Errors was [${errorCodes}]` : ''}\n` )
+      }
       return sr
     } )
   }
 
   static dryRun: CommandDecorator = e => d => {
     if ( d.scriptInContext.dryrun ) {
-      let value = dryRunContents ( d );
-      writeTo ( d.streams, value + '\n' )
-      return Promise.resolve ( [ { duration: 0, details: d, stdout: value, err: null, stderr: "" } ] )
+      d.outputStream.write ( dryRunContents ( d ) + '\n' )
+      return Promise.resolve ( [ { duration: 0, details: d, stdout: dryRunContents ( d ), err: null, stderr: "" } ] )
     } else return e ( d )
   }
   static stdOutDecorator: ( dec: StdOutDecorator ) => CommandDecorator = dec => e => d => {
     if ( dec.condition ( d ) ) {
-      writeTo ( d.streams, dec.pretext ( d ) )
+      writeTo ( d.logStreams, dec.pretext ( d ) )
       return e ( d ).then ( sr => sr.map ( r => {
-        writeTo ( r.details.streams, dec.posttext ( d, r ) )
+        writeTo ( r.details.logStreams, dec.posttext ( d, r ) )
         return r
       } ) )
     } else return e ( d )
@@ -190,7 +198,7 @@ export class CommandDecorators {
 
   static shellDisplay: StdOutDecorator = {
     condition: d => d.scriptInContext.shell && !d.scriptInContext.dryrun,
-    pretext: d => '*   ' + d.details.commandString + '\n',
+    pretext: d => `* ${d.detailsAndDirectory.directory} [${d.details.commandString}]\n`,
     transform: sr => sr,
     posttext: ( d, sr ) => ''
   }
@@ -213,7 +221,7 @@ export class CommandDecorators {
       let guard = dec.guard ( d )
       let valid = dec?.valid?. ( dec.name, guard, d );
       let name = d.scriptInContext.details.name;
-      g.message ( () => [ `Guard ${dec.name} ${d.detailsAndDirectory.directory} ${name}=${valid}` ] )
+      g.message ( () => [ `Guard ${dec.name} ${d.detailsAndDirectory.directory} ${name} =${valid}` ] )
       return valid ? e ( d ) : s.k ( () => `Script killed by guard ${dec.name}`, () => Promise.resolve ( [] ) )
     }
 
@@ -227,14 +235,14 @@ export class CommandDecorators {
       let name = d.scriptInContext.details.name;
 
       const context = ( guardType: string, guard: GuardDefn | GuardDefn[] | undefined ) =>
-        `${guardType} ${d.detailsAndDirectory.directory} ${name}.(${guardType})[${guard ? safeArray ( guard ).map ( g => JSON.stringify ( g ) ).join ( ',' ) : 'undefined'}]`
+        `${guardType} ${d.detailsAndDirectory.directory} ${name}. (${guardType} )[${guard ? safeArray ( guard ).map ( g => JSON.stringify ( g ) ).join ( ',' ) : 'undefined'} ]`
       let dic = d.details.dic;
       let validForScript = guardForScript === undefined || evaluateGuard ( context ( 'script ', guardForScript ), guardForScript, dic );
       let validForCommand = guardForCommand === undefined || evaluateGuard ( context ( 'command ', guardForCommand ), guardForCommand, dic );
 
       let valid = validForScript && validForCommand;
 
-      guardDebug.message ( () => [ `${(context ( '', [ guardForScript, guardForCommand ] ))} script=${validForScript} command=${validForCommand} value=${valid}` ] )
+      guardDebug.message ( () => [ `${(context ( '', [ guardForScript, guardForCommand ] ))} script =${validForScript} command =${validForCommand} value =${valid}` ] )
       return valid
     }
   }
@@ -255,7 +263,7 @@ function evaluateGuard ( context: string, g: GuardDefn | undefined, dic: any ): 
     if ( isFullGuard ( g ) ) {throw Error ( `Guard ${context} has a value that is not a string` )} else { throw Error ( `Guard ${context} is not a string` ) }
 
   let value = derefence ( context, dic, rawValue, { allowUndefined: true, throwError: true, undefinedIs: '', variableDefn: dollarsBracesVarDefn } );
-  // console.log ( `In guard ${context} g is ${JSON.stringify(g)} rawValue is [${rawValue}] value is ${value}`)
+  // console.log ( `In guard ${context} g is ${JSON.stringify(g)} rawValue is [${rawValue} ] value is ${value}`)
   // console.log('dic is ',Object.keys(dic))
   if ( isFullGuard ( g ) && g.default && value == '' ) return true
   if ( isFullGuard ( g ) && g.equals !== undefined ) return g.equals === value

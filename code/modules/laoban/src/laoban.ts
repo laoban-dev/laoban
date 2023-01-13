@@ -1,14 +1,13 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { findLaoban, PackageDetailFiles, packageDetailsFile } from "./Files";
-import * as fs from "fs";
 import * as fse from "fs-extra";
 import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate, MakeCacheFnFromLaobanDir } from "./configProcessor";
-import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
+import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus } from "./status";
 import * as os from "os";
-import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, streamName, timeIt } from "./executors";
+import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, timeIt } from "./executors";
 import { output, Strings } from "./utils";
 import { validatePackageDetailsAndTemplates } from "./validation";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
@@ -27,12 +26,8 @@ const displayError = ( outputStream: Writable ) => ( e: Error ) => {
   else outputStream.write ( chunk );
 }
 export const makeSessionId = ( d: Date, suffix: any, params: string[] ) =>
-  d.toISOString ().replace ( /:/g, '.' ) + '.' + [ suffix, params.slice ( 3 ).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '.' );
+  [ d.toISOString ().replace ( /:/g, '_' ), suffix, ...params.slice ( 3 ).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '_' );
 
-function openStream ( sc: ScriptInContextAndDirectoryWithoutStream ): ScriptInContextAndDirectory {
-  let logStream = fs.createWriteStream ( streamName ( sc ) );
-  return { ...sc, logStream, streams: [ logStream ] }
-}
 function makeSc ( config: ConfigWithDebug, sessionId: string, details: PackageDetailsAndDirectory[], script: ScriptDetails, cmd: any ) {
   let sc: ScriptInContext = {
     debug: config.debug,
@@ -198,7 +193,8 @@ export class Cli {
         let sessionDir = path.join ( config.sessionDir, sessionId );
         config.debug ( 'session' ).message ( () => [ 'sessionId', sessionId, 'sessionDir', sessionDir ] )
         return checkGuard ( config, script ).then ( () => fse.mkdirp ( sessionDir ).then ( () => {
-          let scds: ScriptInContextAndDirectory[] = pds.map ( d => openStream ( { detailsAndDirectory: d, scriptInContext: makeSc ( config, sessionId, pds, script, cmd ) } ) )
+          let scds: ScriptInContextAndDirectoryWithoutStream[] = pds.map ( d =>
+            ({ detailsAndDirectory: d, scriptInContext: makeSc ( config, sessionId, pds, script, cmd ) }) )
           let s = config.debug ( 'scripts' );
           s.message ( () => [ 'rawScriptCommands', ...script.commands.map ( s => s.command ) ] )
           s.message ( () => [ 'directories', ...scds.map ( s => s.detailsAndDirectory.directory ) ] )
@@ -283,11 +279,11 @@ let appendToFiles: AppendToFileIf = ( condition, name, contentGenerator ) =>
   condition ? fse.appendFile ( name, contentGenerator () ) : Promise.resolve ()
 
 let executeOne = ( fileOps: FileOps ): ExecuteCommand => defaultExecutor ( appendToFiles, fileOps )
-let executeOneScript = ( fileOps: FileOps ): ExecuteScript => ScriptDecorators.normalDecorators () ( executeScript ( executeOne ( fileOps ) ) )
-let executeGeneration = ( fileOps: FileOps ): ExecuteOneGeneration => GenerationDecorators.normalDecorators () ( executeOneGeneration ( executeOneScript ( fileOps ) ) )
+let executeOneScript = ( fileOps: FileOps, outputStream: Writable ): ExecuteScript => ScriptDecorators.normalDecorators () ( executeScript ( fileOps, outputStream, executeOne ( fileOps ) ) )
+let executeGeneration = ( fileOps: FileOps, outputStream: Writable ): ExecuteOneGeneration => GenerationDecorators.normalDecorators () ( executeOneGeneration ( executeOneScript ( fileOps, outputStream ) ) )
 
 export function executeGenerations ( outputStream: Writable, fileOps: FileOps ): ExecuteGenerations {
-  return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration ( fileOps ), shellReporter ( outputStream ) ) )
+  return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration ( fileOps, outputStream ), shellReporter ( fileOps, outputStream ) ) )
 }
 
 const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {

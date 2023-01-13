@@ -69,8 +69,7 @@ export interface ScriptInContextAndDirectoryWithoutStream {
   detailsAndDirectory: PackageDetailsAndDirectory
 }
 export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectoryWithoutStream {
-  logStream: Writable
-  streams: Writable[]
+  logStreams: Writable
 }
 
 

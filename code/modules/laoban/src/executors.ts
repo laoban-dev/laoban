@@ -5,11 +5,12 @@ import { cleanUpEnv } from "./configProcessor";
 import * as path from "path";
 
 import { chain, writeTo } from "./utils";
-import { Writable } from "stream";
 import { CommandDecorator } from "./decorators";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { firstSegment, flatten, NameAnd } from "@laoban/utils";
-import { FileOps, InDirectoryFileOps, inDirectoryFileOps } from "@laoban/fileops";
+import { closeStream, firstSegment, flatten, NameAnd } from "@laoban/utils";
+import { FileOps, inDirectoryFileOps, Path } from "@laoban/fileops";
+import fs, { WriteStream } from "fs";
+import { Writable } from "stream";
 
 export function execute ( cwd: string, cmd: string ): Promise<string> {
   // console.log('execute', cwd, cmd)
@@ -29,12 +30,12 @@ export interface ShellResult extends RawShellResult {
 }
 
 export interface ScriptResult {
-  scd: ScriptInContextAndDirectory,
+  scd: ScriptInContextAndDirectoryWithoutStream,
   results: ShellResult[],
   duration: number
 }
 
-export type  Generation = ScriptInContextAndDirectory[]
+export type  Generation = ScriptInContextAndDirectoryWithoutStream[]
 export type  Generations = Generation[]
 export type GenerationResult = ScriptResult[]
 export type GenerationsResult = GenerationResult[]
@@ -43,8 +44,9 @@ export type GenerationsResult = GenerationResult[]
 export interface ShellCommandDetails<Cmd> {
   scriptInContext: ScriptInContext,
   detailsAndDirectory: PackageDetailsAndDirectory
-  details: Cmd,
-  streams: Writable[]
+  details: Cmd
+  outputStream: Writable
+  logStreams: WriteStream[]  // The streams to write the output to
 }
 
 export interface CommandDetails {
@@ -57,22 +59,18 @@ export interface CommandDetails {
 
 function calculateDirectory ( directory: string, command: CommandDefn ) { return (command.directory) ? path.join ( directory, command.directory ) : directory;}
 
-export function streamNamefn ( sessionDir: string, sessionId: string, scriptName: string, directory: string ) {
-  let paths = directory.replace ( /\//g, '_' ).replace ( /\\/g, '_' ).replace ( /:/g, "" );
-  let result = path.join ( sessionDir, sessionId, paths ) + '.' + scriptName + '.log';
-  // console.log("streamNamefn -sessionDir", sessionDir)
-  // console.log("streamNamefn -directory", directory)
-  // console.log("streamNamefn -paths", paths)
-  // console.log("streamNamefn -directory", result)
-  // console.log("streamNamefn", result)
+export function streamNamefn ( path: Path, sessionDir: string, laobanDirectory: string, sessionId: string, scriptName: string, directory: string ) {
+  const relativePath = path.relative ( laobanDirectory, directory )
+  let paths = relativePath.replace ( /[\/\\.]/g, '_' ).replace ( /:/g, "" );
+  let result = path.join ( sessionDir, sessionId, paths )+ '.log';
   return result
 }
-export function streamName ( scd: ScriptInContextAndDirectoryWithoutStream ) {
-  return streamNamefn ( scd.scriptInContext.config.sessionDir, scd.scriptInContext.sessionId, scd.scriptInContext.details.name, scd.detailsAndDirectory.directory )
+export function streamName ( path: Path, scd: ScriptInContextAndDirectoryWithoutStream ) {
+  return streamNamefn ( path, scd.scriptInContext.config.sessionDir, scd.scriptInContext.config.laobanDirectory, scd.scriptInContext.sessionId, scd.scriptInContext.details.name, scd.detailsAndDirectory.directory )
 }
 
 
-export function buildShellCommandDetails ( scd: ScriptInContextAndDirectory ): ShellCommandDetails<CommandDetails>[] {
+export function buildShellCommandDetails ( scd: ScriptInContextAndDirectoryWithoutStream, outputStream: Writable, logStream: WriteStream ): ShellCommandDetails<CommandDetails>[] {
   return flatten ( scd.scriptInContext.details.commands.map ( cmd => {
     let directory = calculateDirectory ( scd.detailsAndDirectory.directory, cmd )
     function makeShellDetails ( link?: string ) {
@@ -81,6 +79,8 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectory ): S
       let env = cleanUpEnv ( `Script ${name}.env`, dic, scd.scriptInContext.details.env );
       let resultForOneCommand: ShellCommandDetails<CommandDetails> = {
         ...scd,
+        logStreams: [ logStream ],
+        outputStream,
         details: ({
           command: cmd,
           commandString: derefence ( `Script ${name}.commandString`, dic, cmd.command, { throwError: true, variableDefn: dollarsBracesVarDefn } ),
@@ -93,7 +93,6 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectory ): S
     }
     let rawlinks = scd.detailsAndDirectory.packageDetails.details.links;
     let links = rawlinks ? rawlinks : []
-    // console.log('links are', links)
     return cmd.eachLink ? links.map ( makeShellDetails ) : [ makeShellDetails () ]
   } ) )
 }
@@ -101,21 +100,30 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectory ): S
 export let executeOneGeneration: ( e: ExecuteScript ) => ExecuteOneGeneration = e => gen => Promise.all ( gen.map ( x => e ( x ) ) )
 
 export function executeAllGenerations ( executeOne: ExecuteOneGeneration, reporter: ( GenerationResult ) => Promise<void> ): ExecuteGenerations {
-  let fn = ( gs, sofar ) => {
-    if ( gs.length == 0 ) return Promise.resolve ( sofar )
-    return executeOne ( gs[ 0 ] ).then ( gen0Res => {
-      return reporter ( gen0Res ).then ( () => fn ( gs.slice ( 1 ), [ ...sofar, gen0Res ] ) )
-    } )
+  let fn = async ( gs, sofar ) => {
+    if ( gs.length == 0 ) return sofar
+    const res = await executeOne ( gs[ 0 ] )
+    await reporter ( res )
+    await fn ( gs.slice ( 1 ), [ ...sofar, res ] )
   }
   return gs => fn ( gs, [] )
 }
 
-export let executeScript: ( e: ExecuteCommand ) => ExecuteScript = e => ( scd: ScriptInContextAndDirectory ) => {
-  let s = scd.scriptInContext.debug ( 'scripts' )
-  s.message ( () => [ `execute script` ] )
-  let startTime = new Date ().getTime ()
-  return executeOneAfterTheOther ( e ) ( buildShellCommandDetails ( scd ) ).then ( results => ({ results: [].concat ( ...results ), scd, duration: new Date ().getTime () - startTime }) )
-}
+
+export let executeScript: ( path: Path, outputStream: Writable, e: ExecuteCommand ) => ExecuteScript =
+             ( path, outputStream, e ) => async ( scd: ScriptInContextAndDirectoryWithoutStream ) => {
+               let s = scd.scriptInContext.debug ( 'scripts' )
+               s.message ( () => [ `execute script` ] )
+               let startTime = new Date ().getTime ()
+               const logStreamName = streamName ( path, scd );
+               const logStream: WriteStream = fs.createWriteStream ( logStreamName )
+               const results: ShellResult[][] = await executeOneAfterTheOther ( e ) ( buildShellCommandDetails ( scd, outputStream, logStream ) );
+               await closeStream ( logStream )
+               const duration = new Date ().getTime () - startTime;
+               s.message ( () => [ `script ${logStream} executed in ${duration}ms` ] )
+               const scriptResult: ScriptResult = { results: [].concat ( ...results ), scd, duration };
+               return scriptResult
+             }
 
 function executeOneAfterTheOther<From, To> ( fn: ( from: From ) => Promise<To> ): ( froms: From[] ) => Promise<To[]> {
   return froms => froms.reduce ( ( res, f ) => res.then ( r => fn ( f ).then ( to => [ ...r, to ] ) ), Promise.resolve ( [] ) )
@@ -126,7 +134,8 @@ export type RawCommandExecutor = ( d: ShellCommandDetails<CommandDetails> ) => P
 
 export type ExecuteCommand = ( d: ShellCommandDetails<CommandDetails> ) => Promise<ShellResult[]>
 
-export type ExecuteScript = ( s: ScriptInContextAndDirectory ) => Promise<ScriptResult>
+export type ExecuteScript = ( s: ScriptInContextAndDirectoryWithoutStream ) => Promise<ScriptResult>
+export type ExecuteScriptWithStreams = ( s: ScriptInContextAndDirectory ) => Promise<ScriptResult>
 
 
 export type ExecuteGeneration = ( generation: Generation ) => Promise<GenerationResult>
@@ -175,8 +184,8 @@ export let execInSpawn: RawCommandExecutor = ( d: ShellCommandDetails<CommandDet
       let debug = d.scriptInContext.debug ( 'scripts' )
       debug.message ( () => [ `spawning ${d.details.commandString}. Options are ${JSON.stringify ( { ...options, env: undefined, shell: true } )}` ] )
       let child = cp.spawn ( d.details.commandString, { ...options, shell: true } )
-      child.stdout.on ( 'data', data => writeTo ( d.streams, data ) )//Why not pipe? because the lifecycle of the streams are different
-      child.stderr.on ( 'data', data => writeTo ( d.streams, data ) )
+      child.stdout.on ( 'data', data => writeTo ( d.logStreams, data ) )//Why not pipe? because the lifecycle of the streams are different
+      child.stderr.on ( 'data', data => writeTo ( d.logStreams, data ) )
       child.on ( 'close', ( code ) => {resolve ( { err: code == 0 ? null : code } )} )
     } catch ( e ) {
       console.error ( e )
@@ -209,11 +218,12 @@ export let execJS: RawCommandExecutor = d => {
     let res = executeInChangedEnv<any> ( d.details.env, () => executeInChangedDir ( d.details.directory,
       () => Function ( "return  " + d.details.commandString.substring ( 3 ) ) ().toString () ) )
     let result = res.toString ();
-    writeTo ( d.streams, result + '\n' )
+    // console.log('result from execJS', d.detailsAndDirectory.directory,result, 'logStreams', d.logStreams.length)
+    writeTo ( d.logStreams, result + '\n' )
     return Promise.resolve ( { err: null } )
   } catch ( e ) {
     let result = `Error: ${e} Command was [${d.details.commandString}]`;
-    writeTo ( d.streams, result + '\n' )
+    writeTo ( d.logStreams, result + '\n' )
     return Promise.resolve ( { err: e } )
   }
 }
@@ -225,10 +235,10 @@ async function executeCommand ( fileOpsWithDir: FileOps, d: ShellCommandDetails<
   }
   async function removeDirCommand () {
     if ( await fileOpsWithDir.isDirectory ( fullFileName ) )
-      await fileOpsWithDir.removeDirectory ( fullFileName, true ).catch(() =>{})
+      await fileOpsWithDir.removeDirectory ( fullFileName, true ).catch ( () => {} )
   }
   async function removeLogCommand () {
-    d.streams.forEach ( s => s.end () )
+    d.logStreams.forEach ( s => s.end () )
     await fileOpsWithDir.removeFile ( '.log' )
   }
   if ( command === 'rm' ) await removeFileCommand ();

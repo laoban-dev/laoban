@@ -1,7 +1,7 @@
 {
   "name": "${packageDetails.name}",
   "description": "${packageDetails.description}",
-  "version": "1.0.18",
+  "version": "${packageDetails.version}",
   "bin": {},
   "keywords": [],
   "license": "${properties.license}",
