@@ -1,10 +1,9 @@
 {
   "name": "laoban",
   "description": "A cli for managing projects that have many npm packages",
-  "version": "1.1.10",
+  "version": "1.2.0",
   "bin": {
-    "laoban": "dist/index.js",
-    "laoban-admin": "dist/src/admin/laobanadmin-cli.js"
+    "laoban": "dist/index.js"
   },
   "keywords": [
     "monorepo",
@@ -15,11 +14,11 @@
   "dependencies": {
     "fs-extra": "^9.0.1",
     "commander": "^6.2.0",
-    "@laoban/variables": "1.1.10",
-    "@laoban/generations": "1.1.10",
-    "@laoban/validation": "1.1.10",
-    "@laoban/debug": "1.1.10",
-    "@laoban/filesops-node": "1.1.10"
+    "@laoban/variables": "1.2.0",
+    "@laoban/generations": "1.2.0",
+    "@laoban/validation": "1.2.0",
+    "@laoban/debug": "1.2.0",
+    "@laoban/filesops-node": "1.2.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.5",
