@@ -17,14 +17,6 @@ export function compactStatus(statusFile: string): Map<string, string> {
     return map
 }
 
-export function writeCompactedStatus(statusFile: string, statusMap: Map<string, string>) {
-    let keys = [...statusMap.keys()].sort()
-    let compacted = keys.map(k => statusMap.get(k)).join("\n") + "\n"
-    return fs.writeFile(statusFile, compacted, err => {
-        if (err) console.log('error compacting initStatus', statusFile, statusMap, compacted)
-    })
-}
-
 
 export function printStatus(directory: string, statusMap: Map<string, string>) {
     let regex = /^([^ ]*) ([^ ]*) (.*)/

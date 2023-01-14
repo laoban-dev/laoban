@@ -1,7 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { combineRawConfigsAndFileOps, CommandDefn, Config, ConfigAndIssues, ConfigOrReportIssues, Envs, RawConfig, RawConfigAndFileOps, RawConfigAndFileOpsAndIssues, ScriptDefn, ScriptDefns, ScriptDetails } from "./config";
 
-import { laobanFile, loabanConfigName } from "./Files";
+import { findLaoban, laobanFile, loabanConfigName } from "./Files";
 import * as os from "os";
 import { Validate } from "@laoban/validation";
 import { validateLaobanJson } from "./validation";
@@ -142,3 +142,19 @@ export function configProcessor ( path: Path, laoban: string, outputStream: Writ
   result.os = os.type ()
   return result
 }
+export const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {
+  try {
+    const debug = params.includes ( '--load.laoban.debug' )
+    const laoban = findLaoban ( process.cwd () )
+    if ( debug ) console.log ( `Found laoban.json at ${laoban}\n` )
+    return loadConfigOrIssues ( fileOps, outputStream, params, loadLoabanJsonAndValidate ( fileOps, makeCacheFn ( laoban ), debug ), debug ) ( laoban );
+  } catch ( e ) {
+    return {
+      outputStream,
+      params,
+      fileOps,
+      issues: [ `Error while starting  ${e.message}` ]
+    }
+  }
+
+};

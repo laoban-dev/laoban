@@ -6,6 +6,9 @@ import { newPackage } from "./newPackage";
 import { FileOps } from "@laoban/fileops";
 import { makeIntoTemplate, newTemplate, updateAllTemplates } from "./newTemplate";
 import { loabanConfigTestName, packageDetailsTestFile } from "../Files";
+import { Config, ConfigAndIssues } from "../config";
+import { abortWithReportIfAnyIssues, loadLaobanAndIssues, makeCache } from "../configProcessor";
+import { Writable } from "stream";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -27,14 +30,31 @@ function initOptions<T> ( envs: NameAnd<string>, p: T ): T {
   return p
 }
 
+export async function loadConfigForAdmin ( fileOps: FileOps, currentDirectory: string, params: string[], outputStream: Writable ): Promise<Config> {
+  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
+  return abortWithReportIfAnyIssues ( configAndIssues )
+}
+
+function clearCache ( fileOps: FileOps, currentDirectory: string, params: string[], outputStream: Writable ) {
+  return async () => {
+    const config = await loadConfigForAdmin ( fileOps, currentDirectory, params, outputStream )
+    if ( config.cacheDir )
+      return fileOps.removeDirectory ( config.cacheDir, true )
+    else
+      console.log ( 'Cache directory is not defined in laoban.json' )
+  };
+}
 export class LaobanAdmin {
   private params: string[];
   private program: any;
   private parsed: any;
-  public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[] ) {
+  public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[], outputStream: Writable ) {
     this.params = params;
     let program = require ( 'commander' )
     this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' )
+
+    program.command ( 'clearcache' ).description ( 'clears the cache. ' )
+      .action ( clearCache ( fileOps, currentDirectory, params, outputStream ) )
 
     initOptions ( envs, program.command ( 'init' )
       .description ( 'Gives a summary of the initStatus of laoban installations' )

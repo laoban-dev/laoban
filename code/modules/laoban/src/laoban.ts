@@ -1,11 +1,11 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { findLaoban, PackageDetailFiles, packageDetailsFile } from "./Files";
+import { PackageDetailFiles, packageDetailsFile } from "./Files";
 import * as fse from "fs-extra";
-import { abortWithReportIfAnyIssues, loadConfigOrIssues, loadLoabanJsonAndValidate, MakeCacheFnFromLaobanDir } from "./configProcessor";
+import { abortWithReportIfAnyIssues, loadLaobanAndIssues, MakeCacheFnFromLaobanDir } from "./configProcessor";
 import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
-import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails, writeCompactedStatus } from "./status";
+import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails } from "./status";
 import * as os from "os";
 import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, timeIt } from "./executors";
 import { output, Strings } from "./utils";
@@ -13,7 +13,7 @@ import { validatePackageDetailsAndTemplates } from "./validation";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
 import { Writable } from "stream";
-import program, { CommanderStatic } from "commander";
+import { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
 
 import { updateConfigFilesFromTemplates } from "./update";
@@ -58,12 +58,6 @@ let configAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) 
   output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) )
   return Promise.resolve ()
 }
-let clearCacheAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
-  if ( config.cacheDir )
-    return fileOps.removeDirectory ( config.cacheDir, true )
-  else
-    console.log ( 'Cache directory is not defined in laoban.json' )
-}
 
 let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
@@ -73,9 +67,6 @@ let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: Package
   return Promise.resolve ()
 }
 
-let compactStatusAction: PackageAction<void[]> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) =>
-  Promise.all ( pds.map ( d =>
-    writeCompactedStatus ( path.join ( d.directory, config.status ), compactStatus ( path.join ( d.directory, config.status ) ) ) ) )
 
 const profileAction: PackageAction<void> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) =>
   Promise.all ( pds.map ( d => loadProfile ( config, d.directory ).then ( p => ({ directory: d.directory, profile: findProfilesFromString ( p ) }) ) ) ).//
@@ -205,9 +196,7 @@ export class Cli {
         } ) )
       }, description, ...options )
     }
-    program.command ( 'admin <command>' ,'admin commands that modify the project (create new packages, set up templates...' )
-    action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ), this.configOptions )
-    action ( program, 'clearCache', clearCacheAction, 'Clears the cache', this.minimalOptions ( configAndIssues ) )
+    program.command ( 'admin <command>', 'admin commands. For example cleaning/modifying the project (creating new packages, set up templates...' )
     action ( program, 'validate', validationAction ( fileOps, this.params ), `checks the laoban.json and the ${packageDetailsFile}`, defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitary command (the rest of the command line).',
@@ -215,7 +204,6 @@ export class Cli {
     }), executeGenerations, defaultOptions )
 
     packageAction ( program, 'status', statusAction, 'shows the initStatus of the project in the current directory', defaultOptions )
-    packageAction ( program, 'compactStatus', compactStatusAction, 'crunches the initStatus', defaultOptions )
     packageAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
     action ( program, 'packages', packagesAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
@@ -289,22 +277,6 @@ export function executeGenerations ( outputStream: Writable, fileOps: FileOps ):
   return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration ( fileOps, outputStream ), shellReporter ( fileOps, outputStream ) ) )
 }
 
-const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {
-  try {
-    const debug = params.includes ( '--load.laoban.debug' )
-    const laoban = findLaoban ( process.cwd () )
-    if ( debug ) console.log ( `Found laoban.json at ${laoban}\n` )
-    return loadConfigOrIssues ( fileOps, outputStream, params, loadLoabanJsonAndValidate ( fileOps, makeCacheFn ( laoban ), debug ), debug ) ( laoban );
-  } catch ( e ) {
-    return {
-      outputStream,
-      params,
-      fileOps,
-      issues: [ `Error while starting  ${e.message}` ]
-    }
-  }
-
-};
 export async function makeStandardCli ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir, outputStream: Writable, params: string[] ) {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCacheFn ) ( process.cwd (), params, outputStream )
   // console.log('makeStandardCli', configAndIssues.config)
