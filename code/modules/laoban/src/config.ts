@@ -3,7 +3,7 @@ import { Generations, ShellResult } from "./executors";
 import { Writable } from "stream";
 // @ts-ignore
 import { Debug } from "@laoban/debug";
-import { combineTwoObjects,  NameAnd, safeArray, safeObject, unique } from "@laoban/utils";
+import { combineTwoObjects, NameAnd, safeArray, safeObject, unique } from "@laoban/utils";
 import { FileOps } from "@laoban/fileops";
 
 
@@ -156,9 +156,6 @@ export const guardFrom = ( g: GuardDefn | undefined ): string | undefined => {
 export interface ScriptDefn {
   description: string,
   guard?: GuardDefn,
-  osGuard?: string,
-  pmGuard?: string,
-  guardReason?: string,
   inLinksOrder?: boolean,
   commands: (string | CommandDefn)[],
   env?: Envs
@@ -171,8 +168,6 @@ export interface CommandDefn {
   status?: boolean,
   eachLink?: boolean,
   guard?: GuardDefn,
-  osGuard?: string,
-  pmGuard?: string,
   directory?: string
 }
 

@@ -203,7 +203,8 @@ export class Cli {
 
 
     if ( configAndIssues.issues.length == 0 )
-      (configAndIssues.config.scripts).sort ( ( a, b ) => a.name.localeCompare ( b.name ) ).forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions ) )
+      (configAndIssues.config.scripts).sort ( ( a, b ) => a.name.localeCompare ( b.name ) )
+        .forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions ) )
 
     program.on ( '--help', () => {
       let log = output ( configAndIssues )
