@@ -44,3 +44,4 @@
 1.1.9 added file commands to allow os independent file manipulation in scripts
 1.1.10 changed the log names to be shorted and easier to read. Also fixed a bug around directory names ending in '.'
 1.2.0 change `laoban-admin` into `laoban admin` (note the lack of a '-)
+1.2.1 moved cleancache and profile to laoban admin

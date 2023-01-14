@@ -68,8 +68,6 @@ let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: Package
 }
 
 
-
-
 const validationAction = ( fileOps: FileOps, params: string[] ): Action<Config | void> =>
   ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
     .then ( ds => validatePackageDetailsAndTemplates ( fileOps, config, ds ) )
@@ -205,7 +203,7 @@ export class Cli {
 
 
     if ( configAndIssues.issues.length == 0 )
-      configAndIssues.config.scripts.forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions ) )
+      (configAndIssues.config.scripts).sort ( ( a, b ) => a.name.localeCompare ( b.name ) ).forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions ) )
 
     program.on ( '--help', () => {
       let log = output ( configAndIssues )
