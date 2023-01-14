@@ -3,16 +3,12 @@
     "typescript": "@laoban@/templates/typescript_405"
   },
   "scripts":   {
-    "compile":         {
+    "compile":    {
       "description": "Compiles the projects",
       "guard":       {"value": "${packageDetails.details.compile}", "default": true},
       "commands":    [{"name": "compile", "command": "tsc --noEmit false --outDir dist", "status": true}]
     },
-    "compile-noguard": {
-      "description": "runs compile without a guard",
-      "commands":    [{"name": "compile", "command": "tsc --noEmit false --outDir dist", "status": true}]
-    },
-    "ls-compile":      {
+    "ls-compile": {
       "description": "lists projects that will be compiled",
       "guard":       "${packageDetails.details.compile}",
       "commands":    ["js:process.cwd()"]

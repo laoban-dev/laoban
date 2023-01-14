@@ -229,6 +229,7 @@ export class CommandDecorators {
     name: 'guard',
     guard: d => d.scriptInContext.details.guard,
     valid: ( guardType: string, guardForScript, d ) => {
+      if ( d.scriptInContext.ignoreGuard ) return true
       let s = d.scriptInContext.debug ( 'scripts' )
       let guardDebug = d.scriptInContext.debug ( 'guard' )
       let guardForCommand: GuardDefn | undefined = d.details.command.guard

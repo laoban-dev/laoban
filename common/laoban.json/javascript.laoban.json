@@ -5,10 +5,6 @@
       "guard":       {"value": "${packageDetails.details.test}", "default": true},
       "commands":    [{"name": "test", "command": "${packageManager} test", "status": true}]
     },
-    "test-noguard": {
-      "description": "runs ${packageManager} test",
-      "commands":    [{"name": "test", "command": "${packageManager} test", "status": true}]
-    },
     "ls-tests":     {
       "description": "lists the projects with tests in them",
       "guard":       "${packageDetails.details.test}",

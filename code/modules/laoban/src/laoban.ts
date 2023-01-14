@@ -2,9 +2,8 @@
 import { PackageDetailFiles, packageDetailsFile } from "./Files";
 import * as fse from "fs-extra";
 import { abortWithReportIfAnyIssues, loadLaobanAndIssues, MakeCacheFnFromLaobanDir } from "./configProcessor";
-import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, ScriptDetails, ScriptInContext, ScriptInContextAndDirectoryWithoutStream } from "./config";
+import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, ScriptDetails, scriptHasGuard, ScriptInContext, ScriptInContextAndDirectoryWithoutStream } from "./config";
 import * as path from "path";
-import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "./profiling";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails } from "./status";
 import * as os from "os";
 import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, timeIt } from "./executors";
@@ -29,8 +28,9 @@ export const makeSessionId = ( d: Date, suffix: any, params: string[] ) =>
   [ d.toISOString ().replace ( /:/g, '_' ), suffix, ...params.slice ( 3 ).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '_' );
 
 function makeSc ( config: ConfigWithDebug, sessionId: string, details: PackageDetailsAndDirectory[], script: ScriptDetails, cmd: any ) {
-  let sc: ScriptInContext = {
+  const sc: ScriptInContext = {
     debug: config.debug,
+    ignoreGuard: cmd.ignoreGuard,
     sessionId,
     dirWidth: Strings.maxLength ( details.map ( d => d.directory ) ) - config.laobanDirectory.length,
     dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet, links: cmd.links, throttle: cmd.throttle,
@@ -105,6 +105,11 @@ function extraUpdateOptions ( program: CommanderStatic ) {
   program.option ( '--major', 'update major version' )
   return program
 }
+
+const ignoreGuardOption = ( s: ScriptDetails ) => ( program: CommanderStatic ) => {
+  if ( scriptHasGuard ( s ) ) program.option ( '--ignoreGuards', 'Runs the command ignoring any guards. This may give erratic behaviour!' )
+  return program
+};
 export class Cli {
   private program: any;
   private params: string[]
@@ -190,7 +195,7 @@ export class Cli {
     program.command ( 'admin <command>', 'admin commands. For example cleaning/modifying the project (creating new packages, set up templates...' )
     action ( program, 'validate', validationAction ( fileOps, this.params ), `checks the laoban.json and the ${packageDetailsFile}`, defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
-      name: 'run', description: 'runs an arbitary command (the rest of the command line).',
+      name: 'run', description: 'runs an arbitrary command (the rest of the command line).',
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]
     }), executeGenerations, defaultOptions )
 
@@ -204,7 +209,7 @@ export class Cli {
 
     if ( configAndIssues.issues.length == 0 )
       (configAndIssues.config.scripts).sort ( ( a, b ) => a.name.localeCompare ( b.name ) )
-        .forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions ) )
+        .forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions, ignoreGuardOption ( script ) ) )
 
     program.on ( '--help', () => {
       let log = output ( configAndIssues )

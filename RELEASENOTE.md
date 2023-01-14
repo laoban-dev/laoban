@@ -45,3 +45,4 @@
 1.1.10 changed the log names to be shorted and easier to read. Also fixed a bug around directory names ending in '.'
 1.2.0 change `laoban-admin` into `laoban admin` (note the lack of a '-)
 1.2.1 moved cleancache and profile to laoban admin
+1.2.2 added `--ignoreGuards` while allowed the removal of scripts that were duplicates of commands except for the guards

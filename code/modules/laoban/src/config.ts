@@ -67,6 +67,7 @@ export interface CommandContext {
 export interface ScriptInContextAndDirectoryWithoutStream {
   scriptInContext: ScriptInContext,
   detailsAndDirectory: PackageDetailsAndDirectory
+
 }
 export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectoryWithoutStream {
   logStreams: Writable
@@ -74,6 +75,7 @@ export interface ScriptInContextAndDirectory extends ScriptInContextAndDirectory
 
 
 export interface ScriptInContext {
+  ignoreGuard?: boolean
   dirWidth: number,
   debug: Debug,
   dryrun: boolean,
@@ -161,6 +163,9 @@ export interface ScriptDefn {
   env?: Envs
 }
 
+export function scriptHasGuard ( script: ScriptDefn ): boolean {
+  return script.guard !== undefined || script.commands.reduce((acc, c) => hasGuard(c)|| acc, false)
+}
 
 export interface CommandDefn {
   name?: string,
@@ -169,6 +174,9 @@ export interface CommandDefn {
   eachLink?: boolean,
   guard?: GuardDefn,
   directory?: string
+}
+function hasGuard ( command: CommandDefn | string ): boolean {
+  return typeof command !== 'string' && command.guard !== undefined
 }
 
 export interface PackageDetailsAndDirectory {
