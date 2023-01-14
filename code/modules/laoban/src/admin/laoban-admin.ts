@@ -33,9 +33,8 @@ export class LaobanAdmin {
   private parsed: any;
   public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[] ) {
     this.params = params;
-    const version = require ( "../../../package.json" ).version
     let program = require ( 'commander' )
-    this.program = program.version ( version )
+    this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' )
 
     initOptions ( envs, program.command ( 'init' )
       .description ( 'Gives a summary of the initStatus of laoban installations' )
@@ -43,7 +42,7 @@ export class LaobanAdmin {
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false ) )
     initUrlOption ( envs, program.command ( 'packages' )
-      .description ( 'Gives a summary of the packages that laoban-admin has detected' )
+      .description ( 'Gives a summary of the packages that laoban admin has detected' )
       .action ( cmd => packages ( fileOps, currentDirectory, cmd ) ) )
     initOptions ( envs, program.command ( 'newpackage <init>' ) )
       .description ( 'Creates a new package under the current directory with the specified type' )

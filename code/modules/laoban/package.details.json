@@ -21,8 +21,7 @@
       "@types/fs-extra": "^9.0.5"
     },
     "extraBins": {
-      "laoban": "dist/index.js",
-      "laoban-admin": "dist/src/admin/laobanadmin-cli.js"
+      "laoban": "dist/index.js"
     },
     "keywords": [
       "monorepo",

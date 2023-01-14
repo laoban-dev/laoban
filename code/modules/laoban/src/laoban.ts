@@ -13,7 +13,7 @@ import { validatePackageDetailsAndTemplates } from "./validation";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
 import { Writable } from "stream";
-import { CommanderStatic } from "commander";
+import program, { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
 
 import { updateConfigFilesFromTemplates } from "./update";
@@ -161,9 +161,12 @@ export class Cli {
     const fileOps = configAndIssues.fileOps
     this.params = configAndIssues.params
     var program = require ( 'commander' )
+      .name ( 'laoban' )
+      .usage ( '<command> [options]' )
       .arguments ( '' )
       .option ( '-c, --cachestats', "show how the cache was impacted by this command", false )
-      .option ( '--load.laoban.debug' ).version ( version )//
+      .option ( '--load.laoban.debug' ).version ( version )
+
 
     let defaultOptions = this.defaultOptions ( configAndIssues )
     function command ( program: any, cmd: string, description: string, fns: (( a: any ) => any)[] ) {
@@ -202,7 +205,7 @@ export class Cli {
         } ) )
       }, description, ...options )
     }
-
+    program.command ( 'admin <command>' ,'admin commands that modify the project (create new packages, set up templates...' )
     action ( program, 'config', configAction, 'displays the config', this.minimalOptions ( configAndIssues ), this.configOptions )
     action ( program, 'clearCache', clearCacheAction, 'Clears the cache', this.minimalOptions ( configAndIssues ) )
     action ( program, 'validate', validationAction ( fileOps, this.params ), `checks the laoban.json and the ${packageDetailsFile}`, defaultOptions )
