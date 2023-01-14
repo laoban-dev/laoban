@@ -5,10 +5,13 @@ import { packages } from "./packages";
 import { newPackage } from "./newPackage";
 import { FileOps } from "@laoban/fileops";
 import { makeIntoTemplate, newTemplate, updateAllTemplates } from "./newTemplate";
-import { loabanConfigTestName, packageDetailsTestFile } from "../Files";
-import { Config, ConfigAndIssues } from "../config";
+import { loabanConfigTestName, PackageDetailFiles, packageDetailsTestFile } from "../Files";
+import { ConfigAndIssues, ConfigWithDebug } from "../config";
 import { abortWithReportIfAnyIssues, loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { Writable } from "stream";
+import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "../profiling";
+import { output } from "../utils";
+import { addDebug } from "@laoban/debug";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -30,19 +33,32 @@ function initOptions<T> ( envs: NameAnd<string>, p: T ): T {
   return p
 }
 
-export async function loadConfigForAdmin ( fileOps: FileOps, currentDirectory: string, params: string[], outputStream: Writable ): Promise<Config> {
+export async function loadConfigForAdmin ( fileOps: FileOps, cmd: any, currentDirectory: string, params: string[], outputStream: Writable ): Promise<ConfigWithDebug> {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
-  return abortWithReportIfAnyIssues ( configAndIssues )
+  const config = await abortWithReportIfAnyIssues ( configAndIssues );
+  return addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) ( config )
 }
 
-function clearCache ( fileOps: FileOps, currentDirectory: string, params: string[], outputStream: Writable ) {
+function clearCache ( fileOps: FileOps, cmd: any, currentDirectory: string, params: string[], outputStream: Writable ) {
   return async () => {
-    const config = await loadConfigForAdmin ( fileOps, currentDirectory, params, outputStream )
+    const config = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
     if ( config.cacheDir )
       return fileOps.removeDirectory ( config.cacheDir, true )
     else
       console.log ( 'Cache directory is not defined in laoban.json' )
   };
+}
+async function profile ( fileOps: FileOps, currentDirectory: string, cmd: any, params: string[], outputStream: Writable ) {
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+  const pds = await PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
+  await Promise.all ( pds.map ( d => loadProfile ( config, d.directory ).then ( p => ({ directory: d.directory, profile: findProfilesFromString ( p ) }) ) ) ).//
+    then ( p => {
+      let data = prettyPrintProfileData ( p );
+
+      prettyPrintProfiles ( output ( config ), 'latest', data, p => (p.latest / 1000).toFixed ( 3 ) )
+      output ( config ) ( '' )
+      prettyPrintProfiles ( output ( config ), 'average', data, p => (p.average / 1000).toFixed ( 3 ) )
+    } )
 }
 export class LaobanAdmin {
   private params: string[];
@@ -54,7 +70,7 @@ export class LaobanAdmin {
     this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' )
 
     program.command ( 'clearcache' ).description ( 'clears the cache. ' )
-      .action ( clearCache ( fileOps, currentDirectory, params, outputStream ) )
+      .action ( cmd => clearCache ( fileOps, cmd, currentDirectory, params, outputStream ) )
 
     initOptions ( envs, program.command ( 'init' )
       .description ( 'Gives a summary of the initStatus of laoban installations' )
@@ -91,7 +107,7 @@ export class LaobanAdmin {
       .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
 
-
+    program.command ( 'profile' ).description ( '' ).action ( cmd => profile ( fileOps, currentDirectory, cmd, params, outputStream ) )
   }
 
   start () {
@@ -102,6 +118,5 @@ export class LaobanAdmin {
     this.parsed = this.program.parseAsync ( this.params ); // notice that we have to parse in a new statement.
     return this.parsed
   }
-
 
 }

@@ -12,7 +12,7 @@
       "description": "displays the tail of  log file. Best used with -s option", "commands": ["tail -5 ${log} "]
     },
     "clean": {
-      "description": "Cleans up laoban (there will be an error message after executing it)", "commands": [
+      "description": "Cleans up laoban (removing cache/status/profile/logs...", "commands": [
         {"command": "file:rm(${status})"},
         {"command": "file:rm(${profile})"},
         {"command": "file:rmDir(${laobanDirectory}/.session)"},

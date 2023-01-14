@@ -68,14 +68,7 @@ let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: Package
 }
 
 
-const profileAction: PackageAction<void> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) =>
-  Promise.all ( pds.map ( d => loadProfile ( config, d.directory ).then ( p => ({ directory: d.directory, profile: findProfilesFromString ( p ) }) ) ) ).//
-    then ( p => {
-      let data = prettyPrintProfileData ( p );
-      prettyPrintProfiles ( output ( config ), 'latest', data, p => (p.latest / 1000).toFixed ( 3 ) )
-      output ( config ) ( '' )
-      prettyPrintProfiles ( output ( config ), 'average', data, p => (p.average / 1000).toFixed ( 3 ) )
-    } )
+
 
 const validationAction = ( fileOps: FileOps, params: string[] ): Action<Config | void> =>
   ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
@@ -204,7 +197,6 @@ export class Cli {
     }), executeGenerations, defaultOptions )
 
     packageAction ( program, 'status', statusAction, 'shows the initStatus of the project in the current directory', defaultOptions )
-    packageAction ( program, 'profile', profileAction, 'shows the time taken by named steps of commands', defaultOptions )
     action ( program, 'packages', packagesAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
     packageAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ),
