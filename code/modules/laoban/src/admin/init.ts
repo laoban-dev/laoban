@@ -8,6 +8,7 @@ import { FileOps, loadWithParents, LocationAnd, LocationAndParsed, parseJson } f
 import { combineRawConfigs } from "../config";
 import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "../loadingTemplates";
 import { findLaobanOrUndefined, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
+import { ActionParams } from "./types";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -78,7 +79,7 @@ export async function findInitFileContents ( fileOps: FileOps, cmd: TypeCmdOptio
   const { type, typeUrls, inits } = await findTypes ( fileOps, cmd )
   const loadInits = loadWithParents<InitFileContents> ( ``,
     url => fileOps.loadFileOrUrl ( url + '/.init.json' ),
-    context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url ,type}),
+    context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url, type }),
     init => safeArray ( init.parents ),
     combineInitContents ( type, i => `Parents ${i.parents}` ) )
 
@@ -145,7 +146,7 @@ export interface ProjectDetailsAndTemplate extends LocationAnd<string> {
   templatePackageJson: any
 }
 function findRequestedIFCForLaoban<F extends InitFileContents> ( initFileContents: F[], type: string ): F {
-  if(!initFileContents|| safeArray(initFileContents).length===0 ) throw new Error(`Init file contents are: ${initFileContents}`)
+  if ( !initFileContents || safeArray ( initFileContents ).length === 0 ) throw new Error ( `Init file contents are: ${initFileContents}` )
   let result = initFileContents.find ( ifc => ifc.type === type );
   if ( result === undefined ) throw new Error ( `Could not find type ${type} in ${JSON.stringify ( initFileContents.map ( ifc => ifc.type ) )}` )
   return result
@@ -265,8 +266,8 @@ interface InitCmdOptions extends TypeCmdOptions {
   dryrun?: boolean
   force?: boolean
 }
-export async function init ( fileOps: FileOps, directory: string, cmd: InitCmdOptions ) {
-  const clearDirectory = path.join ( directory ).replace ( /\\/g, '/' )
+export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<InitCmdOptions> ): Promise<void> {
+  const clearDirectory = path.join ( currentDirectory ).replace ( /\\/g, '/' )
   console.log ( clearDirectory )
   if ( cmd.dryrun && cmd.force ) {
     console.log ( 'Cannot have --dryrun and --force' )

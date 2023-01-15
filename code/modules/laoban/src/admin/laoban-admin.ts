@@ -5,13 +5,15 @@ import { packages } from "./packages";
 import { newPackage } from "./newPackage";
 import { FileOps } from "@laoban/fileops";
 import { makeIntoTemplate, newTemplate, updateAllTemplates } from "./newTemplate";
-import { loabanConfigTestName, PackageDetailFiles, packageDetailsTestFile } from "../Files";
+import { loabanConfigTestName, PackageDetailFiles, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ConfigAndIssues, ConfigWithDebug } from "../config";
 import { abortWithReportIfAnyIssues, loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { Writable } from "stream";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "../profiling";
-import { output } from "../utils";
+import { output, postCommand } from "../utils";
 import { addDebug } from "@laoban/debug";
+import { validatePackageDetailsAndTemplates } from "../validation";
+import { ActionParams } from "./types";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -39,16 +41,15 @@ export async function loadConfigForAdmin ( fileOps: FileOps, cmd: any, currentDi
   return addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) ( config )
 }
 
-function clearCache ( fileOps: FileOps, cmd: any, currentDirectory: string, params: string[], outputStream: Writable ) {
-  return async () => {
-    const config = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
-    if ( config.cacheDir )
-      return fileOps.removeDirectory ( config.cacheDir, true )
-    else
-      console.log ( 'Cache directory is not defined in laoban.json' )
-  };
+async function clearCache ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
+  const config = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+  if ( config.cacheDir )
+    return fileOps.removeDirectory ( config.cacheDir, true )
+  else
+    console.log ( 'Cache directory is not defined in laoban.json' )
+
 }
-async function profile ( fileOps: FileOps, currentDirectory: string, cmd: any, params: string[], outputStream: Writable ) {
+async function profile ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
   const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
   const pds = await PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
   await Promise.all ( pds.map ( d => loadProfile ( config, d.directory ).then ( p => ({ directory: d.directory, profile: findProfilesFromString ( p ) }) ) ) ).//
@@ -60,6 +61,22 @@ async function profile ( fileOps: FileOps, currentDirectory: string, cmd: any, p
       prettyPrintProfiles ( output ( config ), 'average', data, p => (p.average / 1000).toFixed ( 3 ) )
     } )
 }
+async function config ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ) {
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+  let simpleConfig = { ...config }
+  if ( !cmd.all ) delete simpleConfig.scripts
+  delete simpleConfig.outputStream
+  output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) )
+}
+
+
+async function validate ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+  const pds = await PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
+  const issues = await validatePackageDetailsAndTemplates ( fileOps, config, pds )
+  await abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } )
+}
+
 export class LaobanAdmin {
   private params: string[];
   private program: any;
@@ -69,17 +86,25 @@ export class LaobanAdmin {
     let program = require ( 'commander' )
     this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' )
 
-    program.command ( 'clearcache' ).description ( 'clears the cache. ' )
-      .action ( cmd => clearCache ( fileOps, cmd, currentDirectory, params, outputStream ) )
+    const addCommand = ( name: string, description: string, fn: ( ActionParams ) => Promise<void>, moreOptions?: ( env: NameAnd<string>, p: any ) => void ) => {
+      let thisP = program.command ( name )
+        .description ( description )
+        .action ( cmd => fn ( { fileOps, currentDirectory, cmd, params, outputStream } ) )
+      if ( moreOptions ) moreOptions ( envs, thisP )
+      return thisP
+    };
 
-    initOptions ( envs, program.command ( 'init' )
-      .description ( 'Gives a summary of the initStatus of laoban installations' )
-      .action ( cmd => init ( fileOps, currentDirectory, cmd ) )
+    addCommand ( 'clearcache', 'clears the cache. ', clearCache )
+    addCommand ( 'config', 'displays the config', config )
+      .option ( '--all', 'includes the scripts', false )
+
+    addCommand ( 'init', `creates a laoban.json/package.json.details and helps 'get started'`, init, initOptions )
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
-      .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false ) )
-    initUrlOption ( envs, program.command ( 'packages' )
-      .description ( 'Gives a summary of the packages that laoban admin has detected' )
-      .action ( cmd => packages ( fileOps, currentDirectory, cmd ) ) )
+      .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
+    //
+    addCommand ( 'packages', 'Gives a summary of the packages that laoban admin has detected', packages, initUrlOption )
+
+
     initOptions ( envs, program.command ( 'newpackage <init>' ) )
       .description ( 'Creates a new package under the current directory with the specified type' )
       .option ( '--template <template>', 'The template to use. Defaults to the type' )
@@ -87,27 +112,22 @@ export class LaobanAdmin {
       .option ( '-d,--desc <desc>', 'The description of the package, defaults to an empty string' )
       .option ( '--nuke', 'If the directory already exists, it will be deleted and recreated', false )
       .option ( '--force', 'Will create even if the package already exists ', false )
-      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd ) )
+      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd ).then ( postCommand ( program, fileOps ) ) )
 
-    initUrlOption ( envs, program.command ( 'newtemplate' )
-      .description ( `Creates a templates from the specified directory (copies files to template dir)` )
-      .action ( cmd => newTemplate ( fileOps, currentDirectory, cmd ) ) )
+    addCommand ( 'newtemplate', `Creates a templates from the specified directory (copies files to template dir)`, newTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
       .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
-    initUrlOption ( envs, program.command ( 'makeintotemplate' )
-      .description ( `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). Note if existing .template.json file exists will use data from it ` )
-      .action ( cmd => makeIntoTemplate ( fileOps, currentDirectory, cmd ) ) )
-      .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
-      .option ( '-d,--dryrun', `Just displays the files that would be created` )
-    initUrlOption ( envs, program.command ( 'updatealltemplates' )
-      .description ( `all subdirectories that are templates are 'makeintotemplate'ed, which means if you add files to them and run this, they are added to the templates` )
-      .action ( cmd => updateAllTemplates ( fileOps, currentDirectory, cmd ) ) )
-      .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
-      .option ( '-d,--dryrun', `Just displays the files that would be created` )
 
-    program.command ( 'profile' ).description ( '' ).action ( cmd => profile ( fileOps, currentDirectory, cmd, params, outputStream ) )
+    addCommand ( 'makeintotemplate', `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). Note if existing .template.json file exists will use data from it `, makeIntoTemplate, initUrlOption )
+      .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
+      .option ( '-d,--dryrun', `Just displays the files that would be created` )
+    addCommand ( 'updatealltemplates', `all subdirectories that are templates are 'makeintotemplate'ed, which means if you add files to them and run this, they are added to the templates`, updateAllTemplates, initUrlOption )
+      .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
+      .option ( '-d,--dryrun', `Just displays the files that would be created` )
+    addCommand ( 'validate', `checks the laoban.json and the ${packageDetailsFile}`, validate )
+    addCommand ( 'profile', `Displays how long some actions took (the ones that appear in 'laoban status')`, profile )
   }
 
   start () {

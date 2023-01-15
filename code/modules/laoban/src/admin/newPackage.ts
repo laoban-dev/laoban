@@ -5,6 +5,7 @@ import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { FileOps } from "@laoban/fileops";
 import { packageDetailsFile } from "../Files";
 import { execute } from "../executors";
+import { ActionParams } from "./types";
 
 interface CreatePackageOptions extends TypeCmdOptions {
   force?: boolean
@@ -35,12 +36,12 @@ export async function newPackage ( fileOps: FileOps, directory: string, name: st
       description: cmd.desc || ''
     }
   }
-  let packageDetailsRawJson = found["package.details.json"].contents;
-  packageDetailsRawJson.template = cmd.template?cmd.template:cmd.type
+  let packageDetailsRawJson = found[ "package.details.json" ].contents;
+  packageDetailsRawJson.template = cmd.template ? cmd.template : cmd.type
   let packageDetailsJson = derefence ( `Making ${packageDetailsFile}`, dic, JSON.stringify ( packageDetailsRawJson, null, 2 ), { variableDefn: dollarsBracesVarDefn } );
   console.log ( packageDetailsJson )
   await fileOps.createDir ( clearDirectory )
   await fileOps.saveFile ( targetFile, packageDetailsJson )
-  await execute ( clearDirectory, `laoban update` ).then(res => console.log('laoban update\n', res))
+  await execute ( clearDirectory, `laoban update` ).then ( res => console.log ( 'laoban update\n', res ) )
 
-}
+};

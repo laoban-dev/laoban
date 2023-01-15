@@ -89,6 +89,7 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
     } )
   }
   return {
+    ...fileOps,
     digest: fileOps.digest,
     isFile: ( filename: string ) => fileOps.isFile ( processFile ( filename ) ),
     isDirectory: ( filename: string ) => fileOps.isDirectory ( processFile ( filename ) ),
@@ -116,6 +117,7 @@ export function inDirectoryFileOps ( fileOps: FileOps, directory: string ): InDi
     s.startsWith ( '/' ) || s.includes ( ':' ) ? s : fileOps.join ( directory, s );
   if ( isInDirectoryFileOps ( fileOps ) ) return { ...fileOps, directory }
   return {
+    ...fileOps,
     directory,
     digest: fileOps.digest,
     isFile: ( filename: string ) => fileOps.isFile ( processFile ( filename ) ),

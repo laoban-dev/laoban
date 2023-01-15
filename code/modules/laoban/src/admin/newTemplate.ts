@@ -4,6 +4,7 @@ import { NullDebugCommands } from "@laoban/debug";
 import { allButLastSegment, lastSegment, unique } from "@laoban/utils";
 import { findLaobanUpOrDown } from "./init";
 import { loabanConfigName } from "../Files";
+import { ActionParams, ShortActionParams } from "./types";
 
 
 interface MakeIntoTemplateOptions {
@@ -43,7 +44,7 @@ async function findFilesForTemplate ( fileOps: FileOps, directory: string, cmd: 
 function makeDotTemplateJsonObject ( fileNames: string[] ) {
   const files = fileNames.map ( file =>
     lastSegment ( file ) === 'package.json' ?
-      { target: file, file: file, type: "${}",postProcess: "jsonMergeInto(@laoban@/templates/javascript/package.json)" } :
+      { target: file, file: file, type: "${}", postProcess: "jsonMergeInto(@laoban@/templates/javascript/package.json)" } :
       { file, target: file } )
   return files;
 }
@@ -107,7 +108,7 @@ async function checkDirectoryExists ( fileOps: FileOps, directory: string ) {
     process.exit ( 1 )
   }
 }
-export async function newTemplate ( fileOps: FileOps, currentDirectory: string, cmd: CreateTemplateOptions ): Promise<void> {
+export async function newTemplate ( { fileOps, currentDirectory, cmd }: ActionParams<CreateTemplateOptions> ): Promise<void> {
   const { directory, templateName, target } = calculateNewTemplateOptions ( fileOps, currentDirectory, cmd );
   await checkDirectoryExists ( fileOps, directory );
 
@@ -123,7 +124,7 @@ export async function newTemplate ( fileOps: FileOps, currentDirectory: string, 
   await saveDotTemplateJson ( cmd, templateJson, fileOps, target );
 }
 
-export async function makeIntoTemplate ( fileOps: FileOps, currentDirectory: string, cmd: CreateTemplateOptions ): Promise<void> {
+export async function makeIntoTemplate ( { fileOps, currentDirectory, cmd }: ShortActionParams<CreateTemplateOptions> ): Promise<void> {
   const directory = calculateDirectory ( fileOps, currentDirectory, cmd )
   const templateName = calculateTemplateName ( cmd, directory );
   await checkDirectoryExists ( fileOps, directory );
@@ -145,11 +146,12 @@ export async function makeIntoTemplate ( fileOps: FileOps, currentDirectory: str
   await updateLaobanWithNewTemplate ( fileOps, cmd, directory, templateName, fileOps.join ( currentDirectory, templateName ) );
 }
 
-export async function updateAllTemplates ( fileOps: FileOps, currentDirectory: string, cmd: CreateTemplateOptions ): Promise<void> {
+export async function updateAllTemplates ( params: ShortActionParams<CreateTemplateOptions> ): Promise<void> {
+  const { fileOps, currentDirectory, cmd } = params;
   const directory = calculateDirectory ( fileOps, currentDirectory, cmd )
   const filesAndDirs = await fileOps.listFiles ( directory )
   const dirs = await findMatchingK ( filesAndDirs, async f => await fileOps.isDirectory ( fileOps.join ( directory, f ) ) )
   console.log ( `Will update [${dirs}] under ${directory}` )
   for ( const dir of dirs )
-    await makeIntoTemplate ( fileOps, directory, { ...cmd, directory: fileOps.join ( directory, dir ) } )
+    await makeIntoTemplate ( { ...params, currentDirectory: fileOps.join ( directory, dir ) } )
 }

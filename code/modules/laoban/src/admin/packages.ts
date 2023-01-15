@@ -3,13 +3,14 @@ import { gatherInitData, InitData, isSuccessfulInitData, TypeCmdOptions } from "
 
 import { FileOps } from "@laoban/fileops";
 import { loabanConfigName } from "../Files";
+import { ActionParams } from "./types";
 
 interface ProjectCmdOptions extends TypeCmdOptions {
 
 }
 
-export async function packages ( fileOps: FileOps, directory: string, cmd: ProjectCmdOptions ) {
-  const initData: InitData = await gatherInitData ( fileOps, directory, cmd, false );
+export async function packages ( { fileOps, currentDirectory, cmd }: ActionParams<any> ) {
+  const initData: InitData = await gatherInitData ( fileOps, currentDirectory, cmd, false );
   if ( isSuccessfulInitData ( initData ) ) {
     const { suggestions, initFileContents } = initData;
     suggestions.comments.forEach ( c => console.log ( c ) )

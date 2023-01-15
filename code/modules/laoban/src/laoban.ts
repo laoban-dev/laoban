@@ -7,8 +7,7 @@ import * as path from "path";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails } from "./status";
 import * as os from "os";
 import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, timeIt } from "./executors";
-import { output, Strings } from "./utils";
-import { validatePackageDetailsAndTemplates } from "./validation";
+import { output, postCommand, Strings } from "./utils";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
 import { Writable } from "stream";
@@ -50,15 +49,6 @@ function checkGuard ( config: ConfigWithDebug, script: ScriptDetails ): Promise<
   return Promise.resolve ()
 }
 
-
-let configAction: Action<void> = ( fileOps: FileOps, config: Config, cmd: any ) => {
-  let simpleConfig = { ...config }
-  if ( !cmd.all ) delete simpleConfig.scripts
-  delete simpleConfig.outputStream
-  output ( config ) ( JSON.stringify ( simpleConfig, null, 2 ) )
-  return Promise.resolve ()
-}
-
 let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
         pds.map ( d => ({ directory: d.directory, compactedStatusMap: compactStatus ( path.join ( d.directory, config.status ) ) }) )
@@ -68,10 +58,6 @@ let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: Package
 }
 
 
-const validationAction = ( fileOps: FileOps, params: string[] ): Action<Config | void> =>
-  ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
-    .then ( ds => validatePackageDetailsAndTemplates ( fileOps, config, ds ) )
-    .then ( issues => abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } ), displayError ( config.outputStream ) )
 
 //TODO This looks like it needs a clean up. It has abort logic and display error logic.
 
@@ -92,12 +78,7 @@ let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, 
 }
 
 
-function postCommand ( p: any, fileOps: FileOps ) {
-  return res => {
-    if ( p.cachestats ) console.log ( `Cache stats ${JSON.stringify ( fileOpsStats ( fileOps ), null, 2 )}\n` )
-    return res
-  };
-}
+
 
 function extraUpdateOptions ( program: CommanderStatic ) {
   program.option ( '--setVersion <version>', 'sets the version' )
@@ -151,7 +132,6 @@ export class Cli {
       .name ( 'laoban' )
       .usage ( '<command> [options]' )
       .arguments ( '' )
-      .option ( '-c, --cachestats', "show how the cache was impacted by this command", false )
       .option ( '--load.laoban.debug' ).version ( version )
 
 
@@ -193,7 +173,6 @@ export class Cli {
       }, description, ...options )
     }
     program.command ( 'admin <command>', 'admin commands. For example cleaning/modifying the project (creating new packages, set up templates...' )
-    action ( program, 'validate', validationAction ( fileOps, this.params ), `checks the laoban.json and the ${packageDetailsFile}`, defaultOptions )
     scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitrary command (the rest of the command line).',
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]

@@ -8,9 +8,8 @@ import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { cachedFileOps, FileOps, fileOpsStats, inDirectoryFileOps, meteredFileOps, shortCutFileOps, shortCuts } from "@laoban/fileops";
+import { cachedFileOps, FileOps, fileOpsStats, inDirectoryFileOps, meteredFileOps, Path, shortCutFileOps, shortCuts } from "@laoban/fileops";
 import { lastSegment, toArray } from "@laoban/utils";
-import { Path } from "@laoban/fileops";
 import WritableStream = NodeJS.WritableStream;
 
 // const path = simplePath
