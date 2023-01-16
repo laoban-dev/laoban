@@ -115,7 +115,7 @@ export class LaobanAdmin {
       .option ( '-d,--desc <desc>', 'The description of the package, defaults to an empty string' )
       .option ( '--nuke', 'If the directory already exists, it will be deleted and recreated', false )
       .option ( '--force', 'Will create even if the package already exists ', false )
-      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd ).then ( postCommand ( program, fileOps ) ) )
+      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd, params, outputStream ).then ( postCommand ( program, fileOps ) ) )
 
     addCommand ( 'newtemplate', `Creates a templates from the specified directory (copies files to template dir)`, newTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )

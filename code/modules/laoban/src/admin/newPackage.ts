@@ -5,6 +5,9 @@ import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { FileOps } from "@laoban/fileops";
 import { packageDetailsFile } from "../Files";
 import { execute } from "../executors";
+import { ConfigWithDebug } from "../config";
+import { loadConfigForAdmin } from "./laoban-admin";
+import { Writable } from "stream";
 
 interface CreatePackageOptions extends TypeCmdOptions {
   force?: boolean
@@ -14,9 +17,14 @@ interface CreatePackageOptions extends TypeCmdOptions {
   template?: string
 }
 
-export async function newPackage ( fileOps: FileOps, directory: string, name: string | undefined, cmd: CreatePackageOptions ): Promise<void> {
+export async function newPackage ( fileOps: FileOps, currentDirectory: string, name: string | undefined, cmd: CreatePackageOptions, params: string[], outputStream: Writable ): Promise<void> {
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+  if ( !Object.keys ( config.templates ).includes ( cmd.template ) ) {
+    console.error ( `Template ${cmd.template} not known. Legal values are [${Object.keys ( config.templates )}]` )
+    process.exit ( 1 )
+  }
   if ( name === undefined ) name = '.'
-  const clearDirectory = path.join ( directory, name ).replace ( /\\/g, '/' )
+  const clearDirectory = path.join ( currentDirectory, name ).replace ( /\\/g, '/' )
   let targetFile = path.join ( clearDirectory, packageDetailsFile );
   if ( await fileOps.isFile ( targetFile ) && !cmd.force && !cmd.nuke ) {
     console.log ( `File ${targetFile} already exists. Use --force to overwrite. --nuke can also be used but it will blow away the entire directory` )
