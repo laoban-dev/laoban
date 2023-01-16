@@ -4,7 +4,7 @@ It is a tool for controlling multiple projects (called packages in `laoban`-spea
 probably offers the most value to javascript/typescript projects in a __monorepo__.
 
 
-* [Documentation](https://laoban-github.github.io)
+* [Documentation](https://laoban.dev/)
 * Installation `npm i -g laoban`
 
 # Capabilities

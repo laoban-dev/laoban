@@ -19,8 +19,9 @@ interface CreatePackageOptions extends TypeCmdOptions {
 
 export async function newPackage ( fileOps: FileOps, currentDirectory: string, name: string | undefined, cmd: CreatePackageOptions, params: string[], outputStream: Writable ): Promise<void> {
   const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
-  if ( !Object.keys ( config.templates ).includes ( cmd.template ) ) {
-    console.error ( `Template ${cmd.template} not known. Legal values are [${Object.keys ( config.templates )}]` )
+  const templateName = cmd.template || cmd.type
+  if ( !Object.keys ( config.templates ).includes ( templateName ) ) {
+    console.error ( `Template ${templateName} not known. Legal values are [${Object.keys ( config.templates )}]` )
     process.exit ( 1 )
   }
   if ( name === undefined ) name = '.'
@@ -44,11 +45,11 @@ export async function newPackage ( fileOps: FileOps, currentDirectory: string, n
     }
   }
   let packageDetailsRawJson = found[ "package.details.json" ].contents;
-  packageDetailsRawJson.template = cmd.template ? cmd.template : cmd.type
+  packageDetailsRawJson.template = templateName
   let packageDetailsJson = derefence ( `Making ${packageDetailsFile}`, dic, JSON.stringify ( packageDetailsRawJson, null, 2 ), { variableDefn: dollarsBracesVarDefn } );
   console.log ( packageDetailsJson )
   await fileOps.createDir ( clearDirectory )
   await fileOps.saveFile ( targetFile, packageDetailsJson )
   await execute ( clearDirectory, `laoban update` ).then ( res => console.log ( 'laoban update\n', res ) )
 
-};
+}
