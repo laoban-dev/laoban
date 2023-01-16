@@ -30,7 +30,6 @@ src/react-app-env.d.ts
 public/created/
 out/
 .eslintcache
-.idea/
 
 *.review.json
 *.old.json
@@ -47,4 +46,3 @@ project/
 coverage/
 
 .cache/
-templates/
