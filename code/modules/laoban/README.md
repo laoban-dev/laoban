@@ -48,14 +48,10 @@ then laoban is ideal to help you manage those standards
 
 # Getting starting 
 
-* If you are new to a package that is managed by `laoban` then start [here](https://laoban-github.github.io/laoban/LAOBAN.EXISTING.html)
-* If you want to try out `laoban` on your package start [here](https://laoban-github.github.io/laoban/GETTING.STARTED.html)
+* If you are new to a package that is managed by `laoban` then start [here](https://laoban.dev/laoban/LAOBAN.EXISTING.html)
+* If you want to try out `laoban` on your package start [here](https://laoban.dev/laoban/GETTING.STARTED.html)
 
-# Documentation
-
-Documentation is [here](https://laoban-github.github.io/) 
-
-## Motivation
+# Motivation
 
 `npm` does not handle multiple packages well. Each package is a separate package.json that is managed separately. There
 is no ability to 'inherit' or share configuration, so in a package with many moving parts each of which is implemented

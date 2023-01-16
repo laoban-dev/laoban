@@ -5,10 +5,7 @@
       "target":      ".npmrc",
       "postProcess": "checkEnv(NPM_TOKEN)"
     },
-    {
-      "file":   "@laoban@/templates/typescript/babel.config.json",
-      "target": "babel.config.json"
-    },
+    "babel.config.json",
     {
       "file":   "@laoban@/templates/typescript/jest.config.json",
       "target": "jest.config.json"
