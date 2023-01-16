@@ -8,7 +8,7 @@ import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { cachedFileOps, FileOps, fileOpsStats, inDirectoryFileOps, meteredFileOps, parseJson, Path, shortCutFileOps, shortCuts } from "@laoban/fileops";
+import { cachedFileOps, fileNameWithoutShortCuts, FileOps, fileOpsStats, inDirectoryFileOps, meteredFileOps, parseJson, Path, shortCutFileOps, shortCuts } from "@laoban/fileops";
 import { lastSegment, toArray } from "@laoban/utils";
 import WritableStream = NodeJS.WritableStream;
 
@@ -31,7 +31,7 @@ const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
     if ( debug ) console.log ( `About to try and load ${filename}`, fileOpsStats ( fileOps ) )
     const fileContent = await fileOps.loadFileOrUrl ( filename )
     if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent )
-    const rawConfig= parseJson<any>(() =>`Loading ${filename} as part of loading ${loabanConfigName}`) ( fileContent )
+    const rawConfig = parseJson<any>(() => `${fileNameWithoutShortCuts ( fileOps, filename )} as part of loading ${loabanConfigName}`, true) ( fileContent )
     // console.log ( `load ${filename}`, rawConfig.templates )
     const ps = toArray ( rawConfig.parents );
     if ( debug ) console.log ( `\nParents are`, ps )

@@ -88,8 +88,7 @@ export class LaobanAdmin {
   public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[], outputStream: Writable ) {
     this.params = params;
     let program = require ( 'commander' )
-    this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' )
-
+    this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' ).option ( '--load.laoban.debug' )
     const addCommand = ( name: string, description: string, fn: ( ActionParams ) => Promise<void>, moreOptions?: ( env: NameAnd<string>, p: any ) => void ) => {
       let thisP = program.command ( name )
         .description ( description )

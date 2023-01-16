@@ -243,7 +243,7 @@ export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolea
     return { directory: p.directory, location: path.join ( p.directory, dryRun ? packageDetailsTestFile : packageDetailsFile ), contents }
   } );
   const version: LocationAnd<any> = {
-    location: path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.version.test.txt' : '.version.txt' ),
+    location: path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.version.test.txt' : 'version.txt' ),
     contents: initData.suggestions.version || '0.0.0',
     directory: initData.suggestions.laobanJsonLocation
   }

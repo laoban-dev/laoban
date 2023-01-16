@@ -42,12 +42,14 @@ export const findMatchingKFrom = <T> ( fileName: ( t: T ) => string ) => async (
 export const findMatchingK: ( list: string[], filter: ( s: string ) => Promise<boolean> ) => Promise<string[]> = findMatchingKFrom<string> ( s => s )
 
 
-export const parseJson = <T> ( context: string | (() => string) ) => ( s: string ): T => {
+export const parseJson = <T> ( context: string | (() => string), writeToError?: boolean ) => ( s: string ): T => {
   try {
     return JSON.parse ( s )
   } catch ( e ) {
     const realContext = typeof context === 'function' ? context () : context
-    throw new Error ( `Invalid JSON for ${realContext}: ${s}` )
+    const message = `Invalid JSON for ${realContext}: ${s}`;
+    if ( writeToError ) console.error ( message )
+    throw new Error ( message )
   }
 };
 export function loadWithParents<T> ( context: string, loader: ( url ) => Promise<string>, parse: ( context: string ) => ( json: string, location: string ) => T, findChildrenUrls: ( t: T ) => string[], fold: ( t1: T, t2: T ) => T ): ( url: string ) => Promise<T> {
@@ -77,29 +79,40 @@ export const emptyFileOps: FileOps = {
   log: () => Promise.resolve ()
 }
 
+interface ShortCutFileOps extends FileOps {
+  nameAndPrefix: NameAnd<string>
+}
+export function isShortCutFileOps ( fileOps: FileOps ): fileOps is ShortCutFileOps {
+  return (fileOps as ShortCutFileOps).nameAndPrefix !== undefined
+}
 
-export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<string> ): FileOps {
-  function processFile ( s: string ): string {
-    return s.replace ( /^@([^@]*)@/g, ( full ) => {
-      const name = full.slice ( 1, -1 );
-      const result = nameAndPrefix[ name ]
-      if ( result === undefined )
-        throw new Error ( `Cannot handle filename ${s}. It has the @${name}@. Legal names are ${Object.keys ( nameAndPrefix )}` )
-      return result
-    } )
-  }
+export function processFileForShortCuts ( nameAndPrefix: NameAnd<string>, s: string ): string {
+  return s.replace ( /^@([^@]*)@/g, ( full ) => {
+    const name = full.slice ( 1, -1 );
+    const result = nameAndPrefix[ name ]
+    if ( result === undefined )
+      throw new Error ( `Cannot handle filename ${s}. It has the @${name}@. Legal names are ${Object.keys ( nameAndPrefix )}` )
+    return result
+  } )
+}
+export function fileNameWithoutShortCuts(fileOps: FileOps, rawFilename): string{
+  return isShortCutFileOps ( fileOps ) ? processFileForShortCuts ( fileOps.nameAndPrefix, rawFilename ) : rawFilename
+}
+
+export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<string> ): ShortCutFileOps {
   return {
     ...fileOps,
+    nameAndPrefix,
     digest: fileOps.digest,
-    isFile: ( filename: string ) => fileOps.isFile ( processFile ( filename ) ),
-    isDirectory: ( filename: string ) => fileOps.isDirectory ( processFile ( filename ) ),
-    removeFile: ( filename: string ) => fileOps.removeFile ( processFile ( filename ) ),
-    removeDirectory: ( filename: string, recursive: boolean ) => fileOps.removeDirectory ( processFile ( filename ), recursive ),
-    loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ) ),
-    createDir: dir => fileOps.createDir ( processFile ( dir ) ),
-    saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFile ( filename ), text ),
-    log: ( filename: string, text: string ) => fileOps.log ( processFile ( filename ), text ),
-    listFiles: ( root: string ) => fileOps.listFiles ( processFile ( root ) ),
+    isFile: ( filename: string ) => fileOps.isFile ( processFileForShortCuts ( nameAndPrefix, filename ) ),
+    isDirectory: ( filename: string ) => fileOps.isDirectory ( processFileForShortCuts ( nameAndPrefix, filename ) ),
+    removeFile: ( filename: string ) => fileOps.removeFile ( processFileForShortCuts ( nameAndPrefix, filename ) ),
+    removeDirectory: ( filename: string, recursive: boolean ) => fileOps.removeDirectory ( processFileForShortCuts ( nameAndPrefix, filename ), recursive ),
+    loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFileForShortCuts ( nameAndPrefix, fileOrUrl ) ),
+    createDir: dir => fileOps.createDir ( processFileForShortCuts ( nameAndPrefix, dir ) ),
+    saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFileForShortCuts ( nameAndPrefix, filename ), text ),
+    log: ( filename: string, text: string ) => fileOps.log ( processFileForShortCuts ( nameAndPrefix, filename ), text ),
+    listFiles: ( root: string ) => fileOps.listFiles ( processFileForShortCuts ( nameAndPrefix, root ) ),
     join: fileOps.join,
     relative: fileOps.relative
   }
