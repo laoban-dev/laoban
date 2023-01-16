@@ -1,6 +1,6 @@
 {
   "templates": {
-    "react_typescript": "@laoban@/templates/typescript_react"
+    "typescript_react": "@laoban@/templates/typescript_react"
   },
   "scripts":   {
     "run-react": {
