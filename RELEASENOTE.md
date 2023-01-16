@@ -47,3 +47,4 @@
 1.2.1 moved cleancache and profile to laoban admin
 1.2.2 added `--ignoreGuards` while allowed the removal of scripts that were duplicates of commands except for the guards
 1.2.3 moved `laoban config` and `loaban validate` to `laoban admin`, bug fixes and cleanup of the code
+1.2.5 added `laoban admin templates` to list all templates

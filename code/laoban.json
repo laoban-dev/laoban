@@ -5,7 +5,8 @@
     "../common/laoban.json/javascript.laoban.json",
     "../common/laoban.json/typescript.laoban.json",
     "../common/laoban.json/typescript.publish.laoban.json",
-    "../common/laoban.json/ls.laoban.json"
+    "../common/laoban.json/ls.laoban.json",
+    "../common/laoban.json/react.laoban.json"
   ],
   "properties":     {
     "license":    "MIT",

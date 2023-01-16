@@ -16,6 +16,7 @@ interface UpdateCmdOptions {
   dryrun?: boolean
 }
 export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, template: string, target: string ): Promise<void> {
+  console.log ( 'copyTemplateDirectoryByConfig', config.templateDir, template )
   let src = path.join ( config.templateDir, template );
   let d = config.debug ( 'update' );
   return d.k ( () => `copyTemplateDirectory directory from ${src}, to ${target}`, async () => {
@@ -82,7 +83,7 @@ export async function loadOneFileFromTemplateControlFileDetails ( context: strin
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: PackageDetailsAndDirectory, dryrun: boolean ): Promise<void> {
   const prefix = templateUrl.includes ( '://' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const controlFile = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps, laobanDirectory, prefix );
-  d.message ( () => [ `control file is `, controlFile ] )
+  d.message ( () => [ `template control file ${prefix} for ${p.directory} is `, controlFile ] )
   const target = p.directory
   return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
     includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ), dryrun ) ( safeArray ( controlFile.files ) )
@@ -93,7 +94,10 @@ export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebu
   const target = p.directory
   const namedTemplateUrl = safeObject ( config.templates )[ template ]
   d.message ( () => [ `namedTemplateUrl in ${target} for ${template} is ${namedTemplateUrl} (should be undefined if using local template)` ] )
-  if ( namedTemplateUrl === undefined ) return copyTemplateDirectoryByConfig ( fileOps, config, p, template, target )
+  if ( namedTemplateUrl === undefined ) {
+    console.error ( `Cannot find template ${template} for ${target}. Legal values are [${Object.keys(config.templates )}]` )
+    return
+  }
   return copyTemplateDirectoryFromConfigFile ( fileOps, d, config.laobanDirectory, namedTemplateUrl, p, dryrun )
 }
 let lastVersion: string | undefined = undefined
@@ -104,8 +108,8 @@ export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWi
   let d = config.debug ( 'update' )
   async function setVersion ( v: string ) {
     d.message ( () => [ `Setting version to ${cmd.setVersion}` ] )
-    if (lastVersion !== v) console.log ( 'Version number is now', v )
-    lastVersion= v
+    if ( lastVersion !== v ) console.log ( 'Version number is now', v )
+    lastVersion = v
     if ( cmd.dryrun ) {
       return v
     }
@@ -120,7 +124,6 @@ export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWi
 }
 export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageAction<void[]> => ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let d = config.debug ( 'update' )
-
   return Promise.all ( pds.map ( async p => {
     const version = await updateVersionIfNeeded ( fileOps, config, cmd )
     return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>

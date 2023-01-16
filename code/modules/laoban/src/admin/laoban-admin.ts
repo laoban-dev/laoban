@@ -77,6 +77,10 @@ async function validate ( { fileOps, cmd, currentDirectory, params, outputStream
   await abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } )
 }
 
+async function templates ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+  console.log ( 'templates', config.templates )
+}
 export class LaobanAdmin {
   private params: string[];
   private program: any;
@@ -119,6 +123,7 @@ export class LaobanAdmin {
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
       .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
+    addCommand ( 'templates', 'Lists the legal templates', templates )
 
     addCommand ( 'makeintotemplate', `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). Note if existing .template.json file exists will use data from it `, makeIntoTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
