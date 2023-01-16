@@ -1,9 +1,6 @@
 import { calculateNewTemplateOptions } from "./newTemplate";
 import { fileOpsNode } from "@laoban/filesops-node";
-import { copyFile, findChildDirs, findChildFiles, simplePath } from "@laoban/fileops";
-
-
-import { NullDebugCommands } from "@laoban/debug";
+import { findChildFiles, simplePath } from "@laoban/fileops";
 import { testRoot, toArrayReplacingRoot } from "../fixture";
 import { execute } from "../executors";
 import { findLaobanUpOrDown } from "./init";
@@ -61,7 +58,7 @@ describe ( "new template - calculateNewTemplateOptions", () => {
       } )
   } )
 } )
-const prefix = 'node ../../../../code/modules/laoban/dist/src/admin/laobanadmin-cli.js '
+const prefix = 'node ../../../../code/modules/laoban/dist/index.js admin '
 const testDir = path.join ( testRoot, 'newTemplate' )
 const passingDir = path.join ( testDir, 'passing' )
 const passingSourceDir = path.join ( passingDir, 'source' )

@@ -105,10 +105,10 @@ export class LaobanAdmin {
     addCommand ( 'packages', 'Gives a summary of the packages that laoban admin has detected', packages, initUrlOption )
 
 
-    initOptions ( envs, program.command ( 'newpackage <init>' ) )
-      .description ( 'Creates a new package under the current directory with the specified type' )
+    initOptions ( envs, program.command ( 'newpackage [directory]' ) )
+      .description ( 'Creates a new package. Defaults to the current directory if one is not specified' )
       .option ( '--template <template>', 'The template to use. Defaults to the type' )
-      .option ( '-p,--packagename <packagename>', 'The name of the package, defaults to the directory name' )
+      .option ( '-p,--packagename <packagename>', `The name of the package, defaults to the directory name` )
       .option ( '-d,--desc <desc>', 'The description of the package, defaults to an empty string' )
       .option ( '--nuke', 'If the directory already exists, it will be deleted and recreated', false )
       .option ( '--force', 'Will create even if the package already exists ', false )

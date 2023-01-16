@@ -57,11 +57,6 @@ let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: Package
   return Promise.resolve ()
 }
 
-
-
-//TODO This looks like it needs a clean up. It has abort logic and display error logic.
-
-
 let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => {
   return PackageDetailFiles.workOutPackageDetails ( fileOps, config, { ...cmd, all: true } ).//
     then ( pds => {
@@ -76,9 +71,6 @@ let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, 
     } )
     .catch ( displayError ( config.outputStream ) )
 }
-
-
-
 
 function extraUpdateOptions ( program: CommanderStatic ) {
   program.option ( '--setVersion <version>', 'sets the version' )
