@@ -203,9 +203,9 @@ export class Cli {
       log ( '  -d    do a dryrun and only print what would be executed, rather than executing it' );
       log ( '' )
       if ( configAndIssues.issues.length > 0 ) {
-        log ( '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' )
-        log ( `There are issues preventing the program working. Type 'laoban validate' for details` )
-        log ( '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' )
+        log ( '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' )
+        log ( `There are issues preventing the program working. Type 'laoban admin validate' for details` )
+        log ( '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' )
       }
     } );
     program.on ( 'command:*',
