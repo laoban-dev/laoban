@@ -1,5 +1,6 @@
 {
   "packageManager": "yarn",
+  "templateDir":    "${laobanDirectory}/templates",
   "templates":      {
     "javascript": "@laoban@/templates/javascript"
   },
