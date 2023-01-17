@@ -1,9 +1,10 @@
 import { calculateNewTemplateOptions } from "./newTemplate";
 import { fileOpsNode } from "@laoban/filesops-node";
-import { findChildFiles, simplePath } from "@laoban/fileops";
+import { simplePath } from "@laoban/fileops";
 import { testRoot, toArrayReplacingRoot } from "../fixture";
 import { execute } from "../executors";
 import { findLaobanUpOrDown } from "./init";
+import { compareExpectedActualFiles } from "./compareExpectedActualFiles";
 
 const path = simplePath // so that we don't get windows/linux path issues in our tests
 const fileOps = fileOpsNode()
@@ -63,16 +64,6 @@ const testDir = path.join ( testRoot, 'newTemplate' )
 const passingDir = path.join ( testDir, 'passing' )
 const passingSourceDir = path.join ( passingDir, 'source' )
 
-async function compareExpectedActualFiles ( fileOps, expectedDir, actualDir ) {
-  const expectedFiles = (await findChildFiles ( fileOps, () => false ) ( expectedDir )).sort ()
-  const actualFiles = (await findChildFiles ( fileOps, () => false, ) ( actualDir )).sort ()
-  expect ( actualFiles ).toEqual ( expectedFiles )
-  return Promise.all ( actualFiles.map ( async ( file ) => {
-    const expected = await fileOps.loadFileOrUrl ( path.join ( expectedDir, file ) )
-    const actual = await fileOps.loadFileOrUrl ( path.join ( actualDir, file ) )
-    expect ( actual ).toEqual ( expected )
-  } ) )
-}
 async function cleanTestDirectories () {
   const files = (await fileOps.listFiles ( passingDir ))
     .filter ( s => s !== 'expected' && s !== 'source' && s !== 'laoban.json' && s !== 'laoban.starting.json' )

@@ -1,12 +1,11 @@
 {
   "packageManager": "yarn",
   "parents": [
-    "../common/laoban.json/core.laoban.json",
-    "../common/laoban.json/javascript.laoban.json",
-    "../common/laoban.json/typescript.laoban.json",
-    "../common/laoban.json/typescript.publish.laoban.json",
-    "../common/laoban.json/ls.laoban.json",
-    "../common/laoban.json/react.laoban.json"
+    "@laoban@/laoban.json/core.laoban.json",
+    "@laoban@/laoban.json/javascript.laoban.json",
+    "@laoban@/laoban.json/typescript.laoban.json",
+    "@laoban@/laoban.json/typescript.publish.laoban.json",
+    "@laoban@/laoban.json/react.laoban.json"
   ],
   "properties": {
     "license": "MIT",

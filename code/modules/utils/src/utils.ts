@@ -15,10 +15,10 @@ export function unique<T> ( ts: T[] | undefined, tagFn: ( t: T ) => string ): T[
   return result
 }
 
-export function mapObject<T, T1> ( a: NameAnd<T>, fn: ( t: T ) => T1 ): NameAnd<T1> {
+export function mapObject<T, T1> ( a: NameAnd<T>, fn: ( t: T, name: string ) => T1 ): NameAnd<T1> {
   var result: NameAnd<T1> = {}
   Object.entries ( a ).forEach ( ( [ name, t ] ) => {
-    let value = fn ( t );
+    let value = fn ( t, name );
     if ( value !== undefined ) result[ name ] = value
   } )
   return result

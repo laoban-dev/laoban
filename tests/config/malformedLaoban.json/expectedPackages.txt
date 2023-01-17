@@ -1,2 +1,10 @@
 Validation errors prevent laoban from running correctly
 Could not load laoban.json. Run with --load.laoban.debug to find more
+Invalid JSON for C:\git\laoban\tests\config\malformedLaoban.json\laoban.json as part of loading laoban.json: {
+  "templateDir"   : "${laobanDirectory}/template",
+  "versionFile"   : "${
+  "packageManager": "yarn",
+  "scripts"       : {
+    "log"       : {"description": "displays the log file", "commands": ["cat ${log}"]},
+    "link"      : {
+      "description

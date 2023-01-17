@@ -1,0 +1,15 @@
+{
+  "template": "typescript",
+  "name": "@laoban/validation",
+  "description": "A library for validating json",
+  "details": {
+    "publish": true,
+    "test": true,
+    "links": [],
+    "compile": true,
+    "extraDeps": {},
+    "extraDevDeps": {},
+    "extraBins": {},
+    "keywords": []
+  }
+}

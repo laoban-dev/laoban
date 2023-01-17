@@ -27,8 +27,7 @@ function loadFileOrUrl ( fileOrUrl: string ): Promise<string> {
 export const fileOpsNode = ( speedUpLogs?: boolean ): FileOps => {
   const actualSpeedUpLogs = speedUpLogs !== false;
   return {
-    isDirectory: filename => promises.lstat ( filename ).then ( s =>
-      s.isDirectory (), e => false ),
+    isDirectory: filename => promises.lstat ( filename ).then ( s => s.isDirectory (), e => false ),
     isFile: filename => promises.lstat ( filename ).then ( s =>
       s.isFile (), e => false ),
     digest: ( s: string ): string => {

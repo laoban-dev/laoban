@@ -1,5 +1,6 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { FileOps } from "./fileOps";
+import { allButLastSegment } from "@laoban/utils";
 
 export interface LocationAndErrors {
   location: string
@@ -54,4 +55,15 @@ export const fileContentAndLocation = <T> ( file: string, parser: ( s: string ) 
 
 export const fileContentAndLocations = <T> ( file: string, parser: ( context: string ) => ( s: string ) => T ) => async ( context: string, fileOps: FileOps, directories: string[] ): Promise<LocationAndParsedOrErrors<T>[]> => {
   return Promise.all ( directories.map ( d => fileContentAndLocation ( file, parser ( `${context} ${d}` ) ) ( fileOps, d ) ) )
+}
+
+
+export const saveOne = ( fileOps: FileOps ) => async ( lc: LocationAnd<string> ): Promise<void> => {
+  const { location, directory, contents } = lc
+  await fileOps.createDir ( directory )
+  return fileOps.saveFile ( location, contents );
+}
+
+export const saveAll = ( fileOps: FileOps ) => async ( lcs: LocationAndContents<string>[] ): Promise<void> => {
+  await Promise.all ( lcs.map ( saveOne ( fileOps ) ) );
 }

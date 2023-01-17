@@ -31,6 +31,18 @@ export interface FileOps extends CopyFileFns, Path, LogFileFns {
   removeFile ( filename: string ): Promise<void>
 }
 
+export function isUrl ( urlOrFilename: string ) {
+  return urlOrFilename.startsWith ( 'http:/' ) || urlOrFilename.includes ( '@' )
+}
+export function isFilename ( urlOrFilename: string ) {
+  return !isUrl ( urlOrFilename )
+}
+export function addPrefixIfFile ( fileOps: FileOps, prefix: string, fileName: string ) {
+  const isFullyQUalified = fileName.includes ( ':' ) || fileName.includes ( '@' )
+  const newFileName = isFullyQUalified ? fileName : fileOps.join ( prefix, fileName );
+  return newFileName;
+}
+
 interface TAndExist<T> {
   t: T
   exists: boolean
@@ -95,7 +107,7 @@ export function processFileForShortCuts ( nameAndPrefix: NameAnd<string>, s: str
     return result
   } )
 }
-export function fileNameWithoutShortCuts(fileOps: FileOps, rawFilename): string{
+export function fileNameWithoutShortCuts ( fileOps: FileOps, rawFilename ): string {
   return isShortCutFileOps ( fileOps ) ? processFileForShortCuts ( fileOps.nameAndPrefix, rawFilename ) : rawFilename
 }
 

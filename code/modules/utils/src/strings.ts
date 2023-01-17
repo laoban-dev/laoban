@@ -19,3 +19,6 @@ export function firstSegment ( s: string, marker: string | RegExp = pathMarker )
   if ( parts.length === 0 ) return s
   return parts[ 0 ]
 }
+export function cleanLineEndings ( text: string ) {
+  return text.replace ( /((?<!\r)\n|\r(?!\n))/g, '\r\n' )
+}

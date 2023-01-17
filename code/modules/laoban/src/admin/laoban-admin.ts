@@ -14,6 +14,8 @@ import { output, postCommand } from "../utils";
 import { addDebug } from "@laoban/debug";
 import { validatePackageDetailsAndTemplates } from "../validation";
 import { ActionParams } from "./types";
+import { CommanderStatic } from "commander";
+import { updateTemplate, updateTemplateOptions } from "./update-template";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -81,6 +83,7 @@ async function templates ( { fileOps, cmd, currentDirectory, params, outputStrea
   const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
   console.log ( 'templates', config.templates )
 }
+
 export class LaobanAdmin {
   private params: string[];
   private program: any;
@@ -123,6 +126,8 @@ export class LaobanAdmin {
       .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
     addCommand ( 'templates', 'Lists the legal templates', templates )
+
+    addCommand ( 'updatetemplate', `Updates the template from the current directory`, updateTemplate, updateTemplateOptions )
 
     addCommand ( 'makeintotemplate', `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). Note if existing .template.json file exists will use data from it `, makeIntoTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )

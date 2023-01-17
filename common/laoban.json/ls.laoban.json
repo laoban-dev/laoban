@@ -23,10 +23,6 @@
         {
           "command":   "js:process.cwd()",
           "directory": "dist"
-        },
-        {
-          "command":   "pwd",
-          "directory": "dist"
         }
       ]
     }

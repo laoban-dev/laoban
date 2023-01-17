@@ -6,7 +6,7 @@ import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables
 import { loadVersionFile, modifyPackageJson, savePackageJsonFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 import { nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
-import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson } from "@laoban/fileops";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, isTemplateFileDetails, loadFileFromDetails, parseJson } from "@laoban/fileops";
 
 
 interface UpdateCmdOptions {
@@ -81,9 +81,10 @@ export async function loadOneFileFromTemplateControlFileDetails ( context: strin
 
 }
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: PackageDetailsAndDirectory, dryrun: boolean ): Promise<void> {
-  const prefix = templateUrl.includes ( '://' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
+  const prefix = templateUrl.includes ( ':' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const controlFile = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps, laobanDirectory, prefix );
   d.message ( () => [ `template control file ${prefix} for ${p.directory} is `, controlFile ] )
+  if (controlFile.files===undefined){throw Error(`Template control file ${prefix} is malformed. It is missing the files property`)}
   const target = p.directory
   return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
     includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ), dryrun ) ( safeArray ( controlFile.files ) )

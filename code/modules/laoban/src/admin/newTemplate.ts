@@ -83,7 +83,7 @@ async function copyTemplateFilesToTemplate ( fileOps: FileOps, directory: string
 
   await cf ( copyFileDetailsWithPackageJsonSpecial, cmd.dryrun )
 }
-function getTemplateJsonFileName ( fileOps: Path, target: string ) {
+export function getTemplateJsonFileName ( fileOps: Path, target: string ) {
   return fileOps.join ( target, '.template.json' );
 }
 async function saveDotTemplateJson ( cmd: CreateTemplateOptions, templateJson: string, fileOps: FileOps, target: string ) {
