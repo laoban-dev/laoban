@@ -11,7 +11,7 @@ probably offers the most value to javascript/typescript projects in a _monorepo_
 
 If you have tried to use `lerna` or `yarn workspaces` and found them lacking then this might be for you.
 
-It is useful if you want to have a typescript project made of small chunks of code (a main + librarys) or
+It is useful if you want to have a typescript project made of small chunks of code (a main + libraries) or
 want to control and manage dependencies / tech stack at 'the team level' or 'the organisation level'
 
 ## Trivial to make scripts that run across packages

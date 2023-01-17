@@ -49,12 +49,18 @@ function checkGuard ( config: ConfigWithDebug, script: ScriptDetails ): Promise<
   return Promise.resolve ()
 }
 
-let statusAction: PackageAction<void> = ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
+let statusAction: PackageAction<void> = async ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
         pds.map ( d => ({ directory: d.directory, compactedStatusMap: compactStatus ( path.join ( d.directory, config.status ) ) }) )
   let prettyPrintStatusData = toPrettyPrintData ( toStatusDetails ( compactedStatusMap ) );
   prettyPrintData ( prettyPrintStatusData )
-  return Promise.resolve ()
+  const hasError = compactedStatusMap.reduce ( ( acc, d ) => {
+    const hasFalse = [ ...d.compactedStatusMap.values () ].reduce ( ( dacc, v ) => dacc || v.includes ( ' false ' ), false );
+    return acc || hasFalse
+  }, false )
+  if ( hasError ) {
+    process.exit ( 1 )
+  }
 }
 
 let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => {
@@ -78,6 +84,7 @@ function extraUpdateOptions ( program: CommanderStatic ) {
   program.option ( '--major', 'update major version' )
   return program
 }
+
 
 const ignoreGuardOption = ( s: ScriptDetails ) => ( program: CommanderStatic ) => {
   if ( scriptHasGuard ( s ) ) program.option ( '--ignoreGuards', 'Runs the command ignoring any guards. This may give erratic behaviour!' )
