@@ -197,7 +197,7 @@ export class CommandDecorators {
   }
 
   static shellDisplay: StdOutDecorator = {
-    condition: d => d.scriptInContext.shell && !d.scriptInContext.dryrun,
+    condition: d => d.scriptInContext.details.showShell || (d.scriptInContext.shell && !d.scriptInContext.dryrun),
     pretext: d => `* ${d.detailsAndDirectory.directory} [${d.details.commandString}]\n`,
     transform: sr => sr,
     posttext: ( d, sr ) => ''

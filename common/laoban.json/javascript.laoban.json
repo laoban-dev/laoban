@@ -2,7 +2,7 @@
   "scripts": {
     "test":         {
       "description": "runs ${packageManager} test",
-      "inLinksOrder": true,
+      "inLinksOrder": true, "showShell": true,
       "guard":       {"value": "${packageDetails.details.test}", "default": true},
       "commands":    [{"name": "test", "command": "${packageManager} test", "status": true}]
     },

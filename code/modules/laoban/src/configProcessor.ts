@@ -31,7 +31,7 @@ const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
     if ( debug ) console.log ( `About to try and load ${filename}`, fileOpsStats ( fileOps ) )
     const fileContent = await fileOps.loadFileOrUrl ( filename )
     if ( debug ) console.log ( `loaded fileContent from ${filename}`, fileContent )
-    const rawConfig = parseJson<any>(() => `${fileNameWithoutShortCuts ( fileOps, filename )} as part of loading ${loabanConfigName}`, true) ( fileContent )
+    const rawConfig = parseJson<any> ( () => `${fileNameWithoutShortCuts ( fileOps, filename )} as part of loading ${loabanConfigName}`, true ) ( fileContent )
     // console.log ( `load ${filename}`, rawConfig.templates )
     const ps = toArray ( rawConfig.parents );
     if ( debug ) console.log ( `\nParents are`, ps )
@@ -99,7 +99,7 @@ function cleanUpScript ( dic: any ): ( scriptName: string, defn: ScriptDefn ) =>
     name: derefence ( `cleanUpScript ${scriptName}.name`, dic, scriptName, { throwError: true, variableDefn: dollarsBracesVarDefn } ),
     description: derefence ( `cleanUpScript ${scriptName}.description`, dic, defn.description, { throwError: true, variableDefn: dollarsBracesVarDefn } ),
     guard: defn.guard,
-
+    showShell: defn.showShell,
     inLinksOrder: defn.inLinksOrder,
     commands: defn.commands.map ( cleanUpCommand ),
     env: cleanUpEnv ( `cleanUpScript ${scriptName}.env`, dic, defn.env )

@@ -48,7 +48,7 @@ type ReportDecorator = ( report: Report ) => Report
 const prefixLinesThatDontStartWithStar = ( s: string ) => s.split ( '\n' ).map ( s => s.startsWith ( '*' ) ? s : '  ' + s ).join ( '\n' );
 
 const shellReportDecorator: ReportDecorator = report =>
-  report.scd.scriptInContext.shell ?
+  report.scd.scriptInContext.shell || report.scd.scriptInContext.details.showShell ?
     { ...report, text: prefixLinesThatDontStartWithStar ( report.text ) } :
     report;
 

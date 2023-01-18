@@ -53,6 +53,8 @@ export interface ScriptDetails {
   guard?: GuardDefn,
   osGuard?: string,
   pmGuard?: string,
+  showShell?: boolean,
+
   guardReason?: string,
   inLinksOrder?: boolean,
   env?: Envs,
@@ -159,6 +161,7 @@ export interface ScriptDefn {
   description: string,
   guard?: GuardDefn,
   inLinksOrder?: boolean,
+  showShell?: boolean,
   commands: (string | CommandDefn)[],
   env?: Envs
 }
