@@ -187,7 +187,7 @@ async function loadSingleFileFromTemplate ( fileOps: FileOps, templateUrl: strin
 }
 
 
-interface SuccessfullInitData {
+export interface SuccessfullInitData {
   existingLaobanFile: string,
   suggestions: SuccessfullInitSuggestions
   initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[]

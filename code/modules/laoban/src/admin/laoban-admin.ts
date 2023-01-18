@@ -1,7 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { NameAnd } from "@laoban/utils";
 import { init } from "./init";
-import { packages } from "./packages";
+import { analyzepackages } from "./analyzepackages";
 import { newPackage } from "./newPackage";
 import { FileOps } from "@laoban/fileops";
 import { makeIntoTemplate, newTemplate, updateAllTemplates } from "./newTemplate";
@@ -30,12 +30,10 @@ function initUrlOption<T> ( envs: NameAnd<string>, p: T ): T {
     .option ( '-l,--legaltypes <legal...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes. Defaults to the list returned by --listtypes", )
   return p
 }
-function initOptions<T> ( envs: NameAnd<string>, p: T ): T {
-  const a: any = initUrlOption ( envs, p )
-  const defaultInitUrl = initUrl ( envs );
-  a.option ( '-t,--type <type>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", 'typescript' )
-  return p
+function initOptions<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ): T {
+  return p.option ( '-t,--type <type>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", 'typescript' )
 }
+
 
 export async function loadConfigForAdmin ( fileOps: FileOps, cmd: any, currentDirectory: string, params: string[], outputStream: Writable ): Promise<ConfigWithDebug> {
   const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
@@ -108,7 +106,8 @@ export class LaobanAdmin {
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
     //
-    addCommand ( 'packages', 'Gives a summary of the packages that laoban admin has detected', packages, initUrlOption )
+    addCommand ( 'analyzepackages', 'Gives a summary of the packages that laoban admin has detected"', analyzepackages, initUrlOption )
+      .option ( '--showimpact', "Shows dependencies and devDependencies that would be impacted by the change" )
 
 
     initOptions ( envs, program.command ( 'newpackage [directory]' ) )
@@ -147,3 +146,4 @@ export class LaobanAdmin {
   }
 
 }
+

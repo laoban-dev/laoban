@@ -4,7 +4,7 @@ import { loabanConfigName, packageDetailsFile } from "../Files";
 import { addPrefixIfFile, CopyFileDetails, fileNameFrom, FileOps, isFilename, isTemplateFileDetails, isUrl, loadFileFromDetails, LocationAndContents, parseJson, saveAll, targetFrom, TemplateFileDetails } from "@laoban/fileops";
 import { getTemplateJsonFileName } from "./newTemplate";
 import { includeAndTransformFile, TemplateControlFile } from "../update";
-import { deepCombineTwoObjects, jsonDelta, NameAnd, singleOrArrayOrUndefined, toArray } from "@laoban/utils";
+import { deepCombineTwoObjects, jsonDelta, JsonDeltaOptions, NameAnd, singleOrArrayOrUndefined, toArray } from "@laoban/utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { loadConfigForAdmin } from "./laoban-admin";
 import { CommanderStatic } from "commander";
@@ -89,13 +89,13 @@ async function loadOriginalAndCurrentPackageJson ( fileOps: FileOps, directory: 
   return { originalPackageJson, packageJson };
 }
 
-function createDeltaForPackageJson ( packageJson: any, originalPackageJson: any ) {
+export function createDeltaForPackageJson ( originalPackageJson: any, packageJson: any, options: JsonDeltaOptions ) {
   packageJson.name = originalPackageJson.name
   packageJson.description = originalPackageJson.description
   packageJson.version = originalPackageJson.version
   packageJson.license = originalPackageJson.license
   packageJson.repository = originalPackageJson.repository
-  return jsonDelta ( originalPackageJson, packageJson, true );
+  return jsonDelta ( originalPackageJson, packageJson, options );
 }
 export async function updateTemplate ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<UpdateTemplateCmd> ) {
   function error ( msg: string ) {
@@ -114,7 +114,7 @@ export async function updateTemplate ( { fileOps, cmd, currentDirectory, params,
   }
   console.log ( 'templateJson', transformedJson )
   const { originalPackageJson, packageJson } = await loadOriginalAndCurrentPackageJson ( fileOps, directory, templateDirUrl, originalTemplatePackageCfd );
-  const delta = createDeltaForPackageJson ( packageJson, originalPackageJson );
+  const delta = createDeltaForPackageJson ( originalPackageJson, packageJson, { onlyUpdate: true } );
   const originalTemplateWasFile = isFilename ( templateDirUrl );
   const newPackageJson = originalTemplateWasFile ? deepCombineTwoObjects ( originalPackageJson, delta ) : delta
 
