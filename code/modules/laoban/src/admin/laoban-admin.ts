@@ -108,7 +108,7 @@ export class LaobanAdmin {
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
     //
-    addCommand ( 'analyzepackages', 'Gives a summary of the packages that laoban admin has detected"', analyzepackages, justInitUrl )
+    addCommand ( 'analyze', 'Gives a summary of the packages that laoban admin has detected"', analyzepackages, justInitUrl )
       .option ( '--showimpact', "Shows dependencies and devDependencies that would be impacted by the change" )
 
 
@@ -128,7 +128,7 @@ export class LaobanAdmin {
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
     addCommand ( 'templates', 'Lists the legal templates', templates )
     addCommand ( 'updatetemplate', `Updates the template from the current (or specified) directory. Allows you to edit package.json here, and change the template from that`, updateTemplate, updateTemplateOptions )
-    addCommand ( 'makeintotemplate', `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). This is most often used on existing templates after the files have been changed. Note that if existing .template.json file exists will use data from it `, makeIntoTemplate, initUrlOption )
+    addCommand ( 'makeintotemplate', `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). This is most often used on existing templates after the files have been changed. Note that if the '.template.json' file exists data from it will be used`, makeIntoTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
     addCommand ( 'makealltemplates', `all subdirectories that are 'makeintotemplate'ed`, updateAllTemplates, initUrlOption )

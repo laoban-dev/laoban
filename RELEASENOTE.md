@@ -57,4 +57,5 @@
 * 1.2.10 `laoban status` now has an exit code of 1 if there are any errors
 * 1.2.11 `laoban admin updatetemplate` now updates the template based on package.json. For example if the typescript
   version was updated in the package.json...
-* 1.2.12 `laoban admin analysepackage` now shows what would happen if the templates suggested were adopted
+* 1.2.12 `laoban admin analyzepackage` now shows what would happen if the templates suggested were adopted
+* 1.2.16 `laoban admin analyze` is the new name of the `analyzepackage`. A lot of polish added to `init` and `analyze`
