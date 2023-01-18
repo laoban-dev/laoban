@@ -22,7 +22,7 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
       if ( templateUrl === undefined ) console.log ( `Directory ${p.directory} uses template ${p.template} which is not defined in ${loabanConfigName}` )
       else {
         const context = `Loading ${packageDetailsFile} for ${p.directory} from ${templateUrl}`
-        const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) )( 'package.json' )
+        const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) ) ( 'package.json' )
 
         const packageJson = parseJson ( context ) ( templateJson )
         return packageJson
@@ -46,12 +46,21 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
 export async function analyzepackages ( ap: ActionParams<AnalyzePackagesCmd> ) {
   const { fileOps, currentDirectory, cmd, params, outputStream } = ap
   const initData: InitData = await gatherInitData ( fileOps, currentDirectory, cmd, false );
+  async function findActualTemplateIfExists ( p: ProjectDetailsAndTemplate ) {
+     try{
+       const s = await fileOps.loadFileOrUrl ( fileOps.join ( p.directory, packageDetailsFile ) )
+       const parse= parseJson<any>(`Loading ${packageDetailsFile} for ${p.directory}`)(s)
+       return parse.template
+     } catch ( e ) {
+       return undefined
+     }
+  }
   if ( isSuccessfulInitData ( initData ) ) {
     const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
 
     if ( configAndIssues.issues.length > 0 ) console.log ( `Cannot use an existing ${loabanConfigName}` )
-
     if ( cmd.showimpact ) return showImpact ( ap, initData, configAndIssues )
+
     const { suggestions, initFileContents } = initData;
     suggestions.comments.forEach ( c => console.log ( c ) )
     console.log ( `Would put ${loabanConfigName} into `, suggestions.laobanJsonLocation, ' which allows the following templates', initData.parsedLaoBan.templates )
@@ -61,11 +70,12 @@ export async function analyzepackages ( ap: ActionParams<AnalyzePackagesCmd> ) {
       return
     }
     const longestDirLength = dirs.map ( p => p.length ).reduce ( ( a, b ) => Math.max ( a, b ), 0 )
-    console.log ( 'package.json'.padEnd ( longestDirLength ), '    Guessed Template' )
-    initData.projectDetails.forEach ( p => {
-      const template = p.template
-      console.log ( '   ', p.directory.padEnd ( longestDirLength ), template );
-    } )
+    const longestGuessedTemplateLength = [ 'Guessed Template', ...initData.projectDetails.map ( p => p.template ) ].reduce ( ( a, b ) => Math.max ( a, b.length ), 0 )
+    console.log ( 'package.json'.padEnd ( longestDirLength ), '    Guessed Template    Actual Template' )
+    await Promise.all ( initData.projectDetails.map ( async p => {
+      const foundDetails = await findActualTemplateIfExists ( p )
+      console.log ( '   ', p.directory.padEnd ( longestDirLength ), p.template.padEnd ( longestGuessedTemplateLength ),'  ', foundDetails?foundDetails:'---' );
+    } ) )
     console.log ( 'Suggested version number is ', suggestions.version )
     console.log ( 'run' )
     console.log ( '     laoban admin analyzepackages --showimpact' )

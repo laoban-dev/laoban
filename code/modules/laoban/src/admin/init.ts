@@ -249,8 +249,14 @@ export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolea
   }
   return [ laoban, ...projectDetails, version ]
 }
-async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string> [] ): Promise<void> {
-  await Promise.all ( data.map ( async ( { location, contents } ) => fileOps.saveFile ( location, contents ) ) )
+async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string> [], cmd: InitCmdOptions ): Promise<void> {
+  await Promise.all ( data.map ( async ( { location, contents } ) => {
+    if ( cmd.dryrun || cmd.force || !await fileOps.isFile ( location ) ) {
+      console.log ( `Creating`, location );
+      return fileOps.saveFile ( location, contents );
+    }
+    console.log ( `Skipping ${location} because it already exists (use --force to create it)` )
+  } ) )
 }
 
 export function reportInitData ( initData: SuccessfullInitData, files: LocationAnd<string>[] ): void {
@@ -268,7 +274,6 @@ interface InitCmdOptions extends TypeCmdOptions {
 }
 export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<InitCmdOptions> ): Promise<void> {
   const clearDirectory = path.join ( currentDirectory ).replace ( /\\/g, '/' )
-  console.log ( clearDirectory )
   if ( cmd.dryrun && cmd.force ) {
     console.log ( 'Cannot have --dryrun and --force' )
     return
@@ -277,35 +282,9 @@ export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<In
   const initData = await gatherInitData ( fileOps, clearDirectory, cmd, false )
   if ( isSuccessfulInitData ( initData ) ) {
     const files: LocationAnd<string>[] = filesAndContents ( initData, dryRun )
-    if ( cmd.force || cmd.dryrun ) await saveInitDataToFiles ( fileOps, files );
-    if ( cmd.dryrun ) {
-      console.log ()
-      reportInitData ( initData, files )
-      console.log ()
-      files.forEach ( f => console.log ( `Created ${f.location}` ) )
-      console.log ()
-      console.log ( 'Dry run complete' )
-      console.log ()
-      console.log ( `This created files ${loabanConfigTestName}, .versions.txt, ${packageDetailsTestFile} in the project directories` )
-      console.log ( 'To create the actual files use --force' )
-    } else if ( cmd.force ) {
-      reportInitData ( initData, files )
-      files.forEach ( f => console.log ( `Created ${f.location}` ) )
-    } else {
-      console.log ( 'Would create files' )
-      console.log ( '==================' )
-      files.forEach ( f => {
-        console.log
-        console.log ( f.location );
-        console.log ( ''.padStart ( f.location.length, '-' ) );
-        console.log ( f.contents );
-      } )
-      reportInitData ( initData, files )
-      console.log ()
-      console.log ( 'To actually create the files use --force. To see them "in situ" before creating them use --dryrun' )
-
-    }
-
+    reportInitData ( initData, files )
+    console.log ()
+    await saveInitDataToFiles ( fileOps, files, cmd );
   } else
     console.log ( 'Could not work out how to create', JSON.stringify ( initData.suggestions, null, 2 ) )
 }
