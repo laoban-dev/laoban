@@ -43,7 +43,7 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
   console.log ( JSON.stringify ( fromEntries ( ...result ), null, 2 ) )
 }
 
-export async function analyzepackages ( ap: ActionParams<AnalyzePackagesCmd> ) {
+export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
   const { fileOps, currentDirectory, cmd, params, outputStream } = ap
   const initData: InitData = await gatherInitData ( fileOps, currentDirectory, cmd, false );
   async function findActualTemplateIfExists ( p: ProjectDetailsAndTemplate ) {
@@ -78,7 +78,7 @@ export async function analyzepackages ( ap: ActionParams<AnalyzePackagesCmd> ) {
     } ) )
     console.log ( 'Suggested version number is ', suggestions.version )
     console.log ( 'run' )
-    console.log ( '     laoban admin analyzepackages --showimpact' )
+    console.log ( '     laoban admin analyze --showimpact' )
     console.log ( 'to see if any version numbers would be impacted' )
   } else {
     console.log ( 'Had problems with the configuration' )

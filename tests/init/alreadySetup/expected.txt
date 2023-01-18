@@ -1,7 +1,7 @@
-C:/git/laoban/tests/init/alreadySetup
 Found an existing laoban.json file at C:/git/laoban/tests/init/alreadySetup
-Created C:\git\laoban\tests\init\alreadySetup\laoban.json
-Created C:\git\laoban\tests\init\alreadySetup\lib1\package.details.json
-Created C:\git\laoban\tests\init\alreadySetup\lib2\package.details.json
-Created C:\git\laoban\tests\init\alreadySetup\version.txt
+
+Creating C:\git\laoban\tests\init\alreadySetup\laoban.json
+Creating C:\git\laoban\tests\init\alreadySetup\lib1\package.details.json
+Creating C:\git\laoban\tests\init\alreadySetup\lib2\package.details.json
+Creating C:\git\laoban\tests\init\alreadySetup\version.txt
 

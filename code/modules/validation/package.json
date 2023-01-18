@@ -1,7 +1,7 @@
 {
   "name": "@laoban/validation",
   "description": "A library for validating json",
-  "version": "1.2.16",
+  "version": "1.2.18",
   "bin": {},
   "keywords": [],
   "license": "MIT",

@@ -5,11 +5,11 @@ Would put laoban.json into  C:\git\laoban  which allows the following templates 
   typescript: '@laoban@/templates/typescript_405',
   typescript_react: '@laoban@/templates/typescript_react'
 }
-package.json                                      Guessed Template
-    C:\git\laoban\tests\analyzepackage\empty/lib1 typescript
-    C:\git\laoban\tests\analyzepackage\empty/lib2 typescript
+package.json                                      Guessed Template    Actual Template
+    C:\git\laoban\tests\analyzepackage\empty/lib1 typescript          ---
+    C:\git\laoban\tests\analyzepackage\empty/lib2 typescript          ---
 Suggested version number is  1.2.8
 run
-     laoban admin analyzepackages --showimpact
+     laoban admin analyze --showimpact
 to see if any version numbers would be impacted
 

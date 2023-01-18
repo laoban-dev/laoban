@@ -29,7 +29,7 @@ want to control and manage dependencies / tech stack at 'the team level' or 'the
 
 * If many of your packages use a dependency and you want to update that dependency you can do it in one place
 * If you have configuration files like jest.config, tsconfig.json, tslint.json, etc. you can manage them in one place
-* Easy to make your own 'templates'
+* Easy to make your own 'templates' (often trivially easy)
 * Templates extend other templates, so you can have a 'base' template and then extend it with 'just the differences'
 
 ## Manage common scripts
@@ -60,9 +60,9 @@ then laoban is ideal to help you manage those standards
 is no ability to 'inherit' or share configuration, so in a package with many moving parts each of which is implemented
 with a small bit of javascript/typescript, it can be difficult to keep all the dependencies in line.
 
-In the past I have found myself making a whole raft of scripts, and then forgetting them. Copying them
-for use in other packages was problematic and prone to error. Most of the logic in the 
-script was the same, and can be generalised across multiple packages. Laoban was the result of 
+In the past I have found myself making a whole raft of scripts, and then forgetting which one was which / how they worked 
+/ how to modify them. Copying them for use in other packages was problematic and prone to error. Most of the logic in the 
+script was the same, and can be generalised across multiple packages. `laoban` is the result of 
 refactoring these scripts and making them more declarative.
 
 ## Other package managers
@@ -76,7 +76,7 @@ life will be much harder'*
 # What are the 'golden moments'
 
 * Running all the tests in parallel across multiple packages
-    * Without this I have to either use a pipeline after a commit, or make a script to call them one at a time
+    * Without this I have to manually run them one at a time or make a script to call them (which is error-prone and usually without parallelism)
 * Seeing the status of the important commands
     * Which packages have not compiled, or tested, or published successfully?
       * And then go and look at only the 'important' log and find why
@@ -89,13 +89,15 @@ life will be much harder'*
     * And now you can get a status of all the packages, knowing which have been impacted negatively with `laoban status`
 * Updating a global version number
     * If the packages are tightly coupled, I like them to share a version number.
+    * I can update them all with one command `laoban update --minor` or `laoban update --major` 
 
 # Typical usage
 
 ## When loading a project with many  packages from git
 
-* git clone the project
-* `laoban compile -asl`will compile the packages in the correct order
+* `git clone` the project
+* `yarn` to download all the dependencies
+* `laoban compile` will compile the packages in the correct order
 * `laoban test` will test the packages
 * `laoban status` will let you see which packages compiled and passed all their tests
 
@@ -106,5 +108,5 @@ life will be much harder'*
 
 # Why the name `laoban`
 
-I tried every 'boss' or 'controller' work I could think of! Laoban or 老板 is chinese for 'boss' and wasn't taken
+I tried every 'boss' or 'controller' word I could think of! Laoban is Chinese for 'boss' and wasn't taken
 on npmjs (although it was on github) 

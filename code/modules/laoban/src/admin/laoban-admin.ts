@@ -1,7 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { NameAnd } from "@laoban/utils";
 import { init } from "./init";
-import { analyzepackages } from "./analyzepackages";
+import { analyze } from "./analyze";
 import { newPackage } from "./newPackage";
 import { FileOps } from "@laoban/fileops";
 import { makeIntoTemplate, newTemplate, updateAllTemplates } from "./newTemplate";
@@ -108,7 +108,7 @@ export class LaobanAdmin {
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
     //
-    addCommand ( 'analyze', 'Gives a summary of the packages that laoban admin has detected"', analyzepackages, justInitUrl )
+    addCommand ( 'analyze', 'Gives a summary of the packages that laoban admin has detected"', analyze, justInitUrl )
       .option ( '--showimpact', "Shows dependencies and devDependencies that would be impacted by the change" )
 
 

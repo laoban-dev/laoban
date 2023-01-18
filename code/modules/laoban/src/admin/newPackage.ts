@@ -3,7 +3,7 @@ import { findInitFileContents, TypeCmdOptions } from "./init";
 import path from "path";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { FileOps } from "@laoban/fileops";
-import { packageDetailsFile } from "../Files";
+import { packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { execute } from "../executors";
 import { ConfigWithDebug } from "../config";
 import { loadConfigForAdmin } from "./laoban-admin";
@@ -24,19 +24,17 @@ export async function newPackage ( fileOps: FileOps, currentDirectory: string, n
     console.error ( `Template ${templateName} not known. Legal values are [${Object.keys ( config.templates )}]` )
     process.exit ( 1 )
   }
-  if ( name === undefined ) name = '.'
-  const clearDirectory = path.join ( currentDirectory, name ).replace ( /\\/g, '/' )
+  const realName = name === undefined ? '.' : name
+
+  const clearDirectory = path.join ( currentDirectory, realName ).replace ( /\\/g, '/' )
   let targetFile = path.join ( clearDirectory, packageDetailsFile );
   if ( await fileOps.isFile ( targetFile ) && !cmd.force && !cmd.nuke ) {
     console.log ( `File ${targetFile} already exists. Use --force to overwrite. --nuke can also be used but it will blow away the entire directory` )
     process.exit ( 1 )
   }
   if ( cmd.nuke ) await (fileOps.removeDirectory ( clearDirectory, true ))
-
-  console.log ( 'cmd', name, cmd.type, 'initurl', cmd.initurl, 'listTypes', cmd.listTypes )
   const { type, allInitFileContents } = await findInitFileContents ( fileOps, cmd );
 
-  console.log ( 'initData - loaded' )
   const found = allInitFileContents.find ( l => l[ "package.details.json" ].contents.template === cmd.type )
   const dic = {
     packageJson: {
@@ -47,9 +45,12 @@ export async function newPackage ( fileOps: FileOps, currentDirectory: string, n
   let packageDetailsRawJson = found[ "package.details.json" ].contents;
   packageDetailsRawJson.template = templateName
   let packageDetailsJson = derefence ( `Making ${packageDetailsFile}`, dic, JSON.stringify ( packageDetailsRawJson, null, 2 ), { variableDefn: dollarsBracesVarDefn } );
-  console.log ( packageDetailsJson )
+  console.log (packageDetailsFile, packageDetailsJson )
   await fileOps.createDir ( clearDirectory )
   await fileOps.saveFile ( targetFile, packageDetailsJson )
-  await execute ( clearDirectory, `laoban update` ).then ( res => console.log ( 'laoban update\n', res ) )
-
+  await execute ( clearDirectory, `laoban update` ).then ( res => console.log ( 'Calling "laoban update"\n', res ) )
+  if ( name === undefined ) {
+    console.log ()
+    console.log ( 'Please note: no subdirectory was provided. The current directory was transformed into a package' )
+  }
 }

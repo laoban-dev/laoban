@@ -1,7 +1,7 @@
-C:/git/laoban/tests/init/hasgit
 Found a git repo. This is usually a good place for the laoban.json file
-Created C:\git\laoban\tests\init\hasgit\laoban.json
-Created C:\git\laoban\tests\init\hasgit\lib1\package.details.json
-Created C:\git\laoban\tests\init\hasgit\lib2\package.details.json
-Created C:\git\laoban\tests\init\hasgit\version.txt
+
+Creating C:\git\laoban\tests\init\hasgit\laoban.json
+Creating C:\git\laoban\tests\init\hasgit\lib1\package.details.json
+Creating C:\git\laoban\tests\init\hasgit\lib2\package.details.json
+Creating C:\git\laoban\tests\init\hasgit\version.txt
 
