@@ -45,7 +45,7 @@ export async function analyzepackages ( ap: ActionParams<AnalyzePackagesCmd> ) {
     } )
     console.log ( 'Suggested version number is ', suggestions.version )
     console.log ( 'run' )
-    console.log ( '     laoban admin analysepackages --showimpact' )
+    console.log ( '     laoban admin analyzepackages --showimpact' )
     console.log ( 'to see if any version numbers would be impacted' )
   } else {
     console.log ( 'Had problems with the configuration' )

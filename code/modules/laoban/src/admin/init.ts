@@ -121,7 +121,7 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   removeFrom ( deps, templatePackageJson.dependencies )
   removeFrom ( devDeps, templatePackageJson.devDependencies )
   links.forEach ( name => delete deps[ name ] );
-  // console.log ( 'package.details.json', packageJsonDetails.directory, 'deps', deps, 'devDeps', devDeps, 'bins', bins, 'links', links )
+  // console.log ( 'package.details.expected.json', packageJsonDetails.directory, 'deps', deps, 'devDeps', devDeps, 'bins', bins, 'links', links )
 
   let projectDetails = initFileContents[ "package.details.json" ];
   const contents = projectDetails.contents

@@ -22,16 +22,18 @@ const initUrl = ( envs: NameAnd<string> ) => {
   return env ? env : "@laoban@/init/allInits.json";
 };
 
-function initUrlOption<T> ( envs: NameAnd<string>, p: T ): T {
-  const a: any = p
-  const defaultInitUrl = initUrl ( envs );
-  a.option ( '--listTypes', "lists the types of projects that can be created (and doesn't create anything)", false )
-    .option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded. Used for testing and or if you have your own set", defaultInitUrl )
+function initUrlOption<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ): T {
+  p.option ( '--listTypes', "lists the types of projects that can be created (and doesn't create anything)", false )
     .option ( '-l,--legaltypes <legal...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes. Defaults to the list returned by --listtypes", )
   return p
 }
 function initOptions<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ): T {
-  return p.option ( '-t,--type <type>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", 'typescript' )
+  return justInitUrl ( envs, p ).option ( '-t,--type <type>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", 'typescript' )
+}
+function justInitUrl<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ): T {
+  const defaultInitUrl = initUrl ( envs );
+  return p.option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded. Used for testing and or if you have your own set", defaultInitUrl )
+
 }
 
 
@@ -106,7 +108,7 @@ export class LaobanAdmin {
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
     //
-    addCommand ( 'analyzepackages', 'Gives a summary of the packages that laoban admin has detected"', analyzepackages, initUrlOption )
+    addCommand ( 'analyzepackages', 'Gives a summary of the packages that laoban admin has detected"', analyzepackages, justInitUrl )
       .option ( '--showimpact', "Shows dependencies and devDependencies that would be impacted by the change" )
 
 

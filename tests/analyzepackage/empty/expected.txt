@@ -9,6 +9,6 @@ package.json                                      Guessed Template
     C:\git\laoban\tests\analyzepackage\empty/lib2 typescript
 Suggested version number is  1.2.8
 run
-     laoban admin analysepackages --showimpact
+     laoban admin analyzepackages --showimpact
 to see if any version numbers would be impacted
 
