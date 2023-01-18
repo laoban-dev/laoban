@@ -78,6 +78,11 @@ export const toArray = <T> ( t: undefined | T | T[] ): T[] => {
   if ( Array.isArray ( t ) ) return t
   return [ t ]
 }
+export const singleOrArrayOrUndefined = <T> ( ts:  T[] ): T | T[] | undefined => {
+  if ( ts.length === 0 ) return undefined
+  if ( ts.length === 1 ) return ts[ 0 ]
+  return ts
+}
 
 export const chain = <From, To> ( ...fns: (( from: From ) => To | undefined)[] ): ( from: From ) => To | undefined => ( from: From ) => {
   for ( let fn of fns ) {

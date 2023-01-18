@@ -159,7 +159,7 @@ export function inDirectoryFileOps ( fileOps: FileOps, directory: string ): InDi
   }
 }
 
-interface TemplateFileDetails {
+export interface TemplateFileDetails {
   file: string
   target?: string
   type?: string

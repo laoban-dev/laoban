@@ -59,6 +59,7 @@ let statusAction: PackageAction<void> = async ( config: Config, cmd: any, pds: P
     return acc || hasFalse
   }, false )
   if ( hasError ) {
+    console.log ( 'exit code 1' )
     process.exit ( 1 )
   }
 }

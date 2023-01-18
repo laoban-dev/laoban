@@ -55,3 +55,4 @@
 * 1.2.3 moved `laoban config` and `loaban validate` to `laoban admin`, bug fixes and cleanup of the code
 * 1.2.5 added `laoban admin templates` to list all templates
 * 1.2.10 `laoban status` now has an exit code of 1 if there are any errors
+* 1.2.11 `laoban admin updatetemplate` now updates the template based on package.json. For example if the typescript version was updated in the package.json...

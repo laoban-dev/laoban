@@ -1,10 +1,10 @@
 import { ActionParams } from "./types";
 import { ConfigWithDebug } from "../config";
 import { loabanConfigName, packageDetailsFile } from "../Files";
-import { addPrefixIfFile, CopyFileDetails, fileNameFrom, FileOps, isFilename, isTemplateFileDetails, isUrl, loadFileFromDetails, LocationAndContents, parseJson, saveAll, targetFrom } from "@laoban/fileops";
+import { addPrefixIfFile, CopyFileDetails, fileNameFrom, FileOps, isFilename, isTemplateFileDetails, isUrl, loadFileFromDetails, LocationAndContents, parseJson, saveAll, targetFrom, TemplateFileDetails } from "@laoban/fileops";
 import { getTemplateJsonFileName } from "./newTemplate";
 import { includeAndTransformFile, TemplateControlFile } from "../update";
-import { deepCombineTwoObjects, jsonDelta, NameAnd } from "@laoban/utils";
+import { deepCombineTwoObjects, jsonDelta, NameAnd, singleOrArrayOrUndefined, toArray } from "@laoban/utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { loadConfigForAdmin } from "./laoban-admin";
 import { CommanderStatic } from "commander";
@@ -46,17 +46,28 @@ async function findTemplateDetailsAndContent ( fileOps: FileOps, directory: stri
 
 function transformTemplate ( fileOps: FileOps, td: TemplateDetailsAndContent, error: ( msg: string ) => void ): CopyFileDetails[] {
   const { templateDirUrl, templateJson, templateJsonFileName } = td;
+  function getPostProcessForExisting ( f: TemplateFileDetails ) {
+    const existing = f.postProcess
+    const newPath = fileOps.join ( templateDirUrl, 'package.json' )
+    if ( existing.includes ( newPath ) ) return existing
+
+  }
   const transformedJson: CopyFileDetails[] = templateJson.files.map ( f => {
     const fileName = fileNameFrom ( f );
     const target = targetFrom ( f );
     const file = fileOps.join ( templateDirUrl, fileName );
     if ( typeof f === 'string' ) return { file: file.replace ( /\\/g, '/' ), target: f }
     const newFileName = addPrefixIfFile ( fileOps, templateDirUrl, fileName ).replace ( /\\/g, '/' );
+    function getPostProcessAddingToOriginal ( f: TemplateFileDetails ) {
+      const modified = toArray ( f.postProcess ).map ( p => p.includes ( 'jsonMergeInto' ) ? p.replace ( ')', `,${templateDirUrl}/package.json)` ) : p )
+      if ( modified.find ( p => p.includes ( 'jsonMergeInto' ) ) ) return singleOrArrayOrUndefined ( modified )
+      return singleOrArrayOrUndefined ( [ ...modified, `jsonMergeInto(${templateDirUrl}/package.json)` ] )
+    }
     if ( target === 'package.json' ) {
       if ( isUrl ( file ) ) return {
         ...f,
         file: 'package.json',
-        postProcess: `jsonMergeInto(${templateDirUrl}/package.json)`,
+        postProcess: getPostProcessAddingToOriginal ( f ),
       }
       return { ...f, file: 'package.json' } //keep the original postProcess.
     }

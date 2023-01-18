@@ -120,19 +120,17 @@ export class LaobanAdmin {
       .option ( '--force', 'Will create even if the package already exists ', false )
       .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd, params, outputStream ).then ( postCommand ( program, fileOps ) ) )
 
-    addCommand ( 'newtemplate', `Creates a templates from the specified directory (copies files to template dir)`, newTemplate, initUrlOption )
+    addCommand ( 'newtemplate', `Creates a templates from the specified directory (copies files to template dir). It will usually make far too many files!`, newTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
       .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
     addCommand ( 'templates', 'Lists the legal templates', templates )
-
-    addCommand ( 'updatetemplate', `Updates the template from the current directory`, updateTemplate, updateTemplateOptions )
-
-    addCommand ( 'makeintotemplate', `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). Note if existing .template.json file exists will use data from it `, makeIntoTemplate, initUrlOption )
+    addCommand ( 'updatetemplate', `Updates the template from the current (or specified) directory. Allows you to edit package.json here, and change the template from that`, updateTemplate, updateTemplateOptions )
+    addCommand ( 'makeintotemplate', `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). This is most often used on existing templates after the files have been changed. Note that if existing .template.json file exists will use data from it `, makeIntoTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
-    addCommand ( 'updatealltemplates', `all subdirectories that are templates are 'makeintotemplate'ed, which means if you add files to them and run this, they are added to the templates`, updateAllTemplates, initUrlOption )
+    addCommand ( 'makealltemplates', `all subdirectories that are 'makeintotemplate'ed`, updateAllTemplates, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
     addCommand ( 'validate', `checks the laoban.json and the ${packageDetailsFile}`, validate )

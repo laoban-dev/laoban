@@ -18,7 +18,7 @@ const path = simplePath
 const fileOps = fileOpsNode ();
 describe ( "validate laoban json", () => {
   dirsIn ( configTestRoot ).forEach ( testDir => {
-    it ( `should check the laobon.json validation for ${testDir}`, () => {
+    it ( `should check the laobon.json validation for ${testDir}`, async() => {
       let expected = fs.readFileSync ( path.join ( configTestRoot, testDir, 'expectedValidationLaoban.txt' ) ).toString ().split ( '\n' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
       loadConfigOrIssues ( path, process.stdout, [ 'param1', 'param2' ], loadLoabanJsonAndValidate ( fileOps, makeCache ( laobanDir ), false ), false ) ( path.join ( configTestRoot, testDir ) ).then ( configOrIssues => {
         expect ( configOrIssues.issues ).toEqual ( expected )
