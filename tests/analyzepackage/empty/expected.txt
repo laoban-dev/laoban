@@ -1,3 +1,4 @@
+Cannot use an existing laoban.json
 Found a git repo. This is usually a good place for the laoban.json file
 Would put laoban.json into  C:\git\laoban  which allows the following templates {
   javascript: '@laoban@/templates/javascript',

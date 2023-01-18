@@ -22,13 +22,13 @@ async function cleanUpDirectory ( fileOps: FileOps, testDir: string, cleanTempla
     const cf = copyFiles ( '', fileOps, NullDebugCommands, startTemplateDir, templatesDir, async ( type, s ) => s )
     const files = await fileOps.listFiles ( startTemplateDir );
     await cf ( files )
-    console.log('finished copying')
   }
 }
 async function testIt ( directory: string, cleanTemplates: boolean ) {
   const testDir = fileOps.join ( updateTemplateTestRoot, directory );
   cleanUpDirectory ( fileOps, testDir, cleanTemplates )
   const actualDisplay = await execute ( testDir, `${prefix} admin updatetemplate --directory package` )
+
   // expect ( actual ).toEqual ( `Updated template in ${fileOps.join ( updateTemplateTestRoot, directory, 'package' )}` )
   const expectedLaoban = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, 'laoban.expected.json' ) )
   const actualLaoban = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, 'laoban.json' ) )

@@ -1,3 +1,4 @@
+Cannot use an existing laoban.json
 Found an existing laoban.json file at C:\git\laoban\tests\analyzepackage\haslaoban.json
 Would put laoban.json into  C:\git\laoban\tests\analyzepackage\haslaoban.json  which allows the following templates {
   javascript: '@laoban@/templates/javascript',

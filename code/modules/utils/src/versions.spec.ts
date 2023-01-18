@@ -15,6 +15,7 @@ describe ( "compareVersionNumbers", () => {
     expect ( compareVersionNumbers ( [ 1, 1, 0 ], [ 1, 2, 3 ] ) ).toBe ( -1 );
     expect ( compareVersionNumbers ( [ 0, 0, 0 ], [ 1, 2, 3 ] ) ).toBe ( -1 );
   } )
+
 } )
 
 describe( "findHighestVersion", () => {
@@ -22,6 +23,7 @@ describe( "findHighestVersion", () => {
     expect(findHighestVersion(["1.2.3", "1.2.4", "1.2.5"])).toBe("1.2.5")
     expect(findHighestVersion(["1.2.3", "2.2.4", "1.2.5"])).toBe("2.2.4")
     expect(findHighestVersion(["1.2.3-SNAPSHOT", "3.1-RC.4", "1-JUNK.2.5"])).toBe("3.1-RC.4")
+    expect(findHighestVersion(["1.2.3-SNAPSHOT", "3.1-RC.4", undefined, "1-JUNK.2.5"])).toBe("3.1-RC.4")
   })
 })
 

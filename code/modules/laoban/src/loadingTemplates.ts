@@ -59,7 +59,7 @@ export async function findTemplatePackageJsonLookup ( fileOps: FileOps, pdLs: Pa
         throw Error ( `Error finding template  ${template}. Init is ${location}\nTemplate lookup is ${JSON.stringify ( templateLookup, null, 2 )}
         Is this because you asked for a --type that doesnt support the template ${template} ?` )
       const context = `Transforming file ${templateUrl} for ${location}\nKnown templates are ${JSON.stringify ( templateLookup, null, 2 )}`
-      const templatePackageJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) )
+      const templatePackageJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) )('package.json')
       const templateContents = await includeAndTransformFile ( context, { packageDetails: packageDetails }, fileOps ) ( '${}', templatePackageJson )
       result[ template ] = parseJson ( `Finding template package json for template ${template} at ${templateUrl}` ) ( templateContents )
     }
