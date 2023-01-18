@@ -4,8 +4,7 @@ import { gatherInitData, InitData, isSuccessfulInitData, ProjectDetailsAndTempla
 import { FileOps, parseJson } from "@laoban/fileops";
 import { loabanConfigName, packageDetailsFile } from "../Files";
 import { ActionParams } from "./types";
-import { SuccessfullInitSuggestions } from "./initStatus";
-import { fromEntries, jsonDelta } from "@laoban/utils";
+import { fromEntries } from "@laoban/utils";
 import { createDeltaForPackageJson } from "./update-template";
 import { ConfigAndIssues } from "../config";
 import { loadLaobanAndIssues, makeCache } from "../configProcessor";
@@ -23,7 +22,6 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
       else {
         const context = `Loading ${packageDetailsFile} for ${p.directory} from ${templateUrl}`
         const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) ) ( 'package.json' )
-
         const packageJson = parseJson ( context ) ( templateJson )
         return packageJson
       }
@@ -43,38 +41,47 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
   console.log ( JSON.stringify ( fromEntries ( ...result ), null, 2 ) )
 }
 
+export async function getInitDataWithoutTemplates ( fileOps: FileOps, initData: SuccessfullInitData ): Promise<SuccessfullInitData> {
+  const resultsAndPd = await Promise.all ( initData.projectDetails.map ( async pd => {
+    const tjName = fileOps.join ( pd.directory, '.template.json' );
+    const result = !await fileOps.isFile ( tjName );
+    return { result, pd }
+  } ) )
+  const pdWithoutTemplate = resultsAndPd.filter ( r => r.result ).map ( r => r.pd )
+  return { ...initData, projectDetails: pdWithoutTemplate }
+}
 export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
   const { fileOps, currentDirectory, cmd, params, outputStream } = ap
   const initData: InitData = await gatherInitData ( fileOps, currentDirectory, cmd, false );
   async function findActualTemplateIfExists ( p: ProjectDetailsAndTemplate ) {
-     try{
-       const s = await fileOps.loadFileOrUrl ( fileOps.join ( p.directory, packageDetailsFile ) )
-       const parse= parseJson<any>(`Loading ${packageDetailsFile} for ${p.directory}`)(s)
-       return parse.template
-     } catch ( e ) {
-       return undefined
-     }
+    try {
+      const s = await fileOps.loadFileOrUrl ( fileOps.join ( p.directory, packageDetailsFile ) )
+      const parse = parseJson<any> ( `Loading ${packageDetailsFile} for ${p.directory}` ) ( s )
+      return parse.template
+    } catch ( e ) {
+      return undefined
+    }
   }
   if ( isSuccessfulInitData ( initData ) ) {
     const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
-
     if ( configAndIssues.issues.length > 0 ) console.log ( `Cannot use an existing ${loabanConfigName}` )
-    if ( cmd.showimpact ) return showImpact ( ap, initData, configAndIssues )
+    const initDataToUse = await getInitDataWithoutTemplates ( fileOps, initData );
+    if ( cmd.showimpact ) return showImpact ( ap, initDataToUse, configAndIssues )
 
-    const { suggestions, initFileContents } = initData;
+    const { suggestions, initFileContents } = initDataToUse;
     suggestions.comments.forEach ( c => console.log ( c ) )
-    console.log ( `Would put ${loabanConfigName} into `, suggestions.laobanJsonLocation, ' which allows the following templates', initData.parsedLaoBan.templates )
-    const dirs = initData.projectDetails.map ( p => p.directory )
+    console.log ( `Would put ${loabanConfigName} into `, suggestions.laobanJsonLocation, ' which allows the following templates', initDataToUse.parsedLaoBan.templates )
+    const dirs = initDataToUse.projectDetails.map ( p => p.directory )
     if ( dirs.length === 0 ) {
       console.log ( 'No projects found' )
       return
     }
     const longestDirLength = dirs.map ( p => p.length ).reduce ( ( a, b ) => Math.max ( a, b ), 0 )
-    const longestGuessedTemplateLength = [ 'Guessed Template', ...initData.projectDetails.map ( p => p.template ) ].reduce ( ( a, b ) => Math.max ( a, b.length ), 0 )
+    const longestGuessedTemplateLength = [ 'Guessed Template', ...initDataToUse.projectDetails.map ( p => p.template ) ].reduce ( ( a, b ) => Math.max ( a, b.length ), 0 )
     console.log ( 'package.json'.padEnd ( longestDirLength ), '    Guessed Template    Actual Template' )
-    await Promise.all ( initData.projectDetails.map ( async p => {
+    await Promise.all ( initDataToUse.projectDetails.map ( async p => {
       const foundDetails = await findActualTemplateIfExists ( p )
-      console.log ( '   ', p.directory.padEnd ( longestDirLength ), p.template.padEnd ( longestGuessedTemplateLength ),'  ', foundDetails?foundDetails:'---' );
+      console.log ( '   ', p.directory.padEnd ( longestDirLength ), p.template.padEnd ( longestGuessedTemplateLength ), '  ', foundDetails ? foundDetails : '---' );
     } ) )
     console.log ( 'Suggested version number is ', suggestions.version )
     console.log ( 'run' )

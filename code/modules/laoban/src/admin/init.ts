@@ -9,6 +9,7 @@ import { combineRawConfigs } from "../config";
 import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "../loadingTemplates";
 import { findLaobanOrUndefined, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ActionParams } from "./types";
+import { getInitDataWithoutTemplates } from "./analyze";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -279,12 +280,13 @@ export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<In
     return
   }
   const dryRun = cmd.dryrun;
-  const initData = await gatherInitData ( fileOps, clearDirectory, cmd, false )
-  if ( isSuccessfulInitData ( initData ) ) {
+  const rawInitData = await gatherInitData ( fileOps, clearDirectory, cmd, false )
+  if ( isSuccessfulInitData ( rawInitData ) ) {
+    const initData = await getInitDataWithoutTemplates ( fileOps, rawInitData )
     const files: LocationAnd<string>[] = filesAndContents ( initData, dryRun )
     reportInitData ( initData, files )
     console.log ()
     await saveInitDataToFiles ( fileOps, files, cmd );
   } else
-    console.log ( 'Could not work out how to create', JSON.stringify ( initData.suggestions, null, 2 ) )
+    console.log ( 'Could not work out how to create', JSON.stringify ( rawInitData.suggestions, null, 2 ) )
 }

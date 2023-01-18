@@ -59,3 +59,4 @@
   version was updated in the package.json...
 * 1.2.12 `laoban admin analyzepackage` now shows what would happen if the templates suggested were adopted
 * 1.2.16 `laoban admin analyze` is the new name of the `analyzepackage`. A lot of polish added to `init` and `analyze`
+* 1.2.19 `init` and `analyze` now ignore template directories
