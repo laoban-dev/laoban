@@ -10,9 +10,10 @@ import { shortCutFileOps, shortCuts } from "@laoban/fileops";
 
 
 try {
+  if ( process.env.NPM_TOKEN === undefined ) {process.env.NPM_TOKEN = ''}
   if ( process.argv?.[ 2 ] === 'admin' ) {
-    const newArgs = [process.argv[ 0 ], process.argv[ 1 ], ...process.argv.slice ( 3 )]
-    const admin = new LaobanAdmin ( shortCutFileOps ( fileOpsNode (), shortCuts ), process.cwd (), process.env, newArgs , process.stdout)
+    const newArgs = [ process.argv[ 0 ], process.argv[ 1 ], ...process.argv.slice ( 3 ) ]
+    const admin = new LaobanAdmin ( shortCutFileOps ( fileOpsNode (), shortCuts ), process.cwd (), process.env, newArgs, process.stdout )
     admin.start ()
   } else
     makeStandardCli ( fileOpsNode (), makeCache, process.stdout, process.argv ).then ( cli => cli.start () ).then ( () => {
