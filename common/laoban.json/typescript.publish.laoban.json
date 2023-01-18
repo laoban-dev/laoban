@@ -17,7 +17,7 @@
         {"name": "compile", "command": "tsc --noEmit false --outDir dist", "status": true},
         {"name": "publish", "command": "${packageManager} publish --access public", "status": true}
       ],
-      "inLinksOrder": true
+      "inLinksOrder": true, "showShell": true
     },
     "ls-publish": {
       "description": "lists the projects that can be published",
