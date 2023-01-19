@@ -35,14 +35,19 @@ out/
 *.old.json
 *.review
 target/
-.log
-.status
-.profile
 
 .bsp
 project/
-.session/
+
 *.tgz
 coverage/
 
+# Laoban ignores
 .cache/
+.session/
+.log
+.status
+.profile
+.version.test.txt
+.package.details.test.json
+.laoban.test.json

@@ -72,6 +72,7 @@ export async function findPackageJsonDetails ( fileOps: FileOps, directory: stri
 export interface SuccessfullInitSuggestions {
   version: string
   comments: string[]
+  gitRepo: string | undefined
   laobanJsonLocation: string
   packageJsonDetails: LocationAndParsed<any>[]
 }
@@ -155,7 +156,7 @@ export async function suggestInit ( fileOps: FileOps, directory: string, existin
   const packageJsonDetails = await findPackageJsonDetails ( fileOps, directory )
   let params = { gitRepo, details: packageJsonDetails, directory, existingLaobanFile };
   let version = findHighestVersion ( packageJsonDetails.withoutWorkspaces.map ( p => p.contents.version ) );
-  return { version, ...suggestInitSuggestions ( params ) }
+  return { version, ...suggestInitSuggestions ( params ), gitRepo }
 }
 export async function initStatus ( fileOps: FileOps, directory: string ) {
   const existingLaobanFile = findLaobanOrUndefined ( directory )

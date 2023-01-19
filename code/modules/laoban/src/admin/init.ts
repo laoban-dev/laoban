@@ -234,8 +234,39 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
   } else
     return { suggestions, initFileContents: allInitFileContents }
 }
+const laobanIgnores = `
 
-export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolean ): LocationAnd<string>[] {
+# Laoban ignores
+.cache/
+.session/
+.log
+.status
+.profile
+.version.txt
+.package.details.json
+.laoban.json
+`;
+export async function updateIgnore ( fileOps: FileOps, init: SuccessfullInitSuggestions ): Promise<LocationAnd<string>[]> {
+  if ( init.gitRepo !== undefined ) {
+    const filename = fileOps.join ( init.gitRepo, '.gitignore' );
+    if ( await fileOps.isFile ( filename ) ) {
+      const existing = await fileOps.loadFileOrUrl ( filename )
+      const included = existing.includes ( '# Laoban ignores' );
+      return included ? [] : [ {
+        location: filename,
+        directory: init.gitRepo,
+        contents: existing + laobanIgnores
+      } ];
+    } else return [ {
+      location: filename,
+      directory: init.gitRepo,
+      contents: laobanIgnores.trimLeft ()
+    } ]
+  }
+  return []
+
+}
+export async function filesAndContents ( fileOps: FileOps, initData: SuccessfullInitData, dryRun: boolean ): Promise<LocationAnd<string>[]> {
   let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? loabanConfigTestName : 'laoban.json' );
   const laoban: LocationAnd<any> = { location: laobanFileName, contents: initData.laoban, directory: initData.suggestions.laobanJsonLocation }
   const projectDetails: LocationAnd<any>[] = initData.projectDetails.map ( p => {
@@ -248,12 +279,13 @@ export function filesAndContents ( initData: SuccessfullInitData, dryRun: boolea
     contents: initData.suggestions.version || '0.0.0',
     directory: initData.suggestions.laobanJsonLocation
   }
-  return [ laoban, ...projectDetails, version ]
+  const gitIgnores = await updateIgnore ( fileOps, initData.suggestions );
+  return [ laoban, ...projectDetails, version, ...gitIgnores ]
 }
 async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string> [], cmd: InitCmdOptions ): Promise<void> {
   await Promise.all ( data.map ( async ( { location, contents } ) => {
     if ( cmd.dryrun || cmd.force || !await fileOps.isFile ( location ) ) {
-      console.log ( `Creating`, location );
+      console.log (  location );
       return fileOps.saveFile ( location, contents );
     }
     console.log ( `Skipping ${location} because it already exists (use --force to create it)` )
@@ -283,7 +315,7 @@ export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<In
   const rawInitData = await gatherInitData ( fileOps, clearDirectory, cmd, false )
   if ( isSuccessfulInitData ( rawInitData ) ) {
     const initData = await getInitDataWithoutTemplates ( fileOps, rawInitData )
-    const files: LocationAnd<string>[] = filesAndContents ( initData, dryRun )
+    const files: LocationAnd<string>[] = await filesAndContents ( fileOps, initData, dryRun )
     reportInitData ( initData, files )
     console.log ()
     await saveInitDataToFiles ( fileOps, files, cmd );

@@ -16,6 +16,7 @@ async function clean ( dir: string ) {
   await fileOps.removeFile ( fileOps.join ( dir, 'version.txt' ) )
   await fileOps.removeFile ( fileOps.join ( dir, 'lib1/package.details.json' ) )
   await fileOps.removeFile ( fileOps.join ( dir, 'lib2/package.details.json' ) )
+  await fileOps.removeFile ( fileOps.join ( dir, '.gitignore' ) )
 }
 
 async function setupInitialValues ( dir: string ) {
@@ -49,6 +50,41 @@ describe ( "laoban init", () => {
     await clean ( testDir )
     await setupInitialValues ( testDir )
     await testInit ( testDir );
+    await clean ( testDir )
+  } )
+} )
+
+async function setupGitIgnoreInitialValues ( testDir: string ) {
+  await clean ( testDir )
+  const localOps = inDirectoryFileOps ( fileOps, testDir );
+  if ( await localOps.isFile ( 'initial.gitignore' ) )
+    await localOps.saveFile ( '.gitignore', await localOps.loadFileOrUrl ( 'initial.gitignore' ) )
+
+}
+async function testGit ( testDir: string ) {
+  const compare = compareExpectedActualFileInDirectory ( fileOps, testDir );
+  const display = await execute ( testDir, `${prefix} admin init --force` )
+  const actual = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, '.gitignore' ) )
+  const expected = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, '.expected.gitignore' ) )
+  expect ( cleanLineEndings ( actual ) ).toEqual ( cleanLineEndings ( expected ) )
+}
+describe ( "laoban admin init - with .gitignore", () => {
+  it ( "should add to .gitgnore if needed", async () => {
+    const testDir = fileOps.join ( initTestRoot, 'hasgit' );
+    await setupGitIgnoreInitialValues ( testDir )
+    await testGit ( testDir );
+    await clean ( testDir )
+  } )
+  it ( "should create a .gitgnore if needed", async () => {
+    const testDir = fileOps.join ( initTestRoot, 'hasgitNoGitIgnore' );
+    await setupGitIgnoreInitialValues ( testDir )
+    await testGit ( testDir );
+    await clean ( testDir )
+  } )
+  it ( "should not update a .gitgnore if # Laoban ignores already present in .gitignore", async () => {
+    const testDir = fileOps.join ( initTestRoot, 'hasgitGitWithLaobanInGitIgnore' );
+    await setupGitIgnoreInitialValues ( testDir )
+    await testGit ( testDir );
     await clean ( testDir )
   } )
 } )

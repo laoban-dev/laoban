@@ -1,0 +1,9 @@
+# Laoban ignores
+.cache/
+.session/
+.log
+.status
+.profile
+.version.txt
+.package.details.json
+.laoban.json
