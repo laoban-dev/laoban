@@ -33,8 +33,8 @@ async function testInit ( testDir: string ) {
 
   await compare ( 'lib1/package.details.expected.json', 'lib1/package.details.json' );
   await compare ( 'lib2/package.details.expected.json', 'lib2/package.details.json' );
-  await compare ( 'laoban.json', 'laoban.expected.json' );
-  await compare ( 'version.txt', 'version.expected.txt' );
+  await compare ( 'laoban.expected.json', 'laoban.json' );
+  await compare ( 'version.expected.txt', 'version.txt' );
 }
 describe ( "laoban init", () => {
   it ( "should be able to init where there are no existing laoban files", async () => {
