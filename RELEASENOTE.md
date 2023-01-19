@@ -63,3 +63,4 @@
 * 1.2.21 `showShell` now a script option
 * 1.2.22 adding `defaultEnv` to 'laoban.json' to allow the default environment to be set
 * 1.2.24 `laoban admin init` now updates .gitignore
+* 1.2.25 `laoban admin init` now updates .gitignore even if no `--force`

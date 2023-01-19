@@ -4,6 +4,6 @@
 .log
 .status
 .profile
-.version.txt
-.package.details.json
-.laoban.json
+.version.test.txt
+.package.details.test.json
+.laoban.test.json

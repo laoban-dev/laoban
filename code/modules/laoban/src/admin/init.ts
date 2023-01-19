@@ -242,11 +242,18 @@ const laobanIgnores = `
 .log
 .status
 .profile
-.version.txt
-.package.details.json
-.laoban.json
+.version.test.txt
+.package.details.test.json
+.laoban.test.json
 `;
-export async function updateIgnore ( fileOps: FileOps, init: SuccessfullInitSuggestions ): Promise<LocationAnd<string>[]> {
+interface LocationAndUpdate extends LocationAnd<string> {
+  update: boolean
+}
+function isLocationAndUpdate ( l: LocationAnd<string> | LocationAndUpdate ): l is LocationAndUpdate {
+  return (l as LocationAndUpdate).update !== undefined
+}
+
+export async function updateIgnore ( fileOps: FileOps, init: SuccessfullInitSuggestions ): Promise<LocationAndUpdate[]> {
   if ( init.gitRepo !== undefined ) {
     const filename = fileOps.join ( init.gitRepo, '.gitignore' );
     if ( await fileOps.isFile ( filename ) ) {
@@ -255,12 +262,13 @@ export async function updateIgnore ( fileOps: FileOps, init: SuccessfullInitSugg
       return included ? [] : [ {
         location: filename,
         directory: init.gitRepo,
-        contents: existing + laobanIgnores
+        contents: existing.trimRight () + laobanIgnores, update: true
       } ];
     } else return [ {
       location: filename,
       directory: init.gitRepo,
-      contents: laobanIgnores.trimLeft ()
+      contents: laobanIgnores.trimLeft (),
+      update: false
     } ]
   }
   return []
@@ -283,11 +291,13 @@ export async function filesAndContents ( fileOps: FileOps, initData: Successfull
   return [ laoban, ...projectDetails, version, ...gitIgnores ]
 }
 async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string> [], cmd: InitCmdOptions ): Promise<void> {
-  await Promise.all ( data.map ( async ( { location, contents } ) => {
+  await Promise.all ( data.map ( async ( l ) => {
+    const { location, contents } = l
     if ( cmd.dryrun || cmd.force || !await fileOps.isFile ( location ) ) {
-      console.log (  location );
+      console.log ( location );
       return fileOps.saveFile ( location, contents );
-    }
+    } else if ( !cmd.dryrun && isLocationAndUpdate ( l ) && l.update )
+      return fileOps.saveFile ( location, contents );
     console.log ( `Skipping ${location} because it already exists (use --force to create it)` )
   } ) )
 }
