@@ -3,6 +3,7 @@
   "name": "lib1",
   "description": "A test javascript lib1",
   "details": {
+    "compile": false,
     "publish": false,
     "test": true,
     "links": [],

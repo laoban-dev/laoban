@@ -3,10 +3,10 @@
   "name": "lib1",
   "description": "A test lib1",
   "details": {
+    "compile": true,
     "publish": false,
     "test": true,
     "links": [],
-    "compile": true,
     "extraDeps": {},
     "extraDevDeps": {},
     "extraBins": {},
