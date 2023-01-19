@@ -296,8 +296,10 @@ async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string>
     if ( cmd.dryrun || cmd.force || !await fileOps.isFile ( location ) ) {
       console.log ( location );
       return fileOps.saveFile ( location, contents );
-    } else if ( !cmd.dryrun && isLocationAndUpdate ( l ) && l.update )
+    } else if ( !cmd.dryrun && isLocationAndUpdate ( l ) && l.update ) {
+      console.log ( location );
       return fileOps.saveFile ( location, contents );
+    }
     console.log ( `Skipping ${location} because it already exists (use --force to create it)` )
   } ) )
 }

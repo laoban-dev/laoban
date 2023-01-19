@@ -1,13 +1,13 @@
 {
   "name": "@laoban/variables",
   "description": "A library that can dereference ${xxx} in strings",
-  "version": "1.2.24",
+  "version": "1.2.26",
   "bin": {},
   "keywords": [],
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
   "dependencies": {
-    "@laoban/utils": "1.2.24"
+    "@laoban/utils": "1.2.26"
   },
   "devDependencies": {
     "typescript": "^4.0.5",
