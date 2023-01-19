@@ -61,3 +61,4 @@
 * 1.2.16 `laoban admin analyze` is the new name of the `analyzepackage`. A lot of polish added to `init` and `analyze`
 * 1.2.19 `init` and `analyze` now ignore template directories
 * 1.2.21 `showShell` now a script option
+* 1.2.22 adding `defaultEnv` to 'laoban.json' to allow the default environment to be set

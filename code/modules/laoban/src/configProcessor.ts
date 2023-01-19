@@ -131,12 +131,20 @@ export function configProcessor ( path: Path, laoban: string, outputStream: Writ
   add ( "packageManager", rawConfig )
   if ( rawConfig.templateDir ) result.templateDir = rawConfig.templateDir;
   result.properties = rawConfig.properties ? rawConfig.properties : {}
+  result.defaultEnv = rawConfig.defaultEnv
   result.templates = rawConfig.templates ? rawConfig.templates : {}
   result.sessionDir = rawConfig.sessionDir ? rawConfig.sessionDir : path.join ( laoban, '.session' )
   result.throttle = rawConfig.throttle ? rawConfig.throttle : 0
   for ( const k in rawConfig.variables ) add ( k, rawConfig.variables )
   result.scripts = addScripts ( result, rawConfig.scripts );
   result.os = os.type ()
+  if ( rawConfig.defaultEnv ) {
+    result.defaultEnv = {}
+    Object.entries ( rawConfig.defaultEnv ).forEach ( ( [ k, v ] ) => {
+      result.defaultEnv[ k ] = v;
+      if ( process.env[ k ] === undefined ) process.env[ k ] = v;
+    } )
+  }
   return result
 }
 export const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {

@@ -1,8 +1,9 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { configTestRoot, dirsIn,  executeCli, testRoot, toArrayReplacingRoot } from "./fixture";
+import { configTestRoot, dirsIn, executeCli, testRoot, toArrayReplacingRoot } from "./fixture";
 import path from "path";
 import fs from "fs";
 import { execute } from "./executors";
+import { parseJson } from "@laoban/fileops";
 
 let experimental = false
 
@@ -51,4 +52,26 @@ describe ( 'ls with guards', () => {
     expect ( actual ).toEqual ( toArrayReplacingRoot ( testDir, "A <root>/projWithGuard_A\nB <root>/projWithGuard_B" ) )
   } )
 
+} )
+
+describe ( "defaultEnvs", () => {
+  const prefix = "node ./dist/index.js ";
+  const testDir = '.'
+  it ( 'should have the default envs in the config', async () => {
+    const actual = await execute ( testDir, prefix + ' admin config' )
+    const json = parseJson<any> ( `parsing output of laoban admin config` ) ( actual )
+    expect ( json.defaultEnv ).toEqual ( { "TEST_DEFAULT": "test" } )
+  } )
+
+  it ( 'have access to the default env in scripts', async () => {
+    delete process.env.TEST_DEFAULT
+    const actual = await execute ( testDir, prefix + `run "js:process.env.TEST_DEFAULT"` )
+    expect ( actual.trim () ).toEqual ( "test" )
+  } )
+
+  it ( `have access to the real env in scripts (the default doesn't override it`, async () => {
+    process.env.TEST_DEFAULT = 'setvalue'
+    const actual = await execute ( testDir, prefix + `run "js:process.env.TEST_DEFAULT"` )
+    expect ( actual.trim () ).toEqual ( "setvalue" )
+  } )
 } )

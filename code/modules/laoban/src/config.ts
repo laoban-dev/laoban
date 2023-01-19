@@ -21,6 +21,7 @@ export interface ConfigVariables {
   packageManager: string;
   variables?: { [ name: string ]: string }
   properties?: NameAnd<string>
+  defaultEnv?:NameAnd<string>
 }
 export interface RawConfig extends ConfigVariables {
   scripts?: ScriptDefns

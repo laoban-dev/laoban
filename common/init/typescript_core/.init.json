@@ -8,7 +8,10 @@
     "parents":        [
       "@laoban@/laoban.json/typescript.laoban.json",
       "@laoban@/laoban.json/typescript.publish.laoban.json"
-    ]
+    ],
+    "defaultEnv":     {
+      "NPM_TOKEN": ""
+    }
   },
   "package.details.json": {
     "guardfile":     "project.json",
@@ -19,7 +22,7 @@
       "description": "${packageJson.description}",
       "details":     {
         "publish": false,
-        "compile":     true,
+        "compile": true,
         "test":    true,
         "links":   []
       }

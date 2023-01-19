@@ -15,7 +15,7 @@ import { Writable } from "stream";
 export function execute ( cwd: string, cmd: string ): Promise<string> {
   // console.log('execute', cwd, cmd)
   return new Promise<string> ( resolve => {
-    cp.exec ( cmd, { cwd }, ( error, stdout, stdErr ) => {
+    cp.exec ( cmd, { cwd, env: process.env }, ( error, stdout, stdErr ) => {
       resolve ( (stdout.toString () + "\n" + stdErr).toString () )
     } )
   } )

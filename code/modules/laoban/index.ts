@@ -7,10 +7,11 @@ import { fileOpsNode } from "@laoban/filesops-node";
 import { findVersionNumber } from "./src/Files";
 import { LaobanAdmin } from "./src/admin/laoban-admin";
 import { shortCutFileOps, shortCuts } from "@laoban/fileops";
+import { setOriginalEnv } from "./src/originalEnv";
 
 
 try {
-  if ( process.env.NPM_TOKEN === undefined ) {process.env.NPM_TOKEN = ''}
+  setOriginalEnv ()
   if ( process.argv?.[ 2 ] === 'admin' ) {
     const newArgs = [ process.argv[ 0 ], process.argv[ 1 ], ...process.argv.slice ( 3 ) ]
     const admin = new LaobanAdmin ( shortCutFileOps ( fileOpsNode (), shortCuts ), process.cwd (), process.env, newArgs, process.stdout )
