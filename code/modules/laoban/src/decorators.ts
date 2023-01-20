@@ -163,8 +163,9 @@ export class CommandDecorators {
     content: ( d, res ) => `${d.scriptInContext.details.name} ${d.details.command.name} ${res.duration}\n`
   }
   static log: CommandDecorator = e => d => {
+    if ( d.scriptInContext.details.noLogOverwrite ) return e ( d )
     let log = path.join ( d.detailsAndDirectory.directory, d.scriptInContext.config.log )
-    let newLogString = fs.createWriteStream ( log, { flags: 'a' } )
+    let newLogString = fs.createWriteStream ( log )
     newLogString.write ( `${d.scriptInContext.timestamp.toISOString ()} ${d.details.commandString}\n` )
     let newD = { ...d, logStreams: [ ...d.logStreams, newLogString ] }
     return e ( newD ).then ( sr => {

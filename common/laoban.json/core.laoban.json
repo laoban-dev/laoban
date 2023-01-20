@@ -20,6 +20,18 @@
         {"command": "file:rm(${laobanDirectory}/.laoban.test.json)"},
         {"command": "file:rmLog()"}
       ]
+    },
+    "log":   {
+      "description": "Shows the last log from the last command",
+      "commands":    ["file:tail(${log})"],
+
+      "noLogOverwrite": true
+    },
+    "logtail":   {
+      "description": "Shows the last file lines of the log from the last command",
+      "commands":    ["file:tail(${log})"],
+
+      "noLogOverwrite": true
     }
   },
   "properties":     {

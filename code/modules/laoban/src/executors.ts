@@ -241,7 +241,10 @@ async function executeCommand ( fileOpsWithDir: FileOps, d: ShellCommandDetails<
     if ( !(await fileOpsWithDir.isDirectory ( fullFileName )) )
       await fileOpsWithDir.createDir ( fullFileName )
   }
-
+  async function catCommand () {
+    if ( await fileOpsWithDir.isFile ( fullFileName ) )
+      writeTo(d.logStreams, await fileOpsWithDir.loadFileOrUrl ( fullFileName ))
+  }
   async function tailCommand () {
     const parts = fullFileName.split ( ',' )
     if ( parts.length === 0 ) return
@@ -252,7 +255,7 @@ async function executeCommand ( fileOpsWithDir: FileOps, d: ShellCommandDetails<
       }
     }
 
-    const realFileName = parts[0]
+    const realFileName = parts[ 0 ]
     const tailSize = parts.length === 1 ? 10 : number ()
 
     if ( await fileOpsWithDir.isFile ( realFileName ) ) {
@@ -276,7 +279,8 @@ async function executeCommand ( fileOpsWithDir: FileOps, d: ShellCommandDetails<
   else if ( command === 'tail' ) await tailCommand ();
   else if ( command === 'rmLog' ) await removeLogCommand ();
   else if ( command === 'mkdir' ) await createDirCommand ();
-  else throw new Error ( `Unknown file command ${command}. Common commands are 'rm' & 'rmDir'` )
+  else if ( command === 'cat' ) await catCommand ();
+  else throw new Error ( `Unknown file command ${command}. Common commands are 'rm','rmDir', 'tail', 'cat'` )
 }
 
 

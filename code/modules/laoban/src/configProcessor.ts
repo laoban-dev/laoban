@@ -100,6 +100,7 @@ function cleanUpScript ( dic: any ): ( scriptName: string, defn: ScriptDefn ) =>
     description: derefence ( `cleanUpScript ${scriptName}.description`, dic, defn.description, { throwError: true, variableDefn: dollarsBracesVarDefn } ),
     guard: defn.guard,
     showShell: defn.showShell,
+    noLogOverwrite: defn.noLogOverwrite,
     inLinksOrder: defn.inLinksOrder,
     commands: defn.commands.map ( cleanUpCommand ),
     env: cleanUpEnv ( `cleanUpScript ${scriptName}.env`, dic, defn.env )

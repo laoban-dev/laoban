@@ -55,7 +55,7 @@ export interface ScriptDetails {
   osGuard?: string,
   pmGuard?: string,
   showShell?: boolean,
-
+  noLogOverwrite?: boolean,
   guardReason?: string,
   inLinksOrder?: boolean,
   env?: Envs,
@@ -163,6 +163,7 @@ export interface ScriptDefn {
   guard?: GuardDefn,
   inLinksOrder?: boolean,
   showShell?: boolean,
+  noLogOverwrite?: boolean,
   commands: (string | CommandDefn)[],
   env?: Envs
 }

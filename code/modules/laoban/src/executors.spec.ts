@@ -59,13 +59,21 @@ describe ( "execFile i.e. file:", () => {
     expect ( result ).toEqual ( { "err": null } )
     expect ( msgs ).toEqual ( [ "l16\nl17" ] )
   } )
+  it ( "cat(filename)", async () => {
+    const command = 'file:cat(filename)';
+    const { fileOps, result, msgs } = await execute ( command, true );
+    expect ( result ).toEqual ( { "err": null } )
+    expect ( msgs ).toEqual ( [
+      "l1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\nl10\nl11\nl12\nl13\nl14\nl15\nl16\nl17"
+    ] )
+  } )
   it ( "unknown command", async () => {
     const command = 'file:unknown(filename,2)';
     expect.assertions ( 1 );
     try {
-     await execute ( command, true )
+      await execute ( command, true )
     } catch ( e ) {
-      expect ( e.message ).toEqual ( "Unknown file command unknown. Common commands are 'rm' & 'rmDir'" )
+      expect ( e.message ).toEqual ( "Unknown file command unknown. Common commands are 'rm','rmDir', 'tail', 'cat'" )
     }
   } )
 } )
