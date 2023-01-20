@@ -10,7 +10,11 @@ import { ConfigAndIssues } from "../config";
 import { loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "../update";
 
-interface AnalyzePackagesCmd extends TypeCmdOptions {
+export interface HasPackages {
+  packages?: string
+
+}
+interface AnalyzePackagesCmd extends TypeCmdOptions, HasPackages {
   showimpact?: boolean
 }
 
@@ -41,8 +45,12 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
   console.log ( JSON.stringify ( fromEntries ( ...result ), null, 2 ) )
 }
 
-export async function getInitDataWithoutTemplates ( fileOps: FileOps, initData: SuccessfullInitData ): Promise<SuccessfullInitData> {
-  const resultsAndPd = await Promise.all ( initData.projectDetails.map ( async pd => {
+export async function getInitDataWithoutTemplatesFilteredByPackages ( fileOps: FileOps, initData: SuccessfullInitData, cmd: HasPackages ): Promise<SuccessfullInitData> {
+  const packageFilter = ( p: ProjectDetailsAndTemplate ) =>
+    cmd.packages === undefined || cmd.packages === '' ? true : p.directory.match ( cmd.packages ) !== null;
+  const filteredDetails = initData.projectDetails.filter ( packageFilter );
+
+  const resultsAndPd = await Promise.all ( filteredDetails.map ( async pd => {
     const tjName = fileOps.join ( pd.directory, '.template.json' );
     const result = !await fileOps.isFile ( tjName );
     return { result, pd }
@@ -65,7 +73,7 @@ export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
   if ( isSuccessfulInitData ( initData ) ) {
     const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
     if ( configAndIssues.issues.length > 0 ) console.log ( `Cannot use an existing ${loabanConfigName}` )
-    const initDataToUse = await getInitDataWithoutTemplates ( fileOps, initData );
+    const initDataToUse = await getInitDataWithoutTemplatesFilteredByPackages ( fileOps, initData, cmd );
     if ( cmd.showimpact ) return showImpact ( ap, initDataToUse, configAndIssues )
 
     const { suggestions, initFileContents } = initDataToUse;

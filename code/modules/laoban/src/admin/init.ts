@@ -9,7 +9,7 @@ import { combineRawConfigs } from "../config";
 import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "../loadingTemplates";
 import { findLaobanOrUndefined, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ActionParams } from "./types";
-import { getInitDataWithoutTemplates } from "./analyze";
+import { getInitDataWithoutTemplatesFilteredByPackages, HasPackages } from "./analyze";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -313,7 +313,7 @@ export interface TypeCmdOptions {
   initurl: string
   listTypes?: boolean
 }
-interface InitCmdOptions extends TypeCmdOptions {
+interface InitCmdOptions extends TypeCmdOptions,HasPackages {
   dryrun?: boolean
   force?: boolean
 }
@@ -326,7 +326,7 @@ export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<In
   const dryRun = cmd.dryrun;
   const rawInitData = await gatherInitData ( fileOps, clearDirectory, cmd, false )
   if ( isSuccessfulInitData ( rawInitData ) ) {
-    const initData = await getInitDataWithoutTemplates ( fileOps, rawInitData )
+    const initData = await getInitDataWithoutTemplatesFilteredByPackages ( fileOps, rawInitData,cmd )
     const files: LocationAnd<string>[] = await filesAndContents ( fileOps, initData, dryRun )
     reportInitData ( initData, files )
     console.log ()

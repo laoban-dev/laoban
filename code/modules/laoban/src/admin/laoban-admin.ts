@@ -110,6 +110,7 @@ export class LaobanAdmin {
     //
     addCommand ( 'analyze', 'Gives a summary of the packages that laoban admin has detected"', analyze, justInitUrl )
       .option ( '--showimpact', "Shows dependencies and devDependencies that would be impacted by the change" )
+      .option ( '-p, --packages <packages>', "executes this in the packages matching the regex. e.g. -p 'name'", "" )
 
 
     initOptions ( envs, program.command ( 'newpackage [directory]' ) )
