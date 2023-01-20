@@ -171,11 +171,11 @@ export class CommandDecorators {
     return e ( newD ).then ( sr => {
       if ( sr.length === 1 ) {
         const res = sr[ 0 ];
-        newLogString.write ( `Took ${res.duration}${res.err ? `, Error was [${res.err}]` : ''}\n` )
+        newLogString.write ( `Took ${res.duration}ms ${res.err ? `, Error was [${res.err}]` : ''}\n` )
       } else {
         const duration = sr.reduce ( ( acc, res ) => acc + res.duration, 0 )
         const errorCodes = sr.map ( res => res.err )
-        newLogString.write ( `Took ${duration}${errorCodes.length > 0 ? `Errors was [${errorCodes}]` : ''}\n` )
+        newLogString.write ( `Took ${duration}ms${errorCodes.length > 0 ? `, Errors were [${errorCodes}]` : ''}\n` )
       }
       return sr
     } )
