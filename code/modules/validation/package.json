@@ -1,7 +1,7 @@
 {
   "name": "@laoban/validation",
   "description": "A library for validating json",
-  "version": "1.2.26",
+  "version": "1.2.27",
   "bin": {},
   "keywords": [],
   "license": "MIT",
@@ -22,7 +22,6 @@
     "dist/src/"
   ],
   "main": "dist/index",
-  "types": "dist/index",
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
@@ -38,5 +37,6 @@
       "not dead",
       "not op_mini all"
     ]
-  }
+  },
+  "types": "dist/index"
 }

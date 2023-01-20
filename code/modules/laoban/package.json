@@ -1,7 +1,7 @@
 {
   "name": "laoban",
   "description": "A cli for managing projects that have many npm packages",
-  "version": "1.2.26",
+  "version": "1.2.27",
   "bin": {
     "laoban": "dist/index.js"
   },
@@ -14,11 +14,11 @@
   "dependencies": {
     "fs-extra": "^9.0.1",
     "commander": "^6.2.0",
-    "@laoban/variables": "1.2.26",
-    "@laoban/generations": "1.2.26",
-    "@laoban/validation": "1.2.26",
-    "@laoban/debug": "1.2.26",
-    "@laoban/filesops-node": "1.2.26"
+    "@laoban/variables": "1.2.27",
+    "@laoban/generations": "1.2.27",
+    "@laoban/validation": "1.2.27",
+    "@laoban/debug": "1.2.27",
+    "@laoban/filesops-node": "1.2.27"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.5",
@@ -36,7 +36,6 @@
     "dist/src/"
   ],
   "main": "dist/index",
-  "types": "dist/index",
   "scripts": {
     "test": "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
@@ -52,5 +51,6 @@
       "not dead",
       "not op_mini all"
     ]
-  }
+  },
+  "types": "dist/index"
 }
