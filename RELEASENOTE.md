@@ -66,3 +66,4 @@
 * 1.2.25 `laoban admin init` now updates .gitignore even if no `--force`
 * 1.2.27 file: commands now include mkdir and file:tail(file,lines) where lines defaults to 10
 * 1.2.28 Logs in the directory are just the last command. The `laoban log` uses `noLogOverwrite:true` 
+* 1.2.31 Scripts that 'fail' now communicate that better

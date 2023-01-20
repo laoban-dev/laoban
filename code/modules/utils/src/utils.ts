@@ -14,6 +14,9 @@ export function unique<T> ( ts: T[] | undefined, tagFn: ( t: T ) => string ): T[
   } )
   return result
 }
+export function toForwardSlash ( s: string ): string {
+  return s.replace ( /\\/g, '/' )
+}
 
 export function mapObject<T, T1> ( a: NameAnd<T>, fn: ( t: T, name: string ) => T1 ): NameAnd<T1> {
   var result: NameAnd<T1> = {}
