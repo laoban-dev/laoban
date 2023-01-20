@@ -348,8 +348,8 @@ export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<In
     await saveInitDataToFiles ( fileOps, files, cmd );
     if ( cmd.dryrun ) {
       console.log ()
-      console.log ( `The files created above are for you to examine and 'see what would happen` )
-      console.log ( `They can be cleaned by running 'laoban init --cleantestfiles'` )
+      console.log ( `The files created above are for you to examine and 'see what would happen'` )
+      console.log ( `They can be cleaned by running 'laoban admin init --cleantestfiles'` )
     }
   } else
     console.log ( 'Could not work out how to create', JSON.stringify ( rawInitData.suggestions, null, 2 ) )
