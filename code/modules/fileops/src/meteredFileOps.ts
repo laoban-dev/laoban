@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { FileOps} from "./fileOps";
+import { FileOps } from "./fileOps";
 import { isCachedFileOps } from "./cachedFileOps";
 
 export interface MeteredFileOps extends FileOps {
@@ -20,6 +20,7 @@ export interface MeteredFileOps extends FileOps {
 
   removeDirectoryCount (): number
   lastRemoveDirectory (): string
+  lastRemoveFile (): string
 }
 export function fileOpsStats ( fileOps: FileOps ): any {
   const result: any = {}
@@ -56,6 +57,7 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
   let savedFiles: [ string, string ][] = []
   let removeDirectoryCount: number = 0
   let lastRemoveDirectory: string = undefined
+  let lastRemoveFile: string = undefined
 
   return {
     ...fileOps,
@@ -72,6 +74,7 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
     savedFiles: () => savedFiles,
     removeDirectoryCount: () => removeDirectoryCount,
     lastRemoveDirectory: (): string => lastRemoveDirectory,
+    lastRemoveFile: (): string => lastRemoveFile,
     createDir ( dir: string ): Promise<string | undefined> {
       createDirCount += 1
       lastCreatedDir = dir
@@ -102,6 +105,10 @@ export function meteredFileOps ( fileOps: FileOps ): MeteredFileOps {
       removeDirectoryCount += 1
       lastRemoveDirectory = filename
       return fileOps.removeDirectory ( filename, recursive )
+    },
+    removeFile ( filename: string ): Promise<void> {
+      lastRemoveFile = filename
+      return fileOps.removeFile ( filename )
     }
   }
 }

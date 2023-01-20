@@ -62,7 +62,7 @@ function calculateDirectory ( directory: string, command: CommandDefn ) { return
 export function streamNamefn ( path: Path, sessionDir: string, laobanDirectory: string, sessionId: string, scriptName: string, directory: string ) {
   const relativePath = path.relative ( laobanDirectory, directory )
   let paths = relativePath.replace ( /[\/\\.]/g, '_' ).replace ( /:/g, "" );
-  let result = path.join ( sessionDir, sessionId, paths )+ '.log';
+  let result = path.join ( sessionDir, sessionId, paths ) + '.log';
   return result
 }
 export function streamName ( path: Path, scd: ScriptInContextAndDirectoryWithoutStream ) {
@@ -237,22 +237,56 @@ async function executeCommand ( fileOpsWithDir: FileOps, d: ShellCommandDetails<
     if ( await fileOpsWithDir.isDirectory ( fullFileName ) )
       await fileOpsWithDir.removeDirectory ( fullFileName, true ).catch ( () => {} )
   }
+  async function createDirCommand () {
+    if ( !(await fileOpsWithDir.isDirectory ( fullFileName )) )
+      await fileOpsWithDir.createDir ( fullFileName )
+  }
+
+  async function tailCommand () {
+    const parts = fullFileName.split ( ',' )
+    if ( parts.length === 0 ) return
+
+    function number () {
+      try {return parseInt ( parts[ 1 ] )} catch ( e ) {
+        (console.error ( `malformed number in tail command ${fullFileName}` ), 0)
+      }
+    }
+
+    const realFileName = parts[0]
+    const tailSize = parts.length === 1 ? 10 : number ()
+
+    if ( await fileOpsWithDir.isFile ( realFileName ) ) {
+      try {
+        const file = await fileOpsWithDir.loadFileOrUrl ( realFileName )
+        const lines = file.split ( '\n' )
+        const result = lines.slice ( -tailSize ).join ( '\n' );
+        writeTo ( d.logStreams, result )
+      } catch ( e ) {
+        console.log ( `Cannot find file ${fullFileName}` )
+      }
+    }
+  }
+
   async function removeLogCommand () {
     d.logStreams.forEach ( s => s.end () )
     await fileOpsWithDir.removeFile ( '.log' )
   }
   if ( command === 'rm' ) await removeFileCommand ();
   else if ( command === 'rmDir' ) await removeDirCommand ();
+  else if ( command === 'tail' ) await tailCommand ();
   else if ( command === 'rmLog' ) await removeLogCommand ();
+  else if ( command === 'mkdir' ) await createDirCommand ();
   else throw new Error ( `Unknown file command ${command}. Common commands are 'rm' & 'rmDir'` )
 }
+
+
 export const execFile = ( fileOps: FileOps ): RawCommandExecutor =>
   async d => {
     const debug = d.scriptInContext.debug ( 'files' )
     const fileOpsWithDir = inDirectoryFileOps ( fileOps, d.details.directory )
     const regex = /^file:(\w+)\s*\(([^\)]*)\)$/
     const match = d.details.commandString.match ( regex )
-    if ( !match ) throw Error ( `Command [${d.details.commandString}] does not match ${regex}` )
+    if ( !match ) throw Error ( `Command [${d.details.commandString}] does not match 'file:command(value)'` )
     const command = match[ 1 ]
     const filename = match[ 2 ]
     await debug.k ( () => `file: ${command} ${filename}`, () => executeCommand ( fileOpsWithDir, d, filename, command ) );

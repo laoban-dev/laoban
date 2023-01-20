@@ -15,6 +15,9 @@
         {"command": "file:rm(${profile})"},
         {"command": "file:rmDir(${laobanDirectory}/.session)"},
         {"command": "file:rmDir(${cacheDir})"},
+        {"command": "file:rm(.package.details.test.json)"},
+        {"command": "file:rm(${laobanDirectory}/.version.test.txt)"},
+        {"command": "file:rm(${laobanDirectory}/.laoban.test.json)"},
         {"command": "file:rmLog()"}
       ]
     }

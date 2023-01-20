@@ -3,9 +3,13 @@
 It is a tool for controlling multiple projects (called packages in `laoban`-speak). While it is fairly language agnostic it
 probably offers the most value to javascript/typescript projects in a _monorepo_.
 
-
 * [Documentation](https://laoban.dev/)
 * [Installation `npm i -g laoban`](https://laoban.dev/laoban/INSTALLING.LAOBAN.html)
+
+# Getting starting
+
+* If you are new to a package that is managed by `laoban` then start [here](https://laoban.dev/laoban/LAOBAN.EXISTING.html)
+* If you want to try out `laoban` on your package start [here](https://laoban.dev/laoban/GETTING.STARTED.html)
 
 # Capabilities
 
@@ -48,11 +52,6 @@ want to control and manage dependencies / tech stack at 'the team level' or 'the
 laoban is ideal to help you
 * If you are a member of a company with standards (such as 'which version of node', 'which version of react') 
 then laoban is ideal to help you manage those standards
-
-# Getting starting 
-
-* If you are new to a package that is managed by `laoban` then start [here](https://laoban.dev/laoban/LAOBAN.EXISTING.html)
-* If you want to try out `laoban` on your package start [here](https://laoban.dev/laoban/GETTING.STARTED.html)
 
 # Motivation
 
