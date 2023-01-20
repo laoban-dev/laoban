@@ -68,13 +68,14 @@ let statusAction: PackageAction<void> = async ( config: Config, cmd: any, pds: P
 let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => {
   return PackageDetailFiles.workOutPackageDetails ( fileOps, config, { ...cmd, all: true } ).//
     then ( pds => {
-      let dirWidth = Strings.maxLength ( pds.map ( p => p.directory ) )
+
+      let dirWidth = Strings.maxLength ( pds.map ( p => fileOps.relative ( config.laobanDirectory, p.directory ) ) )
       let projWidth = Strings.maxLength ( pds.map ( p => p.packageDetails.name ) )
       let templateWidth = Strings.maxLength ( pds.map ( p => p.packageDetails.template ) )
       pds.forEach ( p => {
         let links = p.packageDetails.details.links;
         let dependsOn = (links && links.length > 0) ? ` depends on [${links.join ()}]` : ""
-        output ( config ) ( `${p.directory.padEnd ( dirWidth )} => ${p.packageDetails.name.padEnd ( projWidth )} (${p.packageDetails.template.padEnd ( templateWidth )})${dependsOn}` )
+        output ( config ) ( `${fileOps.relative ( config.laobanDirectory, p.directory ).padEnd ( dirWidth )} => ${p.packageDetails.name.padEnd ( projWidth )} (${p.packageDetails.template.padEnd ( templateWidth )})${dependsOn}` )
       } )
     } )
     .catch ( displayError ( config.outputStream ) )
