@@ -1,10 +1,10 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { gatherInitData, InitData, isSuccessfulInitData, ProjectDetailsAndTemplate, SuccessfullInitData, TypeCmdOptions } from "./init";
+import { gatherInitData, init, InitData, isSuccessfulInitData, ProjectDetailsAndTemplate, SuccessfullInitData, TypeCmdOptions } from "./init";
 
 import { FileOps, parseJson } from "@laoban/fileops";
 import { loabanConfigName, packageDetailsFile } from "../Files";
 import { ActionParams } from "./types";
-import { fromEntries } from "@laoban/utils";
+import { fromEntries, toForwardSlash } from "@laoban/utils";
 import { createDeltaForPackageJson } from "./update-template";
 import { ConfigAndIssues } from "../config";
 import { loadLaobanAndIssues, makeCache } from "../configProcessor";
@@ -39,7 +39,7 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
     // console.log(' createDeltaForPackageJson', templatePackage, packageJson)
     const delta = createDeltaForPackageJson ( templatePackage, packageJson, { showDiff: ( temp, pack ) => `${pack} => ${temp}`, onlyUpdate: true } )
     // console.log(' delta', delta)
-    const result: [ string, any ] = [ p.directory, delta ];
+    const result: [ string, any ] = [ toForwardSlash(fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory )), delta ];
     return result
   } ) )
   console.log ( JSON.stringify ( fromEntries ( ...result ), null, 2 ) )
@@ -79,17 +79,17 @@ export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
     const { suggestions, initFileContents } = initDataToUse;
     suggestions.comments.forEach ( c => console.log ( c ) )
     console.log ( `Would put ${loabanConfigName} into `, suggestions.laobanJsonLocation, ' which allows the following templates', initDataToUse.parsedLaoBan.templates )
-    const dirs = initDataToUse.projectDetails.map ( p => p.directory )
+    const dirs = initDataToUse.projectDetails.map ( p => fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory ) )
     if ( dirs.length === 0 ) {
       console.log ( 'No projects found' )
       return
     }
-    const longestDirLength = dirs.map ( p => p.length ).reduce ( ( a, b ) => Math.max ( a, b ), 0 )
+    const longestDirLength = ['package.json',...dirs].map ( p => p.length ).reduce ( ( a, b ) => Math.max ( a, b ), 0 )
     const longestGuessedTemplateLength = [ 'Guessed Template', ...initDataToUse.projectDetails.map ( p => p.template ) ].reduce ( ( a, b ) => Math.max ( a, b.length ), 0 )
     console.log ( 'package.json'.padEnd ( longestDirLength ), '    Guessed Template    Actual Template' )
     await Promise.all ( initDataToUse.projectDetails.map ( async p => {
       const foundDetails = await findActualTemplateIfExists ( p )
-      console.log ( '   ', p.directory.padEnd ( longestDirLength ), p.template.padEnd ( longestGuessedTemplateLength ), '  ', foundDetails ? foundDetails : '---' );
+      console.log ( '   ', toForwardSlash(fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory )).padEnd ( longestDirLength ), p.template.padEnd ( longestGuessedTemplateLength ), '  ', foundDetails ? foundDetails : '---' );
     } ) )
     console.log ( 'Suggested version number is ', suggestions.version )
     console.log ( 'run' )

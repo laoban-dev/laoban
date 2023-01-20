@@ -5,9 +5,9 @@ Would put laoban.json into  C:\git\laoban\tests\analyzepackage\haslaoban.json  w
   typescript: '@laoban@/templates/typescript_405',
   typescript_react: '@laoban@/templates/typescript_react'
 }
-package.json                                               Guessed Template    Actual Template
-    C:\git\laoban\tests\analyzepackage\haslaoban.json/lib1 typescript          ---
-    C:\git\laoban\tests\analyzepackage\haslaoban.json/lib2 typescript          ---
+package.json     Guessed Template    Actual Template
+    lib1         typescript          ---
+    lib2         typescript          ---
 Suggested version number is  1.2.8
 run
      laoban admin analyze --showimpact

@@ -1,2 +1,2 @@
-<root>/duplicateProjectNames/projects/project1 => projectName (typescript)
-<root>/duplicateProjectNames/projects/project2 => projectName (typescript)
+projects/project1 => projectName (typescript)
+projects/project2 => projectName (typescript)

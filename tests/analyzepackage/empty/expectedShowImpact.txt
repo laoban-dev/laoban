@@ -1,11 +1,11 @@
 Cannot use an existing laoban.json
 {
-  "C:\\git\\laoban\\tests\\analyzepackage\\empty/lib1": {
+  "tests/analyzepackage/empty/lib1": {
     "devDependencies": {
       "typescript": "^5.0.1 => ^4.0.5"
     }
   },
-  "C:\\git\\laoban\\tests\\analyzepackage\\empty/lib2": {
+  "tests/analyzepackage/empty/lib2": {
     "devDependencies": {
       "typescript": "^4.0.0 => ^4.0.5",
       "@types/jest": "^26.0.16 => ^26.0.15"
