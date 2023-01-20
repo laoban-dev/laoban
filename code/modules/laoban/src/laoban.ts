@@ -15,7 +15,7 @@ import { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
 
 import { updateConfigFilesFromTemplates } from "./update";
-import { FileOps } from "@laoban/fileops";
+import { FileOps, Path } from "@laoban/fileops";
 import { postCommand } from "./postCommand";
 
 
@@ -50,10 +50,11 @@ function checkGuard ( config: ConfigWithDebug, script: ScriptDetails ): Promise<
   return Promise.resolve ()
 }
 
-let statusAction: PackageAction<void> = async ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
+let statusAction = ( path: Path ): PackageAction<void> => async ( config: Config, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
+  if ( !config ) return Promise.reject ( 'No config' )
   let compactedStatusMap: DirectoryAndCompactedStatusMap[] =
         pds.map ( d => ({ directory: d.directory, compactedStatusMap: compactStatus ( path.join ( d.directory, config.status ) ) }) )
-  let prettyPrintStatusData = toPrettyPrintData ( toStatusDetails ( compactedStatusMap ) );
+  let prettyPrintStatusData = toPrettyPrintData ( path, config.laobanDirectory, toStatusDetails ( compactedStatusMap ) );
   prettyPrintData ( prettyPrintStatusData )
   const hasError = compactedStatusMap.reduce ( ( acc, d ) => {
     const hasFalse = [ ...d.compactedStatusMap.values () ].reduce ( ( dacc, v ) => dacc || v.includes ( ' false ' ), false );
@@ -179,7 +180,7 @@ export class Cli {
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]
     }), executeGenerations, defaultOptions )
 
-    packageAction ( program, 'status', statusAction, 'shows the initStatus of the project in the current directory', defaultOptions )
+    packageAction ( program, 'status', statusAction ( fileOps ), 'shows the initStatus of the project in the current directory', defaultOptions )
     action ( program, 'packages', packagesAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
     packageAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ),

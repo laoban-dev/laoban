@@ -1,6 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import {StringAndWidth, Strings} from "./utils";
 import * as fs from "fs";
+import { Path } from "@laoban/fileops";
 
 function readOrBlank(file: string): string {
     try {
@@ -69,17 +70,19 @@ interface PrettyPrintStatusData {
     directoriesWidth: number
     directoryToCommandToData: Map<string, Map<string, string>>
 }
-export function toPrettyPrintData(sds: StatusDetails[]): PrettyPrintStatusData {
-    let directories = [...new Set(sds.map(sd => sd.directory))]
+export function toPrettyPrintData(path: Path, laobanDirectory: string, sds: StatusDetails[]): PrettyPrintStatusData {
+    let directories = [...new Set(sds.map(sd => path.relative(laobanDirectory,sd.directory)))]
+
     let directoriesWidth = Strings.maxLength(directories)
     let commandTitles = [...new Set(sds.map(sd => sd.command))].sort()
     let commandsTitles = ['', ...commandTitles].map(d => ({value: d, width: Math.max(5, d.length)}))  //later might want more sophisticated
     let directoryToCommandToData = new Map<string, Map<string, string>>()
     sds.forEach(sd => {
-        let existingCommandToData = directoryToCommandToData.get(sd.directory)
+        const dir = path.relative(laobanDirectory,sd.directory)
+        let existingCommandToData = directoryToCommandToData.get(dir)
         let map: Map<string, string> = existingCommandToData ? existingCommandToData : new Map<string, string>()
         map.set(sd.command, sd.status)
-        directoryToCommandToData.set(sd.directory, map)
+        directoryToCommandToData.set(dir, map)
     })
     return ({commandsTitles: commandsTitles, directories: directories, directoriesWidth: directoriesWidth, directoryToCommandToData: directoryToCommandToData})
 }
