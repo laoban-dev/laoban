@@ -10,12 +10,13 @@ import { ConfigAndIssues, ConfigWithDebug } from "../config";
 import { abortWithReportIfAnyIssues, loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { Writable } from "stream";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "../profiling";
-import { output, postCommand } from "../utils";
+import { output} from "../utils";
 import { addDebug } from "@laoban/debug";
 import { validatePackageDetailsAndTemplates } from "../validation";
 import { ActionParams } from "./types";
 import { CommanderStatic } from "commander";
 import { updateTemplate, updateTemplateOptions } from "./update-template";
+import { postCommand } from "../postCommand";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -106,6 +107,7 @@ export class LaobanAdmin {
 
     addCommand ( 'init', `creates a laoban.json/package.json.details and helps 'get started'`, init, initOptions )
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
+      .option ( '--cleantestfiles', 'Will clean any test files created by the --dryrun', false )
       .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
     //
     addCommand ( 'analyze', 'Gives a summary of the packages that laoban admin has detected"', analyze, justInitUrl )

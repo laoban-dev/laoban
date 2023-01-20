@@ -1,8 +1,8 @@
 Found a git repo. This is usually a good place for the laoban.json file
 
-C:\git\laoban\tests\init\hasgit\laoban.json
-C:\git\laoban\tests\init\hasgit\lib1\package.details.json
-C:\git\laoban\tests\init\hasgit\lib2\package.details.json
-C:\git\laoban\tests\init\hasgit\version.txt
-C:\git\laoban\tests\init\hasgit\.gitignore
+Creating file:  C:\git\laoban\tests\init\hasgit\laoban.json
+Creating file:  C:\git\laoban\tests\init\hasgit\lib1\package.details.json
+Creating file:  C:\git\laoban\tests\init\hasgit\lib2\package.details.json
+Creating file:  C:\git\laoban\tests\init\hasgit\version.txt
+Creating file:  C:\git\laoban\tests\init\hasgit\.gitignore
 

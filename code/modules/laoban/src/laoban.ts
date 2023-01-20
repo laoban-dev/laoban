@@ -7,7 +7,7 @@ import * as path from "path";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails } from "./status";
 import * as os from "os";
 import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, timeIt } from "./executors";
-import { output, postCommand, Strings } from "./utils";
+import { output, Strings } from "./utils";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
 import { Writable } from "stream";
@@ -15,7 +15,8 @@ import { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
 
 import { updateConfigFilesFromTemplates } from "./update";
-import { FileOps, fileOpsStats } from "@laoban/fileops";
+import { FileOps } from "@laoban/fileops";
+import { postCommand } from "./postCommand";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
@@ -144,10 +145,9 @@ export class Cli {
     function action<T> ( p: any, name: string, a: Action<T>, description: string, ...options: (( p: any ) => any)[] ) {
       return command ( p, name, description, options )
         .action ( cmd => configOrReportIssues ( configAndIssues ).then ( addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) )
-          .then ( ( configWithDebug: ConfigWithDebug ) =>
-            a ( fileOps, configWithDebug, cmd )
-              .then ( postCommand ( p, fileOps ) )
-              .catch ( displayError ( configWithDebug.outputStream ) ) ) )
+          .then ( ( configWithDebug: ConfigWithDebug ) => a ( fileOps, configWithDebug, cmd )
+            .then ( postCommand ( p, fileOps ) )
+            .catch ( displayError ( configWithDebug.outputStream ) ) ) )
     }
     function packageAction<T> ( p: any, name: string, a: PackageAction<T>, description: string, ...options: (( p: any ) => any)[] ) {
       return action ( p, name, ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) =>
@@ -162,13 +162,13 @@ export class Cli {
         let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId ( new Date (), script.name, configAndIssues.params );
         let sessionDir = path.join ( config.sessionDir, sessionId );
         config.debug ( 'session' ).message ( () => [ 'sessionId', sessionId, 'sessionDir', sessionDir ] )
-        return checkGuard ( config, script ).then ( () => fse.mkdirp ( sessionDir ).then ( () => {
+        return checkGuard ( config, script ).then ( () => fse.mkdirp ( sessionDir ).then ( async () => {
           let scds: ScriptInContextAndDirectoryWithoutStream[] = pds.map ( d =>
             ({ detailsAndDirectory: d, scriptInContext: makeSc ( config, sessionId, pds, script, cmd ) }) )
           let s = config.debug ( 'scripts' );
           s.message ( () => [ 'rawScriptCommands', ...script.commands.map ( s => s.command ) ] )
           s.message ( () => [ 'directories', ...scds.map ( s => s.detailsAndDirectory.directory ) ] )
-          return fn ( [ scds ] )
+          return await fn ( [ scds ] )
         } ) )
       }, description, ...options )
     }

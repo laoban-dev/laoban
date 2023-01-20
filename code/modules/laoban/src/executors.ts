@@ -34,6 +34,9 @@ export interface ScriptResult {
   results: ShellResult[],
   duration: number
 }
+export function isScriptResult ( r: any ): r is ScriptResult {
+  return r.scd !== undefined && r.results !== undefined && r.duration !== undefined
+}
 
 export type  Generation = ScriptInContextAndDirectoryWithoutStream[]
 export type  Generations = Generation[]
@@ -100,11 +103,11 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectoryWitho
 export let executeOneGeneration: ( e: ExecuteScript ) => ExecuteOneGeneration = e => gen => Promise.all ( gen.map ( x => e ( x ) ) )
 
 export function executeAllGenerations ( executeOne: ExecuteOneGeneration, reporter: ( GenerationResult ) => Promise<void> ): ExecuteGenerations {
-  let fn = async ( gs, sofar ) => {
+  let fn = async ( gs, sofar ): Promise<GenerationsResult> => {
     if ( gs.length == 0 ) return sofar
     const res = await executeOne ( gs[ 0 ] )
     await reporter ( res )
-    await fn ( gs.slice ( 1 ), [ ...sofar, res ] )
+    return await fn ( gs.slice ( 1 ), [ ...sofar, res ])
   }
   return gs => fn ( gs, [] )
 }
@@ -211,8 +214,9 @@ function executeInChangedEnv<To> ( env: Envs, block: () => To ): To {
   } finally {process.env = oldEnv}
 }
 
-
+export let jsCount = 0
 export let execJS: RawCommandExecutor = d => {
+  jsCount += 1
   // console.log('in execJs',process.cwd(),d.details.directory, d.details.commandString)
   try {
     let res = executeInChangedEnv<any> ( d.details.env, () => executeInChangedDir ( d.details.directory,
@@ -243,7 +247,7 @@ async function executeCommand ( fileOpsWithDir: FileOps, d: ShellCommandDetails<
   }
   async function catCommand () {
     if ( await fileOpsWithDir.isFile ( fullFileName ) )
-      writeTo(d.logStreams, await fileOpsWithDir.loadFileOrUrl ( fullFileName ))
+      writeTo ( d.logStreams, await fileOpsWithDir.loadFileOrUrl ( fullFileName ) )
   }
   async function tailCommand () {
     const parts = fullFileName.split ( ',' )

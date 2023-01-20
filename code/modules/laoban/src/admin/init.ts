@@ -1,10 +1,10 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { combineTwoObjects, NameAnd, safeArray, safeObject } from "@laoban/utils";
+import { combineTwoObjects, lastSegment, NameAnd, safeArray, safeObject } from "@laoban/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./initStatus";
 import { derefence, dollarsBracesVarDefn, findVar } from "@laoban/variables";
 import { laobanJsonLocations, } from "./fileLocations";
 import path from "path";
-import { FileOps, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
+import { FileOps, findChildFiles, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
 import { combineRawConfigs } from "../config";
 import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "../loadingTemplates";
 import { findLaobanOrUndefined, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
@@ -287,17 +287,17 @@ export async function filesAndContents ( fileOps: FileOps, initData: Successfull
     contents: initData.suggestions.version || '0.0.0',
     directory: initData.suggestions.laobanJsonLocation
   }
-  const gitIgnores = await updateIgnore ( fileOps, initData.suggestions );
+  const gitIgnores = dryRun ? [] : await updateIgnore ( fileOps, initData.suggestions );
   return [ laoban, ...projectDetails, version, ...gitIgnores ]
 }
 async function saveInitDataToFiles ( fileOps: FileOps, data: LocationAnd<string> [], cmd: InitCmdOptions ): Promise<void> {
   await Promise.all ( data.map ( async ( l ) => {
     const { location, contents } = l
     if ( cmd.dryrun || cmd.force || !await fileOps.isFile ( location ) ) {
-      console.log ( location );
+      console.log ( 'Creating file: ', location );
       return fileOps.saveFile ( location, contents );
     } else if ( !cmd.dryrun && isLocationAndUpdate ( l ) && l.update ) {
-      console.log ( location );
+      console.log ( 'Updating file: ', location );
       return fileOps.saveFile ( location, contents );
     }
     console.log ( `Skipping ${location} because it already exists (use --force to create it)` )
@@ -312,8 +312,10 @@ export interface TypeCmdOptions {
   legaltypes: string[]
   initurl: string
   listTypes?: boolean
+  cleantestfiles?
+  boolean
 }
-interface InitCmdOptions extends TypeCmdOptions,HasPackages {
+interface InitCmdOptions extends TypeCmdOptions, HasPackages {
   dryrun?: boolean
   force?: boolean
 }
@@ -323,14 +325,32 @@ export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<In
     console.log ( 'Cannot have --dryrun and --force' )
     return
   }
+  if ( cmd.cleantestfiles ) {
+    const files = await findChildFiles ( fileOps,
+      s => s === 'node_modules' || s === '.git' || s === '.session' ) ( currentDirectory )
+    const relevantFiles = files.filter ( l => {
+      const f = lastSegment ( l )
+      return f === '.version.test.txt' || f == '.package.details.test.json' || f === '.laoban.test.json';
+    } )
+    for ( const f of relevantFiles ) {
+      console.log ('deleting',f)
+      await fileOps.removeFile ( f )
+    }
+    return
+  }
   const dryRun = cmd.dryrun;
   const rawInitData = await gatherInitData ( fileOps, clearDirectory, cmd, false )
   if ( isSuccessfulInitData ( rawInitData ) ) {
-    const initData = await getInitDataWithoutTemplatesFilteredByPackages ( fileOps, rawInitData,cmd )
+    const initData = await getInitDataWithoutTemplatesFilteredByPackages ( fileOps, rawInitData, cmd )
     const files: LocationAnd<string>[] = await filesAndContents ( fileOps, initData, dryRun )
     reportInitData ( initData, files )
     console.log ()
     await saveInitDataToFiles ( fileOps, files, cmd );
+    if ( cmd.dryrun ) {
+      console.log ()
+      console.log ( `The files created above are for you to examine and 'see what would happen` )
+      console.log ( `They can be cleaned by running 'laoban init --cleantestfiles'` )
+    }
   } else
     console.log ( 'Could not work out how to create', JSON.stringify ( rawInitData.suggestions, null, 2 ) )
 }
