@@ -11,7 +11,7 @@ import { FileOps } from "@laoban/fileops";
 
 export function validateLaobanJson ( v: Validate<RawConfig> ): Validate<RawConfig> {
   return v.isString ( 'versionFile', `The versionFile is the location of the 'project version number', used during update` )
-    .isNameAnd('templates', 'The templates object defines the names of the templates, and the urls of those templates').//
+    .isNameAnd ( 'templates', 'The templates object defines the names of the templates, and the urls of those templates' ).//
     isString ( 'log', `This is used to say what the name of the log file in the project directory. It is typically '.log'. The output from commands is written here` ).//
     isString ( 'status', `This is the file used to record the success or failure of commands (such as 'test')` ).//
     isString ( 'profile', 'This is used to record how long things took to run' ).//
@@ -31,22 +31,21 @@ function validateCommand ( v: Validate<CommandDefn | string> ) {
 }
 
 
-export function validatePackageDetailsAndTemplates ( fileOps: FileOps, c: ConfigWithDebug, pds: PackageDetailsAndDirectory[] ): Promise<string[]> {
-  let nameAndDirectories = pds.map ( pd => ({ name: pd.packageDetails.name, directory: pd.directory }) )
+export async function validatePackageDetailsAndTemplates ( fileOps: FileOps, c: ConfigWithDebug, pds: PackageDetailsAndDirectory[] ): Promise<string[]> {
+  const detailsIssues = pds.filter ( pd => !pd.packageDetails ).map ( ( { directory, errorParsing } ) =>
+    `Directory ${directory} has ${errorParsing ? 'invalid json in' : 'no '} package.details.json file` )
+  const goodPds = pds.filter ( pd => pd.packageDetails );
+  let nameAndDirectories = goodPds.map ( pd => ({ name: pd.packageDetails.name, directory: pd.directory }) )
   let grouped = groupBy ( nameAndDirectories, nd => nd.name )
   let duplicateErrors = flatten ( Object.keys ( grouped ).map ( key =>
     grouped[ key ].length > 1 ?
-      [ `Have multiple projects with same mame`, ...grouped[ key ].map ( g => `${g.name} ${g.directory}` ) ] :
+      [ `Have multiple projects with same Name`, ...grouped[ key ].map ( g => `   ${g.name} ${g.directory}` ) ] :
       [] ) )
-  if ( duplicateErrors.length > 0 ) return Promise.resolve ( duplicateErrors )
-  let pdsIssues: string[] = flatten ( pds.map ( pd => validatePackageDetails ( Validate.validate ( `Project details in ${pd.directory}`, pd.packageDetails ) ).errors ) )
+  let pdsIssues: string[] = flatten ( goodPds.map ( pd => validatePackageDetails ( Validate.validate ( `Project details in ${pd.directory}`, pd.packageDetails ) ).errors ) )
 
-  return pdsIssues.length > 0 ?
-    Promise.resolve ( pdsIssues ) :
-    checkLoadingTemplates(`Checking all templates`, fileOps, c, c.templates)
-
-  // Promise.all ( removeDuplicates ( pds.map ( d => d.projectDetails.template ) ).sort ().map ( template =>
-  //     validateTemplateDirectory ( `Template Directory`, c, template ) ) ).then ( flatten );
+  const templateIssues = await checkLoadingTemplates ( `Checking all templates`, fileOps, c, c.templates );
+  const allIssues = [ ...detailsIssues, ...duplicateErrors, ...pdsIssues, ...templateIssues ]
+  return allIssues
 }
 
 function validateTemplateDirectory ( context: string, c: Config, templateDir: string ): Promise<string[]> {

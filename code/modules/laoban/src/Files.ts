@@ -1,9 +1,9 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import * as fs from "fs";
 import * as path from "path";
-import { HasLaobanDirectory, PackageDetailsAndDirectory } from "./config";
+import { HasLaobanDirectory, PackageDetails, PackageDetailsAndDirectory } from "./config";
 import { Debug } from "@laoban/debug";
-import { childDirs, FileOps, findMatchingK } from "@laoban/fileops";
+import { childDirs, FileOps, findMatchingK, parseJson } from "@laoban/fileops";
 import { findFileUp } from "@laoban/fileops";
 
 
@@ -30,8 +30,8 @@ export function findLaoban ( directory: string ): string {
   return dir
 }
 
-export async function findVersionNumber(fileOps: FileOps, dir: string): Promise<string> {
-  const packageJsonDir = await findFileUp ( dir, async s => fileOps.isFile(fileOps.join ( packageJsonDir, 'package.json' )) )
+export async function findVersionNumber ( fileOps: FileOps, dir: string ): Promise<string> {
+  const packageJsonDir = await findFileUp ( dir, async s => fileOps.isFile ( fileOps.join ( packageJsonDir, 'package.json' ) ) )
   return fileOps.loadFileOrUrl ( fileOps.join ( packageJsonDir, 'package.json' ) ).then ( s => JSON.parse ( s ).version )
 }
 
@@ -49,11 +49,11 @@ export class PackageDetailFiles {
       if ( options.packages ) return p.k ( () => `options.projects= [${options.packages}]`, () =>
         PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, root ).then ( pd => pd.filter ( p => p.directory.match ( options.packages ) ) ) )
       if ( options.all ) return p.k ( () => "options.allProjects", () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, root ) );
-      if ( options.one ) return p.k ( () => "optionsOneProject", () => PackageDetailFiles.loadPackageDetails ( process.cwd () ).then ( x => [ x ] ) )
-      return PackageDetailFiles.loadPackageDetails ( process.cwd () ).then ( pd => {
+      if ( options.one ) return p.k ( () => "optionsOneProject", () => PackageDetailFiles.loadPackageDetails ( fileOps ) ( process.cwd () ).then ( x => [ x ] ) )
+      return PackageDetailFiles.loadPackageDetails ( fileOps ) ( process.cwd () ).then ( pd => {
           p.message ( () => [ "using default project rules. Looking in ", process.cwd (), 'pd.details', pd.packageDetails ? pd.packageDetails.name : `No ${packageDetailsFile} found` ] )
           return pd.packageDetails ?
-            p.k ( () => 'Using project details from process.cwd()', () => PackageDetailFiles.loadPackageDetails ( process.cwd () ) ).then ( x => [ x ] ) :
+            p.k ( () => 'Using project details from process.cwd()', () => PackageDetailFiles.loadPackageDetails ( fileOps ) ( process.cwd () ) ).then ( x => [ x ] ) :
             p.k ( () => 'Using project details under root', () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, root ) )
         }
       )
@@ -67,25 +67,23 @@ export class PackageDetailFiles {
 
   static async findAndLoadPackageDetailsFromChildren ( fileOps: FileOps, root: string ): Promise<PackageDetailsAndDirectory[]> {
     let dirs = await this.findPackageDirectories ( fileOps ) ( root );
-    return Promise.all ( dirs.map ( this.loadPackageDetails ) )
+    return Promise.all ( dirs.map ( this.loadPackageDetails ( fileOps ) ) )
   }
 
-  static loadPackageDetails ( root: string ): Promise<PackageDetailsAndDirectory> {
-    let rootAndFileName = path.join ( root, packageDetailsFile );
-    return new Promise<PackageDetailsAndDirectory> ( ( resolve, reject ) => {
-      fs.readFile ( rootAndFileName, ( err, data ) => {
-          if ( err ) {resolve ( { directory: root } )} else {
-            try {
-              let packageDetails = JSON.parse ( data.toString () );
-              resolve ( { directory: root, packageDetails: packageDetails } )
-            } catch ( e ) {
-              return reject ( new Error ( `Cannot parse the file ${rootAndFileName}\n${e}` ) )
-            }
-          }
-        }
-      )
-    } )
-  }
+  static loadPackageDetails = ( fileOps: FileOps ) => async ( directory: string ): Promise<PackageDetailsAndDirectory> => {
+    try {
+      let rootAndFileName = fileOps.join ( directory, packageDetailsFile );
+      const asString = await fileOps.loadFileOrUrl ( rootAndFileName );
+      try {
+        let packageDetails = asString && parseJson<PackageDetails> ( `File ${rootAndFileName}` ) ( asString );
+        return { directory, packageDetails }
+      } catch ( e ) {
+        return { directory, errorParsing: true }
+      }
+    } catch ( e ) {
+      return { directory }
+    }
+  };
 
   static findPackageDirectories = ( fileOps: FileOps ) => async ( root: string ): Promise<string[]> => {
     const findDescs = childDirs ( fileOps, s => s === 'node_modules' || s === '.git' || s === '.session' )

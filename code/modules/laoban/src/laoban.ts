@@ -7,7 +7,7 @@ import * as path from "path";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails } from "./status";
 import * as os from "os";
 import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, timeIt } from "./executors";
-import { output, Strings } from "./utils";
+import { output, partition, Strings } from "./utils";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
 import { Writable } from "stream";
@@ -17,6 +17,7 @@ import { addDebug } from "@laoban/debug";
 import { updateConfigFilesFromTemplates } from "./update";
 import { FileOps, Path } from "@laoban/fileops";
 import { postCommand } from "./postCommand";
+import { stringOrUndefinedAsString, toArray } from "@laoban/utils";
 
 
 const displayError = ( outputStream: Writable ) => ( e: Error ) => {
@@ -69,14 +70,16 @@ let statusAction = ( path: Path ): PackageAction<void> => async ( config: Config
 let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) => {
   return PackageDetailFiles.workOutPackageDetails ( fileOps, config, { ...cmd, all: true } ).//
     then ( pds => {
-
-      let dirWidth = Strings.maxLength ( pds.map ( p => fileOps.relative ( config.laobanDirectory, p.directory ) ) )
-      let projWidth = Strings.maxLength ( pds.map ( p => p.packageDetails.name ) )
-      let templateWidth = Strings.maxLength ( pds.map ( p => p.packageDetails.template ) )
-      pds.forEach ( p => {
-        let links = p.packageDetails.details.links;
+      const goodPds = pds.filter ( pd => pd.packageDetails )
+      const badPds = pds.filter ( pd => !pd.packageDetails )
+      if ( badPds.length > 0 ) console.log ( `Bad package.details.json for ${badPds.map ( pd => pd.directory ).join ( ', ' )}` )
+      let dirWidth = Strings.maxLength ( goodPds.map ( p => fileOps.relative ( config.laobanDirectory, p.directory ) ) )
+      let projWidth = Strings.maxLength ( goodPds.map ( p => p.packageDetails.name ) )
+      let templateWidth = Strings.maxLength ( goodPds.map ( p => p.packageDetails.template ) )
+      goodPds.forEach ( p => {
+        let links = toArray ( p.packageDetails.details?.links );
         let dependsOn = (links && links.length > 0) ? ` depends on [${links.join ()}]` : ""
-        output ( config ) ( `${fileOps.relative ( config.laobanDirectory, p.directory ).padEnd ( dirWidth )} => ${p.packageDetails.name.padEnd ( projWidth )} (${p.packageDetails.template.padEnd ( templateWidth )})${dependsOn}` )
+        output ( config ) ( `${fileOps.relative ( config.laobanDirectory, p.directory ).padEnd ( dirWidth )} => ${stringOrUndefinedAsString ( p.packageDetails.name ).padEnd ( projWidth )} (${stringOrUndefinedAsString ( p.packageDetails.template ).padEnd ( templateWidth )})${dependsOn}` )
       } )
     } )
     .catch ( displayError ( config.outputStream ) )
@@ -160,16 +163,21 @@ export class Cli {
 
     function scriptAction<T> ( p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
       return packageAction ( p, name, ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
+        const badPds = pds.filter ( p => !p.packageDetails )
+        if ( badPds.length > 0 ) console.log ( `The following projects have errors in their project.details.json: ${badPds.map ( p => p.directory ).join ()}` )
+        const goodPds = pds.filter ( p => p.packageDetails )
         let script = scriptFn ()
         let sessionId = cmd.sessionId ? cmd.sessionId : makeSessionId ( new Date (), script.name, configAndIssues.params );
         let sessionDir = path.join ( config.sessionDir, sessionId );
         config.debug ( 'session' ).message ( () => [ 'sessionId', sessionId, 'sessionDir', sessionDir ] )
         return checkGuard ( config, script ).then ( () => fse.mkdirp ( sessionDir ).then ( async () => {
-          let scds: ScriptInContextAndDirectoryWithoutStream[] = pds.map ( d =>
-            ({ detailsAndDirectory: d, scriptInContext: makeSc ( config, sessionId, pds, script, cmd ) }) )
+          const scriptInContext = makeSc ( config, sessionId, pds, script, cmd );
+          let scds: ScriptInContextAndDirectoryWithoutStream[] = goodPds.map ( d => ({ detailsAndDirectory: d, scriptInContext }) )
           let s = config.debug ( 'scripts' );
+
           s.message ( () => [ 'rawScriptCommands', ...script.commands.map ( s => s.command ) ] )
           s.message ( () => [ 'directories', ...scds.map ( s => s.detailsAndDirectory.directory ) ] )
+
           return await fn ( [ scds ] )
         } ) )
       }, description, ...options )

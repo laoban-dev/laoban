@@ -1,0 +1,8 @@
+Validation errors prevent laoban from running correctly
+Directory <root>/detailsErrors/projects/detailsFileDoesntParse has invalid json in package.details.json file
+Have multiple projects with same Name
+    proj2 <root>/detailsErrors/projects/noDetails
+    proj2 <root>/detailsErrors/projects/noTemplate
+Project details in <root>/detailsErrors/projects/noDetails.details should be an object.
+Project details in <root>/detailsErrors/projects/noName.name should be a string.
+Project details in <root>/detailsErrors/projects/noTemplate.template should be a string.

@@ -1,2 +1,4 @@
-Cannot parse the file <root>/detailsErrors/projects/detailsFileDoesntParse/package.details.json
-SyntaxError: Unexpected token D in JSON at position 3
+Bad package.details.json for <root>/detailsErrors/projects/detailsFileDoesntParse
+    projects/noDetails  => proj2     (typescript)
+    projects/noName     => undefined (typescript)
+    projects/noTemplate => proj2     (undefined )

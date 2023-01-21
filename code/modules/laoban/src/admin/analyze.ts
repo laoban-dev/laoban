@@ -55,7 +55,7 @@ export async function getInitDataWithoutTemplatesFilteredByPackages ( fileOps: F
     const result = !await fileOps.isFile ( tjName );
     return { result, pd }
   } ) )
-  const pdWithoutTemplate = resultsAndPd.filter ( r => r.result ).map ( r => r.pd )
+  const pdWithoutTemplate = resultsAndPd.filter ( r => r.result ).map ( r => r.pd ).sort((a,b)=>a.directory.localeCompare(b.directory))
   return { ...initData, projectDetails: pdWithoutTemplate }
 }
 export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {

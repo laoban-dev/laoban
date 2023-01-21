@@ -1,0 +1,4 @@
+Validation errors prevent laoban from running correctly
+Have multiple projects with same Name
+projectName <root>/duplicateProjectNames/projects/project1
+projectName <root>/duplicateProjectNames/projects/project2

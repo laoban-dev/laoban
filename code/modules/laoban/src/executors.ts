@@ -7,7 +7,7 @@ import * as path from "path";
 import { chain, writeTo } from "./utils";
 import { CommandDecorator } from "./decorators";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { closeStream, firstSegment, flatten, NameAnd } from "@laoban/utils";
+import { closeStream, firstSegment, flatten, NameAnd, safeArray } from "@laoban/utils";
 import { FileOps, inDirectoryFileOps, Path } from "@laoban/fileops";
 import fs, { WriteStream } from "fs";
 import { Writable } from "stream";
@@ -94,8 +94,7 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectoryWitho
       };
       return resultForOneCommand;
     }
-    let rawlinks = scd.detailsAndDirectory.packageDetails.details.links;
-    let links = rawlinks ? rawlinks : []
+    const links = safeArray ( scd.detailsAndDirectory?.packageDetails?.details?.links )
     return cmd.eachLink ? links.map ( makeShellDetails ) : [ makeShellDetails () ]
   } ) )
 }
@@ -107,7 +106,7 @@ export function executeAllGenerations ( executeOne: ExecuteOneGeneration, report
     if ( gs.length == 0 ) return sofar
     const res = await executeOne ( gs[ 0 ] )
     await reporter ( res )
-    return await fn ( gs.slice ( 1 ), [ ...sofar, res ])
+    return await fn ( gs.slice ( 1 ), [ ...sofar, res ] )
   }
   return gs => fn ( gs, [] )
 }

@@ -1,0 +1,9 @@
+Validation errors prevent laoban from running correctly
+    In directory laobanJsonError, laoban.json.versionFile should be a string. The versionFile is the location of the 'project version number', used during update
+    In directory laobanJsonError, laoban.json templates should be defined. The templates object defines the names of the templates, and the urls of those templates
+    In directory laobanJsonError, laoban.json.log should be a string. This is used to say what the name of the log file in the project directory. It is typically '.log'. The output from commands is written here
+    In directory laobanJsonError, laoban.json.status should be a string. This is the file used to record the success or failure of commands (such as 'test')
+    In directory laobanJsonError, laoban.json.profile should be a string. This is used to record how long things took to run
+    In directory laobanJsonError, laoban.json.scripts.link.commands[0].command should be a string.
+    In directory laobanJsonError, laoban.json.scripts.link.commands[1].command should be a string.
+    In directory laobanJsonError, laoban.json.scripts.log.description should be a string.

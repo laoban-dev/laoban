@@ -1,0 +1,23 @@
+{
+    "laobanDirectory": "C://git//laoban//tests//config//detailsErrors",
+    "laobanConfig": "C://git//laoban//tests//config//detailsErrors//laoban.json",
+    "versionFile": "C://git//laoban//tests//config//detailsErrors/version.txt",
+    "log": ".log",
+    "status": ".status",
+    "inits": "@laoban@/init/allInits.json",
+    "cacheDir": "C://git//laoban//tests//config//detailsErrors//.cache",
+    "profile": ".profile",
+    "packageManager": "yarn",
+    "properties": {
+    "license": "MIT",
+    "repository": "git@github.com:phil-rice/laoban.git"
+    },
+    "templates": {
+    "javascript": "@laoban@/templates/javascript",
+    "typescript": "@laoban@/templates/typescript_405",
+    "typescript_react": "@laoban@/templates/typescript_react"
+    },
+    "sessionDir": "C://git//laoban//tests//config//detailsErrors//.session",
+    "throttle": 0,
+    "os": "Windows_NT"
+    }

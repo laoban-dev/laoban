@@ -6,7 +6,7 @@ export function removeDuplicates<T> ( list: T[] ): T[] {
   return [ ...new Set ( list ) ]
 }
 export class Strings {
-  static maxLength = ( ss: string[] ) => Math.max ( ...(ss.map ( s => s.length )) );
+  static maxLength = ( ss: string[] ) => Math.max ( ...(ss.map ( s => s ? s.length : 9 )) ); //undefined is 9 chars long
   static indentEachLine ( indent: string, lines: string ): string {
     return lines.split ( '\n' ).map ( s => indent + s ).join ( '\n' )
   }

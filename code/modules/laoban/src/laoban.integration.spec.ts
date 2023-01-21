@@ -18,8 +18,13 @@ function doPwd ( cmd: string, expectedFile: string ) {
               let actual = toArrayReplacingRoot ( configTestRoot, result );
               // console.log ( 'cmd', expectedFile )
               // console.log ( 'expected', expected )
-              // console.log ( 'actual', actual )
-              return expect ( actual ).toEqual ( expected );
+              try {
+                return expect ( actual ).toEqual ( expected );
+              } catch ( e ) {
+                console.log ( 'actual\n', actual.join ( '\n' ) )
+                console.log ( '---' )
+                throw e
+              }
             } )
         }
       )
@@ -30,6 +35,10 @@ function doPwd ( cmd: string, expectedFile: string ) {
 const prefix = "node ../../../code/modules/laoban/dist/index.js ";
 doPwd ( prefix + "ls", 'expectedLs.txt' ) //tests dos execution
 doPwd ( prefix + "packages", 'expectedPackages.txt' ) //tests a command
+doPwd ( prefix + "admin config", 'expectedConfig.txt' ) //tests a command
+doPwd ( prefix + "admin validate", 'expectedValidate.txt' ) //tests a command
+doPwd ( prefix + "admin templates", 'expectedTemplates.txt' ) //tests a command
+doPwd ( prefix + "admin analyze", 'expectedAnalyze.txt' ) //tests a command
 doPwd ( prefix + `run "js:process.cwd()"`, 'expectedPwds.txt' ) // tests javascript execution
 
 describe ( 'ls with guards', () => {

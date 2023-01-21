@@ -1,0 +1,13 @@
+Found an existing laoban.json file at <root>/duplicateProjectNames
+Would put laoban.json into  <root>/duplicateProjectNames  which allows the following templates {
+    javascript: '@laoban@/templates/javascript',
+    typescript: '@laoban@/templates/typescript_405',
+    typescript_react: '@laoban@/templates/typescript_react'
+}
+package.json         Guessed Template    Actual Template
+    template/noreact javascript          ---
+    template/react   javascript          ---
+Suggested version number is  undefined
+run
+laoban admin analyze --showimpact
+to see if any version numbers would be impacted

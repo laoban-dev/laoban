@@ -187,6 +187,7 @@ function hasGuard ( command: CommandDefn | string ): boolean {
 export interface PackageDetailsAndDirectory {
   directory: string
   packageDetails?: PackageDetails
+  errorParsing?: boolean
 }
 export interface PackageDetailsDirectoryPropertiesAndVersion {
   version: string

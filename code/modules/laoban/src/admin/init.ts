@@ -7,7 +7,7 @@ import path from "path";
 import { FileOps, findChildFiles, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
 import { combineRawConfigs } from "../config";
 import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "../loadingTemplates";
-import { findLaobanOrUndefined, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
+import { findLaobanOrUndefined, loabanConfigName, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ActionParams } from "./types";
 import { getInitDataWithoutTemplatesFilteredByPackages, HasPackages } from "./analyze";
 
@@ -50,7 +50,15 @@ export async function findTypes ( fileOps: FileOps, cmd: TypeCmdOptions ) {
     process.exit ( 1 )
   }
   const initUrl = cmd.initurl
-  const inits: NameAnd<string> = parseJson<NameAnd<string>> ( `init ${initUrl}` ) ( await fileOps.loadFileOrUrl ( initUrl ) )
+  const laobanJson: any = await fileOps.loadFileOrUrl ( initUrl ).catch ( e => { error ( `Could not load ${initUrl}: ${e}` ); } );
+  function parseTheJsonExitIfBad () {
+    try{
+    return parseJson<NameAnd<string>> ( `init ${initUrl}` ) ( laobanJson );
+    } catch ( e ) {
+      error ( `Error parsing the file ${loabanConfigName} ` )
+    }
+  }
+  const inits: NameAnd<string> = parseTheJsonExitIfBad ()
   const types = cmd.legaltypes || Object.keys ( inits )
   if ( types.length === 0 ) {
     const why = cmd.type ? `You specified --legaltypes but no actual types` : `No types found at ${initUrl}`
@@ -333,7 +341,7 @@ export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<In
       return f === '.version.test.txt' || f == '.package.details.test.json' || f === '.laoban.test.json';
     } )
     for ( const f of relevantFiles ) {
-      console.log ('deleting',f)
+      console.log ( 'deleting', f )
       await fileOps.removeFile ( f )
     }
     return

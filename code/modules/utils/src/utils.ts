@@ -47,6 +47,9 @@ export function safeArray<T> ( ts: T | T[] | undefined ): T[] {
   if ( Array.isArray ( ts ) ) return ts
   return [ ts ];
 }
+export function stringOrUndefinedAsString ( s: string | undefined ): string {
+  return s === undefined ? 'undefined' : s
+}
 export function safeObject<T> ( t: NameAnd<T> | undefined ): NameAnd<T> {
   return t === undefined ? {} : t
 }

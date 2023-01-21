@@ -1,6 +1,6 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { NameAnd } from "@laoban/utils";
-import { init } from "./init";
+import { gatherInitData, init, InitData, isSuccessfulInitData } from "./init";
 import { analyze } from "./analyze";
 import { newPackage } from "./newPackage";
 import { FileOps } from "@laoban/fileops";
@@ -10,7 +10,7 @@ import { ConfigAndIssues, ConfigWithDebug } from "../config";
 import { abortWithReportIfAnyIssues, loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { Writable } from "stream";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "../profiling";
-import { output} from "../utils";
+import { output } from "../utils";
 import { addDebug } from "@laoban/debug";
 import { validatePackageDetailsAndTemplates } from "../validation";
 import { ActionParams } from "./types";
@@ -81,8 +81,19 @@ async function validate ( { fileOps, cmd, currentDirectory, params, outputStream
 }
 
 async function templates ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
-  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
-  console.log ( 'templates', config.templates )
+  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
+  if ( configAndIssues.config ) {
+    console.log ( 'templates', configAndIssues.config.templates )
+  } else {
+    const initData: InitData = await gatherInitData ( fileOps, currentDirectory, cmd, false );
+    if ( isSuccessfulInitData ( initData ) ) {
+      console.log ( 'templates', initData.parsedLaoBan.templates )
+    } else {
+      console.log ( `Had problems with the configuration, couldn't work out the templates to use` )
+      const { suggestions } = initData;
+      suggestions.comments.forEach ( c => console.log ( c ) )
+    }
+  }
 }
 
 export class LaobanAdmin {
@@ -108,7 +119,9 @@ export class LaobanAdmin {
     addCommand ( 'init', `creates a laoban.json/package.json.details and helps 'get started'`, init, initOptions )
       .option ( '-d,--dryrun', `The dry run creates files ${loabanConfigTestName} and ${packageDetailsTestFile} to allow previews and comparisons`, false )
       .option ( '--cleantestfiles', 'Will clean any test files created by the --dryrun', false )
-      .option ( '--force', 'Without a force, this will not create files, but will instead just detail what it would do', false )
+      .option ( '--force', `This is used to say 'overwrite existing files'`, false )
+      .option ( '-p, --packages <packages>', "only executes this in the packages matching the regex. e.g. -p 'name' (so no laoban.json/version.txt)", "" )
+      .option ( '--usetemplate <template>', `By default templates are 'detected'. You can 'force' templates using this. Commonly used with '--usetemplate javascript' and with the '-p' option`, undefined )
     //
     addCommand ( 'analyze', 'Gives a summary of the packages that laoban admin has detected"', analyze, justInitUrl )
       .option ( '--showimpact', "Shows dependencies and devDependencies that would be impacted by the change" )
@@ -129,7 +142,7 @@ export class LaobanAdmin {
       .option ( '-d,--dryrun', `Just displays the files that would be created` )
       .option ( '-t,--template <template>', `The template directory (each template will be a directory under here)`, fileOps.join ( currentDirectory, 'templates' ) )
       .option ( '-n,--templatename <templatename>', `Where to put the template files` )
-    addCommand ( 'templates', 'Lists the legal templates', templates )
+    addCommand ( 'templates', 'Lists the legal templates', templates, justInitUrl )
     addCommand ( 'updatetemplate', `Updates the template from the current (or specified) directory. Allows you to edit package.json here, and change the template from that`, updateTemplate, updateTemplateOptions )
     addCommand ( 'makeintotemplate', `turns the specified directory into a template directory (just adds a .template.json and update laoban.json'). This is most often used on existing templates after the files have been changed. Note that if the '.template.json' file exists data from it will be used`, makeIntoTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use. Defaults to the current directory.' )
