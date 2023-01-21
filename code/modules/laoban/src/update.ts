@@ -72,7 +72,7 @@ export async function loadTemplateControlFile ( context: string, fileOps: FileOp
   return fileOps.loadFileOrUrl ( url ).then ( parseJson ( context + `\n from url ${url}` ) );
 }
 
-export const loadOneFileFromTemplateControlFileDetails =  ( context: string, fileOps: FileOps, templateControlFileUrl: string, tx?: ( type: string, text: string ) => Promise<string> )=> async ( file: string ): Promise<string> => {
+export const loadOneFileFromTemplateControlFileDetails = ( context: string, fileOps: FileOps, templateControlFileUrl: string, tx?: ( type: string, text: string ) => Promise<string> ) => async ( file: string ): Promise<string> => {
   const controlFile: TemplateControlFile = await loadTemplateControlFile ( context, fileOps, undefined, templateControlFileUrl )
   const cfd = controlFile.files.find ( cfd => fileNameFrom ( cfd ) === file )
   if ( cfd === undefined ) throw Error ( `${context}. Cannot find ${file} in file ${templateControlFileUrl}\nControl file is ${JSON.stringify ( controlFile, null, 2 )}` )
@@ -83,10 +83,10 @@ export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d:
   const prefix = templateUrl.includes ( ':' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
   const controlFile = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps, laobanDirectory, prefix );
   d.message ( () => [ `template control file ${prefix} for ${p.directory} is `, controlFile ] )
-  if (controlFile.files===undefined){throw Error(`Template control file ${prefix} is malformed. It is missing the files property`)}
+  if ( controlFile.files === undefined ) {throw Error ( `Template control file ${prefix} is malformed. It is missing the files property` )}
   const target = p.directory
   return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
-    includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ), dryrun ) ( safeArray ( controlFile.files ) )
+    { tx: includeAndTransformFile ( `Transforming file ${templateUrl} for ${p.directory}`, p, fileOps ), dryrun } ) ( safeArray ( controlFile.files ) )
 }
 export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, dryrun: boolean ): Promise<void> {
   let d = config.debug ( 'update' )
@@ -95,7 +95,7 @@ export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebu
   const namedTemplateUrl = safeObject ( config.templates )[ template ]
   d.message ( () => [ `namedTemplateUrl in ${target} for ${template} is ${namedTemplateUrl} (should be undefined if using local template)` ] )
   if ( namedTemplateUrl === undefined ) {
-    console.error ( `Cannot find template ${template} for ${target}. Legal values are [${Object.keys(config.templates )}]` )
+    console.error ( `Cannot find template ${template} for ${target}. Legal values are [${Object.keys ( config.templates )}]` )
     return
   }
   return copyTemplateDirectoryFromConfigFile ( fileOps, d, config.laobanDirectory, namedTemplateUrl, p, dryrun )

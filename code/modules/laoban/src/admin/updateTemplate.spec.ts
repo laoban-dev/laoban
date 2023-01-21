@@ -19,7 +19,7 @@ async function cleanUpDirectory ( fileOps: FileOps, testDir: string, cleanTempla
   const startTemplateDir = fileOps.join ( testDir, 'startTemplates', 'typescript' )
   if ( await fileOps.isDirectory ( startTemplateDir ) ) {
     await fileOps.createDir(templatesDir)
-    const cf = copyFiles ( '', fileOps, NullDebugCommands, startTemplateDir, templatesDir, async ( type, s ) => s )
+    const cf = copyFiles ( '', fileOps, NullDebugCommands, startTemplateDir, templatesDir, {} )
     const files = await fileOps.listFiles ( startTemplateDir );
     await cf ( files )
   }

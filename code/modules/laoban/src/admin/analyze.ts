@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { gatherInitData, init, InitData, isSuccessfulInitData, ProjectDetailsAndTemplate, SuccessfullInitData, TypeCmdOptions } from "./init";
+import { gatherInitData, InitData, isSuccessfulInitData, ProjectDetailsAndTemplate, SuccessfullInitData, TypeCmdOptions } from "./init";
 
 import { FileOps, parseJson } from "@laoban/fileops";
 import { loabanConfigName, packageDetailsFile } from "../Files";
@@ -89,10 +89,13 @@ export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
     const longestDirLength = [ 'package.json', ...dirs ].map ( p => p.length ).reduce ( ( a, b ) => Math.max ( a, b ), 0 )
     const longestGuessedTemplateLength = [ 'Guessed Template', ...initDataToUse.projectDetails.map ( p => p.template ) ].reduce ( ( a, b ) => Math.max ( a, b.length ), 0 )
     console.log ( 'package.json'.padEnd ( longestDirLength ), '    Guessed Template    Actual Template' )
-    await Promise.all ( initDataToUse.projectDetails.map ( async p => {
+    const text = await Promise.all ( initDataToUse.projectDetails.map ( async p => {
       const foundDetails = await findActualTemplateIfExists ( p )
-      console.log ( '   ', toForwardSlash ( fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory ) ).padEnd ( longestDirLength ), p.template.padEnd ( longestGuessedTemplateLength ), '  ', foundDetails ? foundDetails : '---' );
+      let dir = toForwardSlash ( fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory ) ).padEnd ( longestDirLength );
+      let template = p.template.padEnd ( longestGuessedTemplateLength );
+      return `${dir} ${template}    ${foundDetails ? foundDetails : '---'}`
     } ) )
+    text.forEach ( t => console.log ( '   ', t ) )
     console.log ( 'Suggested version number is ', suggestions.version )
     console.log ( 'run' )
     console.log ( '     laoban admin analyze --showimpact' )

@@ -1,5 +1,5 @@
 import { FileOps, fileOpsStats } from "@laoban/fileops";
-import { GenerationsResult, isScriptResult, jsCount } from "./executors";
+import { isScriptResult } from "./executors";
 import { flatMap, toArray, toForwardSlash } from "@laoban/utils";
 
 export function postCommand ( p: any, fileOps: FileOps ) {
@@ -12,8 +12,7 @@ export function postCommand ( p: any, fileOps: FileOps ) {
       return []
     } ) )
     if ( errorDirs.length === 1 ) {
-      console.log ( `${errorDirs[ 0 ]} has an error. To view log use` )
-      console.log ( `   laoban log -p ${toForwardSlash ( errorDirs[ 0 ] )}$` )
+      console.log ( `${errorDirs[ 0 ]} has an error. To view log use laoban log -p ${toForwardSlash ( errorDirs[ 0 ] )}$` )
     } else if ( errorDirs.length > 0 ) {
       console.log ( 'Multiple errors. To view logs use' )
       errorDirs.forEach ( dir => console.log ( `    laoban log -p ${toForwardSlash(dir)}$` ) )

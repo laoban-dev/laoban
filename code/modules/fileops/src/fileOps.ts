@@ -164,6 +164,7 @@ export interface TemplateFileDetails {
   target?: string
   type?: string
   postProcess?: string | string[]
+  sample?: boolean
 }
 function turnPackageJsonIntoTemplate ( text: string ) {
   const packageJson = JSON.parse ( text );
@@ -241,9 +242,19 @@ export async function loadFileFromDetails ( context: string, fileOps: FileOps, r
   return { target, postProcessed };
 }
 
-export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, tx?: ( type: string, text: string ) => Promise<string>, dryrun?: boolean ): ( fd: CopyFileDetails ) => Promise<void> {
+export interface CopyFileOptions {
+  dryrun?: boolean
+  allowSamples?: boolean
+  tx?: ( type: string, text: string ) => Promise<string>,
+}
+export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
+  const { tx, dryrun, allowSamples } = options
   return async ( cfd ) => {
     const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, rootUrl, tx, cfd );
+    if ( isTemplateFileDetails ( cfd ) && cfd.sample ) {
+      if ( !allowSamples ) return
+      if ( await fileOps.isFile ( targetRoot + '/' + target ) ) return
+    }
     if ( dryrun ) {
       console.log ( `dryrun: would copy ${target} to ${targetRoot}/${target}` );
       return
@@ -255,11 +266,11 @@ export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootU
 }
 
 
-export function copyFile ( fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, dryrun?: boolean ): ( fd: CopyFileDetails ) => Promise<void> {
-  return copyFileAndTransform ( fileOps, d, rootUrl, target, undefined, dryrun )
+export function copyFile ( fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
+  return copyFileAndTransform ( fileOps, d, rootUrl, target, options )
 }
-export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, tx?: ( type: string, text: string ) => Promise<string>, dryrun?: boolean ): ( fs: CopyFileDetails[], dryrun?: boolean ) => Promise<void> {
-  const cf = copyFileAndTransform ( fileOps, d, rootUrl, target, tx, dryrun )
+export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fs: CopyFileDetails[], dryrun?: boolean ) => Promise<void> {
+  const cf = copyFileAndTransform ( fileOps, d, rootUrl, target, options )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );
     throw Error ( `Error ${context}\nFile ${JSON.stringify ( f )}\n${e}` )

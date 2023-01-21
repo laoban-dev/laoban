@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { copyFile, copyFiles, emptyFileOps} from "./fileOps";
+import { copyFile, copyFiles, emptyFileOps } from "./fileOps";
 import { NullDebugCommands } from "@laoban/debug";
 import { lastSegment } from "@laoban/utils";
 import { fileOpsStats, MeteredFileOps, meteredFileOps } from "./meteredFileOps";
@@ -71,21 +71,20 @@ describe ( "fileOpsNode", () => {
 describe ( "copyFile", () => {
   it ( "it should copy a file", async () => {
     const fileOps = foundFileOps ();
-    await copyFile ( fileOps, NullDebugCommands, 'rootUrl', 'target' ) ( 'url' )
+    await copyFile ( fileOps, NullDebugCommands, 'rootUrl', 'target', {} ) ( 'url' )
     expect ( fileOps.savedFiles () ).toEqual ( [ [ "target/url", "loaded_rootUrl/url" ] ] )
   } )
 } )
 describe ( "copyFiles", () => {
   it ( "it should copy files", async () => {
     const fileOps = foundFileOps ();
-    await copyFiles ( 'someContext', fileOps, NullDebugCommands, 'rootUrl', 'target', ( type, text ) => Promise.resolve ( text ) ) ( [ 'url1', 'url2' ] )
+    await copyFiles ( 'someContext', fileOps, NullDebugCommands, 'rootUrl', 'target', { tx: ( type, text ) => Promise.resolve ( text ) } ) ( [ 'url1', 'url2' ] )
     expect ( fileOps.savedFiles () ).toEqual ( [
       [ "target/url1", "loaded_rootUrl/url1" ],
       [ "target/url2", "loaded_rootUrl/url2" ]
     ] )
   } )
 } )
-
 
 describe ( "childDirs", () => {
   const fileOps = (): MeteredFileOps => meteredFileOps ( {
