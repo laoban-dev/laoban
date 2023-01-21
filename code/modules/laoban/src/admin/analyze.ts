@@ -39,7 +39,7 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
     // console.log(' createDeltaForPackageJson', templatePackage, packageJson)
     const delta = createDeltaForPackageJson ( templatePackage, packageJson, { showDiff: ( temp, pack ) => `${pack} => ${temp}`, onlyUpdate: true } )
     // console.log(' delta', delta)
-    const result: [ string, any ] = [ toForwardSlash(fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory )), delta ];
+    const result: [ string, any ] = [ toForwardSlash ( fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory ) ), delta ];
     return result
   } ) )
   console.log ( JSON.stringify ( fromEntries ( ...result ), null, 2 ) )
@@ -55,7 +55,9 @@ export async function getInitDataWithoutTemplatesFilteredByPackages ( fileOps: F
     const result = !await fileOps.isFile ( tjName );
     return { result, pd }
   } ) )
-  const pdWithoutTemplate = resultsAndPd.filter ( r => r.result ).map ( r => r.pd ).sort((a,b)=>a.directory.localeCompare(b.directory))
+  const pdWithoutTemplate = resultsAndPd.filter ( r => r.result )
+    .map ( r => r.pd )
+    .sort ( ( a, b ) => a.directory.localeCompare ( b.directory ) )
   return { ...initData, projectDetails: pdWithoutTemplate }
 }
 export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
@@ -84,12 +86,12 @@ export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
       console.log ( 'No projects found' )
       return
     }
-    const longestDirLength = ['package.json',...dirs].map ( p => p.length ).reduce ( ( a, b ) => Math.max ( a, b ), 0 )
+    const longestDirLength = [ 'package.json', ...dirs ].map ( p => p.length ).reduce ( ( a, b ) => Math.max ( a, b ), 0 )
     const longestGuessedTemplateLength = [ 'Guessed Template', ...initDataToUse.projectDetails.map ( p => p.template ) ].reduce ( ( a, b ) => Math.max ( a, b.length ), 0 )
     console.log ( 'package.json'.padEnd ( longestDirLength ), '    Guessed Template    Actual Template' )
     await Promise.all ( initDataToUse.projectDetails.map ( async p => {
       const foundDetails = await findActualTemplateIfExists ( p )
-      console.log ( '   ', toForwardSlash(fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory )).padEnd ( longestDirLength ), p.template.padEnd ( longestGuessedTemplateLength ), '  ', foundDetails ? foundDetails : '---' );
+      console.log ( '   ', toForwardSlash ( fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory ) ).padEnd ( longestDirLength ), p.template.padEnd ( longestGuessedTemplateLength ), '  ', foundDetails ? foundDetails : '---' );
     } ) )
     console.log ( 'Suggested version number is ', suggestions.version )
     console.log ( 'run' )

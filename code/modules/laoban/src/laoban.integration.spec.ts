@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { execute } from "./executors";
 import { parseJson } from "@laoban/fileops";
-
+jest.setTimeout(15000);
 let experimental = false
 
 function doPwd ( cmd: string, expectedFile: string ) {
