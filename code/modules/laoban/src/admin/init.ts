@@ -160,7 +160,7 @@ function findRequestedIFCForLaoban<F extends InitFileContents> ( initFileContent
   if ( result === undefined ) throw new Error ( `Could not find type ${type} in ${JSON.stringify ( initFileContents.map ( ifc => ifc.type ) )}` )
   return result
 }
-function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, packageJson: LocationAndParsed<any> ) {
+export function findAppropriateIfc ( initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, packageJson: LocationAndParsed<any> ) {
   // console.log(initFileContents.map(i => i.location))
   const evaluateMarker = ( m: string ) => {
     if ( !m.startsWith ( 'json:' ) ) throw Error ( `Illegal marker ${m}. Must start with json:` )
@@ -220,7 +220,7 @@ export async function findLaobanUpOrDown ( fileOps: FileOps, directory: string )
   let jsonLocations = await laobanJsonLocations ( fileOps, directory );
   return jsonLocations.map ( l => path.join ( directory, l ) )?.[ 0 ]
 }
-function findInitFileContentsFor ( initFileContents: InitFileContents[], parsedLaoBan: any ): initFileContentsWithParsedLaobanJsonAndProjectDetails[] {
+export function findInitFileContentsFor ( initFileContents: InitFileContents[], parsedLaoBan: any ): initFileContentsWithParsedLaobanJsonAndProjectDetails[] {
   return initFileContents.map ( oneIFC => {
     const projectDetailsTemplate = oneIFC[ "package.details.json" ].contents || {}
     const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails = { ...oneIFC, laoban: parsedLaoBan, packageDetails: projectDetailsTemplate }

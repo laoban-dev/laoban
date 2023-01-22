@@ -1,0 +1,27 @@
+{
+  "packageManager": "yarn",
+  "parents":        [
+    "@laoban@/laoban.json/core.laoban.json",
+    "@laoban@/laoban.json/javascript.laoban.json",
+    "@laoban@/laoban.json/typescript.laoban.json",
+    "@laoban@/laoban.json/typescript.publish.laoban.json",
+    "@laoban@/laoban.json/react.laoban.json"
+  ],
+  "properties":     {
+    "license":    "MIT",
+    "repository": "git@github.com:phil-rice/laoban.git"
+  },
+  "scripts":        {
+    "threethings": {
+      "description": "Executes three commands for tests",
+      "commands":    [
+        "echo one",
+        "echo two",
+        "echo three"
+      ]
+    }
+  },
+  "defaultEnv":     {
+    "TEST_DEFAULT": "test"
+  }
+}

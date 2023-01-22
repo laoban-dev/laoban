@@ -276,3 +276,12 @@ export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands,
     throw Error ( `Error ${context}\nFile ${JSON.stringify ( f )}\n${e}` )
   } ) ) ).then ( () => {} )
 }
+
+export const copyDirectory = async ( fileOps: FileOps, from: string, to: string ): Promise<void> => {
+  if ( await fileOps.isDirectory ( from ) ) {
+    await fileOps.createDir ( to )
+    const files = await fileOps.listFiles ( from )
+    await Promise.all ( files.map ( f => copyDirectory ( fileOps, fileOps.join ( from, f ), fileOps.join ( to, f ) ) ) )
+  } else if ( await fileOps.isFile ( from ) )
+    await fileOps.saveFile ( to, await fileOps.loadFileOrUrl ( from ) )
+};

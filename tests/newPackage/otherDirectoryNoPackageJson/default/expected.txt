@@ -1,0 +1,15 @@
+package.details.json {
+  "template": "typescript",
+  "name": "pck",
+  "description": "",
+  "details": {
+    "compile": true,
+    "publish": false,
+    "test": true,
+    "links": []
+  }
+}
+Calling "laoban update"
+
+
+

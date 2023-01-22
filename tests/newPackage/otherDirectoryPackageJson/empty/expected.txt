@@ -1,0 +1,1 @@
+File C:\git\laoban\tests\newPackage\newDirectory\alreadyPackage\cwd\modules\pck\package.details.json already exists. Use --force to overwrite. --nuke can also be used but it will blow away the entire directory
