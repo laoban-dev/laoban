@@ -14,6 +14,7 @@ async function reporter ( fileOps: FileOps, outputStream: Writable, gen: Generat
     let report: Report = { scd: scriptRes.scd, text: await fileOps.loadFileOrUrl ( filename ) }
     let message = reportDecorator ( report ).text;
     if ( message.length > 0 ) log ( message.trimRight () )
+    if (scriptRes.scd.scriptInContext.shell) log('')
   }
 }
 //   const report = reportDecorator ( gen );
