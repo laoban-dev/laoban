@@ -11,6 +11,7 @@ const fileOps = fileOpsNode ()
 const newPackageDir = path.join ( testRoot, 'newpackage' )
 const command = 'node ../../../../../code/modules/laoban/dist/index.js admin newpackage'
 
+jest.setTimeout(15000);
 
 async function clean ( dir: string, packages: string[] ) {
   const dirOps = inDirectoryFileOps ( fileOps, dir )

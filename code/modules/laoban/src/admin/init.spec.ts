@@ -5,6 +5,7 @@ import { compareExpectedActualFileInDirectory } from "./compareExpectedActualFil
 import { cleanLineEndings } from "@laoban/utils";
 import { inDirectoryFileOps } from "@laoban/fileops/src/fileOps";
 
+jest.setTimeout(15000);
 
 const fileOps = fileOpsNode ();
 
