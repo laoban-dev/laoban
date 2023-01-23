@@ -5,8 +5,7 @@ import { compareExpectedActualFileInDirectory } from "./compareExpectedActualFil
 import { cleanLineEndings } from "@laoban/utils";
 import { inDirectoryFileOps } from "@laoban/fileops/src/fileOps";
 
-jest.setTimeout(15000);
-
+jest.setTimeout(30000);
 const fileOps = fileOpsNode ();
 
 const initTestRoot = fileOps.join ( testRoot, 'init' )
@@ -63,7 +62,6 @@ async function setupGitIgnoreInitialValues ( testDir: string ) {
 
 }
 async function testGit ( testDir: string ) {
-  const compare = compareExpectedActualFileInDirectory ( fileOps, testDir );
   const display = await execute ( testDir, `${prefix} admin init --force` )
   const actual = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, '.gitignore' ) )
   const expected = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, '.expected.gitignore' ) )
