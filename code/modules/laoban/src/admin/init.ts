@@ -110,9 +110,9 @@ async function createLaobanJsonContents ( initFileContents: InitFileContents, su
 }
 function removeFrom ( beingCreated: any, template: any ) {
   if ( template === undefined ) return
-  Object.keys ( template ).forEach ( key => delete beingCreated[ key ] );
+  Object.keys ( safeObject(template) ).forEach ( key => delete beingCreated[ key ] );
 }
-async function findTemplatePackageJson ( fileOps: FileOps, initFileContents: InitFileContents, template: string ) {
+export async function findTemplatePackageJson ( fileOps: FileOps, initFileContents: InitFileContents, template: string ) : Promise<any>{
   const laobanJson = parseJson<any> ( 'laoban json' ) ( initFileContents[ "laoban.json" ] );
   const templates = safeObject<string> ( laobanJson.templates )
   const templateUrl: string = templates[ template ];
@@ -141,7 +141,7 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   details[ "extraBins" ] = bins;
   details[ "keywords" ] = keywords;
   contents[ "details" ] = details;
-  const projectDetailsString = JSON.stringify ( projectDetails, null, 2 )
+  const projectDetailsString = JSON.stringify ( contents, null, 2 )
   const directory = packageJsonDetails.directory;
   const dic: any = {}
   dic [ 'packageJson' ] = packageJsonDetails.contents
@@ -177,18 +177,28 @@ export function findAppropriateIfc ( initFileContents: initFileContentsWithParse
   let result = found || findRequestedIFCForLaoban ( initFileContents, type );
   return result;
 }
+
+interface OneProjectDetailsResult{
+  location: string,
+  contents: any
+  template: string
+  directory: string
+  templatePackageJson: any
+}
+export function makeOneProjectDetails ( initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, p: LocationAndParsed<any>, templateLookup: NameAnd<any>, allProjectNames: string[] ):OneProjectDetailsResult {
+  let theBestIfc = findAppropriateIfc ( initFileContents, type, p );
+  const template = theBestIfc.packageDetails.template
+  const templatePackageJson = templateLookup[ template ] || {}
+  return ({
+    location: `${path.join ( p.directory, packageDetailsFile )}`,
+    directory: p.directory,
+    contents: makeProjectDetails ( templatePackageJson, theBestIfc, p, allProjectNames ),
+    template, templatePackageJson
+  });
+}
 export const makeAllProjectDetails = ( templateLookup: NameAnd<any>, initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, packageJsonDetails: LocationAndParsed<any>[] ): ProjectDetailsAndTemplate[] => {
   const allProjectNames = findAllProjectNames ( packageJsonDetails );
-  return packageJsonDetails.map ( p => {
-    let theBestIfc = findAppropriateIfc ( initFileContents, type, p );
-    const template = theBestIfc.packageDetails.template
-    const templatePackageJson = templateLookup[ template ] || {}
-    return ({
-      location: `${path.join ( p.directory, packageDetailsFile )}`, directory: p.directory,
-      contents: makeProjectDetails ( templatePackageJson, theBestIfc, p, allProjectNames ),
-      template, templatePackageJson
-    });
-  } );
+  return packageJsonDetails.map ( p => makeOneProjectDetails ( initFileContents, type, p, templateLookup, allProjectNames ) );
 };
 
 async function loadSingleFileFromTemplate ( fileOps: FileOps, templateUrl: string, fileName: string ) {
@@ -286,9 +296,9 @@ export async function filesAndContents ( fileOps: FileOps, initData: Successfull
   let laobanFileName = path.join ( initData.suggestions.laobanJsonLocation, dryRun ? loabanConfigTestName : 'laoban.json' );
   const laoban: LocationAnd<any> = { location: laobanFileName, contents: initData.laoban, directory: initData.suggestions.laobanJsonLocation }
   const projectDetails: LocationAnd<any>[] = initData.projectDetails.map ( p => {
-    const json = parseJson<any> ( () => `Project details for ${p.directory}` ) ( p.contents )
-    const contents = JSON.stringify ( json.contents, null, 2 )
-    return { directory: p.directory, location: path.join ( p.directory, dryRun ? packageDetailsTestFile : packageDetailsFile ), contents }
+    // const json = parseJson<any> ( () => `Project details for ${p.directory}` ) ( p.contents )
+    // const contents = JSON.stringify ( json.contents, null, 2 )
+    return { directory: p.directory, location: path.join ( p.directory, dryRun ? packageDetailsTestFile : packageDetailsFile ), contents: p.contents }
   } );
   const version: LocationAnd<any> = {
     location: path.join ( initData.suggestions.laobanJsonLocation, dryRun ? '.version.test.txt' : 'version.txt' ),

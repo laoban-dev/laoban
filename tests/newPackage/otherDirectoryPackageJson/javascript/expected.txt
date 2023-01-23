@@ -1,1 +1,16 @@
-File C:\git\laoban\tests\newPackage\newDirectory\alreadyPackage\cwd\modules\pck\package.details.json already exists. Use --force to overwrite. --nuke can also be used but it will blow away the entire directory
+package.details.json {
+  "template": "javascript",
+  "name": "somename",
+  "description": "some description",
+  "details": {
+    "compile": false,
+    "publish": false,
+    "test": true,
+    "links": [],
+    "extraDeps": {},
+    "extraDevDeps": {},
+    "extraBins": {},
+    "keywords": []
+  }
+}
+Calling "laoban update"

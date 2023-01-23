@@ -15,16 +15,12 @@ jest.setTimeout ( 30000 );
 
 async function clean ( dir: string, packages: string[] ) {
   const dirOps = inDirectoryFileOps ( fileOps, dir )
-  for ( let p of packages ) {
-    await dirOps.removeDirectory ( p, true )
-  }
+  await Promise.all ( packages.map ( p => dirOps.removeDirectory ( p, true ) ) )
 }
 async function setup ( dir: string, ...packages: string[] ) {
   await clean ( dir, packages )
   const dirOps = inDirectoryFileOps ( fileOps, dir )
-  for ( let p of packages ) {
-    await copyDirectory ( dirOps, `start_${p}`, p )
-  }
+  await Promise.all ( packages.map ( p => copyDirectory ( dirOps, `start_${p}`, p ) ) )
 
 }
 
@@ -71,9 +67,10 @@ describe ( "newpackage", () => {
   describe ( "in a existing directory with a package.json", () => {
     it ( "should make a javascript package if init detects this as javascript", async () => {
       await testIt ( 'otherDirectoryPackageJson', 'javascript', command + ' modules/pck', [ 'cwd' ] )
-
     } )
-    it ( "should make a typescript package", async () => {} )
+    it ( "should make a typescript package", async () => {
+      await testIt ( 'otherDirectoryPackageJson', 'typescript', command + ' modules/pck', [ 'cwd' ] )
+    } )
   } )
 
 

@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { FileOps } from "./fileOps";
+import { FileOps, parseJson } from "./fileOps";
 import { allButLastSegment } from "@laoban/utils";
 
 export interface LocationAndErrors {
@@ -25,6 +25,19 @@ export const parseLocationAnd = <T> ( context: string, parser: ( context: string
   contents: parser ( `${context} ${l.location}` ) ( l.contents ),
   original: l.contents
 });
+
+export async function loadJsonFileOrUndefined<T> ( context: string, fileOps: FileOps, directory: string, fileName: string ): Promise<LocationAndParsed<T> | undefined> {
+  const location = fileOps.join ( directory, fileName );
+  try {
+    const original = await fileOps.loadFileOrUrl ( location )
+    const contents = parseJson<T> ( `${context}Loading ${fileName}` ) ( original )
+    return { location, directory, contents, original }
+  } catch ( e ) {
+    return undefined
+  }
+}
+
+
 export const isLocationAnd = <T> ( x: LocationAndContents<T> ): x is LocationAnd<T> => {
   const a: any = x
   return a && a.location && a.contents

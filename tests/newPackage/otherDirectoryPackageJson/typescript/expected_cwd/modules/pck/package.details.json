@@ -1,9 +1,9 @@
 {
-  "template": "javascript",
+  "template": "typescript",
   "name": "somename",
   "description": "some description",
   "details": {
-    "compile": false,
+    "compile": true,
     "publish": false,
     "test": true,
     "links": [],

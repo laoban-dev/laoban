@@ -1,4 +1,6 @@
 {
+  "name": "somename",
+  "description": "some description",
   "dependencies":    {
   },
   "devDependencies": {
