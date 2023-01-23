@@ -1,0 +1,11 @@
+{
+  "template": "typescript",
+  "name": "pck",
+  "description": "",
+  "details": {
+    "compile": true,
+    "publish": false,
+    "test": true,
+    "links": []
+  }
+}

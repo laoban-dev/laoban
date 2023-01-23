@@ -11,7 +11,7 @@ const fileOps = fileOpsNode ()
 const newPackageDir = path.join ( testRoot, 'newpackage' )
 const command = 'node ../../../../../code/modules/laoban/dist/index.js admin newpackage'
 
-jest.setTimeout(30000);
+jest.setTimeout ( 30000 );
 
 async function clean ( dir: string, packages: string[] ) {
   const dirOps = inDirectoryFileOps ( fileOps, dir )
@@ -68,12 +68,13 @@ describe ( "newpackage", () => {
 
     } )
   } )
-  // describe ( "in a existing directory with a package.json", () => {
-  //   it ( "should make a javascript package if init detects this as javascript", async () => {
-  //
-  //   } )
-  //   it ( "should make a typescript package", async () => {} )
-  // } )
+  describe ( "in a existing directory with a package.json", () => {
+    it ( "should make a javascript package if init detects this as javascript", async () => {
+      await testIt ( 'otherDirectoryPackageJson', 'javascript', command + ' modules/pck', [ 'cwd' ] )
+
+    } )
+    it ( "should make a typescript package", async () => {} )
+  } )
 
 
 } )
