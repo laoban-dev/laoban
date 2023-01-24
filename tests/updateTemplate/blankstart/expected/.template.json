@@ -17,6 +17,11 @@
     {
       "file": "@laoban@/templates/typescript_405/tsconfig.json",
       "target": "tsconfig.json"
+    },
+    {
+      "file": "@laoban@/templates/typescript/index.ts",
+      "sample": true,
+      "target": "index.ts"
     }
   ]
 }

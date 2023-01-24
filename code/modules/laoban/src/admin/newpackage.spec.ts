@@ -15,6 +15,7 @@ jest.setTimeout ( 30000 );
 
 async function clean ( dir: string, packages: string[] ) {
   const dirOps = inDirectoryFileOps ( fileOps, dir )
+  await dirOps.removeDirectory ( '.cache', true )
   await Promise.all ( packages.map ( p => dirOps.removeDirectory ( p, true ) ) )
 }
 async function setup ( dir: string, ...packages: string[] ) {
@@ -32,10 +33,13 @@ async function testIt ( category: string, test: string, command: string, pcks: s
   const display = await execute ( path.join ( testDir, 'cwd' ), command )//+ " --load.laoban.debug" )
   const expected = await fileOps.loadFileOrUrl ( path.join ( testDir, 'expected.txt' ) )
   const cleanFn = ( s: string ) => cleanLineEndings ( s ).trim ()
+
   expect ( cleanFn ( display ) ).toEqual ( cleanFn ( expected ) )
   for ( let pck of pcks ) {
-    await fileOps.removeFile(path.join(testDir, pck, '.log'))
-    await compareExpectedActualFiles ( fileOps, path.join ( testDir, `${pck}_expected` ), path.join ( testDir, pck ), cleanFn )
+    await fileOps.removeFile ( path.join ( testDir, pck, '.log' ) )
+    await fileOps.removeDirectory ( path.join ( testDir, pck, 'dist' ), true )
+    await compareExpectedActualFiles ( fileOps, path.join ( testDir, `${pck}_expected` ), path.join ( testDir, pck ),
+      { cleanFn, ignoreFn: s => s.includes ( 'dist' ) } )
   }
   await clean ( testDir, pcks )
 }

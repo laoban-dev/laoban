@@ -122,12 +122,13 @@ export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWi
 }
 export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageAction<void[]> => async ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let d = config.debug ( 'update' )
+  const allowSamples = cmd.allowsamples
   const version = await updateVersionIfNeeded ( fileOps, config, cmd )
   return Promise.all ( pds.map ( async p => {
     return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
       copyTemplateDirectory ( fileOps, config,
         { ...p, version, properties: safeObject ( config.properties ) },
-        { dryrun: cmd.dryrun, tx: includeAndTransformFile ( `updating ${p.directory}`, { ...config, version, packageDetails: p.packageDetails }, fileOps ) } ) )
+        { allowSamples, dryrun: cmd.dryrun, tx: includeAndTransformFile ( `updating ${p.directory}`, { ...config, version, packageDetails: p.packageDetails }, fileOps ) } ) )
     // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOpsNode.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
     // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )
   } ) )

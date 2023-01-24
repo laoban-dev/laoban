@@ -267,6 +267,7 @@ export interface CopyFileOptions {
 }
 export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
   const { dryrun, allowSamples } = options
+
   return async ( cfd ) => {
     const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, rootUrl, options, cfd );
     if ( isTemplateFileDetails ( cfd ) && cfd.sample ) {
