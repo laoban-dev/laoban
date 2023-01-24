@@ -15,6 +15,6 @@
       "postProcess": "jsonMergeInto(@laoban@/templates/javascript/package.json)"
     },
     "tsconfig.json",
-    {"file": "@laoban@/templates/typescript/index.ts", "sample": true, target: "index.ts"}
+    {"file": "@laoban@/templates/typescript/index.ts", "sample": true, "target": "index.ts"}
   ]
 }
