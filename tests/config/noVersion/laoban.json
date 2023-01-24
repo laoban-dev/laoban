@@ -1,0 +1,21 @@
+{
+  "packageManager": "yarn",
+  "parents":        [
+    "@laoban@/laoban.json/core.laoban.json",
+    "@laoban@/laoban.json/javascript.laoban.json",
+    "@laoban@/laoban.json/typescript.laoban.json",
+    "@laoban@/laoban.json/typescript.publish.laoban.json"
+  ],
+  "properties":     {
+    "license":    "MIT",
+    "repository": "git@github.com:phil-rice/laoban.git"
+  },
+  "templates":      {
+    "javascript":       "@laoban@/templates/javascript",
+    "typescript":       "@laoban@/templates/typescript_405",
+    "typescript_react": "@laoban@/templates/typescript_react"
+  },
+  "scripts":        {
+    "ls": {"description": "lists all the projects", "commands": ["js:process.cwd()"]}
+  }
+}

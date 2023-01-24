@@ -1,0 +1,13 @@
+Found an existing laoban.json file at <root>/noVersion
+Would put laoban.json into  <root>/noVersion  which allows the following templates {
+    javascript: '@laoban@/templates/javascript',
+    typescript: '@laoban@/templates/typescript_405',
+    typescript_react: '@laoban@/templates/typescript_react'
+}
+package.json          Guessed Template    Actual Template
+    projects/project1 typescript          typescript
+    projects/project2 typescript          typescript
+Suggested version number is  0.0.0
+run
+laoban admin analyze --showimpact
+to see if any version numbers would be impacted

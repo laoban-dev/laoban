@@ -77,7 +77,6 @@ export function loadWithParents<T> ( context: string, loader: ( url ) => Promise
 }
 
 
-
 export const emptyFileOps: FileOps = {
   ...simplePath,
   createDir (): Promise<string | undefined> {return Promise.resolve ( undefined );},
@@ -195,11 +194,19 @@ const postProcessOne = ( context: string, fileOps: FileOps, tx: ( type: string, 
   if ( p.match ( /^jsonMergeInto\(.*\)$/ ) ) {
     const commaSeparatedFiles = p.slice ( 14, -1 )
     const files = commaSeparatedFiles.split ( ',' )
-    const fileJson: string[] = await Promise.all<string> ( files.map ( name =>
-      fileOps.loadFileOrUrl ( name ).then ( content => tx ( '${}', content ) ).then ( parseJson ( `${context} file ${name}` ) ) ) )
+    const fileJson: any[] = await Promise.all<any> ( files.map<any> ( async name => {
+      const content = await fileOps.loadFileOrUrl ( name )
+      const txed = await (tx ? tx ( '${}', content ) : content)
+      try {
+        const result = parseJson ( `${context} file ${name}` ) ( txed )
+        return result
+      } catch ( e ) {
+        console.error ( 'error in post process', tx, txed )
+        throw e
+      }
+    } ) )
     const myJson = parseJson<any> ( context ) ( text )
     const result = [ ...fileJson, myJson ].reduce ( deepCombineTwoObjects )
-    // console.log('size:', files.length)
     return JSON.stringify ( result, null, 2 )
   }
 
@@ -227,9 +234,19 @@ export function targetFrom ( f: CopyFileDetails ): string {
 
 
 export type CopyFileDetails = string | TemplateFileDetails
-
-export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, tx: ( type: string, text: string ) => Promise<string>, cfd: string | TemplateFileDetails ) {
+export type TransformTextFn = ( type: string, text: string ) => Promise<string>
+export function combineTransformFns ( ...fns: TransformTextFn[] ): TransformTextFn {
+  return ( type, text ) => fns.reduce <Promise<string>> ( async ( acc, fn ) => fn ( type, await acc ), Promise.resolve ( text ) )
+}
+export interface CopyFileOptions {
+  dryrun?: boolean
+  tx?: TransformTextFn
+  allowSample?: boolean
+}
+export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, options: CopyFileOptions, cfd: string | TemplateFileDetails ) {
   const fileName = fileNameFrom ( cfd );
+  const { tx } = options
+
   const target = targetFrom ( cfd )
   function calcFileName () {
     if ( fileName.includes ( '://' ) || fileName.startsWith ( '@' ) ) return fileName
@@ -249,9 +266,9 @@ export interface CopyFileOptions {
   tx?: ( type: string, text: string ) => Promise<string>,
 }
 export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
-  const { tx, dryrun, allowSamples } = options
+  const { dryrun, allowSamples } = options
   return async ( cfd ) => {
-    const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, rootUrl, tx, cfd );
+    const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, rootUrl, options, cfd );
     if ( isTemplateFileDetails ( cfd ) && cfd.sample ) {
       if ( !allowSamples ) return
       if ( await fileOps.isFile ( targetRoot + '/' + target ) ) return
@@ -270,7 +287,7 @@ export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootU
 export function copyFile ( fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
   return copyFileAndTransform ( fileOps, d, rootUrl, target, options )
 }
-export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fs: CopyFileDetails[], dryrun?: boolean ) => Promise<void> {
+export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fs: CopyFileDetails[] ) => Promise<void> {
   const cf = copyFileAndTransform ( fileOps, d, rootUrl, target, options )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );

@@ -1,13 +1,13 @@
 Found an existing laoban.json file at <root>/detailsErrors
 Would put laoban.json into  <root>/detailsErrors  which allows the following templates {
-javascript: '@laoban@/templates/javascript',
-typescript: '@laoban@/templates/typescript_405',
-typescript_react: '@laoban@/templates/typescript_react'
+    javascript: '@laoban@/templates/javascript',
+    typescript: '@laoban@/templates/typescript_405',
+    typescript_react: '@laoban@/templates/typescript_react'
 }
-package.json         Guessed Template    Actual Template
-    template/noreact javascript          ---
-    template/react   javascript          ---
-Suggested version number is  undefined
+package.json           Guessed Template    Actual Template
+    projects/noDetails typescript          typescript
+    projects/noName    typescript          typescript
+Suggested version number is  someversion
 run
 laoban admin analyze --showimpact
 to see if any version numbers would be impacted

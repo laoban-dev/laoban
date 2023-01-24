@@ -79,7 +79,7 @@ async function loadOriginalAndCurrentPackageJson ( fileOps: FileOps, directory: 
   const packageJson = parseJson<any> ( `Loading ${packageJsonFileName}` ) ( packageJsonString )
 
   const loadOriginalJsonContext = `Loading original package`
-  const { postProcessed } = await loadFileFromDetails ( loadOriginalJsonContext, fileOps, templateDirUrl, includeAndTransformFile ( loadOriginalJsonContext, {}, fileOps ), originalTemplatePackageCfd )
+  const { postProcessed } = await loadFileFromDetails ( loadOriginalJsonContext, fileOps, templateDirUrl, {tx:includeAndTransformFile ( loadOriginalJsonContext, {}, fileOps )}, originalTemplatePackageCfd )
   const originalPackageJson = parseJson<any> ( `Loading ${JSON.stringify ( originalTemplatePackageCfd )}` ) ( postProcessed )
   return { originalPackageJson, packageJson };
 }

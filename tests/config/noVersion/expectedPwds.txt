@@ -1,0 +1,2 @@
+<root>/noVersion/projects/project1
+<root>/noVersion/projects/project2

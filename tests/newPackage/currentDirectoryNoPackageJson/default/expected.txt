@@ -9,9 +9,6 @@ package.details.json {
     "links": []
   }
 }
-Calling "laoban update"
- 
-
-
 Please note: no subdirectory was provided. The current directory was transformed into a package
 
+Calling "laoban update"

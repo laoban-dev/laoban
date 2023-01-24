@@ -35,7 +35,7 @@ async function testIt ( category: string, test: string, command: string, pcks: s
   for ( let pck of pcks ) {
     await compareExpectedActualFiles ( fileOps, path.join ( testDir, `expected_${pck}` ), path.join ( testDir, pck ), cleanFn )
   }
-  await clean ( testDir, pcks )
+  // await clean ( testDir, pcks )
 }
 describe ( "newpackage", () => {
   describe ( "in the current package no package.json", () => {

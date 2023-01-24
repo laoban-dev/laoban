@@ -10,16 +10,23 @@ import { shortCutFileOps, shortCuts } from "@laoban/fileops";
 import { setOriginalEnv } from "./src/originalEnv";
 
 
-try {
-  setOriginalEnv ()
-  if ( process.argv?.[ 2 ] === 'admin' ) {
-    const newArgs = [ process.argv[ 0 ], process.argv[ 1 ], ...process.argv.slice ( 3 ) ]
-    const admin = new LaobanAdmin ( shortCutFileOps ( fileOpsNode (), shortCuts ), process.cwd (), process.env, newArgs, process.stdout )
-    admin.start ()
+export function runLoabanAdmin ( newArgs: string[] ) {
+  const admin = new LaobanAdmin ( shortCutFileOps ( fileOpsNode (), shortCuts ), process.cwd (), process.env, newArgs, process.stdout )
+  return admin.start ()
+}
+export function runLoaban ( args: string[] ) {
+  if ( args?.[ 2 ] === 'admin' ) {
+    const newArgs = [ args[ 0 ], args[ 1 ], ...args.slice ( 3 ) ]
+    return runLoabanAdmin ( newArgs );
   } else
-    makeStandardCli ( fileOpsNode (), makeCache, process.stdout, process.argv ).then ( cli => cli.start () ).then ( () => {
-      process.setMaxListeners ( 30 ) // because commander adds many listeners: at least one per option, and we have more than 10 options
-    } )
+    return makeStandardCli ( fileOpsNode (), makeCache, process.stdout, args ).then ( cli => cli.start () )
+}
+
+try {
+  process.setMaxListeners ( 30 ) // because commander adds many listeners: at least one per option, and we have more than 10 options
+  setOriginalEnv ()
+  runLoaban ( process.argv )
+
 } catch ( e ) {
   console.error ( e.message )
 }

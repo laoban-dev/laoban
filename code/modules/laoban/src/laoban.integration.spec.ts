@@ -4,14 +4,16 @@ import path from "path";
 import fs from "fs";
 import { execute } from "./executors";
 import { parseJson } from "@laoban/fileops";
+import { fileOpsNode } from "@laoban/filesops-node";
 jest.setTimeout(15000);
 let experimental = false
 
 function doPwd ( cmd: string, expectedFile: string ) {
-  describe ( cmd, () => {
+  let displayCmd = cmd.split(' ').filter( s=> s.length>0).slice(2).join(' ');
+  describe (  displayCmd, () => {
     dirsIn ( configTestRoot ).map ( d => path.join ( configTestRoot, d ) ).map ( testDir => {
       let expected = toArrayReplacingRoot ( configTestRoot, fs.readFileSync ( path.join ( testDir, expectedFile ) ).toString () )
-      it ( `should return ${expectedFile} when ${cmd} is run in ${path.parse ( testDir ).name}. Fullname${testDir}`, async () => {
+      it ( `should return ${expectedFile} when ${displayCmd} is run in ${path.parse ( testDir ).name}. Fullname${testDir}`, async () => {
           await experimental ?
             await executeCli ( testDir, cmd ).then ( actual => expect ( toArrayReplacingRoot ( configTestRoot, actual ) ).toEqual ( expected ) ) :
             await execute ( testDir, cmd ).then ( result => {
@@ -40,6 +42,7 @@ doPwd ( prefix + "admin validate", 'expectedValidate.txt' ) //tests a command
 doPwd ( prefix + "admin templates", 'expectedTemplates.txt' ) //tests a command
 doPwd ( prefix + "admin analyze", 'expectedAnalyze.txt' ) //tests a command
 doPwd ( prefix + `run "js:process.cwd()"`, 'expectedPwds.txt' ) // tests javascript execution
+doPwd ( prefix + `update`, 'expectedUpdate.txt' ) // tests javascript execution
 
 describe ( 'ls with guards', () => {
   const prefix = "node ../../code/modules/laoban/dist/index.js ";

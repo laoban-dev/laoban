@@ -25,7 +25,7 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
       if ( templateUrl === undefined ) console.log ( `Directory ${p.directory} uses template ${p.template} which is not defined in ${loabanConfigName}` )
       else {
         const context = `Loading ${packageDetailsFile} for ${p.directory} from ${templateUrl}`
-        const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) ) ( 'package.json' )
+        const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, { tx: includeAndTransformFile ( context, {}, fileOps ) } ) ( 'package.json' )
         const packageJson = parseJson ( context ) ( templateJson )
         return packageJson
       }

@@ -89,6 +89,7 @@ function extraUpdateOptions ( program: CommanderStatic ) {
   program.option ( '--setVersion <version>', 'sets the version' )
   program.option ( '-m,--minor', 'update minor version' )
   program.option ( '--major', 'update major version' )
+  program.option ( '--allowsamples', 'If a sample is defined in the template, and is not present, it will be created' )
   return program
 }
 

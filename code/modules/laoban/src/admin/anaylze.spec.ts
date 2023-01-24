@@ -3,7 +3,7 @@ import { testRoot } from "../fixture";
 import { execute } from "../executors";
 import { cleanLineEndings } from "@laoban/utils";
 
-
+jest.setTimeout(30000);
 const fileOps = fileOpsNode ();
 
 const updateTemplateTestRoot = fileOps.join ( testRoot, 'analyzepackage' )

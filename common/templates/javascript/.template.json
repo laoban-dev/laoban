@@ -1,3 +1,6 @@
 {
-  "files": [{"file": "package.json", "type": "${}"}]
+  "files": [
+    {"file": "package.json", "type": "${}"},
+    {"file": "index.js", "sample": true}
+  ]
 }

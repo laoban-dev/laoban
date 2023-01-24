@@ -28,7 +28,7 @@ export async function checkLoadingTemplates ( context: string, fileOps: FileOps,
         d.message ( () => [ `Successfully loaded templatecontrol file ${template} at ${url}` ] )
         return Promise.all ( tcf.files.map ( async cfd => {
           d.message ( () => [ `Trying to  loaded templatecontrol file ${template} at ${url}` ] )
-          return loadFileFromDetails ( `${context}. Template: ${template}] ${JSON.stringify ( cfd )}`, fileOps, url, includeAndTransformFile ( context, {}, fileOps ), cfd )
+          return loadFileFromDetails ( `${context}. Template: ${template}] ${JSON.stringify ( cfd )}`, fileOps, url, { tx: includeAndTransformFile ( context, {}, fileOps ) }, cfd )
             .then ( ( { target, postProcessed } ) => d.message ( () => [ `  Checked ${template} ${JSON.stringify ( cfd )}}` ] ),
               error => errors.push ( error ) )
         } ) )
@@ -49,7 +49,7 @@ export async function checkLoadingTemplates ( context: string, fileOps: FileOps,
 export async function findTemplatePackageJsonLookup ( fileOps: FileOps, pdLs: PackageDetailsAndLocations[], parsedLaoBan: any ): Promise<NameAnd<any>> {
   const result: NameAnd<any> = {}
   const templateErrors: string[] = checkTemplates ( pdLs, parsedLaoBan.templates )
-  if ( templateErrors.length>0) throw Error ( JSON.stringify ( templateErrors, null, 2 ) )
+  if ( templateErrors.length > 0 ) throw Error ( JSON.stringify ( templateErrors, null, 2 ) )
   await Promise.all ( pdLs.map ( async ( { packageDetails, location } ) => {
     const template = packageDetails.template
     if ( result[ template ] === undefined ) {//earlier ones take precedence
@@ -59,7 +59,7 @@ export async function findTemplatePackageJsonLookup ( fileOps: FileOps, pdLs: Pa
         throw Error ( `Error finding template  ${template}. Init is ${location}\nTemplate lookup is ${JSON.stringify ( templateLookup, null, 2 )}
         Is this because you asked for a --type that doesnt support the template ${template} ?` )
       const context = `Transforming file ${templateUrl} for ${location}\nKnown templates are ${JSON.stringify ( templateLookup, null, 2 )}`
-      const templatePackageJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, includeAndTransformFile ( context, {}, fileOps ) )('package.json')
+      const templatePackageJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, { tx: includeAndTransformFile ( context, {}, fileOps ) } ) ( 'package.json' )
       const templateContents = await includeAndTransformFile ( context, { packageDetails: packageDetails }, fileOps ) ( '${}', templatePackageJson )
       result[ template ] = parseJson ( `Finding template package json for template ${template} at ${templateUrl}` ) ( templateContents )
     }

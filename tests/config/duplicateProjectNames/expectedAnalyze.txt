@@ -4,10 +4,10 @@ Would put laoban.json into  <root>/duplicateProjectNames  which allows the follo
     typescript: '@laoban@/templates/typescript_405',
     typescript_react: '@laoban@/templates/typescript_react'
 }
-package.json         Guessed Template    Actual Template
-    template/noreact javascript          ---
-    template/react   javascript          ---
-Suggested version number is  undefined
+package.json          Guessed Template    Actual Template
+    projects/project1 typescript          typescript
+    projects/project2 typescript          typescript
+Suggested version number is  someversion
 run
 laoban admin analyze --showimpact
 to see if any version numbers would be impacted

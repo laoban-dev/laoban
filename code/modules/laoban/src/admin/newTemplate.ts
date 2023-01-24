@@ -82,7 +82,7 @@ async function copyTemplateFilesToTemplate ( fileOps: FileOps, directory: string
   const copyFileDetailsWithPackageJsonSpecial: CopyFileDetails[] = copyFileDetails.map ( file =>
     lastSegment ( file ) === 'package.json' ? { file, postProcess: "turnIntoPackageJsonTemplate" } : file )
 
-  await cf ( copyFileDetailsWithPackageJsonSpecial, cmd.dryrun )
+  await cf ( copyFileDetailsWithPackageJsonSpecial )
 }
 export function getTemplateJsonFileName ( fileOps: Path, target: string ) {
   return fileOps.join ( target, '.template.json' );

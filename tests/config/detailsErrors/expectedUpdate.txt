@@ -1,0 +1,2 @@
+Cannot find template undefined for <root>/detailsErrors/projects/detailsFileDoesntParse. Legal values are [javascript,typescript,typescript_react]
+Cannot find template undefined for <root>/detailsErrors/projects/noTemplate. Legal values are [javascript,typescript,typescript_react]

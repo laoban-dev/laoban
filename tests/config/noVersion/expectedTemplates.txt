@@ -1,0 +1,5 @@
+templates {
+    javascript: '@laoban@/templates/javascript',
+    typescript: '@laoban@/templates/typescript_405',
+    typescript_react: '@laoban@/templates/typescript_react'
+    }

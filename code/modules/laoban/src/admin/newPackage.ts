@@ -34,9 +34,10 @@ function packageJsonDetailsForNoPackageJson ( allInitFileContents: InitFileConte
 }
 
 async function packageDetailsJsonWhenPackageJsonExists ( fileOps: FileOps, parsedLaoBan: any, allInitFileContents: InitFileContents[], cmd: CreatePackageOptions, packageJson: LocationAndParsed<any> ): Promise<string> {
+
   const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[] = findInitFileContentsFor ( allInitFileContents, parsedLaoBan );
   const templatePackageJsonLookup = await findTemplatePackageJsonLookup ( fileOps, initFileContents, parsedLaoBan )
-  const { contents,location,template } = await makeOneProjectDetails ( initFileContents, cmd.type, packageJson, templatePackageJsonLookup, [] )
+  const { contents, location, template } = await makeOneProjectDetails ( initFileContents, cmd.type, packageJson, templatePackageJsonLookup, [] )
   return contents
 }
 
@@ -51,82 +52,27 @@ export async function newPackage ( fileOps: FileOps, currentDirectory: string, n
 
   const clearDirectory = path.join ( currentDirectory, realName ).replace ( /\\/g, '/' )
   let targetFile = path.join ( clearDirectory, packageDetailsFile );
-  if ( await fileOps.isFile ( targetFile ) && !cmd.force && !cmd.nuke ) {
-    console.log ( `File ${targetFile} already exists. Use --force to overwrite. --nuke can also be used but it will blow away the entire directory` )
-    process.exit ( 1 )
-    return
-  }
+  if ( await fileOps.isFile ( targetFile ) )
+    if ( !cmd.force && !cmd.nuke ) {
+      console.log ( `File ${targetFile} already exists. Use --force to overwrite. --nuke can also be used but it will blow away the entire directory` )
+      process.exit ( 1 )
+      return
+    } else if ( cmd.force ) (console.log ( `Existing ${packageDetailsFile} will be modified as --force was used` ))
   if ( cmd.nuke ) await (fileOps.removeDirectory ( clearDirectory, true ))
   const { type, allInitFileContents } = await findInitFileContents ( fileOps, cmd );
   const packageJson = await loadJsonFileOrUndefined<any> ( ``, fileOps, clearDirectory, 'package.json' )
-  let packageDetailsJson = packageJson
-    ? (await packageDetailsJsonWhenPackageJsonExists ( fileOps, config, allInitFileContents, cmd, packageJson ))
-    : packageJsonDetailsForNoPackageJson ( allInitFileContents, cmd, clearDirectory, templateName )
+  let packageDetailsJson = await (packageJson
+    ? packageDetailsJsonWhenPackageJsonExists ( fileOps, config, allInitFileContents, cmd, packageJson )
+    : Promise.resolve ( packageJsonDetailsForNoPackageJson ( allInitFileContents, cmd, clearDirectory, templateName ) ))
   console.log ( packageDetailsFile, packageDetailsJson )
   await fileOps.createDir ( clearDirectory )
   await fileOps.saveFile ( targetFile, packageDetailsJson )
-  await execute ( clearDirectory, `laoban update` ).then ( res => console.log ( 'Calling "laoban update"\n', res ) )
+  const laoban = require ( '../../index' )
   if ( name === undefined ) {
-    console.log ()
     console.log ( 'Please note: no subdirectory was provided. The current directory was transformed into a package' )
+    console.log ()
   }
+  console.log ( 'Calling "laoban update"\n' )
+  const res = await laoban.runLoaban ( [ process.argv[ 0 ], process.argv[ 1 ], 'update' ] )
 }
 
-
-//export async function newPackage ( fileOps: FileOps, currentDirectory: string, name: string | undefined, cmd: CreatePackageOptions, params: string[], outputStream: Writable ): Promise<void> {
-//   const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
-//   const templateName = cmd.template || cmd.type
-//   if ( !Object.keys ( config.templates ).includes ( templateName ) ) {
-//     console.error ( `Template ${templateName} not known. Legal values are [${Object.keys ( config.templates )}]` )
-//     process.exit ( 1 )
-//   }
-//   const realName = name === undefined ? '.' : name
-//
-//   const clearDirectory = path.join ( currentDirectory, realName ).replace ( /\\/g, '/' )
-//   let targetFile = path.join ( clearDirectory, packageDetailsFile );
-//   if ( await fileOps.isFile ( targetFile ) && !cmd.force && !cmd.nuke ) {
-//     console.log ( `File ${targetFile} already exists. Use --force to overwrite. --nuke can also be used but it will blow away the entire directory` )
-//     process.exit ( 1 )
-//   }
-//   if ( cmd.nuke ) await (fileOps.removeDirectory ( clearDirectory, true ))
-//   async function pdWithoutExistingJson ( template: string ) {
-//     const { type, allInitFileContents } = await findInitFileContents ( fileOps, cmd );
-//     const found = allInitFileContents.find ( l => l[ "package.details.json" ].contents.template === template )
-//     const dic = {
-//       packageJson: {
-//         name: cmd.packagename || path.basename ( clearDirectory ),
-//         description: cmd.desc || ''
-//       }
-//     }
-//     let packageDetailsRawJson = found[ "package.details.json" ].contents;
-//     packageDetailsRawJson.template = templateName
-//     let packageDetailsJson = derefence ( `Making ${packageDetailsFile}`, dic, JSON.stringify ( packageDetailsRawJson, null, 2 ), { variableDefn: dollarsBracesVarDefn } );
-//     console.log ( packageDetailsFile, packageDetailsJson )
-//     return packageDetailsJson
-//   }
-//   async function findExistingPackageJson (): Promise<LocationAndParsed<any>> {
-//     let location = fileOps.join ( clearDirectory, 'package.json' );
-//     if ( await fileOps.isFile ( location ) ) {
-//       const original = await fileOps.loadFileOrUrl ( location )
-//       const json = parseJson ( location ) ( original )
-//       return { location, directory: clearDirectory, contents: json, original }
-//     }
-//     undefined;
-//   }
-//   const existingPackageJson = await findExistingPackageJson ()
-//   async function pdWithExistingJson () {
-//     const { allInitFileContents } = await findInitFileContents ( fileOps, cmd )
-//     const ifc = findInitFileContentsFor ( allInitFileContents, config )
-//     const initFileContents = findAppropriateIfc ( ifc, cmd.type, existingPackageJson )
-//     return makeProjectDetails ( existingPackageJson, initFileContents, existingPackageJson, [] );
-//   }
-//   const pd = await (existingPackageJson ? pdWithExistingJson () : pdWithoutExistingJson ( cmd.template ))
-//   await fileOps.createDir ( clearDirectory )
-//   await fileOps.saveFile ( targetFile, pd )
-//
-//   await execute ( clearDirectory, `laoban update` ).then ( res => console.log ( 'Calling "laoban update"\n', res.trimRight () ) )
-//   if ( name === undefined ) {
-//     console.log ()
-//     console.log ( 'Please note: no subdirectory was provided. The current directory was transformed into a package' )
-//   }
-// }
