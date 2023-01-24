@@ -9,6 +9,7 @@ import { ConfigWithDebug } from "../config";
 import { loadConfigForAdmin } from "./laoban-admin";
 import { Writable } from "stream";
 import { findTemplatePackageJsonLookup } from "../loadingTemplates";
+import { toForwardSlash } from "@laoban/utils";
 
 interface CreatePackageOptions extends TypeCmdOptions {
   force?: boolean
@@ -73,6 +74,8 @@ export async function newPackage ( fileOps: FileOps, currentDirectory: string, n
     console.log ()
   }
   console.log ( 'Calling "laoban update"\n' )
-  const res = await laoban.runLoaban ( [ process.argv[ 0 ], process.argv[ 1 ], 'update' ] )
+  const allowSamplesArg = packageJson ? [] : [ '--allowsamples' ]
+  let focusOnDirectory = [ '-p',  toForwardSlash(path.relative(config.laobanDirectory,clearDirectory)) + "$" ];
+  const res = await laoban.runLoaban ( [ process.argv[ 0 ], process.argv[ 1 ], 'update', ...focusOnDirectory, ...allowSamplesArg ] )
 }
 

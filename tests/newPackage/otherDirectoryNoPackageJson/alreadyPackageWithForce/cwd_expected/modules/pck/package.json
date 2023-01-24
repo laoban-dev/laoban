@@ -1,6 +1,6 @@
 {
-  "name":        "pck",
-  "description": "",
+  "name":        "originalname",
+  "description": "originalDescription",
   "version":     "someversion",
   "bin":{
     

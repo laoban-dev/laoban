@@ -1,8 +1,8 @@
 Existing package.details.json will be modified as --force was used
 package.details.json {
   "template": "javascript",
-  "name": "pck",
-  "description": "",
+  "name": "originalname",
+  "description": "originalDescription",
   "details": {
     "compile": false,
     "publish": false,
