@@ -9,23 +9,26 @@
       "license":    "${packageJson.license}",
       "repository": "${packageJson.repository}"
     },
-    "templates": {
+    "templates":      {
       "javascript": "@laoban@/templates/javascript"
     }
   },
-  "package.details.json":     {
-      "variableFiles": {"packageJson": "project.json"},
-      "contents":      {
-        "template":    "javascript",
-        "name":        "${packageJson.name}",
-        "description": "${packageJson.description}",
-        "packageJson": {},
-        "details":     {
-          "compile": false,
-          "publish": false,
-          "test":    true,
-          "links":   []
-        }
+  "package.details.json": {
+    "variableFiles": {"packageJson": "project.json"},
+    "contents":      {
+      "template":    "javascript",
+      "name":        "${packageJson.name}",
+      "description": "${packageJson.description}",
+      "packageJson": {
+        "dependencies":    {},
+        "devDependencies": {}
+      },
+      "links":       [],
+      "guards":      {
+        "compile": false,
+        "publish": false,
+        "test":    true
       }
     }
+  }
 }

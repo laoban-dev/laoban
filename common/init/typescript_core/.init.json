@@ -17,14 +17,8 @@
     "guardfile":     "project.json",
     "variableFiles": {"packageJson": "project.json"},
     "contents":      {
-      "template":    "typescript",
-      "name":        "${packageJson.name}",
-      "description": "${packageJson.description}",
-      "details":     {
-        "publish": false,
-        "compile": true,
-        "test":    true,
-        "links":   []
+      "guards": {
+        "compile": true
       }
     }
   }
