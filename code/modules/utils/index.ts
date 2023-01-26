@@ -4,3 +4,6 @@ export * from './src/streamUtils'
 export * from './src/strings'
 export * from './src/utils'
 export * from './src/versions'
+export * from "./src/safe";
+export * from "./src/combine";
+export * from "./src/nameAnd";

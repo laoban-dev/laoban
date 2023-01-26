@@ -6,3 +6,7 @@ export { cachedFileOps } from "./src/cachedFileOps";
 export *  from "./src/cachedFileOps";
 export *  from "./src/childFiles";
 export *  from "./src/findFile";
+export { composePostProcessFn } from "./src/postProcessFn";
+export { postProcessCheckEnv } from "./src/postProcessFn";
+export { postProcessJson } from "./src/postProcessFn";
+export { PostProcessFn } from "./src/postProcessFn";

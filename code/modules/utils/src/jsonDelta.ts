@@ -1,4 +1,4 @@
-import { mapObject } from "./utils";
+import { mapObject } from "./nameAnd";
 
 
 export interface JsonDeltaOptions {

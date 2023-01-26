@@ -1,6 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 /** ref is like ${xxx} and this returns dic[xxx]. */
 import { firstSegment, lastSegment, safeArray } from "@laoban/utils";
+import { findPart } from "@laoban/utils/dist/src/dotLanguage";
 
 export interface VariableDefn {
   regex: RegExp
@@ -48,13 +49,7 @@ export function derefence ( context: string, dic: any, s: string, options?: Dere
 }
 
 
-export function findVar ( dic: any, ref: string ): any {
-  if ( ref === undefined ) return undefined
-  const parts = ref.split ( '.' )
-  try {
-    return parts.reduce ( ( acc, part ) => acc[ firstSegment ( part, ':' ) ], dic )
-  } catch ( e ) {return undefined}
-}
+
 function composeVar ( context: string, dic: any, composeString: string, options: DereferenceOptions, commaIfNeeded: boolean ): string {
   const index = composeString.indexOf ( '(' )
   const withoutStartEnd = composeString.slice ( index + 1, -1 )
@@ -66,7 +61,7 @@ function composeVar ( context: string, dic: any, composeString: string, options:
   return result
 }
 function replaceVarOfTrimmed ( context: string, dic: any, withoutStartEnd: string, options: DereferenceOptions ) {
-  const obj = findVar ( dic, withoutStartEnd )
+  const obj = findPart ( dic, withoutStartEnd )
   const last = lastSegment ( withoutStartEnd, '.' )
   const { result, error } = processVariable ( context, dic, last, obj, options )
   if ( error !== undefined ) {

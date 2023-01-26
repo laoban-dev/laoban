@@ -1,6 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { DebugCommands } from "@laoban/debug";
-import { allButLastSegment, deepCombineTwoObjects, NameAnd, safeArray } from "@laoban/utils";
+import { allButLastSegment, NameAnd, safeArray } from "@laoban/utils";
+import { PostProcessFn } from "./postProcessFn";
 
 
 export const shortCuts: NameAnd<string> = { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' };
@@ -166,56 +167,18 @@ export interface TemplateFileDetails {
   postProcess?: string | string[]
   sample?: boolean
 }
-function turnPackageJsonIntoTemplate ( text: string ) {
-  const packageJson = JSON.parse ( text );
-  if ( typeof packageJson.workspaces === 'object' ) return text
-  packageJson.name = "${packageDetails.name}"
-  packageJson.description = "${packageDetails.description}"
-  packageJson.version = "${packageDetails.version}"
-  packageJson.license = "${properties.license}"
-  packageJson.repository = "${properties.repository}"
-  return JSON.stringify ( packageJson, null, 2 )
-}
 
-const postProcessOne = ( context: string, fileOps: FileOps, tx: ( type: string, text: string ) => Promise<string> ) => async ( text: string, p: string ): Promise<string> => {
-  if ( p === 'json' ) try {
-    return JSON.stringify ( JSON.parse ( text ), null, 2 )
-  } catch ( e ) {
-    console.error ( `Cannot parse post processing json ${context}`, e )
-    console.error ( 'json is', text )
-    throw e
-  }
-  if ( p === 'turnIntoPackageJsonTemplate' ) return turnPackageJsonIntoTemplate ( text )
-  if ( p.match ( /^checkEnv\(.*\)$/ ) ) {
-    const env = p.slice ( 9, -1 )
-    if ( process.env[ env ] === undefined ) console.error ( `${context}\n requires the env variable [${env} to exist and it doesn't. This might cause problems]` )
-    return text
-  }
-  if ( p.match ( /^jsonMergeInto\(.*\)$/ ) ) {
-    const commaSeparatedFiles = p.slice ( 14, -1 )
-    const files = commaSeparatedFiles.split ( ',' )
-    const fileJson: any[] = await Promise.all<any> ( files.map<any> ( async name => {
-      const content = await fileOps.loadFileOrUrl ( name )
-      const txed = await (tx ? tx ( '${}', content ) : content)
-      try {
-        const result = parseJson ( `${context} file ${name}` ) ( txed )
-        return result
-      } catch ( e ) {
-        console.error ( 'error in post process', tx, txed )
-        throw e
-      }
-    } ) )
-    const myJson = parseJson<any> ( context ) ( text )
-    const result = [ ...fileJson, myJson ].reduce ( deepCombineTwoObjects )
-    return JSON.stringify ( result, null, 2 )
-  }
 
-  throw Error ( `${context}. Don't know how to post process with ${p}. Legal values are 'json' and 'checkEnv(xxx) - which checks the environment variable has a value` )
-};
-async function postProcess ( context: string, fileOps: FileOps, tx: ( type: string, text: string ) => Promise<string>, t: CopyFileDetails, text: string ): Promise<string> {
+async function postProcess ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, t: CopyFileDetails, text: string ): Promise<string> {
   if ( !isTemplateFileDetails ( t ) ) return text
-  return safeArray ( t.postProcess ).reduce ( ( accP: Promise<string>, v ) => accP.then ( acc => postProcessOne ( context, fileOps, tx ) ( acc, v ) ), Promise.resolve ( text ) )
+  const { postProfessFn } = copyFileOptions
+  if ( !postProfessFn ) return text
+  const folder = postProfessFn ( context, fileOps, copyFileOptions, t );
+  return safeArray ( t.postProcess ).reduce ( ( accP: Promise<string>, v ) => {
+    return accP.then ( acc => folder ( acc, v ) );
+  }, Promise.resolve ( text ) )
 }
+
 
 export function isTemplateFileDetails ( t: CopyFileDetails ): t is TemplateFileDetails {
   const a: any = t
@@ -242,6 +205,7 @@ export interface CopyFileOptions {
   dryrun?: boolean
   tx?: TransformTextFn
   allowSample?: boolean
+  postProfessFn?: PostProcessFn
 }
 export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, options: CopyFileOptions, cfd: string | TemplateFileDetails ) {
   const fileName = fileNameFrom ( cfd );
@@ -256,7 +220,7 @@ export async function loadFileFromDetails ( context: string, fileOps: FileOps, r
   const fullname = calcFileName ()
   const text = await fileOps.loadFileOrUrl ( fullname )
   const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
-  const postProcessed = await postProcess ( context, fileOps, tx, cfd, txformed )
+  const postProcessed = await postProcess ( context, fileOps, options, cfd, txformed )
   return { target, postProcessed };
 }
 

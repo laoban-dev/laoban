@@ -7,6 +7,7 @@ import { loadVersionFile, modifyPackageJson, savePackageJsonFile } from "./modif
 import { DebugCommands } from "@laoban/debug";
 import { nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
 import { combineTransformFns, CopyFileDetails, CopyFileOptions, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, TransformTextFn } from "@laoban/fileops";
+import { defaultPostProcessors } from "@laoban/fileops/dist/src/postProcessFn";
 
 
 interface UpdateCmdOptions {
@@ -128,7 +129,11 @@ export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageActio
     return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
       copyTemplateDirectory ( fileOps, config,
         { ...p, version, properties: safeObject ( config.properties ) },
-        { allowSamples, dryrun: cmd.dryrun, tx: includeAndTransformFile ( `updating ${p.directory}`, { ...config, version, packageDetails: p.packageDetails }, fileOps ) } ) )
+        {
+          allowSamples, dryrun: cmd.dryrun,
+          postProfessFn: defaultPostProcessors,
+          tx: includeAndTransformFile ( `updating ${p.directory}`, { ...config, version, packageDetails: p.packageDetails }, fileOps )
+        } ) )
     // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOpsNode.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
     // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )
   } ) )

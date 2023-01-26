@@ -5,7 +5,7 @@ import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { FileOps, loadJsonFileOrUndefined, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
 import { packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { execute } from "../executors";
-import { ConfigWithDebug } from "../config";
+import { Config, ConfigWithDebug } from "../config";
 import { loadConfigForAdmin } from "./laoban-admin";
 import { Writable } from "stream";
 import { findTemplatePackageJsonLookup } from "../loadingTemplates";
@@ -19,9 +19,8 @@ interface CreatePackageOptions extends TypeCmdOptions {
   template?: string
 }
 
-function packageJsonDetailsForNoPackageJson ( allInitFileContents: InitFileContents[], cmd: CreatePackageOptions, clearDirectory: string, templateName: string ): string {
+function packageJsonDetailsForNoPackageJson (allInitFileContents: InitFileContents[], cmd: CreatePackageOptions, clearDirectory: string, templateName: string ): string {
   const found = allInitFileContents.find ( l => l[ "package.details.json" ].contents.template === cmd.type )
-
   const dic = {
     packageJson: {
       name: cmd.packagename || path.basename ( clearDirectory ),
@@ -75,7 +74,7 @@ export async function newPackage ( fileOps: FileOps, currentDirectory: string, n
   }
   console.log ( 'Calling "laoban update"\n' )
   const allowSamplesArg = packageJson ? [] : [ '--allowsamples' ]
-  let focusOnDirectory = [ '-p',  toForwardSlash(path.relative(config.laobanDirectory,clearDirectory)) + "$" ];
+  let focusOnDirectory = [ '-p', toForwardSlash ( path.relative ( config.laobanDirectory, clearDirectory ) ) + "$" ];
   const res = await laoban.runLoaban ( [ process.argv[ 0 ], process.argv[ 1 ], 'update', ...focusOnDirectory, ...allowSamplesArg ] )
 }
 

@@ -1,29 +1,30 @@
 {
-  "template": "typescript",
-  "name": "laoban",
+  "template":    "typescript",
+  "name":        "laoban",
   "description": "A cli for managing projects that have many npm packages",
-  "details": {
-    "publish": true,
-    "test": true,
-    "links": [
+  "details":     {
+    "publish":      true,
+    "test":         true,
+    "links":        [
       "@laoban/variables",
       "@laoban/generations",
       "@laoban/validation",
       "@laoban/debug",
+      "@laoban/node",
       "@laoban/filesops-node"
     ],
-    "compile": true,
-    "extraDeps": {
-      "fs-extra": "^9.0.1",
+    "compile":      true,
+    "extraDeps":    {
+      "fs-extra":  "^9.0.1",
       "commander": "^6.2.0"
     },
     "extraDevDeps": {
       "@types/fs-extra": "^9.0.5"
     },
-    "extraBins": {
+    "extraBins":    {
       "laoban": "dist/index.js"
     },
-    "keywords": [
+    "keywords":     [
       "monorepo",
       "devops"
     ]

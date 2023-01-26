@@ -1,15 +1,11 @@
 {
-  "template": "javascript",
-  "name": "originalname",
-  "description": "originalDescription",
+  "template": "typescript",
+  "name": "pck",
+  "description": "",
   "details": {
-    "compile": false,
+    "compile": true,
     "publish": false,
     "test": true,
-    "links": [],
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": []
+    "links": []
   }
 }

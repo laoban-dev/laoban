@@ -1,5 +1,8 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { fromEntries, deepCombineTwoObjects, mapObject, mapObjectKeys, removeEmptyArrays, safeArray, unique } from "./utils";
+import { foldK, mapK, unique } from "./utils";
+import { safeArray } from "./safe";
+import { deepCombineTwoObjects } from "./combine";
+import { fromEntries, mapObject, mapObjectKeys, removeEmptyArrays } from "./nameAnd";
 
 describe ( 'safeArray', () => {
   it ( "should return the array if defined", () => {
@@ -77,3 +80,14 @@ describe ( 'level1CombineTwoObjects', () => {
     } )
   }
 )
+describe ( "foldK", () => {
+  it ( "should fold ", async () => {
+    expect ( foldK ( [ 1, 2, 3 ], 0, ( acc, v ) => Promise.resolve ( acc + v ) ) ).resolves.toEqual ( 6 )
+  } )
+} )
+
+describe ( "mapK", () => {
+  it ( 'should map', async () => {
+    expect ( mapK ( [ 1, 2, 3 ], v => Promise.resolve ( v + 1 ) ) ).resolves.toEqual ( [ 2, 3, 4 ] )
+  } )
+} )

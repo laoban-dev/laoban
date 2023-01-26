@@ -1,17 +1,13 @@
 Existing package.details.json will be modified as --force was used
 package.details.json {
-  "template": "javascript",
-  "name": "originalname",
-  "description": "originalDescription",
+  "template": "typescript",
+  "name": "pck",
+  "description": "",
   "details": {
-    "compile": false,
+    "compile": true,
     "publish": false,
     "test": true,
-    "links": [],
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": []
+    "links": []
   }
 }
 Calling "laoban update"

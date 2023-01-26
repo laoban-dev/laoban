@@ -22,3 +22,6 @@ export function firstSegment ( s: string, marker: string | RegExp = pathMarker )
 export function cleanLineEndings ( text: string ) {
   return text.replace ( /((?<!\r)\n|\r(?!\n))/g, '\r\n' )
 }
+export function toForwardSlash ( s: string ): string {
+  return s.replace ( /\\/g, '/' )
+}

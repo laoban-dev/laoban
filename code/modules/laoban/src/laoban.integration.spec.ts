@@ -14,7 +14,7 @@ function doPwd ( cmd: string, expectedFile: string ) {
     dirsIn ( configTestRoot ).map ( d => path.join ( configTestRoot, d ) ).map ( testDir => {
       let expected = toArrayReplacingRoot ( configTestRoot, fs.readFileSync ( path.join ( testDir, expectedFile ) ).toString () )
       it ( `should return ${expectedFile} when ${displayCmd} is run in ${path.parse ( testDir ).name}. Fullname${testDir}`, async () => {
-          await experimental ?
+          await (experimental ?
             await executeCli ( testDir, cmd ).then ( actual => expect ( toArrayReplacingRoot ( configTestRoot, actual ) ).toEqual ( expected ) ) :
             await execute ( testDir, cmd ).then ( result => {
               let actual = toArrayReplacingRoot ( configTestRoot, result );
@@ -27,7 +27,7 @@ function doPwd ( cmd: string, expectedFile: string ) {
                 console.log ( '---' )
                 throw e
               }
-            } )
+            } ))
         }
       )
     } )

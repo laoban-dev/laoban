@@ -1,7 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { combineTwoObjects, lastSegment, NameAnd, safeArray, safeObject } from "@laoban/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./initStatus";
-import { derefence, dollarsBracesVarDefn, findVar } from "@laoban/variables";
+import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { laobanJsonLocations, } from "./fileLocations";
 import path from "path";
 import { FileOps, findChildFiles, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
@@ -10,6 +10,7 @@ import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "../lo
 import { findLaobanOrUndefined, loabanConfigName, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ActionParams } from "./types";
 import { getInitDataWithoutTemplatesFilteredByPackages, HasPackages } from "./analyze";
+import { findPart } from "@laoban/utils/dist/src/dotLanguage";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -166,7 +167,7 @@ export function findAppropriateIfc ( initFileContents: initFileContentsWithParse
     if ( !m.startsWith ( 'json:' ) ) throw Error ( `Illegal marker ${m}. Must start with json:` )
     let markerWithoutPrefix = m.substring ( 5 );
     let dic = { packageJson: packageJson.contents };
-    let result = findVar ( dic, markerWithoutPrefix );
+    let result = findPart ( dic, markerWithoutPrefix );
     return result;
   };
   const found = initFileContents.find ( ( ifc, i ) => {
