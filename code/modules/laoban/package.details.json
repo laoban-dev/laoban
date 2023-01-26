@@ -18,17 +18,17 @@
       "devops"
     ]
   },
+  "links": [
+    "@laoban/variables",
+    "@laoban/generations",
+    "@laoban/validation",
+    "@laoban/debug",
+    "@laoban/node",
+    "@laoban/filesops-node"
+  ],
   "details":     {
     "publish":      true,
     "test":         true,
-    "links":        [
-      "@laoban/variables",
-      "@laoban/generations",
-      "@laoban/validation",
-      "@laoban/debug",
-      "@laoban/node",
-      "@laoban/filesops-node"
-    ],
     "compile":      true,
     "extraDeps":    {
       "fs-extra":  "^9.0.1",

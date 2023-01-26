@@ -44,7 +44,7 @@
     "ts-jest": "^26.4.4"
   },
   "keywords": [
-    "monorepox",
+    "monorepo",
     "devops"
   ],
   "types": "dist/index"
