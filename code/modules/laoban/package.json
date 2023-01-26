@@ -1,18 +1,6 @@
 {
-  "name": "laoban",
-  "description": "A cli for managing projects that have many npm packages",
-  "version": "1.3.0",
-  "license": "MIT",
-  "repository": "git@github.com:phil-rice/laoban.git",
-  "files": [
-    "dist/index.js",
-    "dist/index.d.ts",
-    "dist/src/"
-  ],
-  "main": "dist/index",
-  "scripts": {
-    "test": "jest --config jest.config.json",
-    "test:watch": "npm run test -- --watch"
+  "bin": {
+    "laoban": "dist/index.js"
   },
   "browserslist": {
     "development": [
@@ -26,9 +14,6 @@
       "not op_mini all"
     ]
   },
-  "bin": {
-    "laoban": "dist/index.js"
-  },
   "dependencies": {
     "fs-extra": "^9.0.1",
     "commander": "^6.2.0",
@@ -39,6 +24,7 @@
     "@laoban/node": "1.3.0",
     "@laoban/filesops-node": "1.3.0"
   },
+  "description": "A cli for managing projects that have many npm packages",
   "devDependencies": {
     "@types/fs-extra": "^9.0.5",
     "typescript": "^4.0.5",
@@ -49,9 +35,23 @@
     "jest": "^26.6.0",
     "ts-jest": "^26.4.4"
   },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
+  ],
   "keywords": [
     "monorepo",
     "devops"
   ],
-  "types": "dist/index"
+  "license": "MIT",
+  "main": "dist/index",
+  "name": "laoban",
+  "repository": "git@github.com:phil-rice/laoban.git",
+  "scripts": {
+    "test": "jest --config jest.config.json",
+    "test:watch": "npm run test -- --watch"
+  },
+  "types": "dist/index",
+  "version": "1.3.0"
 }

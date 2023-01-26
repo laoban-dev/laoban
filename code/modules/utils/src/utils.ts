@@ -43,3 +43,18 @@ export function mapK<V, To> ( vs: V[], fn: ( v: V ) => Promise<To> ): Promise<To
 export function objectSortedByKeys<T>(o: NameAnd<T>): NameAnd<T>{
   return Object.keys(o).sort().reduce((r, k) => (r[k] = o[k], r), {} as NameAnd<T>);
 }
+
+export function objectSortedByKeysWithPriority<T>(o: NameAnd<T>, ...priorityOrder: string[]){
+  const priority = new Set(priorityOrder);
+  return Object.keys(o).sort((a, b) => {
+    if (priority.has(a) && priority.has(b)) {
+      return priorityOrder.indexOf(a) - priorityOrder.indexOf(b);
+    } else if (priority.has(a)) {
+      return -1;
+    } else if (priority.has(b)) {
+      return 1;
+    } else {
+      return a.localeCompare(b);
+    }
+  }).reduce((r, k) => (r[k] = o[k], r), {} as NameAnd<T>);
+}

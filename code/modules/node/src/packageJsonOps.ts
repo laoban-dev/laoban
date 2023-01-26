@@ -1,5 +1,5 @@
-import { deepCombineTwoObjects } from "@laoban/utils";
-import { FileOps, parseJson, PostProcessFn } from "@laoban/fileops";
+import { deepCombineTwoObjects, NameAnd, objectSortedByKeysWithPriority } from "@laoban/utils";
+import { composePostProcessFn, FileOps, parseJson, PostProcessFn } from "@laoban/fileops";
 
 function turnPackageJsonIntoTemplate ( text: string ) {
   const packageJson = JSON.parse ( text );
@@ -15,3 +15,14 @@ function turnPackageJsonIntoTemplate ( text: string ) {
 export const postProcessTurnPackageJsonIntoTemplate: PostProcessFn = () =>
   async ( text: string, p: string ): Promise<string> => { if ( p === 'turnIntoPackageJsonTemplate' ) return turnPackageJsonIntoTemplate ( text ); }
 
+
+export const postProcessPackageJsonSort: PostProcessFn = () =>
+  async ( text: string, p: string ): Promise<string> => {
+    if ( p === 'packageJsonSort' ) {
+      const json = parseJson<NameAnd<any>> ( 'packageJsonSort' ) ( text )
+      const sorted = objectSortedByKeysWithPriority ( json, "name", "description", "version" , "main", "types")
+      return JSON.stringify ( sorted, null, 2 )
+    }
+  }
+
+export const postProcessForPackageJson = postProcessPackageJsonSort
