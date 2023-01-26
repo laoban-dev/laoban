@@ -196,14 +196,14 @@ export interface PackageDetailsDirectoryPropertiesAndVersion {
   properties: NameAnd<string>
 }
 
-export interface Details {
+export interface Guards {
   "publish": boolean,
 }
 export interface PackageDetails {
   "name": string,
   "description": string,
   template: string,
-  "details": Details
+  "guards": Guards
   links: string[]
 }
 export interface RawConfigAndFileOps {

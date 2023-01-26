@@ -3,17 +3,17 @@
     "runPact":                {
       "osGuard":     "Windows_NT",
       "description": "runs the pactserver as a stub",
-      "guard":       "${packageDetails.details.packport}",
+      "guard":       "${packageDetails.guards.packport}",
       "commands":    [
         "docker run -t -p  %PORT%:%PORT% -v \"%cwd%/pact/pacts/:/app/pact/pacts\" pactfoundation/pact-stub-server -p %PORT% -d pact/pacts"
       ],
       "env":         {
-        "PORT": "${packageDetails.details.packport}"
+        "PORT": "${packageDetails.guards.packport}"
       }
     },
     "mvn":                    {
       "description": "generates the type script and java projects",
-      "guard":       "${packageDetails.details.mvn}",
+      "guard":       "${packageDetails.guards.mvn}",
       "commands":    [
         {
           "name":    "maven",
@@ -23,7 +23,7 @@
       ]
     }, "copyPackFilesToCode": {
       "description": "copies all the tgz files to a code repo",
-      "guard":       "${packageDetails.details.publish}",
+      "guard":       "${packageDetails.guards.publish}",
       "commands":    [
         "copy *.tgz ..\\..\\focusoncode"
       ]

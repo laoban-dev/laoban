@@ -1,2 +1,2 @@
-${packageDetails.details.extraDeps:object:comma:indent4}
-    ${packageDetails.details.links:comma:map<<>>(i=>"<<i>>":"<<version>>")}
+${packageDetails.guards.extraDeps:object:comma:indent4}
+    ${packageDetails.guards.links:comma:map<<>>(i=>"<<i>>":"<<version>>")}

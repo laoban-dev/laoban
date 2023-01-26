@@ -4,9 +4,9 @@
     "commands":    [
       "echo Linux: [${PORT}] windows: [%PORT%]"
     ],
-    "guard":       "${packageDetails.details.port}",
+    "guard":       "${packageDetails.guards.port}",
     "env":         {
-      "PORT": "${packageDetails.details.port}"
+      "PORT": "${packageDetails.guards.port}"
     }
   },
   "slow": {

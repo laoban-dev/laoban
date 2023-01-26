@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { CommandDefn, Config, ConfigWithDebug, Details, PackageDetails, PackageDetailsAndDirectory, PackageJson, RawConfig, ScriptDefn } from "./config";
+import { CommandDefn, Config, ConfigWithDebug, Guards, PackageDetails, PackageDetailsAndDirectory, PackageJson, RawConfig, ScriptDefn } from "./config";
 import * as path from "path";
 import { groupBy } from "./utils";
 // @ts-ignore
@@ -59,10 +59,10 @@ function validatePackageDetails ( v: Validate<PackageDetails> ) {
   return v.isString ( "name" ).//
     isString ( "description" ).//
     isString ( "template" ).//
-    isObject ( "details", validateDetails )
+    isObject ( "guards", validateDetails )
 }
 
-function validateDetails ( v: Validate<Details> ) {
+function validateDetails ( v: Validate<Guards> ) {
   return v.isBoolean ( "publish", 'Should the project be published' )//
     // isArrayofObjects('links', v => v).//
     // optObject ( "extraDeps", v => v, 'These are added to package.json dependencies' ).//

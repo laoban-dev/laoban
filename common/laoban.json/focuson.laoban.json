@@ -5,11 +5,11 @@
       "commands":    [
         "js:process.cwd()"
       ],
-      "guard":       "${packageDetails.details.generated}"
+      "guard":       "${packageDetails.guards.generated}"
     },
     "kill-generated-src": {
       "description": "removes the src folders ",
-      "guard":       "${packageDetails.details.generated}",
+      "guard":       "${packageDetails.guards.generated}",
       "osGuard":     "Windows",
       "commands":    [
         "rmdir /Q /S src "
@@ -17,7 +17,7 @@
     },
     "ls-generate":        {
       "description": "lists the projects that will respond to the generate command",
-      "guard":       "${packageDetails.details.generator}",
+      "guard":       "${packageDetails.guards.generator}",
       "commands":    [
         {
           "name":    "generate",
@@ -27,7 +27,7 @@
     },
     "generate":           {
       "description": "generates the type script and java projects",
-      "guard":       "${packageDetails.details.generator}",
+      "guard":       "${packageDetails.guards.generator}",
       "commands":    [
         {
           "name":    "generate",

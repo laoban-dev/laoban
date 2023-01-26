@@ -9,7 +9,7 @@
     "ls-deps":   {
       "description": "lists all the projects, and which other projects they depend on",
       "commands":    [
-        "js:'${packageDetails.name}  => '.padEnd(30,' ') + '${packageDetails.details.links}'"
+        "js:'${packageDetails.name}  => '.padEnd(30,' ') + '${packageDetails.guards.links}'"
       ]
     },
     "ls-names":  {

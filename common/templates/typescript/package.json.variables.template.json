@@ -2,8 +2,8 @@
   "description": "${packageDetails.description}",
   "version":     "${version}",
   "bin":{
-${packageDetails.details.extraBins:object:indent4}
+${packageDetails.guards.extraBins:object:indent4}
   },
-  "keywords": [${packageDetails.details.keywords:map<<>>(kw=>"<<kw>>")}],
+  "keywords": [${packageDetails.guards.keywords:map<<>>(kw=>"<<kw>>")}],
   "license": "${properties.license}",
   "repository": "${properties.repository}"
