@@ -27,6 +27,7 @@ function packageJsonDetailsForNoPackageJson (allInitFileContents: InitFileConten
       description: cmd.desc || ''
     }
   }
+  if ( !found ) {throw Error(`Could not find ${cmd.type} in ${JSON.stringify(allInitFileContents, null, 2)}`)}
   let packageDetailsRawJson = found[ "package.details.json" ].contents;
   packageDetailsRawJson.template = templateName
   let packageDetailsJson = derefence ( `Making ${packageDetailsFile}`, dic, JSON.stringify ( packageDetailsRawJson, null, 2 ), { variableDefn: dollarsBracesVarDefn } );
