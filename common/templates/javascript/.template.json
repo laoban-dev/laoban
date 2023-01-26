@@ -1,7 +1,7 @@
 {
   "files": [
     {
-      "file": "package.json", "type": "${}", "postProcess": "jsonMergeInto($packageDetails.packageJson,$links)"
+      "file": "package.json", "type": "${}", "postProcess": ["jsonMergeInto($packageDetails.packageJson,$links)", "jsonSort"]
     },
     {"file": "index.js", "sample": true}
   ]

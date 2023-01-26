@@ -1,5 +1,5 @@
 import { CopyFileOptions, FileOps, parseJson, TemplateFileDetails, TransformTextFn } from "./fileOps";
-import { deepCombineTwoObjects, foldK, mapK, NameAnd, safeObject } from "@laoban/utils";
+import { deepCombineTwoObjects, foldK, mapK, NameAnd, objectSortedByKeys, safeObject } from "@laoban/utils";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
 
 export type PostProcessFn = ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, cfd: TemplateFileDetails ) => ( text: string, postProcessCmd: string ) => Promise<string | undefined>
@@ -52,6 +52,14 @@ export const postProcessJsonMergeInto: PostProcessFn = ( context, fileOps, copyF
   }
 }
 
+export const jsonSortPostProcess: PostProcessFn = ( context ) => async ( text, cmd ) => {
+  if ( cmd === 'jsonSort' ) {
+    const json = parseJson<NameAnd<any>> ( context + '.jsonSort' ) ( text )
+    const sorted = objectSortedByKeys ( json )
+    return JSON.stringify ( sorted, null, 2 )
+  }
+}
+
 export function composePostProcessFn ( ...ps: PostProcessFn[] ): PostProcessFn {
   return ( context, fileOps, copyFileOptions, cfd ) => {
     const txsPs: (( text: string, postProcessCmd: string ) => Promise<string | undefined>)[] = ps.map ( p => p ( context, fileOps, copyFileOptions, cfd ) )
@@ -63,4 +71,4 @@ export function composePostProcessFn ( ...ps: PostProcessFn[] ): PostProcessFn {
   }
 }
 
-export const defaultPostProcessors = composePostProcessFn ( postProcessJson, postProcessCheckEnv, postProcessJsonMergeInto )
+export const defaultPostProcessors = composePostProcessFn ( postProcessJson, postProcessCheckEnv, postProcessJsonMergeInto,jsonSortPostProcess )
