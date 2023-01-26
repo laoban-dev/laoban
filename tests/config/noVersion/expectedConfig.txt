@@ -8,6 +8,7 @@
     "cacheDir": "C://git//laoban//tests//config//noVersion//.cache",
     "profile": ".profile",
     "packageManager": "yarn",
+    "templateDir": "C://git//laoban//tests//config//noVersion/templates",
     "properties": {
     "license": "MIT",
     "repository": "git@github.com:phil-rice/laoban.git"

@@ -5,7 +5,7 @@ import * as fse from "fs-extra";
 import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables";
 import { loadVersionFile, modifyPackageJson, savePackageJsonFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
-import { nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
+import { fromEntries, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
 import { combineTransformFns, CopyFileDetails, CopyFileOptions, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, TransformTextFn } from "@laoban/fileops";
 import { defaultPostProcessors } from "@laoban/fileops/dist/src/postProcessFn";
 
@@ -127,14 +127,15 @@ export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageActio
   const version = await updateVersionIfNeeded ( fileOps, config, cmd )
   return Promise.all ( pds.map ( async p => {
     const packageDetails = p.packageDetails
+    let dic = { ...config, version, packageDetails: p.packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
     return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
       copyTemplateDirectory ( fileOps, config,
         { ...p, version, properties: safeObject ( config.properties ) },
         {
           allowSamples, dryrun: cmd.dryrun,
           postProfessFn: defaultPostProcessors,
-          lookupForJsonMergeInto:{packageDetails},
-          tx: includeAndTransformFile ( `updating ${p.directory}`, { ...config, version, packageDetails: p.packageDetails }, fileOps )
+          lookupForJsonMergeInto: { packageDetails },
+          tx: includeAndTransformFile ( `updating ${p.directory}`, dic, fileOps )
         } ) )
     // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOpsNode.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
     // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )

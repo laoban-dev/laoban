@@ -30,8 +30,8 @@ function fileName ( f: FileNameAndOrPart ): string {
 }
 export const partToMerge = ( context: string, fileOps: FileOps, tx: TransformTextFn | undefined, dic: NameAnd<any> ) => async ( fileCmd: string ): Promise<any> => {
   if ( typeof fileCmd === 'string' && fileCmd.startsWith ( '$' ) ) {
-    let result = findPart ( dic, fileCmd.slice ( 1 ) );
-    if ( result === undefined ) throw Error ( `${context} Ccould not find ${fileCmd} in ${JSON.stringify ( dic )}` )
+    let result = safeObject ( findPart ( dic, fileCmd.slice ( 1 ) ) );
+    console.log ( 'partToMerge', fileCmd, result, JSON.stringify(dic,null,2) )
     return result
   }
   const fileNameAndOrPart = findFileNameAndOrPart ( fileCmd )

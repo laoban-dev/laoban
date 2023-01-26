@@ -130,7 +130,7 @@ export function configProcessor ( path: Path, laoban: string, outputStream: Writ
   add ( "cacheDir", { ...rawConfig, cacheDir: findCache ( path, laoban, undefined, rawConfig.cacheDir ) } )
   add ( "profile", rawConfig )
   add ( "packageManager", rawConfig )
-  if ( rawConfig.templateDir ) result.templateDir = rawConfig.templateDir;
+  if ( rawConfig.templateDir ) add("templateDir", rawConfig);
   result.properties = rawConfig.properties ? rawConfig.properties : {}
   result.defaultEnv = rawConfig.defaultEnv
   result.templates = rawConfig.templates ? rawConfig.templates : {}

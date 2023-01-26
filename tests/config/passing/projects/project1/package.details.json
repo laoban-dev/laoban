@@ -2,6 +2,12 @@
   "template"      : "typescript",
   "name"          : "proj1",
   "description"   : "A sample project",
+  "packageJson": {
+    "dependencies": {
+      "someDep": "1.2"
+    },
+    "bin": "bin/proj1"
+  },
   "details": {
     "publish"     : true,
     "links"       : [],

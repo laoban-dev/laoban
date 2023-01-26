@@ -2,35 +2,8 @@
   "name": "laoban",
   "description": "A cli for managing projects that have many npm packages",
   "version": "1.2.41",
-  "bin": {
-    "laoban": "dist/index.js"
-  },
-  "keywords": [
-    "monorepo",
-    "devops"
-  ],
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
-  "dependencies": {
-    "fs-extra": "^9.0.1",
-    "commander": "^6.2.0",
-    "@laoban/variables": "1.2.41",
-    "@laoban/generations": "1.2.41",
-    "@laoban/validation": "1.2.41",
-    "@laoban/debug": "1.2.41",
-    "@laoban/node": "1.2.41",
-    "@laoban/filesops-node": "1.2.41"
-  },
-  "devDependencies": {
-    "@types/fs-extra": "^9.0.5",
-    "typescript": "^4.0.5",
-    "@types/node": "^14.14.7",
-    "@types/jest": "^26.0.15",
-    "@testing-library/jest-dom": "^5.11.5",
-    "@testing-library/user-event": "^12.2.0",
-    "jest": "^26.6.0",
-    "ts-jest": "^26.4.4"
-  },
   "files": [
     "dist/index.js",
     "dist/index.d.ts",
@@ -53,5 +26,26 @@
       "not op_mini all"
     ]
   },
+  "bin": {
+    "laoban": "dist/index.js"
+  },
+  "dependencies": {
+    "fs-extra": "^9.0.1",
+    "commander": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.5",
+    "typescript": "^4.0.5",
+    "@types/node": "^14.14.7",
+    "@types/jest": "^26.0.15",
+    "@testing-library/jest-dom": "^5.11.5",
+    "@testing-library/user-event": "^12.2.0",
+    "jest": "^26.6.0",
+    "ts-jest": "^26.4.4"
+  },
+  "keywords": [
+    "monorepox",
+    "devops"
+  ],
   "types": "dist/index"
 }

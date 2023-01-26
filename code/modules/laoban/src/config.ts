@@ -208,6 +208,8 @@ export interface PackageDetails {
   "description": string,
   template: string,
   "details": Details
+
+  links: string[]
 }
 export interface RawConfigAndFileOps {
   rawConfig?: RawConfig,
