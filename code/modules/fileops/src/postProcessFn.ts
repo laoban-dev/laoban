@@ -29,11 +29,8 @@ function fileName ( f: FileNameAndOrPart ): string {
   return isFileAndPart ( f ) ? f.file : f
 }
 export const partToMerge = ( context: string, fileOps: FileOps, tx: TransformTextFn | undefined, dic: NameAnd<any> ) => async ( fileCmd: string ): Promise<any> => {
-  if ( typeof fileCmd === 'string' && fileCmd.startsWith ( '$' ) ) {
-    let result = safeObject ( findPart ( dic, fileCmd.slice ( 1 ) ) );
-    console.log ( 'partToMerge', fileCmd, result )
-    return result
-  }
+  if ( typeof fileCmd === 'string' && fileCmd.startsWith ( '$' ) )
+    return safeObject ( findPart ( dic, fileCmd.slice ( 1 ) ) )
   const fileNameAndOrPart = findFileNameAndOrPart ( fileCmd )
   const fileAsString = await fileOps.loadFileOrUrl ( fileName ( fileNameAndOrPart ) )
   const txed = await (tx ? tx ( '${}', fileAsString ) : fileAsString)
@@ -46,7 +43,6 @@ export const partToMerge = ( context: string, fileOps: FileOps, tx: TransformTex
 export const postProcessJsonMergeInto: PostProcessFn = ( context, fileOps, copyFileOptions, cfd ) => async ( text, cmd ) => {
   const { tx } = copyFileOptions
   if ( cmd.match ( /^jsonMergeInto\(.*\)$/ ) ) {
-    console.log('postProcessJsonMergeInto', cmd)
     const commaSeparatedFiles = cmd.slice ( 14, -1 )
     const files = commaSeparatedFiles.split ( ',' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
     const fileParts = await mapK ( files, partToMerge ( context, fileOps, tx, safeObject ( copyFileOptions?.lookupForJsonMergeInto ) ) )

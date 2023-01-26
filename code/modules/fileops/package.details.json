@@ -1,11 +1,11 @@
 {
-  "template": "typescript",
-  "name": "@laoban/fileops",
+  "template":    "typescript",
+  "name":        "@laoban/fileops",
   "description": "Utilities about files: not bound to any way of accessing files",
-  "details": {
+  "links":       ["@laoban/utils"],
+  "details":     {
     "publish": true,
-    "test": true,
-    "links": [],
+    "test":    true,
     "compile": true
   }
 }

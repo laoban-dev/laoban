@@ -127,15 +127,15 @@ export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageActio
   const version = await updateVersionIfNeeded ( fileOps, config, cmd )
   return Promise.all ( pds.map ( async p => {
     const packageDetails = p.packageDetails
-    let dic = { ...config, version, packageDetails: p.packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
+    let lookupForJsonMergeInto = { ...config, version, packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
     return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
       copyTemplateDirectory ( fileOps, config,
         { ...p, version, properties: safeObject ( config.properties ) },
         {
           allowSamples, dryrun: cmd.dryrun,
           postProfessFn: defaultPostProcessors,
-          lookupForJsonMergeInto: { packageDetails },
-          tx: includeAndTransformFile ( `updating ${p.directory}`, dic, fileOps )
+          lookupForJsonMergeInto,
+          tx: includeAndTransformFile ( `updating ${p.directory}`, lookupForJsonMergeInto, fileOps )
         } ) )
     // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOpsNode.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
     // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )

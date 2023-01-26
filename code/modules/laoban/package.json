@@ -31,7 +31,13 @@
   },
   "dependencies": {
     "fs-extra": "^9.0.1",
-    "commander": "^6.2.0"
+    "commander": "^6.2.0",
+    "@laoban/variables": "1.2.41",
+    "@laoban/generations": "1.2.41",
+    "@laoban/validation": "1.2.41",
+    "@laoban/debug": "1.2.41",
+    "@laoban/node": "1.2.41",
+    "@laoban/filesops-node": "1.2.41"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.5",

@@ -1,17 +1,13 @@
 {
-  "template": "typescript",
-  "name": "@laoban/utils",
+  "template":    "typescript",
+  "name":        "@laoban/utils",
   "description": "Those miscellaneous utilities and types that every project needs",
-  "details": {
+  "links":       [
+    "@laoban/debug"
+  ],
+  "details":     {
     "publish": true,
-    "test": true,
-    "links": [
-      "@laoban/debug"
-    ],
-    "compile": true,
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": []
+    "test":    true,
+    "compile": true
   }
 }

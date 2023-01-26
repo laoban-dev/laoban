@@ -1,15 +1,11 @@
 {
-  "template": "typescript",
-  "name": "@laoban/debug",
+  "template":    "typescript",
+  "name":        "@laoban/debug",
   "description": "A general debug utility that allows debugs to be turned on and off easily and thus left in the code",
-  "details": {
+  "details":     {
     "publish": true,
-    "test": true,
-    "links": [],
-    "compile": true,
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": []
+    "test":    true,
+    "links":   [],
+    "compile": true
   }
 }
