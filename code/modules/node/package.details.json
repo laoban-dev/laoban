@@ -3,7 +3,7 @@
   "name":        "@laoban/node",
   "description": "The parts of Laoban that are just about package.json",
   "links":       ["@laoban/fileops"],
-  "details":     {
+  "guards":     {
     "compile": true,
     "publish": false,
     "test":    true

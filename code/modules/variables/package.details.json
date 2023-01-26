@@ -5,7 +5,7 @@
   "links":       [
     "@laoban/utils"
   ],
-  "details":     {
+  "guards":     {
     "publish": true,
     "test":    true,
     "compile": true

@@ -2,7 +2,7 @@
   "template":    "typescript",
   "name":        "@laoban/validation",
   "description": "A library for validating json",
-  "details":     {
+  "guards":     {
     "publish": true,
     "test":    true,
     "compile": true

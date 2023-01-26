@@ -14,7 +14,7 @@
       "@types/node-fetch": "^2.6.2"
     }
   },
-  "details":     {
+  "guards":     {
     "publish": true,
     "test":    true,
     "compile": true

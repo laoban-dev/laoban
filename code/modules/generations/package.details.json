@@ -11,7 +11,7 @@
       "array.prototype.flatmap": "^1.3.1"
     }
   },
-  "details":     {
+  "guards":     {
     "publish": true,
     "test":    true,
     "compile": true

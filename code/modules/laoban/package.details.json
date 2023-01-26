@@ -26,7 +26,7 @@
     "@laoban/node",
     "@laoban/filesops-node"
   ],
-  "details":     {
+  "guards":     {
     "publish": true,
     "test":    true,
     "compile": true

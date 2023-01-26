@@ -3,7 +3,7 @@
   "name":        "@laoban/fileops",
   "description": "Utilities about files: not bound to any way of accessing files",
   "links":       ["@laoban/utils"],
-  "details":     {
+  "guards":     {
     "publish": true,
     "test":    true,
     "compile": true

@@ -5,7 +5,7 @@
   "links":       [
     "@laoban/debug"
   ],
-  "details":     {
+  "guards":     {
     "publish": true,
     "test":    true,
     "compile": true
