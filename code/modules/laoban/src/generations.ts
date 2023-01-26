@@ -19,7 +19,7 @@ export function calculateAllGenerations ( scds: ScriptInContextAndDirectory[] ):
 export const typeClassForTopologicalSort = ( debug: Debug ): TopologicalSortTypeClasses<ScriptInContextAndDirectory> => ({
   debug,
   name: ( g: ScriptInContextAndDirectory ): string => g.detailsAndDirectory.packageDetails.name,
-  children: ( g: ScriptInContextAndDirectory ): string[] => g.detailsAndDirectory.packageDetails.details.links,
+  children: ( g: ScriptInContextAndDirectory ): string[] => g.detailsAndDirectory.packageDetails.links,
   loopMessage: ( gs, loops ) => {
     const message = uniqueLoops ( loops ).map ( l => `  ${l.join ( ' -> ' )}` ).join ( "\n" )
     throw Error ( `Cannot work out the 'order' for the project. There are 'cycles' in the project links:\n${message}` );
@@ -72,7 +72,7 @@ export function prettyPrintGenerations ( hasStream: HasOutputStream, scds: Scrip
 
 function getChildrenRecurse ( pds: ScriptInContextAndDirectory[], existing: string[] ) {
   let thisTree = {}
-  pds.forEach ( p => thisTree[ p.detailsAndDirectory.packageDetails.name ] = new Set ( p.detailsAndDirectory.packageDetails.details.links ) )
+  pds.forEach ( p => thisTree[ p.detailsAndDirectory.packageDetails.name ] = new Set ( p.detailsAndDirectory.packageDetails.links ) )
   for ( let k in thisTree ) {
     if ( existing.includes ( k ) ) delete thisTree[ k ]
     else {

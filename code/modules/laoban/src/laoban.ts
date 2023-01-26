@@ -77,7 +77,7 @@ let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, 
       let projWidth = Strings.maxLength ( goodPds.map ( p => p.packageDetails.name ) )
       let templateWidth = Strings.maxLength ( goodPds.map ( p => p.packageDetails.template ) )
       goodPds.forEach ( p => {
-        let links = toArray ( p.packageDetails.details?.links );
+        let links = toArray ( p.packageDetails.links );
         let dependsOn = (links && links.length > 0) ? ` depends on [${links.join ()}]` : ""
         output ( config ) ( `${fileOps.relative ( config.laobanDirectory, p.directory ).padEnd ( dirWidth )} => ${stringOrUndefinedAsString ( p.packageDetails.name ).padEnd ( projWidth )} (${stringOrUndefinedAsString ( p.packageDetails.template ).padEnd ( templateWidth )})${dependsOn}` )
       } )

@@ -1,7 +1,7 @@
 {
   "name": "@laoban/filesops-node",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
-  "version": "1.2.41",
+  "version": "1.3.0",
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
   "files": [
@@ -27,8 +27,9 @@
     ]
   },
   "dependencies": {
-    "@laoban/utils": "1.2.41",
-    "@laoban/fileops": "1.2.41"
+    "node-fetch": "2.6.1",
+    "@laoban/utils": "1.3.0",
+    "@laoban/fileops": "1.3.0"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.6.2",

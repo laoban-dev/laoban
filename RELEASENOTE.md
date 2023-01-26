@@ -65,7 +65,10 @@
 * 1.2.24 `laoban admin init` now updates .gitignore
 * 1.2.25 `laoban admin init` now updates .gitignore even if no `--force`
 * 1.2.27 file: commands now include mkdir and file:tail(file,lines) where lines defaults to 10
-* 1.2.28 Logs in the directory are just the last command. The `laoban log` uses `noLogOverwrite:true` 
+* 1.2.28 Logs in the directory are just the last command. The `laoban log` uses `noLogOverwrite:true`
 * 1.2.31 Scripts that 'fail' now communicate that better
 * 1.2.40 Templates can now have samples. So when `laoban admin newpackage` is run, the samples are copied into the
   project (as long as there is no existing package.json)
+
+* 1.3.0 Breaking change to package.details.json. Now has packageJson section and everything in it is merged into
+  packageJson. This is far more extensible and most importantly understandable

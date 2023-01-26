@@ -1,7 +1,7 @@
 {
-  "name": "@laoban/validation",
-  "description": "A library for validating json",
-  "version": "1.3.0",
+  "name": "proj2",
+  "description": "A simple implementation of lens using type script",
+  "version": "someversion",
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
   "files": [
@@ -26,7 +26,6 @@
       "not op_mini all"
     ]
   },
-  "dependencies": {},
   "types": "dist/index",
   "devDependencies": {
     "typescript": "^4.0.5",

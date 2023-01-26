@@ -1,0 +1,27 @@
+{
+  "files": [
+    {
+      "file": "@laoban@/templates/typescript/.npmrc",
+      "target": ".npmrc",
+      "postProcess": "checkEnv(NPM_TOKEN)"
+    },
+    {
+      "file": "@laoban@/templates/typescript/jest.config.json",
+      "target": "jest.config.json"
+    },
+    {
+      "file": "package.json",
+      "type": "${}",
+      "postProcess": "jsonMergeInto(@laoban@/templates/javascript/package.json,$packageDetails.packageJson,@laoban@/templates/typescript_405/package.json)"
+    },
+    {
+      "file": "@laoban@/templates/typescript_405/tsconfig.json",
+      "target": "tsconfig.json"
+    },
+    {
+      "file": "@laoban@/templates/typescript/index.ts",
+      "sample": true,
+      "target": "index.ts"
+    }
+  ]
+}

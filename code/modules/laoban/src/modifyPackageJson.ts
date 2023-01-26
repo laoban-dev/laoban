@@ -45,20 +45,20 @@ export function savePackageJsonFile ( directory: string, packageJson: any ): Pro
 }
 
 
-export function modifyPackageJson ( raw: any, version: string, packageDetails: PackageDetails ) {
-  let result = { ...raw }
-  Object.assign ( result, packageDetails )
-  add ( result, 'dependencies', packageDetails.details.extraDeps )
-  let links = packageDetails.details.links ? packageDetails.details.links : [];
-  links.map ( l => result[ 'dependencies' ][ l ] = version )
-  add ( result, 'devDependencies', packageDetails.details.extraDevDeps )
-  add ( result, 'bin', packageDetails.details.extraBins )
-  delete result.packageDetails
-  result.version = version
-  result.name = packageDetails.name
-  result.description = packageDetails.description
-  return result
-}
+// export function modifyPackageJson ( raw: any, version: string, packageDetails: PackageDetails ) {
+//   let result = { ...raw }
+//   Object.assign ( result, packageDetails )
+//   add ( result, 'dependencies', packageDetails.details.extraDeps )
+//   let links = packageDetails.details.links ? packageDetails.details.links : [];
+//   links.map ( l => result[ 'dependencies' ][ l ] = version )
+//   add ( result, 'devDependencies', packageDetails.details.extraDevDeps )
+//   add ( result, 'bin', packageDetails.details.extraBins )
+//   delete result.packageDetails
+//   result.version = version
+//   result.name = packageDetails.name
+//   result.description = packageDetails.description
+//   return result
+// }
 
 function add ( a: any, name: string, b: any ) {
   if ( b ) {

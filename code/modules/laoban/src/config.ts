@@ -198,17 +198,12 @@ export interface PackageDetailsDirectoryPropertiesAndVersion {
 
 export interface Details {
   "publish": boolean,
-  "links": string[],
-  "extraDeps": any,
-  "extraDevDeps": any,
-  extraBins: any
 }
 export interface PackageDetails {
   "name": string,
   "description": string,
   template: string,
   "details": Details
-
   links: string[]
 }
 export interface RawConfigAndFileOps {

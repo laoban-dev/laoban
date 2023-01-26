@@ -1,9 +1,8 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import path from "path";
 import { ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, PackageDetailsDirectoryPropertiesAndVersion } from "./config";
-import * as fse from "fs-extra";
 import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables";
-import { loadVersionFile, modifyPackageJson, savePackageJsonFile } from "./modifyPackageJson";
+import { loadVersionFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 import { fromEntries, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
 import { combineTransformFns, CopyFileDetails, CopyFileOptions, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, TransformTextFn } from "@laoban/fileops";
@@ -16,20 +15,20 @@ interface UpdateCmdOptions {
   major?: string
   dryrun?: boolean
 }
-export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, template: string, target: string ): Promise<void> {
-  console.log ( 'copyTemplateDirectoryByConfig', config.templateDir, template )
-  let src = path.join ( config.templateDir, template );
-  let d = config.debug ( 'update' );
-  return d.k ( () => `copyTemplateDirectory directory from ${src}, to ${target}`, async () => {
-    fse.copySync ( src, target )
-    // no idea why the fse.copy doesn't work here... it just fails silently
-    let packageJsonFileName = path.join ( p.directory, 'package.json' );
-    const exists = await fileOps.isFile ( packageJsonFileName )
-    if ( !exists ) return Promise.resolve ()
-    const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( packageJsonFileName ) )
-    return d.k ( () => `${p.directory} savePackageJsonFile`, () => savePackageJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.packageDetails ) ) )
-  } )
-}
+// export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, template: string, target: string ): Promise<void> {
+//   console.log ( 'copyTemplateDirectoryByConfig', config.templateDir, template )
+//   let src = path.join ( config.templateDir, template );
+//   let d = config.debug ( 'update' );
+//   return d.k ( () => `copyTemplateDirectory directory from ${src}, to ${target}`, async () => {
+//     fse.copySync ( src, target )
+//     // no idea why the fse.copy doesn't work here... it just fails silently
+//     let packageJsonFileName = path.join ( p.directory, 'package.json' );
+//     const exists = await fileOps.isFile ( packageJsonFileName )
+//     if ( !exists ) return Promise.resolve ()
+//     const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( packageJsonFileName ) )
+//     return d.k ( () => `${p.directory} savePackageJsonFile`, () => savePackageJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.packageDetails ) ) )
+//   } )
+// }
 export interface TemplateControlFile {
   files: CopyFileDetails[]
 }

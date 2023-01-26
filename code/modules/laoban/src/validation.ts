@@ -63,11 +63,11 @@ function validatePackageDetails ( v: Validate<PackageDetails> ) {
 }
 
 function validateDetails ( v: Validate<Details> ) {
-  return v.isBoolean ( "publish", 'Should the project be published' ).//
+  return v.isBoolean ( "publish", 'Should the project be published' )//
     // isArrayofObjects('links', v => v).//
-    optObject ( "extraDeps", v => v, 'These are added to package.json dependencies' ).//
-    optObject ( "extraDevDeps", v => v, 'These are added to package.json devDependencies' ).//
-    optObject ( "extraBins", v => v, 'These are added to package.json bin' )
+    // optObject ( "extraDeps", v => v, 'These are added to package.json dependencies' ).//
+    // optObject ( "extraDevDeps", v => v, 'These are added to package.json devDependencies' ).//
+    // optObject ( "extraBins", v => v, 'These are added to package.json bin' )
 }
 function validatePackageJson ( v: Validate<PackageJson> ) {
   return v.isObject ( 'dependencies', v => v )

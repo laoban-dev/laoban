@@ -94,7 +94,7 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectoryWitho
       };
       return resultForOneCommand;
     }
-    const links = safeArray ( scd.detailsAndDirectory?.packageDetails?.details?.links )
+    const links = safeArray ( scd.detailsAndDirectory?.packageDetails?.links )
     return cmd.eachLink ? links.map ( makeShellDetails ) : [ makeShellDetails () ]
   } ) )
 }

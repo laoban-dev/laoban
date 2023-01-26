@@ -1,21 +1,20 @@
 {
-  "template":     "typescript",
-  "name":         "@laoban/filesops-node",
-  "description":  "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
-  "links":        [
+  "template":    "typescript",
+  "name":        "@laoban/filesops-node",
+  "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
+  "links":       [
     "@laoban/utils",
     "@laoban/fileops"
   ],
   "packageJson": {
     "dependencies":    {
-      "@laoban/utils":   "0.0.1",
-      "@laoban/fileops": "0.0.1"
+      "node-fetch": "2.6.1"
     },
     "devDependencies": {
       "@types/node-fetch": "^2.6.2"
     }
   },
-  "details":      {
+  "details":     {
     "publish": true,
     "test":    true,
     "compile": true
