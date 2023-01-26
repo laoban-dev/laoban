@@ -1,5 +1,5 @@
 import { CopyFileOptions, FileOps, parseJson, TemplateFileDetails, TransformTextFn } from "./fileOps";
-import { deepCombineTwoObjects, foldK, mapK } from "@laoban/utils";
+import { deepCombineTwoObjects, foldK, mapK, NameAnd, safeObject } from "@laoban/utils";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
 
 export type PostProcessFn = ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, cfd: TemplateFileDetails ) => ( text: string, postProcessCmd: string ) => Promise<string | undefined>
@@ -28,7 +28,12 @@ function findFileNameAndOrPart ( f: string ): FileNameAndOrPart {
 function fileName ( f: FileNameAndOrPart ): string {
   return isFileAndPart ( f ) ? f.file : f
 }
-export const partToMerge = ( context: string, fileOps: FileOps, tx: TransformTextFn | undefined ) => async ( fileCmd: string ): Promise<any> => {
+export const partToMerge = ( context: string, fileOps: FileOps, tx: TransformTextFn | undefined, dic: NameAnd<any> ) => async ( fileCmd: string ): Promise<any> => {
+  if ( typeof fileCmd === 'string' && fileCmd.startsWith ( '$.' ) ) {
+    let result = findPart ( dic, fileCmd.slice ( 2 ) );
+    if ( result === undefined ) throw Error ( `${context} Ccould not find ${fileCmd} in ${JSON.stringify ( dic )}` )
+    return result
+  }
   const fileNameAndOrPart = findFileNameAndOrPart ( fileCmd )
   const fileAsString = await fileOps.loadFileOrUrl ( fileName ( fileNameAndOrPart ) )
   const txed = await (tx ? tx ( '${}', fileAsString ) : fileAsString)
@@ -43,7 +48,7 @@ export const postProcessJsonMergeInto: PostProcessFn = ( context, fileOps, copyF
   if ( cmd.match ( /^jsonMergeInto\(.*\)$/ ) ) {
     const commaSeparatedFiles = cmd.slice ( 14, -1 )
     const files = commaSeparatedFiles.split ( ',' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
-    const fileParts = await mapK ( files, partToMerge ( context, fileOps, tx ) )
+    const fileParts = await mapK ( files, partToMerge ( context, fileOps, tx, safeObject ( copyFileOptions?.lookupForJsonMergeInto ) ) )
     const myJson = parseJson<any> ( context ) ( text )
     const result = [ ...fileParts, myJson ].reduce ( deepCombineTwoObjects )
     return JSON.stringify ( result, null, 2 )

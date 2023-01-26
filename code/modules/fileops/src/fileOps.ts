@@ -206,6 +206,7 @@ export interface CopyFileOptions {
   tx?: TransformTextFn
   allowSample?: boolean
   postProfessFn?: PostProcessFn
+  lookupForJsonMergeInto?: NameAnd<any>
 }
 export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, options: CopyFileOptions, cfd: string | TemplateFileDetails ) {
   const fileName = fileNameFrom ( cfd );
