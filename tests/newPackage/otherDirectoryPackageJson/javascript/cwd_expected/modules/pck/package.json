@@ -2,18 +2,8 @@
   "name": "somename",
   "description": "some description",
   "version": "someversion",
-  "license": "MIT",
-  "repository": "git@github.com:phil-rice/laoban.git",
-  "files": [
-    "dist/index.js",
-    "dist/index.d.ts",
-    "dist/src/"
-  ],
   "main": "index",
-  "scripts": {
-    "test": "jest --config jest.config.json",
-    "test:watch": "npm run test -- --watch"
-  },
+  "bins": {},
   "browserslist": {
     "development": [
       "last 1 chrome version",
@@ -25,5 +15,19 @@
       "not dead",
       "not op_mini all"
     ]
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
+  ],
+  "keywords": [],
+  "license": "MIT",
+  "repository": "git@github.com:phil-rice/laoban.git",
+  "scripts": {
+    "test": "jest --config jest.config.json",
+    "test:watch": "npm run test -- --watch"
   }
 }

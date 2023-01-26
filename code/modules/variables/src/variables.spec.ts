@@ -80,14 +80,14 @@ describe ( "derefence", () => {
   } )
 
 
-  describe ( "We should be able to process  {${projectDetails.details.links:map<<>>(i=>\"<<i>>\":\"<<version>>\")}}", () => {
+  describe ( "We should be able to process  {${projectDetails.guards.links:map<<>>(i=>\"<<i>>\":\"<<version>>\")}}", () => {
     it ( 'should inline the mapped array', () => {
       expect ( derefence ( 'context', { ...dic, version: '1.2.3' },
         '{"one":1, ${array:map<<>>(i=>"<<i>>":"<<version>>")},"two":2}', { variableDefn: dollarsBracesVarDefn } ) ).toEqual (
         '{"one":1, "a":"1.2.3","b":"1.2.3","c":"1.2.3","two":2}' )
     } )
   } )
-  describe ( "We should be able to process  {${projectDetails.details.links:comma:map<<>>(i=>\"<<i>>\":\"<<version>>\")}}", () => {
+  describe ( "We should be able to process  {${projectDetails.guards.links:comma:map<<>>(i=>\"<<i>>\":\"<<version>>\")}}", () => {
     it ( "should only add a comma if the array is not empty", () => {
       expect ( derefence ( 'context', { ...dic, version: '1.2.3' },
         '{"one":1, ${array:comma:map<<>>(i=>"<<i>>":"<<version>>")}"two":2}', { variableDefn: dollarsBracesVarDefn } ) ).toEqual (

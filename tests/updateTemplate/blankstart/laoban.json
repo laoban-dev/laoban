@@ -20,8 +20,5 @@
         "echo three"
       ]
     }
-  },
-  "templates": {
-    "typescript": "templates/typescript"
   }
 }

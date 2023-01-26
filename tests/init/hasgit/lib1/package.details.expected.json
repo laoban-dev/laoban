@@ -2,14 +2,16 @@
   "template": "typescript",
   "name": "lib1",
   "description": "A test lib1",
-  "details": {
+  "packageJson": {
+    "dependencies": {},
+    "devDependencies": {},
+    "bins": {},
+    "keywords": []
+  },
+  "links": [],
+  "guards": {
     "compile": true,
     "publish": false,
-    "test": true,
-    "links": [],
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": []
+    "test": true
   }
 }

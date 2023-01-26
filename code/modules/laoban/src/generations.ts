@@ -5,6 +5,7 @@ import { uniqueLoops } from "@laoban/generations";
 import { topologicalSort, TopologicalSortTypeClasses } from "@laoban/generations";
 import { Debug } from "@laoban/debug";
 import { packageDetailsFile } from "./Files";
+import { safeArray } from "@laoban/utils";
 
 
 interface GenerationCalc {
@@ -19,7 +20,7 @@ export function calculateAllGenerations ( scds: ScriptInContextAndDirectory[] ):
 export const typeClassForTopologicalSort = ( debug: Debug ): TopologicalSortTypeClasses<ScriptInContextAndDirectory> => ({
   debug,
   name: ( g: ScriptInContextAndDirectory ): string => g.detailsAndDirectory.packageDetails.name,
-  children: ( g: ScriptInContextAndDirectory ): string[] => g.detailsAndDirectory.packageDetails.links,
+  children: ( g: ScriptInContextAndDirectory ): string[] => safeArray(g.detailsAndDirectory.packageDetails.links),
   loopMessage: ( gs, loops ) => {
     const message = uniqueLoops ( loops ).map ( l => `  ${l.join ( ' -> ' )}` ).join ( "\n" )
     throw Error ( `Cannot work out the 'order' for the project. There are 'cycles' in the project links:\n${message}` );

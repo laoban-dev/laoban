@@ -3,12 +3,15 @@ package.details.json {
   "template": "typescript",
   "name": "pck",
   "description": "",
-  "packageJson": {},
-  "details": {
+  "packageJson": {
+    "dependencies": {},
+    "devDependencies": {}
+  },
+  "links": [],
+  "guards": {
     "compile": true,
     "publish": false,
-    "test": true,
-    "links": []
+    "test": true
   }
 }
 Calling "laoban update"

@@ -4,9 +4,9 @@ Would put laoban.json into  <root>/detailsErrors  which allows the following tem
     typescript: '@laoban@/templates/typescript_405',
     typescript_react: '@laoban@/templates/typescript_react'
 }
-package.json           Guessed Template    Actual Template
-    projects/noDetails typescript          typescript
-    projects/noName    typescript          typescript
+package.json          Guessed Template    Actual Template
+    projects/noGuards typescript          typescript
+    projects/noName   typescript          typescript
 Suggested version number is  someversion
 run
 laoban admin analyze --showimpact

@@ -1,18 +1,15 @@
 {
-  "template"      : "typescript",
-  "name"          : "proj1",
-  "description"   : "A sample project",
+  "template":    "typescript",
+  "name":        "proj1",
+  "description": "A sample project",
   "packageJson": {
     "dependencies": {
       "someDep": "1.2"
     },
-    "bin": "bin/proj1"
+    "bin":          "bin/proj1"
   },
-  "details": {
-    "publish"     : true,
-    "links"       : [],
-    "extraDeps"   : {},
-    "extraDevDeps": {},
-    "extraBins": {}
+  "links":       [],
+  "guards":      {
+    "publish": true
   }
 }

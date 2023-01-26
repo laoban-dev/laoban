@@ -127,7 +127,7 @@ export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageActio
   const version = await updateVersionIfNeeded ( fileOps, config, cmd )
   return Promise.all ( pds.map ( async p => {
     const packageDetails = p.packageDetails
-    let lookupForJsonMergeInto = { ...config, version, packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
+    let lookupForJsonMergeInto = { ...config, version, packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails?.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
     return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
       copyTemplateDirectory ( fileOps, config,
         { ...p, version, properties: safeObject ( config.properties ) },

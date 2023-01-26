@@ -6,7 +6,7 @@ import { execute } from "./executors";
 import { parseJson } from "@laoban/fileops";
 import { fileOpsNode } from "@laoban/filesops-node";
 
-jest.setTimeout ( 15000 );
+jest.setTimeout ( 30000 );
 let experimental = false
 const fileOps = fileOpsNode ()
 

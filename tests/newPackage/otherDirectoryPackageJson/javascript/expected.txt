@@ -2,16 +2,17 @@ package.details.json {
   "template": "javascript",
   "name": "somename",
   "description": "some description",
-  "packageJson": {},
-  "details": {
+  "packageJson": {
+    "dependencies": {},
+    "devDependencies": {},
+    "bins": {},
+    "keywords": []
+  },
+  "links": [],
+  "guards": {
     "compile": false,
     "publish": false,
-    "test": true,
-    "links": [],
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": []
+    "test": true
   }
 }
 Calling "laoban update"

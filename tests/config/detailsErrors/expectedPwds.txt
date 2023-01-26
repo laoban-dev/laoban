@@ -1,4 +1,4 @@
 The following projects have errors in their project.details.json: <root>/detailsErrors/projects/detailsFileDoesntParse
-<root>/detailsErrors/projects/noDetails
+<root>/detailsErrors/projects/noGuards
 <root>/detailsErrors/projects/noName
 <root>/detailsErrors/projects/noTemplate

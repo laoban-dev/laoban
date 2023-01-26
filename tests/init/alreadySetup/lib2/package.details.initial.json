@@ -1,15 +1,9 @@
 {
-  "template": "typescript",
-  "name": "lib2",
+  "template":    "typescript",
+  "name":        "lib2",
   "description": "A test lib2",
-  "details": {
-    "publish": false,
-    "test": true,
-    "links": [],
-    "compile": true,
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": []
+  "links":       [],
+  "details":     {
+    "publish": false
   }
 }

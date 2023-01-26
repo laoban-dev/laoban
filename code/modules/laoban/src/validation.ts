@@ -59,10 +59,10 @@ function validatePackageDetails ( v: Validate<PackageDetails> ) {
   return v.isString ( "name" ).//
     isString ( "description" ).//
     isString ( "template" ).//
-    isObject ( "guards", validateDetails )
+    isObject ( "guards", validateGuards )
 }
 
-function validateDetails ( v: Validate<Guards> ) {
+function validateGuards ( v: Validate<Guards> ) {
   return v.isBoolean ( "publish", 'Should the project be published' )//
     // isArrayofObjects('links', v => v).//
     // optObject ( "extraDeps", v => v, 'These are added to package.json dependencies' ).//

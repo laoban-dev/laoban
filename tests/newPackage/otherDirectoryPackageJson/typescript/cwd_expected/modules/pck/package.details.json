@@ -2,15 +2,16 @@
   "template": "typescript",
   "name": "somename",
   "description": "some description",
-  "packageJson": {},
-  "details": {
+  "packageJson": {
+    "dependencies": {},
+    "devDependencies": {},
+    "bins": {},
+    "keywords": []
+  },
+  "links": [],
+  "guards": {
     "compile": true,
     "publish": false,
-    "test": true,
-    "links": [],
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": []
+    "test": true
   }
 }

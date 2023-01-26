@@ -1,12 +1,9 @@
 {
-  "template"      : "typescript",
-  "name"          : "projectName",
-  "description"   : "A sample project",
-  "details": {
-    "publish"     : true,
-    "links"       : [],
-    "extraDeps"   : {},
-    "extraDevDeps": {},
-    "extraBins": {}
+  "template":    "typescript",
+  "name":        "projectName",
+  "description": "A sample project",
+  "links":       [],
+  "guards":      {
+    "publish": true
   }
 }

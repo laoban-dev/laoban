@@ -1,11 +1,11 @@
 {
-  "template"      : "typescript",
-  "noname"          : "proj1",
-  "description"   : "A sample project",
-  "details": {
-    "publish"     : true,
-    "links"       : [],
-    "extraDeps"   : {},
+  "template":    "typescript",
+  "noname":      "proj1",
+  "description": "A sample project",
+  "links":       [],
+  "guards":      {
+    "publish":      true,
+    "extraDeps":    {},
     "extraDevDeps": {}
   }
 }

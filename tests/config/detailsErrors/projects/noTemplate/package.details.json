@@ -1,11 +1,11 @@
 {
-  "notemplate"      : "typescript",
-  "name"          : "proj2",
-  "description"   : "A simple implementation of lens using type script",
-  "details": {
-    "publish"     : true,
-    "links"       : [],
-    "extraDeps"   : {},
+  "notemplate":  "typescript",
+  "name":        "proj2",
+  "description": "A simple implementation of lens using type script",
+  "links":       [],
+  "guards":      {
+    "publish":      true,
+    "extraDeps":    {},
     "extraDevDeps": {}
   }
 }

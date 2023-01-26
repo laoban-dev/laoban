@@ -2,13 +2,9 @@
   "template":    "typescript",
   "name":        "projWithGuard",
   "description": "A sample project",
-  "details":     {
-    "publish":      true,
-    "links":        [],
-    "extraDeps":    {},
-    "extraDevDeps": {},
-    "extraBins":    {},
-    "guard":        true,
-    "valueGuard":   "A"
+  "guards":      {
+    "publish":    true,
+    "guard":      true,
+    "valueGuard": "A"
   }
 }

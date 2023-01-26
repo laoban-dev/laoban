@@ -2,11 +2,8 @@
   "template":    "typescript",
   "name":        "projWithoutGuard",
   "description": "A sample project",
-  "details":     {
-    "publish":      true,
-    "links":        [],
-    "extraDeps":    {},
-    "extraDevDeps": {},
-    "extraBins":    {}
+  "links":       [],
+  "guards":      {
+    "publish": true
   }
 }

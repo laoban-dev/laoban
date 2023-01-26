@@ -1,16 +1,10 @@
 {
-  "template": "typescript",
-  "name": "lib1",
+  "template":    "typescript",
+  "name":        "lib1",
   "description": "A test lib1",
-  "details": {
+  "links":       [],
+  "guards":      {
     "publish": false,
-    "test": true,
-    "links": [],
-    "compile": true,
-    "extraDeps": {},
-    "extraDevDeps": {},
-    "extraBins": {},
-    "keywords": [],
-    "some": "thing"
+    "some":    "thing"
   }
 }

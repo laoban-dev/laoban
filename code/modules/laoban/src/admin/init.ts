@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { combineTwoObjects, lastSegment, NameAnd, safeArray, safeObject } from "@laoban/utils";
+import { combineTwoObjects, deepCombineTwoObjects, lastSegment, NameAnd, safeArray, safeObject } from "@laoban/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./initStatus";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { laobanJsonLocations, } from "./fileLocations";
@@ -16,13 +16,7 @@ interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
   contents: any
 }
-function combineProjectDetailsJson ( i1: ProjectDetailsJson, i2: ProjectDetailsJson ): ProjectDetailsJson {
-  const combineDetails = ( i1: any, i2: any ): any => combineTwoObjects ( safeObject ( i1?.details ), safeObject ( i2?.details ) );
-  return {
-    variableFiles: { ...safeObject ( i1?.variableFiles ), ...safeObject ( i2?.variableFiles ) },
-    contents: { ...safeObject ( i1?.contents ), ...safeObject ( i2?.contents ), details: combineDetails ( i1?.contents, i2?.contents ) }
-  }
-}
+
 export interface InitFileContents {
   type: string
   location: string
@@ -38,7 +32,7 @@ export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends I
 const combineInitContents = ( type: string, summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
   return {
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
-    "package.details.json": combineProjectDetailsJson ( i1[ "package.details.json" ], i2[ "package.details.json" ] ),
+    "package.details.json":  deepCombineTwoObjects ( i1[ "package.details.json" ], i2[ "package.details.json" ] ),
     markers: safeArray ( i1.markers ).concat ( safeArray ( i2.markers ) ),
     location: `${i1.location} and ${i2.location}`,
     type
@@ -135,13 +129,13 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
 
   let projectDetails = initFileContents[ "package.details.json" ];
   const contents = projectDetails.contents
-  const details = contents.details || []
-  details[ "links" ] = links;
-  details[ "extraDeps" ] = deps;
-  details[ "extraDevDeps" ] = devDeps;
-  details[ "extraBins" ] = bins;
-  details[ "keywords" ] = keywords;
-  contents[ "details" ] = details;
+  const packageJsonSection = contents.packageJson || []
+  contents[ "links" ] = links;
+  packageJsonSection[ "dependencies" ] = deps;
+  packageJsonSection[ "devDependencies" ] = devDeps;
+  packageJsonSection[ "bins" ] = bins;
+  packageJsonSection[ "keywords" ] = keywords;
+  contents[ "packageJson" ] = packageJsonSection;
   const projectDetailsString = JSON.stringify ( contents, null, 2 )
   const directory = packageJsonDetails.directory;
   const dic: any = {}

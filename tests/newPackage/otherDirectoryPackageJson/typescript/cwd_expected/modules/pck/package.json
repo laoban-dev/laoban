@@ -2,18 +2,9 @@
   "name": "somename",
   "description": "some description",
   "version": "someversion",
-  "license": "MIT",
-  "repository": "git@github.com:phil-rice/laoban.git",
-  "files": [
-    "dist/index.js",
-    "dist/index.d.ts",
-    "dist/src/"
-  ],
   "main": "dist/index",
-  "scripts": {
-    "test": "jest --config jest.config.json",
-    "test:watch": "npm run test -- --watch"
-  },
+  "types": "dist/index",
+  "bins": {},
   "browserslist": {
     "development": [
       "last 1 chrome version",
@@ -26,7 +17,7 @@
       "not op_mini all"
     ]
   },
-  "types": "dist/index",
+  "dependencies": {},
   "devDependencies": {
     "typescript": "^4.0.5",
     "@types/node": "^14.14.7",
@@ -35,5 +26,17 @@
     "@testing-library/user-event": "^12.2.0",
     "jest": "^26.6.0",
     "ts-jest": "^26.4.4"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
+  ],
+  "keywords": [],
+  "license": "MIT",
+  "repository": "git@github.com:phil-rice/laoban.git",
+  "scripts": {
+    "test": "jest --config jest.config.json",
+    "test:watch": "npm run test -- --watch"
   }
 }

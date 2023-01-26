@@ -6,7 +6,9 @@
   "keywords":        [],
   "license":         "MIT",
   "repository":      "git@github.com:phil-rice/laoban.git",
-  "dependencies":    {},
+  "dependencies":    {
+    "lib1": "someversion"
+  },
   "devDependencies": {
     "typescript":                  "^4.0.0",
     "@types/node":                 "^14.14.7",
