@@ -2,6 +2,7 @@
   "template": "typescript",
   "name": "pck",
   "description": "",
+  "packageJson": {},
   "details": {
     "compile": true,
     "publish": false,

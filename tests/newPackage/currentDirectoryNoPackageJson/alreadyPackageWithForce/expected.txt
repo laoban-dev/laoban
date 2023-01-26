@@ -3,6 +3,7 @@ package.details.json {
   "template": "typescript",
   "name": "cwd",
   "description": "",
+  "packageJson": {},
   "details": {
     "compile": true,
     "publish": false,

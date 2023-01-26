@@ -2,6 +2,7 @@
   "template": "typescript",
   "name": "somename",
   "description": "some description",
+  "packageJson": {},
   "details": {
     "compile": true,
     "publish": false,

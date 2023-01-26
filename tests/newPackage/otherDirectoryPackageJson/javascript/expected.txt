@@ -2,6 +2,7 @@ package.details.json {
   "template": "javascript",
   "name": "somename",
   "description": "some description",
+  "packageJson": {},
   "details": {
     "compile": false,
     "publish": false,

@@ -1,19 +1,9 @@
 {
-  "name":        "somename",
+  "name": "somename",
   "description": "some description",
-  "version":     "someversion",
-  "bin":{
-    
-  },
-  "keywords": [],
+  "version": "someversion",
   "license": "MIT",
   "repository": "git@github.com:phil-rice/laoban.git",
-  "dependencies": {
-        
-  },
-  "devDependencies": {
-      
-  },
   "files": [
     "dist/index.js",
     "dist/index.d.ts",
