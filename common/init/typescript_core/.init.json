@@ -15,6 +15,7 @@
   },
   "package.details.json": {
     "template":      "typescript",
+    "templatex":      "typescript",
     "guardfile":     "project.json",
     "variableFiles": {"packageJson": "project.json"},
     "contents":      {
