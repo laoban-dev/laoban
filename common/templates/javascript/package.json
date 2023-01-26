@@ -2,21 +2,8 @@
   "name":        "${packageDetails.name}",
   "description": "${packageDetails.description}",
   "version":     "${version}",
-  "bin":{
-    ${packageDetails.details.extraBins:object:indent4}
-  },
-  "keywords": [${packageDetails.details.keywords:map<<>>(kw=>"<<kw>>")}],
   "license": "${properties.license}",
   "repository": "${properties.repository}",
-  "dependencies": {
-        ${compose(
-            packageDetails.details.extraDeps:object:indent4,
-            packageDetails.details.links:map<<>>(i=>"<<i>>": "<<version>>")
-         )}
-  },
-  "devDependencies": {
-      ${packageDetails.details.extraDevDeps:object:indent4}
-  },
   "files": [
     "dist/index.js",
     "dist/index.d.ts",

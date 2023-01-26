@@ -126,12 +126,14 @@ export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageActio
   const allowSamples = cmd.allowsamples
   const version = await updateVersionIfNeeded ( fileOps, config, cmd )
   return Promise.all ( pds.map ( async p => {
+    const packageDetails = p.packageDetails
     return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
       copyTemplateDirectory ( fileOps, config,
         { ...p, version, properties: safeObject ( config.properties ) },
         {
           allowSamples, dryrun: cmd.dryrun,
           postProfessFn: defaultPostProcessors,
+          lookupForJsonMergeInto:{packageDetails},
           tx: includeAndTransformFile ( `updating ${p.directory}`, { ...config, version, packageDetails: p.packageDetails }, fileOps )
         } ) )
     // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOpsNode.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )

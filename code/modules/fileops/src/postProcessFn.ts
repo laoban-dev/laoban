@@ -29,8 +29,8 @@ function fileName ( f: FileNameAndOrPart ): string {
   return isFileAndPart ( f ) ? f.file : f
 }
 export const partToMerge = ( context: string, fileOps: FileOps, tx: TransformTextFn | undefined, dic: NameAnd<any> ) => async ( fileCmd: string ): Promise<any> => {
-  if ( typeof fileCmd === 'string' && fileCmd.startsWith ( '$.' ) ) {
-    let result = findPart ( dic, fileCmd.slice ( 2 ) );
+  if ( typeof fileCmd === 'string' && fileCmd.startsWith ( '$' ) ) {
+    let result = findPart ( dic, fileCmd.slice ( 1 ) );
     if ( result === undefined ) throw Error ( `${context} Ccould not find ${fileCmd} in ${JSON.stringify ( dic )}` )
     return result
   }

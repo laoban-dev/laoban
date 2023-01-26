@@ -5,15 +5,22 @@ import fs from "fs";
 import { execute } from "./executors";
 import { parseJson } from "@laoban/fileops";
 import { fileOpsNode } from "@laoban/filesops-node";
-jest.setTimeout(15000);
-let experimental = false
 
+jest.setTimeout ( 15000 );
+let experimental = false
+const fileOps = fileOpsNode ()
+
+async function clean ( testDir: string ) {
+  await fileOps.removeDirectory ( fileOps.join ( testDir, '.cache' ), true )
+  await fileOps.removeDirectory ( fileOps.join ( testDir, '.session' ), true )
+}
 function doPwd ( cmd: string, expectedFile: string ) {
-  let displayCmd = cmd.split(' ').filter( s=> s.length>0).slice(2).join(' ');
-  describe (  displayCmd, () => {
+  let displayCmd = cmd.split ( ' ' ).filter ( s => s.length > 0 ).slice ( 2 ).join ( ' ' );
+  describe ( displayCmd, () => {
     dirsIn ( configTestRoot ).map ( d => path.join ( configTestRoot, d ) ).map ( testDir => {
       let expected = toArrayReplacingRoot ( configTestRoot, fs.readFileSync ( path.join ( testDir, expectedFile ) ).toString () )
       it ( `should return ${expectedFile} when ${displayCmd} is run in ${path.parse ( testDir ).name}. Fullname${testDir}`, async () => {
+          await clean ( testDir );
           await (experimental ?
             await executeCli ( testDir, cmd ).then ( actual => expect ( toArrayReplacingRoot ( configTestRoot, actual ) ).toEqual ( expected ) ) :
             await execute ( testDir, cmd ).then ( result => {
@@ -28,6 +35,8 @@ function doPwd ( cmd: string, expectedFile: string ) {
                 throw e
               }
             } ))
+          await clean ( testDir );
+
         }
       )
     } )
