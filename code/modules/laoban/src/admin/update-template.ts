@@ -54,9 +54,10 @@ function transformTemplate ( fileOps: FileOps, td: TemplateDetailsAndContent, er
     if ( typeof f === 'string' ) return { file: file.replace ( /\\/g, '/' ), target: f }
     const newFileName = addPrefixIfFile ( fileOps, templateDirUrl, fileName ).replace ( /\\/g, '/' );
     function getPostProcessAddingToOriginal ( f: TemplateFileDetails ) {
-      const modified = toArray ( f.postProcess ).map ( p => p.includes ( 'jsonMergeInto' ) ? p.replace ( ')', `,${templateDirUrl}/package.json)` ) : p )
-      if ( modified.find ( p => p.includes ( 'jsonMergeInto' ) ) ) return singleOrArrayOrUndefined ( modified )
-      return singleOrArrayOrUndefined ( [ ...modified, `jsonMergeInto(${templateDirUrl}/package.json)` ] )
+      const isReference = ( p: string ) => p.startsWith ( 'jsonMergeInto' ) || p.startsWith ( 'packageJson(' );
+      const modified = toArray ( f.postProcess ).map ( p => isReference ( p ) ? p.replace ( ')', `,${templateDirUrl}/package.json)` ) : p )
+      if ( modified.find ( isReference ) ) return singleOrArrayOrUndefined ( modified )
+      return singleOrArrayOrUndefined ( [ ...modified, `packageJson(${templateDirUrl}/package.json)` ] )
     }
     if ( target === 'package.json' ) {
       if ( isUrl ( file ) ) return {
@@ -79,7 +80,7 @@ async function loadOriginalAndCurrentPackageJson ( fileOps: FileOps, directory: 
   const packageJson = parseJson<any> ( `Loading ${packageJsonFileName}` ) ( packageJsonString )
 
   const loadOriginalJsonContext = `Loading original package`
-  const { postProcessed } = await loadFileFromDetails ( loadOriginalJsonContext, fileOps, templateDirUrl, {tx:includeAndTransformFile ( loadOriginalJsonContext, {}, fileOps )}, originalTemplatePackageCfd )
+  const { postProcessed } = await loadFileFromDetails ( loadOriginalJsonContext, fileOps, templateDirUrl, { tx: includeAndTransformFile ( loadOriginalJsonContext, {}, fileOps ) }, originalTemplatePackageCfd )
   const originalPackageJson = parseJson<any> ( `Loading ${JSON.stringify ( originalTemplatePackageCfd )}` ) ( postProcessed )
   return { originalPackageJson, packageJson };
 }
@@ -122,7 +123,7 @@ export async function updateTemplate ( { fileOps, cmd, currentDirectory, params,
       const templateFile = parse ( asString );
       const originalTemplate = templateFile.files.find ( f => targetFrom ( f ) === 'package.json' )
       if ( originalTemplate === undefined ) throw Error ( `There is no package.json defined in the template file ${templateDirUrl}\n${JSON.stringify ( templateFile )}` )
-      const result = parse(await fileOps.loadFileOrUrl ( fileOps.join ( templateDirUrl, fileNameFrom ( originalTemplate ) ) ))
+      const result = parse ( await fileOps.loadFileOrUrl ( fileOps.join ( templateDirUrl, fileNameFrom ( originalTemplate ) ) ) )
       return result
     }
     return {}

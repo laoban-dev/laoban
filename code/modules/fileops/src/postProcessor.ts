@@ -79,17 +79,20 @@ export function chainPostProcessFn ( ...ps: PostProcessor[] ): PostProcessor {
   }
 }
 
-export function doAllPostProcessor ( matcher: RegExp, p: PostProcessor, cmds: (cmd: string) =>string[] ): PostProcessor {
+export function doAllPostProcessor ( matcher: RegExp, p: PostProcessor, cmds: ( cmd: string ) => string[] ): PostProcessor {
   return postProcessor ( matcher,
-    ( context, fileOps, copyFileOptions, cfd ) => async ( text, postProcessCmd: string ) =>
-      foldK ( cmds(postProcessCmd), text, ( t, cmd ) => applyOrOriginal ( p ) ( context, fileOps, copyFileOptions, cmd ) ( postProcessCmd, t ) )
+    ( context, fileOps, copyFileOptions, cfd ) => async ( text, postProcessCmd: string ) => {
+      let commands = cmds ( postProcessCmd );
+      let fn = applyOrOriginal ( p ) ( context, fileOps, copyFileOptions, cfd );
+      return foldK ( commands, text, ( t, cmd ) => fn ( t, cmd ) );}
   )
 }
 
 
 export const applyOrOriginal = ( p: PostProcessor ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: string ) => {
   let applicable = p.applicable ( postProcessCmd );
-  return applicable ? p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : text;}
+  return applicable ? p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : text;
+}
 export const applyOrUndefined = ( p: PostProcessor ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: string ) =>
   p.applicable ( postProcessCmd ) ? p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : undefined
 

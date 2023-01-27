@@ -12,10 +12,7 @@
     {
       "file": "package.json",
       "type": "${}",
-      "postProcess": [
-        "jsonMergeInto(@laoban@/templates/javascript/package.json,$packageDetails.packageJson,$links,@laoban@/templates/typescript_405/package.json)",
-        "packageJsonSort"
-      ]
+      "postProcess": "packageJson(@laoban@/templates/javascript/package.json,@laoban@/templates/typescript_405/package.json)"
     },
     {
       "file": "@laoban@/templates/typescript_405/tsconfig.json",

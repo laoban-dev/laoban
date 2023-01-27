@@ -15,6 +15,7 @@ async function cleanUpDirectory ( fileOps: FileOps, testDir: string, cleanTempla
   const laoban = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, 'laoban.starting.json' ) )
   await fileOps.saveFile ( fileOps.join ( testDir, 'laoban.json' ), laoban )
   const templatesDir = fileOps.join ( testDir, 'templates', 'typescript' );
+  await fileOps.removeDirectory ( fileOps.join ( testDir, '.cache' ), true )
   if ( cleanTemplates ) await fileOps.removeDirectory ( templatesDir, true )
   const startTemplateDir = fileOps.join ( testDir, 'startTemplates', 'typescript' )
   if ( await fileOps.isDirectory ( startTemplateDir ) ) {

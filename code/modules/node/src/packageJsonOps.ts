@@ -25,15 +25,15 @@ export const postProcessPackageJsonSort: PostProcessor = postProcessor ( /^packa
       return JSON.stringify ( sorted, null, 2 )
     } )
 
-const packageJsonMatcher = /^packageJson\(.*\)$/;
+const packageJsonMatcher = /^packageJson\((.*)\)$/;
 export const postProcessPackageJson: PostProcessor = doAllPostProcessor (
   packageJsonMatcher,
   chainPostProcessFn ( defaultPostProcessors, postProcessPackageJsonSort ),
   ( cmd ) => {
     const files = cmd.match ( packageJsonMatcher )?.[ 1 ]
-    if ( !files ) throw Error ( `packageJson command must have a file list: ${cmd} - software error` )
-    const comma = files.length === 0 ? '' : ','
-    return [ `jsonMergeInto(${files}${comma}$packageDetails.packageJson,$links)`, "packageJsonSort" ];
+    const filesString = files ? files : ''
+    const comma = filesString.length === 0 ? '' : ','
+    return [ `jsonMergeInto(${filesString}${comma}$packageDetails.packageJson,$links)`, "packageJsonSort" ];
   } )
 
 
