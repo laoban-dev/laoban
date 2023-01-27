@@ -4,7 +4,7 @@ import { simplePath } from "@laoban/fileops";
 import { testRoot, toArrayReplacingRoot } from "../fixture";
 import { execute } from "../executors";
 import { findLaobanUpOrDown } from "./init";
-import { compareExpectedActualFiles } from "./compareExpectedActualFiles";
+import { compareExpectedActualFiles } from "@laoban/comparefiles";
 
 const path = simplePath // so that we don't get windows/linux path issues in our tests
 const fileOps = fileOpsNode()

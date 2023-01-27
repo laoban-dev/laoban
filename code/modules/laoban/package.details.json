@@ -24,9 +24,10 @@
     "@laoban/validation",
     "@laoban/debug",
     "@laoban/node",
-    "@laoban/filesops-node"
+    "@laoban/filesops-node",
+    "@laoban/comparefiles"
   ],
-  "guards":     {
+  "guards":      {
     "publish": true,
     "test":    true,
     "compile": true

@@ -1,5 +1,6 @@
-import { deepCombineTwoObjects, NameAnd, objectSortedByKeysWithPriority } from "@laoban/utils";
-import { composePostProcessFn, FileOps, parseJson, PostProcessFn } from "@laoban/fileops";
+import { NameAnd, objectSortedByKeysWithPriority } from "@laoban/utils";
+import { chainPostProcessFn, defaultPostProcessors, doAllPostProcessor, parseJson, PostProcessor } from "@laoban/fileops";
+import { postProcessor } from "@laoban/fileops/dist/src/postProcessor";
 
 function turnPackageJsonIntoTemplate ( text: string ) {
   const packageJson = JSON.parse ( text );
@@ -12,17 +13,28 @@ function turnPackageJsonIntoTemplate ( text: string ) {
   return JSON.stringify ( packageJson, null, 2 )
 }
 
-export const postProcessTurnPackageJsonIntoTemplate: PostProcessFn = () =>
-  async ( text: string, p: string ): Promise<string> => { if ( p === 'turnIntoPackageJsonTemplate' ) return turnPackageJsonIntoTemplate ( text ); }
+export const postProcessTurnPackageJsonIntoTemplate: PostProcessor = postProcessor ( /^turnIntoPackageJsonTemplate$/, () =>
+  async ( text: string, p: string ): Promise<string> => { if ( p === 'turnIntoPackageJsonTemplate' ) return turnPackageJsonIntoTemplate ( text ); } )
 
 
-export const postProcessPackageJsonSort: PostProcessFn = () =>
-  async ( text: string, p: string ): Promise<string> => {
-    if ( p === 'packageJsonSort' ) {
+export const postProcessPackageJsonSort: PostProcessor = postProcessor ( /^packageJsonSort$/,
+  () =>
+    async ( text: string, p: string ): Promise<string> => {
       const json = parseJson<NameAnd<any>> ( 'packageJsonSort' ) ( text )
-      const sorted = objectSortedByKeysWithPriority ( json, "name", "description", "version" , "main", "types")
+      const sorted = objectSortedByKeysWithPriority ( json, "name", "description", "version", "main", "types" )
       return JSON.stringify ( sorted, null, 2 )
-    }
-  }
+    } )
 
-export const postProcessForPackageJson = postProcessPackageJsonSort
+const packageJsonMatcher = /^packageJson\(.*\)$/;
+export const postProcessPackageJson: PostProcessor = doAllPostProcessor (
+  packageJsonMatcher,
+  chainPostProcessFn ( defaultPostProcessors, postProcessPackageJsonSort ),
+  ( cmd ) => {
+    const files = cmd.match ( packageJsonMatcher )?.[ 1 ]
+    if ( !files ) throw Error ( `packageJson command must have a file list: ${cmd} - software error` )
+    const comma = files.length === 0 ? '' : ','
+    return [ `jsonMergeInto(${files}${comma}$packageDetails.packageJson,$links)`, "packageJsonSort" ];
+  } )
+
+
+export const postProcessForPackageJson = chainPostProcessFn ( postProcessPackageJsonSort, postProcessPackageJson )

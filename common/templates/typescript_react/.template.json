@@ -13,7 +13,7 @@
     {
       "file":        "package.json",
       "type":        "${}",
-      "postProcess": "jsonMergeInto(@laoban@/templates/javascript/package.json,@laoban@/templates/typescript_405/package.json)"
+      "postProcess": "packageJson(@laoban@/templates/javascript/package.json,@laoban@/templates/typescript_405/package.json)"
     },
     "tsconfig.json"
   ]

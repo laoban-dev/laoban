@@ -5,7 +5,7 @@
   "links":       ["@laoban/fileops"],
   "guards":     {
     "compile": true,
-    "publish": false,
+    "publish": true,
     "test":    true
   }
 }

@@ -1,7 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { DebugCommands } from "@laoban/debug";
 import { allButLastSegment, NameAnd, safeArray } from "@laoban/utils";
-import { PostProcessFn } from "./postProcessFn";
+import { applyOrOriginal, PostProcessor } from "./postProcessor";
 
 
 export const shortCuts: NameAnd<string> = { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' };
@@ -171,14 +171,13 @@ export interface TemplateFileDetails {
 
 async function postProcess ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, t: CopyFileDetails, text: string ): Promise<string> {
   if ( !isTemplateFileDetails ( t ) ) return text
-  const { postProfessFn } = copyFileOptions
-  if ( !postProfessFn ) return text
-  const folder = postProfessFn ( context, fileOps, copyFileOptions, t );
+  const { postProcessor } = copyFileOptions
+  if ( !postProcessor ) return text
+  const folder = applyOrOriginal(postProcessor) ( context, fileOps, copyFileOptions, t );
   return safeArray ( t.postProcess ).reduce ( ( accP: Promise<string>, v ) => {
     return accP.then ( acc => folder ( acc, v ) );
   }, Promise.resolve ( text ) )
 }
-
 
 export function isTemplateFileDetails ( t: CopyFileDetails ): t is TemplateFileDetails {
   const a: any = t
@@ -205,7 +204,7 @@ export interface CopyFileOptions {
   dryrun?: boolean
   tx?: TransformTextFn
   allowSample?: boolean
-  postProfessFn?: PostProcessFn
+  postProcessor?: PostProcessor
   lookupForJsonMergeInto?: NameAnd<any>
 }
 export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, options: CopyFileOptions, cfd: string | TemplateFileDetails ) {

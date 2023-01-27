@@ -5,8 +5,8 @@ import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables
 import { loadVersionFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 import { fromEntries, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
-import { combineTransformFns, composePostProcessFn, CopyFileDetails, CopyFileOptions, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, TransformTextFn } from "@laoban/fileops";
-import { defaultPostProcessors } from "@laoban/fileops/dist/src/postProcessFn";
+import { combineTransformFns, chainPostProcessFn, CopyFileDetails, CopyFileOptions, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, TransformTextFn, defaultPostProcessors } from "@laoban/fileops";
+
 import { postProcessForPackageJson } from "@laoban/node";
 
 
@@ -133,7 +133,7 @@ export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageActio
         { ...p, version, properties: safeObject ( config.properties ) },
         {
           allowSamples, dryrun: cmd.dryrun,
-          postProfessFn: composePostProcessFn ( defaultPostProcessors, postProcessForPackageJson ),
+          postProcessor: chainPostProcessFn ( defaultPostProcessors, postProcessForPackageJson ),
           lookupForJsonMergeInto,
           tx: includeAndTransformFile ( `updating ${p.directory}`, lookupForJsonMergeInto, fileOps )
         } ) )

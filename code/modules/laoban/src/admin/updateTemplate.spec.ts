@@ -1,7 +1,7 @@
 import { fileOpsNode } from '@laoban/filesops-node'
 import { testRoot } from "../fixture";
 import { execute } from "../executors";
-import { compareExpectedActualFiles } from "./compareExpectedActualFiles";
+import { compareExpectedActualFiles } from "@laoban/comparefiles";
 import { copyFiles, FileOps } from "@laoban/fileops";
 import { cleanLineEndings } from "@laoban/utils";
 import { NullDebugCommands } from "@laoban/debug";
@@ -18,7 +18,7 @@ async function cleanUpDirectory ( fileOps: FileOps, testDir: string, cleanTempla
   if ( cleanTemplates ) await fileOps.removeDirectory ( templatesDir, true )
   const startTemplateDir = fileOps.join ( testDir, 'startTemplates', 'typescript' )
   if ( await fileOps.isDirectory ( startTemplateDir ) ) {
-    await fileOps.createDir(templatesDir)
+    await fileOps.createDir ( templatesDir )
     const cf = copyFiles ( '', fileOps, NullDebugCommands, startTemplateDir, templatesDir, {} )
     const files = await fileOps.listFiles ( startTemplateDir );
     await cf ( files )
@@ -26,7 +26,7 @@ async function cleanUpDirectory ( fileOps: FileOps, testDir: string, cleanTempla
 }
 async function testIt ( directory: string, cleanTemplates: boolean ) {
   const testDir = fileOps.join ( updateTemplateTestRoot, directory );
-  cleanUpDirectory ( fileOps, testDir, cleanTemplates )
+  await cleanUpDirectory ( fileOps, testDir, cleanTemplates )
   const actualDisplay = await execute ( testDir, `${prefix} admin updatetemplate --directory package` )
 
   // expect ( actual ).toEqual ( `Updated template in ${fileOps.join ( updateTemplateTestRoot, directory, 'package' )}` )

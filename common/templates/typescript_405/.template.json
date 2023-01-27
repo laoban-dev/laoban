@@ -12,7 +12,7 @@
     {
       "file":        "package.json",
       "type":        "${}",
-      "postProcess": ["jsonMergeInto(@laoban@/templates/javascript/package.json,$packageDetails.packageJson,$links)", "packageJsonSort"]
+      "postProcess": "packageJson(@laoban@/templates/javascript/package.json)"
     },
     "tsconfig.json",
     {"file": "@laoban@/templates/typescript/index.ts", "sample": true, "target": "index.ts"}

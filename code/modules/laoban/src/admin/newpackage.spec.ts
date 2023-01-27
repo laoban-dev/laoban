@@ -2,7 +2,7 @@ import { copyDirectory, inDirectoryFileOps, simplePath } from "@laoban/fileops";
 import { fileOpsNode } from "@laoban/filesops-node";
 import { testRoot } from "../fixture";
 import { execute } from "../executors";
-import { compareExpectedActualFile, compareExpectedActualFileInDirectory, compareExpectedActualFiles } from "./compareExpectedActualFiles";
+import { compareExpectedActualFiles } from "@laoban/comparefiles"
 import { cleanLineEndings } from "@laoban/utils";
 
 const path = simplePath // so that we don't get windows/linux path issues in our tests

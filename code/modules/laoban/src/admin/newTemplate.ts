@@ -79,7 +79,7 @@ async function createNeededDirectoriesForFilesNames ( copyFileDetails: string[],
 }
 async function copyTemplateFilesToTemplate ( fileOps: FileOps, directory: string, target: string, cmd: CreateTemplateOptions, copyFileDetails: string[] ) {
   const cf = copyFiles ( `Copying files to template ${target}`, fileOps, NullDebugCommands, directory, target,
-    { tx: async ( type, text ) => text, dryrun: cmd.dryrun , postProfessFn: postProcessTurnPackageJsonIntoTemplate} )
+    { tx: async ( type, text ) => text, dryrun: cmd.dryrun , postProcessor: postProcessTurnPackageJsonIntoTemplate} )
   const copyFileDetailsWithPackageJsonSpecial: CopyFileDetails[] = copyFileDetails.map ( file =>
     lastSegment ( file ) === 'package.json' ? { file, postProcess: "turnIntoPackageJsonTemplate" } : file )
 

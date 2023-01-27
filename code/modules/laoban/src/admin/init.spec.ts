@@ -1,9 +1,10 @@
 import { fileOpsNode } from "@laoban/filesops-node";
 import { testRoot } from "../fixture";
 import { execute } from "../executors";
-import { compareExpectedActualFileInDirectory } from "./compareExpectedActualFiles";
+
 import { cleanLineEndings } from "@laoban/utils";
 import { inDirectoryFileOps } from "@laoban/fileops/src/fileOps";
+import { compareExpectedActualFileInDirectory } from "@laoban/comparefiles";
 
 jest.setTimeout(30000);
 const fileOps = fileOpsNode ();
