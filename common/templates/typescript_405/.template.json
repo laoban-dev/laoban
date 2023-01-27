@@ -12,7 +12,7 @@
     {
       "file":        "package.json",
       "type":        "${}",
-      "postProcess": "packageJson()"
+      "postProcess": "packageJson(@laoban@/templates/javascript/package.json)"
     },
     "tsconfig.json",
     {"file": "@laoban@/templates/typescript/index.ts", "sample": true, "target": "index.ts"}

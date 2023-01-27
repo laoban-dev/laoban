@@ -1,0 +1,10 @@
+{
+  "parent": {"src": "@laoban@/templates/javascript", "delete": ["index.js"]},
+  "files":  {
+    ".npmrc":           {"file": "@laoban@/templates/typescript/.npmrc", "postProcess": "checkEnv(NPM_TOKEN)"},
+    "jest.config.json": {"file": "@laoban@/templates/typescript/jest.config.json"},
+    "tsconfig.json":    {},
+    "index.ts":         {"sample": true, "file": "@laoban@/templates/typescript/index.ts"}
+  }
+}
+
