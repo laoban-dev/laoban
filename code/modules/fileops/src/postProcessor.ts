@@ -84,8 +84,8 @@ export function doAllPostProcessor ( matcher: RegExp, p: PostProcessor, cmds: ( 
     ( context, fileOps, copyFileOptions, cfd ) => async ( text, postProcessCmd: string ) => {
       let commands = cmds ( postProcessCmd );
       let fn = applyOrOriginal ( p ) ( context, fileOps, copyFileOptions, cfd );
-      return foldK ( commands, text, ( t, cmd ) => fn ( t, cmd ) );}
-  )
+      return foldK ( commands, text, async ( t, cmd ) => await fn ( t, cmd ) );
+    } )
 }
 
 

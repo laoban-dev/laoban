@@ -173,7 +173,7 @@ async function postProcess ( context: string, fileOps: FileOps, copyFileOptions:
   if ( !isTemplateFileDetails ( t ) ) return text
   const { postProcessor } = copyFileOptions
   if ( !postProcessor ) return text
-  const folder = applyOrOriginal(postProcessor) ( context, fileOps, copyFileOptions, t );
+  const folder = applyOrOriginal ( postProcessor ) ( context, fileOps, copyFileOptions, t );
   return safeArray ( t.postProcess ).reduce ( ( accP: Promise<string>, v ) => {
     return accP.then ( acc => folder ( acc, v ) );
   }, Promise.resolve ( text ) )

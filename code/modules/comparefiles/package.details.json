@@ -9,7 +9,7 @@
   "links": ["@laoban/fileops", "@laoban/utils"],
   "guards": {
     "compile": true,
-    "publish": false,
+    "publish": true,
     "test": false
   }
 }

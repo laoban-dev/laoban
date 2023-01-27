@@ -60,6 +60,7 @@ function transformTemplate ( fileOps: FileOps, td: TemplateDetailsAndContent, er
       return singleOrArrayOrUndefined ( [ ...modified, `packageJson(${templateDirUrl}/package.json)` ] )
     }
     if ( target === 'package.json' ) {
+      console.log('package.json')
       if ( isUrl ( file ) ) return {
         ...f,
         file: 'package.json',
