@@ -1,4 +1,4 @@
-import { FileOps } from "@laoban/fileops";
+import { CopyFileOptions, FileOps } from "@laoban/fileops";
 import { Writable } from "stream";
 
 export interface ShortActionParams<Cmd> {
@@ -10,4 +10,5 @@ export interface ShortActionParams<Cmd> {
 export interface ActionParams<Cmd> extends ShortActionParams<Cmd> {
   params: string[],
   outputStream: Writable
+  copyOptions: CopyFileOptions
 }

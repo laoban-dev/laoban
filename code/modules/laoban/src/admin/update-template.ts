@@ -1,9 +1,9 @@
 import { ActionParams } from "./types";
 import { ConfigWithDebug } from "../config";
 import { loabanConfigName, packageDetailsFile } from "../Files";
-import { addPrefixIfFile, CopyFileDetails, fileNameFrom, FileOps, isFilename, isTemplateFileDetails, isUrl, loadFileFromDetails, LocationAndContents, parseJson, saveAll, targetFrom, TemplateFileDetails } from "@laoban/fileops";
+import { addPrefixIfFile, CopyFileDetails, fileNameFrom, FileOps, isFilename, isTemplateFileDetails, isUrl, loadFileFromDetails, LocationAndContents, parseJson, saveAll, targetFrom, TemplateControlFile, TemplateFileDetails } from "@laoban/fileops";
 import { getTemplateJsonFileName } from "./newTemplate";
-import { includeAndTransformFile, TemplateControlFile } from "../update";
+import { includeAndTransformFile } from "../update";
 import { deepCombineTwoObjects, jsonDelta, JsonDeltaOptions, NameAnd, singleOrArrayOrUndefined, toArray } from "@laoban/utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { loadConfigForAdmin } from "./laoban-admin";

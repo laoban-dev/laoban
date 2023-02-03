@@ -5,9 +5,10 @@ import { derefence, dollarsBracesVarDefn, mustachesVariableDefn, VariableDefn } 
 import { loadVersionFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 import { fromEntries, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
-import { combineTransformFns, chainPostProcessFn, CopyFileDetails, CopyFileOptions, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, TransformTextFn, defaultPostProcessors } from "@laoban/fileops";
+import { combineTransformFns, chainPostProcessFn, CopyFileDetails, CopyFileOptions, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, TransformTextFn, defaultPostProcessors, TemplateControlFile } from "@laoban/fileops";
 
 import { postProcessForPackageJson } from "@laoban/node";
+import { findPart } from "@laoban/utils/dist/src/dotLanguage";
 
 
 interface UpdateCmdOptions {
@@ -30,9 +31,7 @@ interface UpdateCmdOptions {
 //     return d.k ( () => `${p.directory} savePackageJsonFile`, () => savePackageJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.packageDetails ) ) )
 //   } )
 // }
-export interface TemplateControlFile {
-  files: CopyFileDetails[]
-}
+
 export const includeFiles = ( fileOps: FileOps ): TransformTextFn => async ( type: string, text: string ): Promise<string> => {
   let regExp = /\${include\(([^)]*)\)/g;
   const includes = text.match ( regExp )
@@ -72,9 +71,8 @@ export async function loadTemplateControlFile ( context: string, fileOps: FileOp
 
 
 export const loadOneFileFromTemplateControlFileDetails = ( context: string, fileOps: FileOps, templateControlFileUrl: string, options: CopyFileOptions ) => async ( file: string ): Promise<string> => {
-
   const controlFile: TemplateControlFile = await loadTemplateControlFile ( context, fileOps, undefined, templateControlFileUrl )
-  const cfd = controlFile.files.find ( cfd => fileNameFrom ( cfd ) === file )
+  const cfd = findPart ( controlFile.files, file )
   if ( cfd === undefined ) throw Error ( `${context}. Cannot find ${file} in file ${templateControlFileUrl}\nControl file is ${JSON.stringify ( controlFile, null, 2 )}` )
   const { target, postProcessed } = await loadFileFromDetails ( context, fileOps, templateControlFileUrl, options, cfd )
   return postProcessed

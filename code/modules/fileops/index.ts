@@ -6,3 +6,5 @@ export * from "./src/cachedFileOps";
 export * from "./src/childFiles";
 export * from "./src/findFile";
 export * from "./src/postProcessor";
+export * from "./src/copyFiles";
+export * from "./src/loadTemplateControlFile";

@@ -3,7 +3,7 @@ import { NameAnd } from "@laoban/utils";
 import { gatherInitData, init, InitData, isSuccessfulInitData } from "./init";
 import { analyze } from "./analyze";
 import { newPackage } from "./newPackage";
-import { FileOps } from "@laoban/fileops";
+import { CopyFileOptions, FileOps } from "@laoban/fileops";
 import { makeIntoTemplate, newTemplate, updateAllTemplates } from "./newTemplate";
 import { loabanConfigTestName, PackageDetailFiles, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ConfigAndIssues, ConfigWithDebug } from "../config";
@@ -17,6 +17,7 @@ import { ActionParams } from "./types";
 import { CommanderStatic } from "commander";
 import { updateTemplate, updateTemplateOptions } from "./update-template";
 import { postCommand } from "../postCommand";
+import { ErrorsAnd, hasErrors } from "@laoban/utils/dist/src/errors";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -73,10 +74,10 @@ async function config ( { fileOps, cmd, currentDirectory, params, outputStream }
 }
 
 
-async function validate ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
+async function validate ( { fileOps, cmd, currentDirectory, params, outputStream, copyOptions }: ActionParams<any> ): Promise<void> {
   const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
   const pds = await PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
-  const issues = await validatePackageDetailsAndTemplates ( fileOps, config, pds )
+  const issues = await validatePackageDetailsAndTemplates ( fileOps, config, copyOptions, pds )
   await abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } )
 }
 
@@ -85,7 +86,11 @@ async function templates ( { fileOps, cmd, currentDirectory, params, outputStrea
   if ( configAndIssues.config ) {
     console.log ( 'templates', configAndIssues.config.templates )
   } else {
-    const initData: InitData = await gatherInitData ( fileOps, currentDirectory, cmd, false );
+    const initData: ErrorsAnd<InitData> = await gatherInitData ( fileOps, currentDirectory, cmd, false );
+    if ( hasErrors ( initData ) ) {
+      console.log ( 'Could not successfully load the init data' )
+      return reportError ( initData )
+    }
     if ( isSuccessfulInitData ( initData ) ) {
       console.log ( 'templates', initData.parsedLaoBan.templates )
     } else {
@@ -100,7 +105,7 @@ export class LaobanAdmin {
   private params: string[];
   private program: any;
   private parsed: any;
-  public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[], outputStream: Writable ) {
+  public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[], outputStream: Writable, copyFileOptions: CopyFileOptions ) {
     this.params = params;
     let program = require ( 'commander' )
     this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' ).option ( '--load.laoban.debug' )
@@ -135,7 +140,7 @@ export class LaobanAdmin {
       .option ( '-d,--desc <desc>', 'The description of the package, defaults to an empty string' )
       .option ( '--nuke', 'If the directory already exists, it will be deleted and recreated', false )
       .option ( '--force', 'Will create even if the package already exists ', false )
-      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd, params, outputStream ).then ( postCommand ( program, fileOps ) ) )
+      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, copyFileOptions, cmd, params, outputStream ).then ( postCommand ( program, fileOps ) ) )
 
     addCommand ( 'newtemplate', `Creates a templates from the specified directory (copies files to template dir). It will usually make far too many files!`, newTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )

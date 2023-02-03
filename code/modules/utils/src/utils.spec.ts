@@ -78,6 +78,13 @@ describe ( 'level1CombineTwoObjects', () => {
         "p": 2
       } )
     } )
+    it ( "should combine objects by appending arrays", () => {
+      expect ( deepCombineTwoObjects ( { a: [ 1, 2 ] }, { a: [ 3, 4 ] } ) ).toEqual ( { a: [ 1, 2, 3, 4 ] } )
+      expect ( deepCombineTwoObjects ( { a: { b: [ 1, 2 ] } }, { a: { b: [ 3, 4 ] } } ) ).toEqual ( {
+        "a": { "b": [ 1, 2, 3, 4 ] }
+      } )
+    } )
+
   }
 )
 describe ( "foldK", () => {

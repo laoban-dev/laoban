@@ -6,9 +6,16 @@ import { makeCache } from "./src/configProcessor";
 import { fileOpsNode } from "@laoban/filesops-node";
 import { findVersionNumber } from "./src/Files";
 import { LaobanAdmin } from "./src/admin/laoban-admin";
-import { shortCutFileOps, shortCuts } from "@laoban/fileops";
+import { chainPostProcessFn, CopyFileOptions, defaultPostProcessors, shortCutFileOps, shortCuts } from "@laoban/fileops";
 import { setOriginalEnv } from "./src/originalEnv";
+import { postProcessForPackageJson } from "@laoban/node";
+import { includeAndTransformFile } from "./src/update";
 
+
+const defaultCopyFileOptions: CopyFileOptions = {
+  postProcessor: chainPostProcessFn ( defaultPostProcessors, postProcessForPackageJson ),
+  tx: includeAndTransformFile ( `updating ${p.directory}`, lookupForJsonMergeInto, fileOps )
+}
 
 export function runLoabanAdmin ( newArgs: string[] ) {
   const admin = new LaobanAdmin ( shortCutFileOps ( fileOpsNode (), shortCuts ), process.cwd (), process.env, newArgs, process.stdout )

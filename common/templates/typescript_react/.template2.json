@@ -1,11 +1,6 @@
 {
   "parent": "@laoban@/templates/typescript_405",
-  "files": { "package.json": {
-
-  },
-      "type":        "${}",
-      "postProcess": "packageJson(@laoban@/templates/javascript/package.json,@laoban@/templates/typescript_405/package.json)"
-    },
-    "tsconfig.json"
-  ]
+  "files":  {
+    "package.json": {"template": "${}", "postProcess": "packageJson() // aka merge me into parent file"}
+  }
 }

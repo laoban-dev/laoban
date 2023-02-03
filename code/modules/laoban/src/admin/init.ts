@@ -1,16 +1,17 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { combineTwoObjects, deepCombineTwoObjects, lastSegment, NameAnd, safeArray, safeObject } from "@laoban/utils";
+import { deepCombineTwoObjects, lastSegment, NameAnd, safeArray, safeObject } from "@laoban/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./initStatus";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { laobanJsonLocations, } from "./fileLocations";
 import path from "path";
-import { FileOps, findChildFiles, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
+import { FileOps, findChildFiles, findTemplateLookup, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
 import { combineRawConfigs } from "../config";
-import { findTemplatePackageJsonLookup, PackageDetailsAndLocations } from "../loadingTemplates";
+
 import { findLaobanOrUndefined, loabanConfigName, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ActionParams } from "./types";
 import { getInitDataWithoutTemplatesFilteredByPackages, HasPackages } from "./analyze";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
+import { ErrorsAnd, flipErrorAndArray, hasErrors, mapErrors, mapErrorsK } from "@laoban/utils/dist/src/errors";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -25,6 +26,11 @@ export interface InitFileContents {
   "laoban.json": any;
   "package.details.json": ProjectDetailsJson
 }
+export interface PackageDetailsAndLocations {
+  packageDetails: any
+  location: string
+}
+
 export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends InitFileContents, PackageDetailsAndLocations {
   laoban: any
   packageDetails: any
@@ -32,7 +38,7 @@ export interface initFileContentsWithParsedLaobanJsonAndProjectDetails extends I
 const combineInitContents = ( type: string, summary: ( i: InitFileContents ) => string ) => ( i1: InitFileContents, i2: InitFileContents ): InitFileContents => {
   return {
     "laoban.json": combineRawConfigs ( i1[ "laoban.json" ], i2[ "laoban.json" ] ),
-    "package.details.json":  deepCombineTwoObjects ( i1[ "package.details.json" ], i2[ "package.details.json" ] ),
+    "package.details.json": deepCombineTwoObjects ( i1[ "package.details.json" ], i2[ "package.details.json" ] ),
     markers: safeArray ( i1.markers ).concat ( safeArray ( i2.markers ) ),
     location: `${i1.location} and ${i2.location}`,
     type
@@ -47,8 +53,8 @@ export async function findTypes ( fileOps: FileOps, cmd: TypeCmdOptions ) {
   const initUrl = cmd.initurl
   const laobanJson: any = await fileOps.loadFileOrUrl ( initUrl ).catch ( e => { error ( `Could not load ${initUrl}: ${e}` ); } );
   function parseTheJsonExitIfBad () {
-    try{
-    return parseJson<NameAnd<string>> ( `init ${initUrl}` ) ( laobanJson );
+    try {
+      return parseJson<NameAnd<string>> ( `init ${initUrl}` ) ( laobanJson );
     } catch ( e ) {
       error ( `Error parsing the file ${loabanConfigName} ` )
     }
@@ -79,15 +85,19 @@ interface TypeAndIFC {
   allInitFileContents: InitFileContents[]
   type: string
 }
-export async function findInitFileContents ( fileOps: FileOps, cmd: TypeCmdOptions ): Promise<TypeAndIFC> {
+export async function findInitFileContents ( fileOps: FileOps, cmd: TypeCmdOptions ): Promise<ErrorsAnd<TypeAndIFC>> {
   const { type, typeUrls, inits } = await findTypes ( fileOps, cmd )
-  const loadInits = loadWithParents<InitFileContents> ( ``,
+  const loadInits = loadWithParents<InitFileContents, InitFileContents> ( ``,
     url => fileOps.loadFileOrUrl ( url + '/.init.json' ),
     context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url, type }),
     init => safeArray ( init.parents ),
+    x => x,
     combineInitContents ( type, i => `Parents ${i.parents}` ) )
 
-  return { type, allInitFileContents: await Promise.all <InitFileContents> ( typeUrls.map ( loadInits ) ) }
+  return mapErrorsK ( loadInits, async inits => mapErrors ( flipErrorAndArray (
+    await Promise.all <ErrorsAnd<InitFileContents>> ( typeUrls.map ( inits ) ) ), allInitFileContents =>
+    ({ allInitFileContents, type }) ) )
+
 }
 
 async function createLaobanJsonContents ( initFileContents: InitFileContents, suggestions: InitSuggestions, quiet: boolean ): Promise<string> {
@@ -105,9 +115,9 @@ async function createLaobanJsonContents ( initFileContents: InitFileContents, su
 }
 function removeFrom ( beingCreated: any, template: any ) {
   if ( template === undefined ) return
-  Object.keys ( safeObject(template) ).forEach ( key => delete beingCreated[ key ] );
+  Object.keys ( safeObject ( template ) ).forEach ( key => delete beingCreated[ key ] );
 }
-export async function findTemplatePackageJson ( fileOps: FileOps, initFileContents: InitFileContents, template: string ) : Promise<any>{
+export async function findTemplatePackageJson ( fileOps: FileOps, initFileContents: InitFileContents, template: string ): Promise<any> {
   const laobanJson = parseJson<any> ( 'laoban json' ) ( initFileContents[ "laoban.json" ] );
   const templates = safeObject<string> ( laobanJson.templates )
   const templateUrl: string = templates[ template ];
@@ -173,14 +183,14 @@ export function findAppropriateIfc ( initFileContents: initFileContentsWithParse
   return result;
 }
 
-interface OneProjectDetailsResult{
+interface OneProjectDetailsResult {
   location: string,
   contents: any
   template: string
   directory: string
   templatePackageJson: any
 }
-export function makeOneProjectDetails ( initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, p: LocationAndParsed<any>, templateLookup: NameAnd<any>, allProjectNames: string[] ):OneProjectDetailsResult {
+export function makeOneProjectDetails ( initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[], type: string, p: LocationAndParsed<any>, templateLookup: NameAnd<any>, allProjectNames: string[] ): OneProjectDetailsResult {
   let theBestIfc = findAppropriateIfc ( initFileContents, type, p );
   const template = theBestIfc.packageDetails.template
   const templatePackageJson = templateLookup[ template ] || {}
@@ -232,8 +242,10 @@ export function findInitFileContentsFor ( initFileContents: InitFileContents[], 
     return initFileContents;
   } )
 }
-export async function gatherInitData ( fileOps: FileOps, directory: string, cmd: TypeCmdOptions, quiet: boolean ): Promise<InitData> {
-  const { type, allInitFileContents } = await findInitFileContents ( fileOps, cmd );
+export async function gatherInitData ( fileOps: FileOps, directory: string, cmd: TypeCmdOptions, quiet: boolean ): Promise<ErrorsAnd<InitData>> {
+  const ifc = await findInitFileContents ( fileOps, cmd );
+  if ( hasErrors ( ifc ) ) return ifc;
+  const { type, allInitFileContents } = ifc;
   const existingLaobanFile = await findLaobanUpOrDown ( fileOps, directory )
   const suggestions: InitSuggestions = await suggestInit ( fileOps, directory, existingLaobanFile )
   const firstInitFileContents = findRequestedIFCForLaoban ( allInitFileContents, type )
@@ -241,9 +253,13 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
     const parsedLaoBan = parseJson<any> ( 'laoban.json' ) ( laoban );
     const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[] = findInitFileContentsFor ( allInitFileContents, parsedLaoBan );
-    const templatePackageJsonLookup = await findTemplatePackageJsonLookup ( fileOps, initFileContents, parsedLaoBan )
-    const projectDetails: ProjectDetailsAndTemplate[] = makeAllProjectDetails ( templatePackageJsonLookup, initFileContents, type, suggestions.packageJsonDetails );
-    return { existingLaobanFile, suggestions, parsedLaoBan, initFileContents, laoban, projectDetails }
+    return mapErrors ( await findTemplateLookup ( fileOps, {}, parsedLaoBan.templates, 'package.json' ),
+      templatePackageJsonLookup => {
+        const projectDetails: ProjectDetailsAndTemplate[] = makeAllProjectDetails ( templatePackageJsonLookup, initFileContents, type, suggestions.packageJsonDetails );
+        return { existingLaobanFile, suggestions, parsedLaoBan, initFileContents, laoban, projectDetails }
+      }
+    )
+
   } else
     return { suggestions, initFileContents: allInitFileContents }
 }
@@ -352,18 +368,22 @@ export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<In
     return
   }
   const dryRun = cmd.dryrun;
-  const rawInitData = await gatherInitData ( fileOps, clearDirectory, cmd, false )
-  if ( isSuccessfulInitData ( rawInitData ) ) {
-    const initData = await getInitDataWithoutTemplatesFilteredByPackages ( fileOps, rawInitData, cmd )
-    const files: LocationAnd<string>[] = await filesAndContents ( fileOps, initData, dryRun )
-    reportInitData ( initData, files )
-    console.log ()
-    await saveInitDataToFiles ( fileOps, files, cmd );
-    if ( cmd.dryrun ) {
-      console.log ()
-      console.log ( `The files created above are for you to examine and 'see what would happen'` )
-      console.log ( `They can be cleaned by running 'laoban admin init --cleantestfiles'` )
-    }
-  } else
-    console.log ( 'Could not work out how to create', JSON.stringify ( rawInitData.suggestions, null, 2 ) )
+
+  const result = mapErrorsK (
+    await gatherInitData ( fileOps, clearDirectory, cmd, false ), async rawInitData => {
+      if ( isSuccessfulInitData ( rawInitData ) ) {
+        const initData = await getInitDataWithoutTemplatesFilteredByPackages ( fileOps, rawInitData, cmd )
+        const files: LocationAnd<string>[] = await filesAndContents ( fileOps, initData, dryRun )
+        reportInitData ( initData, files )
+        console.log ()
+        await saveInitDataToFiles ( fileOps, files, cmd );
+        if ( cmd.dryrun ) {
+          console.log ()
+          console.log ( `The files created above are for you to examine and 'see what would happen'` )
+          console.log ( `They can be cleaned by running 'laoban admin init --cleantestfiles'` )
+        }
+      } else
+        console.log ( 'Could not work out how to create', JSON.stringify ( rawInitData.suggestions, null, 2 ) )
+    } )
+  if ( hasErrors ( result ) ) reportError ( result )
 }

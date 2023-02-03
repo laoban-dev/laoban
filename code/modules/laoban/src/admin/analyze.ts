@@ -9,6 +9,7 @@ import { createDeltaForPackageJson } from "./update-template";
 import { ConfigAndIssues } from "../config";
 import { loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "../update";
+import { ErrorsAnd, hasErrors } from "@laoban/utils/dist/src/errors";
 
 export interface HasPackages {
   packages?: string
@@ -62,7 +63,8 @@ export async function getInitDataWithoutTemplatesFilteredByPackages ( fileOps: F
 }
 export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
   const { fileOps, currentDirectory, cmd, params, outputStream } = ap
-  const initData: InitData = await gatherInitData ( fileOps, currentDirectory, cmd, false );
+  const initData: ErrorsAnd<InitData> = await gatherInitData ( fileOps, currentDirectory, cmd, false );
+  if ( hasErrors ( initData ) ) return reportError ( initData )
   async function findActualTemplateIfExists ( p: ProjectDetailsAndTemplate ) {
     try {
       const s = await fileOps.loadFileOrUrl ( fileOps.join ( p.directory, packageDetailsFile ) )

@@ -1,6 +1,7 @@
-import { CopyFileOptions, FileOps, parseJson, TemplateFileDetails, TransformTextFn } from "./fileOps";
-import { deepCombineTwoObjects, foldK, mapK, NameAnd, objectSortedByKeys, safeObject } from "@laoban/utils";
+import { FileOps, parseJson } from "./fileOps";
+import { deepCombineTwoObjects, foldK, mapK, NameAnd, objectSortedByKeys, safeObject, toArray } from "@laoban/utils";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
+import { CopyFileOptions, TemplateFileDetails, TransformTextFn } from "./copyFiles";
 
 type PostProcessFn = ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, cfd: TemplateFileDetails ) => ( text: string, postProcessCmd: string ) => Promise<string>
 export interface PostProcessor {
@@ -11,6 +12,11 @@ export interface PostProcessor {
 export function postProcessor ( matcher: RegExp, postProcess: PostProcessFn ): PostProcessor {
   return { applicable: ( postProcessCmd: string ) => postProcessCmd.match ( matcher ) !== null, postProcess }
 }
+export const postProcessorForTest: PostProcessor = postProcessor ( /.*/, ( context ) => async ( text, cmd ) =>
+  text.includes ( '{' )
+    ? text.replace ( /{/, `{"post": "${cmd}",` )
+    : `${cmd}(${text})`)
+
 export const postProcessJson: PostProcessor = postProcessor ( /^json$/,
   ( context ) => async ( text, cmd ) => {return JSON.stringify ( parseJson ( context ) ( text ), null, 2 )} )
 export const postProcessCheckEnv: PostProcessor = postProcessor ( /^checkEnv\(.*\)$/, ( context ) => async ( text, cmd ) => {
@@ -89,12 +95,16 @@ export function doAllPostProcessor ( matcher: RegExp, p: PostProcessor, cmds: ( 
 }
 
 
-export const applyOrOriginal = ( p: PostProcessor ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: string ) => {
+export const applyOrOriginal = ( p: PostProcessor | undefined ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: string ) => {
+  if ( !p ) return text;
   let applicable = p.applicable ( postProcessCmd );
-  return applicable ? p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : text;
+  const result = applicable ? p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : text;
+  return result;
 }
 export const applyOrUndefined = ( p: PostProcessor ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: string ) =>
   p.applicable ( postProcessCmd ) ? p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : undefined
 
+export const applyAll = ( p: PostProcessor | undefined ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: undefined | string | string[] ) =>
+  foldK ( toArray ( postProcessCmd ), text, async ( t, cmd ) => applyOrOriginal ( p ) ( context, fileOps, copyFileOptions, cfd ) ( t, cmd ) )
 
 export const defaultPostProcessors = chainPostProcessFn ( postProcessJson, postProcessCheckEnv, postProcessJsonMergeInto, jsonSortPostProcess )

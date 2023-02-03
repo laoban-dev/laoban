@@ -1,6 +1,7 @@
 import { chainPostProcessFn, postProcessCheckEnv, PostProcessor, postProcessJson, postProcessJsonMergeInto, applyOrOriginal, postProcessor, applyOrUndefined } from "./postProcessor";
-import { CopyFileOptions, emptyFileOps, FileOps, TransformTextFn } from "./fileOps";
+import { emptyFileOps, FileOps } from "./fileOps";
 import { mapObjectValues } from "@laoban/utils";
+import { CopyFileOptions, TransformTextFn } from "./copyFiles";
 
 const context = 'someContext'
 const fileOps: FileOps = {

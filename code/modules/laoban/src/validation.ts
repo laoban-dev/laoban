@@ -1,12 +1,10 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { CommandDefn, Config, ConfigWithDebug, Guards, PackageDetails, PackageDetailsAndDirectory, PackageJson, RawConfig, ScriptDefn } from "./config";
-import * as path from "path";
+import { CommandDefn, ConfigWithDebug, Guards, PackageDetails, PackageDetailsAndDirectory, RawConfig, ScriptDefn } from "./config";
 import { groupBy } from "./utils";
 // @ts-ignore
 import { Validate } from "@laoban/validation";
-import { checkLoadingTemplates } from "./loadingTemplates";
 import { flatten } from "@laoban/utils";
-import { FileOps } from "@laoban/fileops";
+import { FileOps, validateTemplates } from "@laoban/fileops";
 
 
 export function validateLaobanJson ( v: Validate<RawConfig> ): Validate<RawConfig> {
@@ -31,7 +29,7 @@ function validateCommand ( v: Validate<CommandDefn | string> ) {
 }
 
 
-export async function validatePackageDetailsAndTemplates ( fileOps: FileOps, c: ConfigWithDebug, pds: PackageDetailsAndDirectory[] ): Promise<string[]> {
+export async function validatePackageDetailsAndTemplates ( fileOps: FileOps, c: ConfigWithDebug,copyFileOptions, pds: PackageDetailsAndDirectory[] ): Promise<string[]> {
   const detailsIssues = pds.filter ( pd => !pd.packageDetails ).map ( ( { directory, errorParsing } ) =>
     `Directory ${directory} has ${errorParsing ? 'invalid json in' : 'no '} package.details.json file` )
   const goodPds = pds.filter ( pd => pd.packageDetails );
@@ -43,17 +41,11 @@ export async function validatePackageDetailsAndTemplates ( fileOps: FileOps, c: 
       [] ) )
   let pdsIssues: string[] = flatten ( goodPds.map ( pd => validatePackageDetails ( Validate.validate ( `Project details in ${pd.directory}`, pd.packageDetails ) ).errors ) )
 
-  const templateIssues = await checkLoadingTemplates ( `Checking all templates`, fileOps, c, c.templates );
+  const templateIssues = await validateTemplates ( `s`, fileOps, copyFileOptions, c.templates );
   const allIssues = [ ...detailsIssues, ...duplicateErrors, ...pdsIssues, ...templateIssues ]
   return allIssues
 }
 
-function validateTemplateDirectory ( context: string, c: Config, templateDir: string ): Promise<string[]> {
-  let dir = path.join ( c.templateDir, templateDir );
-  return Validate.validateDirectoryExists ( context, dir ).then ( dirErrors => dirErrors.length === 0 ?
-    Validate.validateFile ( `package.json in template directory ${templateDir}`, path.join ( dir, 'package.json' ), validatePackageJson ) :
-    dirErrors )
-}
 
 function validatePackageDetails ( v: Validate<PackageDetails> ) {
   return v.isString ( "name" ).//
@@ -68,7 +60,4 @@ function validateGuards ( v: Validate<Guards> ) {
     // optObject ( "extraDeps", v => v, 'These are added to package.json dependencies' ).//
     // optObject ( "extraDevDeps", v => v, 'These are added to package.json devDependencies' ).//
     // optObject ( "extraBins", v => v, 'These are added to package.json bin' )
-}
-function validatePackageJson ( v: Validate<PackageJson> ) {
-  return v.isObject ( 'dependencies', v => v )
 }
