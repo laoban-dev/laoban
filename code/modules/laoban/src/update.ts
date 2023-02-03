@@ -1,7 +1,7 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import path from "path";
 import { ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, PackageDetailsDirectoryPropertiesAndVersion } from "./config";
-import { derefence, dollarsBracesVarDefn, VariableDefn } from "@laoban/variables";
+import { derefence, dollarsBracesVarDefn, mustachesVariableDefn, VariableDefn } from "@laoban/variables";
 import { loadVersionFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 import { fromEntries, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
@@ -47,6 +47,7 @@ export const includeFiles = ( fileOps: FileOps ): TransformTextFn => async ( typ
 export const transformFile = ( context: string, dic: any ): TransformTextFn => ( type: string, text: string ): Promise<string> => {
   function variableDefn (): VariableDefn | undefined {
     if ( type === '${}' ) return dollarsBracesVarDefn
+    if ( type === '{{}}' ) return mustachesVariableDefn
     if ( type === undefined ) return undefined
     throw new Error ( `${context}. Unexpected type ${type}` )
   }

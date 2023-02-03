@@ -2,21 +2,21 @@
   "scripts": {
     "run-api": {
       "description": "Runs the spring boot server (the jar must exist in /target...",
-      "guard":       "${packageDetails.guards.mvn}",
+      "guard":       "${packageDetails.guards.javaPort}",
       "commands":    [
         {
           "name":    "run-java",
-          "command": "java -jar  .\\target\\${packageDetails.guards.name}-2.5.0.jar --server.port=${packageDetails.guards.javaPort}"
+          "command": "java -jar  .\\target\\${packageDetails.name}-2.5.0.jar --server.port=${packageDetails.guards.javaPort}"
         }
       ]
     },
     "ls-api":  {
       "description": "Lists the spring boot servers and their port",
-      "guard":       "${packageDetails.guards.mvn}",
+      "guard":       "${packageDetails.guards.javaPort}",
       "commands":    [
         {
           "name":    "echo-java",
-          "command": "echo java -jar  .\\target\\${packageDetails.guards.name}-2.5.0.jar --server.port=${packageDetails.guards.javaPort}"
+          "command": "echo java -jar  .\\target\\${packageDetails.name}-2.5.0.jar --server.port=${packageDetails.guards.javaPort}"
         }
       ]
     }

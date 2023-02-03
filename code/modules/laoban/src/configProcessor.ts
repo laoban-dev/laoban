@@ -136,6 +136,7 @@ export function configProcessor ( path: Path, laoban: string, outputStream: Writ
   result.templates = rawConfig.templates ? rawConfig.templates : {}
   result.sessionDir = rawConfig.sessionDir ? rawConfig.sessionDir : path.join ( laoban, '.session' )
   result.throttle = rawConfig.throttle ? rawConfig.throttle : 0
+  // result.variables = rawConfig.variables
   for ( const k in rawConfig.variables ) add ( k, rawConfig.variables )
   result.scripts = addScripts ( result, rawConfig.scripts );
   result.os = os.type ()

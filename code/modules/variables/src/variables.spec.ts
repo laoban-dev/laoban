@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { derefence, dollarsBracesVarDefn } from "./variables";
+import { derefence, dollarsBracesVarDefn, mustachesVariableDefn } from "./variables";
 
 describe ( "derefence", () => {
   describe ( "simple variables like ${a}", () => {
@@ -11,11 +11,11 @@ describe ( "derefence", () => {
       expect ( derefence ( 'context', dic, "Some data ${b.c} here", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'Some data BC here' )
       expect ( derefence ( 'context', dic, "Some data ${d} here", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( "Some data //LAOBAN-UPDATE-ERROR context Ref is ${d}. no value found. Value was undefined here" )
     } )
-    it ("should ignore leading trailing spaces", () => {
+    it ( "should ignore leading trailing spaces", () => {
       const dic = { a: "A", b: { c: "BC" } }
       expect ( derefence ( 'context', dic, "Some data ${  a  } here", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( "Some data A here" )
 
-    })
+    } )
 
   } )
   describe ( "simple variables with indent like ${a:indentx}", () => {
@@ -73,7 +73,7 @@ describe ( "derefence", () => {
   } )
   describe ( "variable:object:comma:indentx like ${a:object:indentx} for an array", () => {
     it ( 'should replace an object with the string w/o {}', () => {
-      const withArray = {...dic, a: ['V1', 'V2']}
+      const withArray = { ...dic, a: [ 'V1', 'V2' ] }
       expect ( derefence ( 'context', withArray, '{"one":1,[${a:object:indent3}],"two":2}', { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( `{"one":1,[   "V1",
    "V2"],"two":2}` )
     } )
@@ -124,4 +124,11 @@ describe ( "derefence", () => {
     } )
   } )
 
+} )
+
+describe ( 'derefernence with variableDefn:mustachesVariableDefn', () => {
+  const dic = { a: 1 }
+  it ( 'should replace a variable with the value', () => {
+    expect ( derefence ( 'someContext', dic, 'Hello {{a}}', { variableDefn: mustachesVariableDefn } ) ).toEqual ( 'Hello 1' )
+  } )
 } )
