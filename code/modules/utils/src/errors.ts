@@ -1,11 +1,13 @@
 import { flatMap, flatten } from "./utils";
+import { InitFileContents } from "laoban/dist/src/admin/init";
 
 export type ErrorsAnd<T> = T | string[]
 
-export function flipErrorAndArray<T> ( t: ErrorsAnd<T>[] ): ErrorsAnd<T[]> {
-  const allErrors = flatMap ( t, errors )
-  if ( allErrors.length > 0 ) return allErrors
-  return t.map ( value )
+export function mapArrayOfErrorsAnd<T, T1> ( ts: ErrorsAnd<T>[], fn: ( ts: T[] ) => T1 ): ErrorsAnd<T1> {
+  const allErrors = ts.filter ( hasErrors )
+  if ( allErrors.length > 0 ) return flatten ( allErrors )
+  const allResults: T[] = ts.map ( value )
+  return fn ( allResults )
 }
 
 export function reportErrors ( e: string[] ): string[] {

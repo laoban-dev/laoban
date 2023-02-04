@@ -1,7 +1,7 @@
 import { FileOps, isUrl, loadWithParents, parseJson, Path } from "./fileOps";
 import { CopyFileDetails, CopyFileOptions, SourcedTemplateFileDetails, SourceTemplateFileDetailsSingleOrArray, TemplateFileDetails, TransformTextFn } from "./copyFiles";
 import { Validate } from "@laoban/validation";
-import { allButLastSegment, combineTwoObjects, deepCombineTwoObjects, flatMap, flatMapK, mapK, mapObject, mapObjectK, mapObjectKeys, NameAnd, removeEmptyArrays, toArray } from "@laoban/utils";
+import { allButLastSegment, combineTwoObjects, deepCombineTwoObjects, flatMap, flatMapK, hasErrors, mapK, mapObject, mapObjectK, mapObjectKeys, NameAnd, removeEmptyArrays, toArray } from "@laoban/utils";
 import { deletePath } from "@laoban/utils/dist/src/dotLanguage";
 import { applyAll } from "./postProcessor";
 import { errors, ErrorsAnd, mapErrors, mapErrorsK } from "@laoban/utils/dist/src/errors";
@@ -209,11 +209,15 @@ export async function copyFromTemplate ( context: string, fileOps: FileOps, opti
   const postProcessed: ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>> = await loadTemplateDetailsAndFileContents ( context, fileOps, template, options );
   await mapErrorsK ( postProcessed, files => saveMergedFiles ( context, fileOps, options, targetRoot, files ) )
 }
-export async function findTemplateLookup ( fileOps: FileOps, options: CopyFileOptions, templates: NameAnd<string>, filename: string ) {
+export async function findTemplateLookup ( context: string, fileOps: FileOps, options: CopyFileOptions, templates: NameAnd<string>, filename: string ): Promise<ErrorsAnd<any>> {
   return mapObjectK ( templates, async ( template, name ) => {
-    const context = ``;
-    const data = await loadTemplateDetailsAndFileContents ( context, fileOps, template, { ...options, filter: name => name === filename } )
-    const content = data[ filename ].content;
+    const data = await loadTemplateDetailsAndFileContents ( context, fileOps, template, { ...options, filter: name => {console.log('comparing', name, filename); return name === filename; } } )
+    if ( hasErrors ( data ) ) return data
+    const content = data[ filename ]?.content;
+    console.log('filename', filename)
+    console.log('templates', templates)
+    console.log('data', data)
+    if ( content === undefined ) return [ `${context} Template [${template}] Filename[${filename}] cannot be found. Legal values are [${Object.keys ( data )}]`]
     if ( typeof content !== 'string' ) throw Error ( `${context}. Error in template. Content is not a string. It is ${typeof content} ${JSON.stringify ( content, null, 2 )}` )
     return parseJson ( context ) ( content )
   } )

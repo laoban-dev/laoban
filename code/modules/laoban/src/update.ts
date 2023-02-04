@@ -5,7 +5,7 @@ import { derefence, dollarsBracesVarDefn, mustachesVariableDefn, VariableDefn } 
 import { loadVersionFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 import { fromEntries, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
-import { combineTransformFns, chainPostProcessFn, CopyFileDetails, CopyFileOptions, copyFiles, fileNameFrom, FileOps, loadFileFromDetails, parseJson, TransformTextFn, defaultPostProcessors, TemplateControlFile } from "@laoban/fileops";
+import { chainPostProcessFn, combineTransformFns, CopyFileOptions, copyFiles, defaultPostProcessors, FileOps, loadFileFromDetails, parseJson, TemplateControlFile, TransformTextFn } from "@laoban/fileops";
 
 import { postProcessForPackageJson } from "@laoban/node";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
@@ -120,22 +120,30 @@ export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWi
   if ( cmd.major ) return setVersion ( nextMajorVersion ( version ) )
   return version
 }
+interface DryRunAndAllowSamples {
+  dryrun?: boolean
+  allowsamples?: boolean
+}
+export function makeCopyOptions ( context: string, fileOps: FileOps, cmd: DryRunAndAllowSamples, config: ConfigWithDebug, version: string | undefined, p: PackageDetailsAndDirectory | undefined ): CopyFileOptions {
+  const packageDetails: PackageDetails | undefined = p?.packageDetails
+  const allowSamples = cmd.allowsamples
+  let lookupForJsonMergeInto = { ...config, version, packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails?.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
+  const tx = includeAndTransformFile ( context, lookupForJsonMergeInto, fileOps );
+  return {
+    allowSamples, dryrun: cmd.dryrun,
+    postProcessor: chainPostProcessFn ( defaultPostProcessors, postProcessForPackageJson ),
+    lookupForJsonMergeInto, tx
+  };
+}
 export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageAction<void[]> => async ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let d = config.debug ( 'update' )
-  const allowSamples = cmd.allowsamples
   const version = await updateVersionIfNeeded ( fileOps, config, cmd )
-  return Promise.all ( pds.map ( async p => {
-    const packageDetails = p.packageDetails
-    let lookupForJsonMergeInto = { ...config, version, packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails?.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
-    return d.k ( () => `${p.directory} copyTemplateDirectory`, () =>
+  return Promise.all ( pds.map ( async pd => {
+    const copyOptions = makeCopyOptions ( `updating ${pd.directory}`, fileOps, cmd, config, version, pd );
+    return d.k ( () => `${pd.directory} copyTemplateDirectory`, () =>
       copyTemplateDirectory ( fileOps, config,
-        { ...p, version, properties: safeObject ( config.properties ) },
-        {
-          allowSamples, dryrun: cmd.dryrun,
-          postProcessor: chainPostProcessFn ( defaultPostProcessors, postProcessForPackageJson ),
-          lookupForJsonMergeInto,
-          tx: includeAndTransformFile ( `updating ${p.directory}`, lookupForJsonMergeInto, fileOps )
-        } ) )
+        { ...pd, version, properties: safeObject ( config.properties ) },
+        copyOptions ) )
     // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOpsNode.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )
     // return d.k ( () => `${p.directory} saveProjectJsonFile`, () => saveProjectJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), version, p.projectDetails ) ) )
   } ) )

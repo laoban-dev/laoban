@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { deepCombineTwoObjects, lastSegment, NameAnd, safeArray, safeObject } from "@laoban/utils";
+import { deepCombineTwoObjects, flatten, lastSegment, mapArrayOfErrorsAnd, NameAnd, safeArray, safeObject, value } from "@laoban/utils";
 import { FailedInitSuggestions, InitSuggestions, isSuccessfulInitSuggestions, SuccessfullInitSuggestions, suggestInit } from "./initStatus";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { laobanJsonLocations, } from "./fileLocations";
@@ -11,7 +11,7 @@ import { findLaobanOrUndefined, loabanConfigName, loabanConfigTestName, packageD
 import { ActionParams } from "./types";
 import { getInitDataWithoutTemplatesFilteredByPackages, HasPackages } from "./analyze";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
-import { ErrorsAnd, flipErrorAndArray, hasErrors, mapErrors, mapErrorsK } from "@laoban/utils/dist/src/errors";
+import { ErrorsAnd, arrayOfErrorsAndToErrorsAndArray, hasErrors, mapErrors, mapErrorsK } from "@laoban/utils/dist/src/errors";
 
 interface ProjectDetailsJson {
   variableFiles: NameAnd<any>
@@ -87,17 +87,17 @@ interface TypeAndIFC {
 }
 export async function findInitFileContents ( fileOps: FileOps, cmd: TypeCmdOptions ): Promise<ErrorsAnd<TypeAndIFC>> {
   const { type, typeUrls, inits } = await findTypes ( fileOps, cmd )
-  const loadInits = loadWithParents<InitFileContents, InitFileContents> ( ``,
+  const loadInits: ( url: string ) => Promise<ErrorsAnd<InitFileContents>> = loadWithParents<InitFileContents, InitFileContents> ( ``,
     url => fileOps.loadFileOrUrl ( url + '/.init.json' ),
     context => ( s, url ) => ({ ...parseJson<InitFileContents> ( context ) ( s ), location: url, type }),
     init => safeArray ( init.parents ),
     x => x,
     combineInitContents ( type, i => `Parents ${i.parents}` ) )
 
-  return mapErrorsK ( loadInits, async inits => mapErrors ( flipErrorAndArray (
-    await Promise.all <ErrorsAnd<InitFileContents>> ( typeUrls.map ( inits ) ) ), allInitFileContents =>
-    ({ allInitFileContents, type }) ) )
-
+  if ( hasErrors ( loadInits ) ) return loadInits
+  const loadInitNoErrors: ( url: string ) => Promise<ErrorsAnd<InitFileContents>> = value ( loadInits )
+  const loadedUrlsOrErrors: ErrorsAnd<InitFileContents>[] = await Promise.all ( typeUrls.map ( loadInitNoErrors ) )
+  return mapArrayOfErrorsAnd ( loadedUrlsOrErrors, allInitFileContents => ({ allInitFileContents, type }) )
 }
 
 async function createLaobanJsonContents ( initFileContents: InitFileContents, suggestions: InitSuggestions, quiet: boolean ): Promise<string> {
@@ -253,12 +253,13 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
     const parsedLaoBan = parseJson<any> ( 'laoban.json' ) ( laoban );
     const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[] = findInitFileContentsFor ( allInitFileContents, parsedLaoBan );
-    return mapErrors ( await findTemplateLookup ( fileOps, {}, parsedLaoBan.templates, 'package.json' ),
+    const result = mapErrors ( await findTemplateLookup ( `Gathering template data`,fileOps, {}, parsedLaoBan.templates, 'package.json' ),
       templatePackageJsonLookup => {
         const projectDetails: ProjectDetailsAndTemplate[] = makeAllProjectDetails ( templatePackageJsonLookup, initFileContents, type, suggestions.packageJsonDetails );
         return { existingLaobanFile, suggestions, parsedLaoBan, initFileContents, laoban, projectDetails }
       }
-    )
+    );
+    return result
 
   } else
     return { suggestions, initFileContents: allInitFileContents }

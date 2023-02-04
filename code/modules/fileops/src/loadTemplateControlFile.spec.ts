@@ -357,7 +357,7 @@ const templates = {
 }
 describe ( "findTemplateLookup", () => {
   it ( "should return a map of template names to the named file within each template (most often package.json)", async () => {
-    await expect ( await findTemplateLookup ( fileOps, optionsWithSample, templates, "package.json" ) ).toEqual ( {
+    await expect ( await findTemplateLookup (`someContext`, fileOps, optionsWithSample, templates, "package.json" ) ).toEqual ( {
       "javascript": {
         "@test@/javascript/package.json": "content",
         "post": "packageJson()",

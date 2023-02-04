@@ -1,20 +1,19 @@
 {
-  "files": [
-    {
-      "file":        "@laoban@/templates/typescript/.npmrc",
-      "target":      ".npmrc",
-      "postProcess": "checkEnv(NPM_TOKEN)"
-    },
-    {
-      "file":   "@laoban@/templates/typescript/jest.config.json",
-      "target": "jest.config.json"
-    },
-    {
-      "file":        "package.json",
-      "type":        "${}",
-      "postProcess": "packageJson(@laoban@/templates/javascript/package.json)"
-    },
-    "tsconfig.json",
-    {"file": "@laoban@/templates/typescript/index.ts", "sample": true, "target": "index.ts"}
-  ]
+  "parent":           [{"src": "@laoban@/templates/javascript", "delete": ["index.js"]}, "can have multiple parents"],
+  "defaultSrcPrefix": "@laoban@/templates/typescript",
+  "description":      "This is the template for typescript",
+  "documentation":    "",
+  "repository":       "",
+  "files":            {
+    ".npmrc":           {"postProcess": "checkEnv(NPM_TOKEN)"},
+    "jest.config.json": {},
+    "tsconfig.json":    {},
+    "index.ts":         {"sample": true},
+    "package.json":     {
+      "file":            "./package.json note the '.' overpowers the 'defaultSrcPrefix'",
+      "template":        "${}",
+      "mergeWithParent": "json",
+      "postProcess":     "packageJsonSort"
+    }
+  }
 }

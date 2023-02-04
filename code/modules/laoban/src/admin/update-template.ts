@@ -44,27 +44,34 @@ async function findTemplateDetailsAndContent ( fileOps: FileOps, directory: stri
 }
 
 
-function transformTemplate ( fileOps: FileOps, td: TemplateDetailsAndContent, error: ( msg: string ) => void ): CopyFileDetails[] {
-  const { templateDirUrl, templateJson, templateJsonFileName } = td;
+function getPostProcessAddingToOriginalForPackageJson ( templateDirUrl: string, f: TemplateFileDetails ) {
+  const isReference = ( p: string ) => p.startsWith ( 'jsonMergeInto' ) || p.startsWith ( 'packageJson(' );
+  const modified = toArray ( f.postProcess ).map ( p => {
+    if ( isReference ( p ) )
+      return p.includes ( '()' )
+        ? p.replace ( '()', `(${templateDirUrl}/package.json)` )
+        : p.replace ( ')', `,${templateDirUrl}/package.json)` );
+    else return p
+  } )
+  if ( modified.find ( isReference ) ) return singleOrArrayOrUndefined ( modified )
+  return singleOrArrayOrUndefined ( [ ...modified, `packageJson(${templateDirUrl}/package.json)` ] )
+}
 
+function transformTemplate ( fileOps: FileOps, td: TemplateDetailsAndContent, error: ( msg: string ) => void ): CopyFileDetails[] {
+
+  const { templateDirUrl, templateJson, templateJsonFileName } = td;
   const transformedJson: CopyFileDetails[] = templateJson.files.map ( f => {
     const fileName = fileNameFrom ( f );
     const target = targetFrom ( f );
     const file = fileOps.join ( templateDirUrl, fileName );
     if ( typeof f === 'string' ) return { file: file.replace ( /\\/g, '/' ), target: f }
     const newFileName = addPrefixIfFile ( fileOps, templateDirUrl, fileName ).replace ( /\\/g, '/' );
-    function getPostProcessAddingToOriginal ( f: TemplateFileDetails ) {
-      const isReference = ( p: string ) => p.startsWith ( 'jsonMergeInto' ) || p.startsWith ( 'packageJson(' );
-      const modified = toArray ( f.postProcess ).map ( p => isReference ( p ) ? p.replace ( ')', `,${templateDirUrl}/package.json)` ) : p )
-      if ( modified.find ( isReference ) ) return singleOrArrayOrUndefined ( modified )
-      return singleOrArrayOrUndefined ( [ ...modified, `packageJson(${templateDirUrl}/package.json)` ] )
-    }
     if ( target === 'package.json' ) {
-      console.log('package.json')
+      console.log ( 'package.json' )
       if ( isUrl ( file ) ) return {
         ...f,
         file: 'package.json',
-        postProcess: getPostProcessAddingToOriginal ( f ),
+        postProcess: getPostProcessAddingToOriginalForPackageJson ( templateDirUrl, f ),
       }
       return { ...f, file: 'package.json' } //keep the original postProcess.
     }

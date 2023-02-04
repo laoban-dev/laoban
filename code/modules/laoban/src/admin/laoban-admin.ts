@@ -18,6 +18,7 @@ import { CommanderStatic } from "commander";
 import { updateTemplate, updateTemplateOptions } from "./update-template";
 import { postCommand } from "../postCommand";
 import { ErrorsAnd, hasErrors } from "@laoban/utils/dist/src/errors";
+import { makeCopyOptions } from "../update";
 
 const initUrl = ( envs: NameAnd<string> ) => {
   let env = envs[ 'LAOBANINITURL' ];
@@ -105,7 +106,7 @@ export class LaobanAdmin {
   private params: string[];
   private program: any;
   private parsed: any;
-  public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[], outputStream: Writable, copyFileOptions: CopyFileOptions ) {
+  public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[], outputStream: Writable ) {
     this.params = params;
     let program = require ( 'commander' )
     this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' ).option ( '--load.laoban.debug' )
@@ -140,7 +141,7 @@ export class LaobanAdmin {
       .option ( '-d,--desc <desc>', 'The description of the package, defaults to an empty string' )
       .option ( '--nuke', 'If the directory already exists, it will be deleted and recreated', false )
       .option ( '--force', 'Will create even if the package already exists ', false )
-      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, copyFileOptions, cmd, params, outputStream ).then ( postCommand ( program, fileOps ) ) )
+      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd, params, outputStream ).then ( postCommand ( program, fileOps ) ) )
 
     addCommand ( 'newtemplate', `Creates a templates from the specified directory (copies files to template dir). It will usually make far too many files!`, newTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )

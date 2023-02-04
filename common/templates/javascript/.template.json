@@ -1,8 +1,7 @@
 {
-  "files": [
-    {
-      "file": "package.json", "type": "${}", "postProcess": "packageJson()"
-    },
-    {"file": "index.js", "sample": true}
-  ]
+  "files": {
+    "package.json": {"templated": "${}", "postProcess": "packageJson()"},
+    "index.js":     {"sample": true},
+    "src": {"sample":  true, "directory":  {}}
+  }
 }

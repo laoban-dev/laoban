@@ -1,20 +1,6 @@
 {
-  "files": [
-    {
-      "file":        "@laoban@/templates/typescript/.npmrc",
-      "target":      ".npmrc",
-      "postProcess": "checkEnv(NPM_TOKEN)"
-    },
-    "babel.config.json",
-    {
-      "file":   "@laoban@/templates/typescript/jest.config.json",
-      "target": "jest.config.json"
-    },
-    {
-      "file":        "package.json",
-      "type":        "${}",
-      "postProcess": "packageJson(@laoban@/templates/javascript/package.json,@laoban@/templates/typescript_405/package.json)"
-    },
-    "tsconfig.json"
-  ]
+  "parent": "@laoban@/templates/typescript_405",
+  "files":  {
+    "package.json": {"template": "${}", "postProcess": "packageJson() // aka merge me into parent file"}
+  }
 }

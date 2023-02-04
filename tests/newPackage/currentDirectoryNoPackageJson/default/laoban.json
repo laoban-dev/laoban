@@ -23,5 +23,8 @@
   },
   "defaultEnv":     {
     "TEST_DEFAULT": "test"
+  },
+  "templates": {
+    "typescript": "../../../../common/templates/typescript_405"
   }
 }

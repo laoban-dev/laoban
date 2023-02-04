@@ -12,10 +12,7 @@ import { postProcessForPackageJson } from "@laoban/node";
 import { includeAndTransformFile } from "./src/update";
 
 
-const defaultCopyFileOptions: CopyFileOptions = {
-  postProcessor: chainPostProcessFn ( defaultPostProcessors, postProcessForPackageJson ),
-  tx: includeAndTransformFile ( `updating ${p.directory}`, lookupForJsonMergeInto, fileOps )
-}
+
 
 export function runLoabanAdmin ( newArgs: string[] ) {
   const admin = new LaobanAdmin ( shortCutFileOps ( fileOpsNode (), shortCuts ), process.cwd (), process.env, newArgs, process.stdout )
