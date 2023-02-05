@@ -35,6 +35,7 @@ async function testIt ( category: string, test: string, command: string, pcks: s
   const cleanFn = ( s: string ) => cleanLineEndings ( s ).trim ()
 
   expect ( cleanFn ( display ) ).toEqual ( cleanFn ( expected ) )
+    await fileOps.removeDirectory ( path.join ( testDir, '.cache' ), true )
   for ( let pck of pcks ) {
     await fileOps.removeFile ( path.join ( testDir, pck, '.log' ) )
     await fileOps.removeDirectory ( path.join ( testDir, pck, 'dist' ), true )

@@ -111,10 +111,12 @@ export async function loadFilesInTemplate ( fileData: NameAnd<SourceTemplateFile
   async function load ( prefix: string[], fileData: NameAnd<SourceTemplateFileDetailsSingleOrArray> ) {
     const realtx: TransformTextFn = async ( type, text ) => options.tx ? options.tx ( type, text ) : text
 
-    const toMerge: NameAnd<SourcedTemplateFileDetailsWithContent[]> = removeEmptyArrays ( await mapObjectK ( fileData, async ( fas, name ) =>
-      flatMapK ( toArray ( fas ), async fa => {
+    const toMerge: NameAnd<SourcedTemplateFileDetailsWithContent[]> = removeEmptyArrays ( await mapObjectK ( fileData, async ( fas, name ) => {
+      console.log ( 'fas', fas )
+      return flatMapK ( toArray ( fas ), async fa => {
         const target = [ ...prefix, fa.target ? fa.target : name ].join ( '/' );
         if ( fa.directory ) {return [ { ...fa, name, target, content: await load ( [ ...prefix, name ], fa.directory ) } ]}
+        console.log ( 'toMerge', name, fa )
         if ( options.filter && !options.filter ( name, fa ) ) return []
         return [ fa.sample && !options.allowSamples
           ? { ...fa, name, content: undefined }
@@ -122,9 +124,11 @@ export async function loadFilesInTemplate ( fileData: NameAnd<SourceTemplateFile
             ...fa, name, target, content: await fileOps.loadFileOrUrl ( fa.file ).then ( async text =>
               fa.templated ? await realtx ( fa.templated, text ) : text )
           } ]
-      } ) ) )
+      } );
+    } ) )
     return toMerge;
   }
+      console.log ( 'fileData', fileData )
   const toMerge = await load ( [], fileData );
   return toMerge;
 }
@@ -200,6 +204,7 @@ export async function saveMergedFiles ( context: string, fileOps: FileOps, optio
 }
 export async function loadTemplateDetailsAndFileContents ( context: string, fileOps: FileOps, template: string, options: CopyFileOptions ): Promise<ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>>> {
   const templateFile = await loadTemplateControlFile ( context, fileOps ) ( template )
+  console.log('templateFile', templateFile)
   const filesAndContent = await mapErrorsK ( templateFile, async ( { files } ) => await loadFilesInTemplate ( files, fileOps, options ) )
   const merged = mapErrors ( filesAndContent, mergeFiles ( context ) )
   const postProcessed = await mapErrorsK ( merged, postProcessFiles ( context, fileOps, options ) )
@@ -211,13 +216,20 @@ export async function copyFromTemplate ( context: string, fileOps: FileOps, opti
 }
 export async function findTemplateLookup ( context: string, fileOps: FileOps, options: CopyFileOptions, templates: NameAnd<string>, filename: string ): Promise<ErrorsAnd<any>> {
   return mapObjectK ( templates, async ( template, name ) => {
-    const data = await loadTemplateDetailsAndFileContents ( context, fileOps, template, { ...options, filter: name => {console.log('comparing', name, filename); return name === filename; } } )
+    console.log ( 0, filename, name, template )
+    const data = await loadTemplateDetailsAndFileContents ( context, fileOps, template, {
+      ...options, filter: name => {
+        console.log ( 'comparing', name, filename );
+        return name === filename;
+      }
+    } )
+    console.log ( 1, data )
     if ( hasErrors ( data ) ) return data
     const content = data[ filename ]?.content;
-    console.log('filename', filename)
-    console.log('templates', templates)
-    console.log('data', data)
-    if ( content === undefined ) return [ `${context} Template [${template}] Filename[${filename}] cannot be found. Legal values are [${Object.keys ( data )}]`]
+    console.log ( 'filename', filename )
+    console.log ( 'templates', templates )
+    console.log ( 'data', data )
+    if ( content === undefined ) return [ `${context} Template [${template}] Filename[${filename}] cannot be found. Legal values are [${Object.keys ( data )}]` ]
     if ( typeof content !== 'string' ) throw Error ( `${context}. Error in template. Content is not a string. It is ${typeof content} ${JSON.stringify ( content, null, 2 )}` )
     return parseJson ( context ) ( content )
   } )

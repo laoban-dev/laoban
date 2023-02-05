@@ -64,6 +64,7 @@ export function targetFrom ( f: CopyFileDetails ): string {
   throw new Error ( `Cannot find target in [${JSON.stringify ( f )}]` )
 }
 export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, options: CopyFileOptions, cfd: string | TemplateFileDetails ) {
+  console.log('loadFileFromDetails xx',context, cfd)
   const fileName = fileNameFrom ( cfd );
   const { tx } = options
 
