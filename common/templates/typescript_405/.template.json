@@ -1,5 +1,5 @@
 {
-  "parent":           [{"src": "@laoban@/templates/javascript", "delete": ["index.js"]}, "can have multiple parents"],
+  "parent":           [{"src": "@laoban@/templates/javascript", "delete": ["index.js"]}],
   "defaultSrcPrefix": "@laoban@/templates/typescript",
   "description":      "This is the template for typescript",
   "documentation":    "",
@@ -10,7 +10,7 @@
     "tsconfig.json":    {},
     "index.ts":         {"sample": true},
     "package.json":     {
-      "file":            "./package.json note the '.' overpowers the 'defaultSrcPrefix'",
+      "file":            "./package.json",
       "template":        "${}",
       "mergeWithParent": "json",
       "postProcess":     "packageJsonSort"
