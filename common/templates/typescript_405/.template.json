@@ -13,7 +13,7 @@
       "file":            "./package.json",
       "template":        "${}",
       "mergeWithParent": "json",
-      "postProcess":     "packageJsonSort"
+      "postProcess":     "packageJson()"
     }
   }
 }
