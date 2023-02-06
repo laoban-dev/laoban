@@ -12,7 +12,7 @@ function loadFile ( fileName: string ): Promise<string> {
 function loadUrl ( fileOrUrl: string ): Promise<string> {
   return fetch ( fileOrUrl ).then ( async res => {
     let text = await res.text ();
-    if ( res.status >= 400 ) throw Error ( `Cannot load file ${fileOrUrl}. Status is ${res.status}\n      Response was ${text}` )
+    if ( res.status >= 400 ) throw Error ( `Cannot load file [${fileOrUrl}] . Status is ${res.status}\n      Response was ${text}` )
     return text;
   }, error => {
     console.error ( error )

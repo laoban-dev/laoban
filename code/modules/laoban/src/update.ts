@@ -1,11 +1,11 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import path from "path";
-import { ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, PackageDetailsDirectoryPropertiesAndVersion } from "./config";
+import { ConfigWithDebug, PackageAction, PackageDetails, PackageDetailsAndDirectory, PackageDetailsDirectoryPropertiesAndVersion } from "./config";
 import { derefence, dollarsBracesVarDefn, mustachesVariableDefn, VariableDefn } from "@laoban/variables";
 import { loadVersionFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
-import { fromEntries, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
-import { chainPostProcessFn, combineTransformFns, CopyFileOptions, copyFiles, defaultPostProcessors, FileOps, loadFileFromDetails, parseJson, TemplateControlFile, TransformTextFn } from "@laoban/fileops";
+import { ErrorsAnd, fromEntries, hasErrors, nextMajorVersion, nextVersion, reportErrors, safeArray, safeObject } from "@laoban/utils";
+import { chainPostProcessFn, combineTransformFns, CopyFileOptions, copyFiles, copyFromTemplate, defaultPostProcessors, FileOps, loadFileFromDetails, loadTemplateControlFile, parseJson, TemplateControlFile, TemplateFileIntermediate, TransformTextFn } from "@laoban/fileops";
 
 import { postProcessForPackageJson } from "@laoban/node";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
@@ -57,7 +57,7 @@ export const transformFile = ( context: string, dic: any ): TransformTextFn => (
 export const includeAndTransformFile = ( context: string, dic: any, fileOps: FileOps ): TransformTextFn =>
   combineTransformFns ( includeFiles ( fileOps ), transformFile ( context, dic ) )
 
-export async function loadTemplateControlFile ( context: string, fileOps: FileOps, laobanDirectory: string | undefined, templateControlFileUrl: string ): Promise<TemplateControlFile> {
+export async function loadTemplateControlFileOld ( context: string, fileOps: FileOps, laobanDirectory: string | undefined, templateControlFileUrl: string ): Promise<TemplateControlFile> {
   function findPrefix () {
     if ( templateControlFileUrl.includes ( '://' ) || templateControlFileUrl.startsWith ( '@' ) ) return templateControlFileUrl
     if ( laobanDirectory ) path.join ( laobanDirectory, templateControlFileUrl );
@@ -70,21 +70,28 @@ export async function loadTemplateControlFile ( context: string, fileOps: FileOp
 }
 
 
-export const loadOneFileFromTemplateControlFileDetails = ( context: string, fileOps: FileOps, templateControlFileUrl: string, options: CopyFileOptions ) => async ( file: string ): Promise<string> => {
-  const controlFile: TemplateControlFile = await loadTemplateControlFile ( context, fileOps, undefined, templateControlFileUrl )
+export const loadOneFileFromTemplateControlFileDetails = ( context: string, fileOps: FileOps, templateControlFileUrl: string, options: CopyFileOptions ) => async ( file: string ): Promise<ErrorsAnd<string>> => {
+  const controlFile: ErrorsAnd<TemplateFileIntermediate> = await loadTemplateControlFile ( context, fileOps ) ( file )
+  if ( hasErrors ( controlFile ) ) return controlFile
   const cfd = findPart ( controlFile.files, file )
   if ( cfd === undefined ) throw Error ( `${context}. Cannot find ${file} in file ${templateControlFileUrl}\nControl file is ${JSON.stringify ( controlFile, null, 2 )}` )
   const { target, postProcessed } = await loadFileFromDetails ( context, fileOps, templateControlFileUrl, options, cfd )
   return postProcessed
 };
 export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: PackageDetailsAndDirectory, options: CopyFileOptions ): Promise<void> {
-  const prefix = templateUrl.includes ( ':' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
-  const controlFile = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps, laobanDirectory, prefix );
-  d.message ( () => [ `template control file ${prefix} for ${p.directory} is `, controlFile ] )
-  if ( controlFile.files === undefined ) {throw Error ( `Template control file ${prefix} is malformed. It is missing the files property` )}
-  const target = p.directory
-  return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
-    options ) ( safeArray ( controlFile.files ) )
+  return copyFromTemplate ( `Copying template files from ${templateUrl} to ${p.directory}`, fileOps, options, templateUrl, p.directory )
+  // const prefix = templateUrl.includes ( ':' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
+  // const controlFile: ErrorsAnd<TemplateFileIntermediate> = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps ) ( prefix );
+  // console.log ( 'controlFile', controlFile )
+  // if ( hasErrors ( controlFile ) ) {
+  //   reportErrors ( controlFile );
+  //   return
+  // }
+  // d.message ( () => [ `template control file ${prefix} for ${p.directory} is `, controlFile ] )
+  // if ( controlFile.files === undefined ) {throw Error ( `Template control file ${prefix} is malformed. It is missing the files property` )}
+  // const target = p.directory
+  // return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
+  //   options ) ( safeArray ( controlFile.files ) )
 }
 export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, options: CopyFileOptions ): Promise<void> {
   let d = config.debug ( 'update' )

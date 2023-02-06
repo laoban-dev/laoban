@@ -23,8 +23,5 @@
   },
   "defaultEnv":     {
     "TEST_DEFAULT": "test"
-  },
-  "templates":      {
-    "javascript": "../../../../common/templates/javascript"
   }
 }

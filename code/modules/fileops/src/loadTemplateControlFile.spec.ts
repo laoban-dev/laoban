@@ -74,7 +74,7 @@ const jsNoSampleMerged: NameAnd<SourcedTemplateFileDetailsWithContent> = {
 const ts = JSON.stringify ( {
   "parents": [ "@test@/javascript" ],
   deleteFromParents: 'index.js',
-  "defaultSrcPrefix": "@test@/templates/typescript",
+  "defaultSrcPrefix": "@test@/typescript",
   "description": "This is the template for typescript",
   "documentation": "",
   "repository": "",
@@ -203,7 +203,7 @@ const fileOps: FileOps = {
     if ( filename.startsWith ( 'notin' ) ) throw new Error ( 'not found' )
     if ( filename.startsWith ( '#doesntparse#' ) ) return '{not json'
     if ( filename === "@test@/javascript/.template.json" ) return js
-    if ( filename === "@test@/typescript/.template.json" ) return ts
+    if ( filename === "@test@/typescript_405/.template.json" ) return ts
     return `{"${filename}":"content"}`
   }
 }
@@ -222,7 +222,7 @@ describe ( "load template file", () => {
     await expect ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "@test@/javascript" ) ).toEqual ( { files: jsLoaded } )
   } );
   it ( "should load a typescript template file, enriching the data in it", async () => {
-    await expect ( value ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "@test@/typescript" ) ).files ).toEqual ( tsLoaded )
+    await expect ( value ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "@test@/typescript_405" ) ).files ).toEqual ( tsLoaded )
   } );
   it ( "should return an error if a file is not found", async () => {
     await expect ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "notin" ) ).toEqual ( [

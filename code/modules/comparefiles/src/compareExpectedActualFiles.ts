@@ -10,7 +10,7 @@ export const compareExpectedActualFile = ( fileOps: FileOps, options?: CompareFi
   try {
     expect ( realCleanFn ( actual ) ).toEqual ( realCleanFn ( expected ) )
   } catch ( e ) {
-    console.log ( `Comparing ${expectedFile} to ${actualFile}` )
+    console.log ( `Error comparing ${expectedFile} to ${actualFile}` )
     throw e
   }
 };

@@ -1,4 +1,5 @@
-import { mapK } from "./utils";
+import { flatMap, mapK } from "./utils";
+import { errors, ErrorsAnd, mapErrors, mapErrorsK } from "./errors";
 
 export interface NameAnd<T> {
   [ name: string ]: T
@@ -15,6 +16,13 @@ export function mapObject<T, T1> ( a: NameAnd<T>, fn: ( t: T, name: string ) => 
 export async function mapObjectK<T, T1> ( o: NameAnd<T>, fn: ( t: T, name: string ) => Promise<T1> ): Promise<NameAnd<T1>> {
   let result: [ string, T1 ][] = await mapK ( Object.entries ( o ), async ( [ name, t ] ) => [ name, await fn ( t, name ) ] )
   return fromEntries<T1> ( ...result )
+}
+export async function mapObjectWithErrorsK<T, T1> ( o: NameAnd<T>, fn: ( t: T, name: string ) => Promise<ErrorsAnd<T1>> ): Promise<ErrorsAnd<NameAnd<T1>>> {
+  let result: [ string, ErrorsAnd<T1> ][] = await mapK ( Object.entries ( o ), async ( [ name, t ] ) => [ name, await fn ( t, name ) ] )
+  const errors = flatMap ( result, ( [ n, v ] ) => Array.isArray ( v ) ? v : [] )
+  if ( errors.length > 0 ) return errors
+  const values = result as [ string, T1 ][]
+  return fromEntries<T1> ( ...values )
 }
 
 export function fromEntries<T> ( ...kvs: ([ string, T | undefined ])[] ): NameAnd<T> {

@@ -150,7 +150,8 @@ export function makeProjectDetails ( templatePackageJson: any, initFileContents:
   const directory = packageJsonDetails.directory;
   const dic: any = {}
   dic [ 'packageJson' ] = packageJsonDetails.contents
-  return derefence ( `Making ${packageDetailsFile} for ${directory}`, dic, projectDetailsString, { variableDefn: dollarsBracesVarDefn } );
+  const result = derefence ( `Making ${packageDetailsFile} for ${directory}`, dic, projectDetailsString, { variableDefn: dollarsBracesVarDefn } );
+  return result;
 }
 export function findAllProjectNames ( packageJsonDetails: LocationAnd<any>[] ): string[] {
   return packageJsonDetails.map ( p => p.contents.name )
@@ -253,7 +254,7 @@ export async function gatherInitData ( fileOps: FileOps, directory: string, cmd:
   if ( isSuccessfulInitSuggestions ( suggestions ) ) {
     const parsedLaoBan = parseJson<any> ( 'laoban.json' ) ( laoban );
     const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[] = findInitFileContentsFor ( allInitFileContents, parsedLaoBan );
-    const result = mapErrors ( await findTemplateLookup ( `Gathering template data`,fileOps, {}, parsedLaoBan.templates, 'package.json' ),
+    const result = mapErrors ( await findTemplateLookup ( `Gathering template data`, fileOps, {}, parsedLaoBan.templates, 'package.json' ),
       templatePackageJsonLookup => {
         const projectDetails: ProjectDetailsAndTemplate[] = makeAllProjectDetails ( templatePackageJsonLookup, initFileContents, type, suggestions.packageJsonDetails );
         return { existingLaobanFile, suggestions, parsedLaoBan, initFileContents, laoban, projectDetails }

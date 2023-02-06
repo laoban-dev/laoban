@@ -8,7 +8,7 @@ import { ConfigWithDebug } from "../config";
 import { loadConfigForAdmin } from "./laoban-admin";
 import { Writable } from "stream";
 
-import { ErrorsAnd, hasErrors, reportErrors, toForwardSlash } from "@laoban/utils";
+import { ErrorsAnd, hasErrors, lastSegment, mapErrors, NameAnd, reportErrors, toForwardSlash } from "@laoban/utils";
 import { makeCopyOptions } from "../update";
 
 interface CreatePackageOptions extends TypeCmdOptions {
@@ -26,7 +26,7 @@ function packageJsonDetailsForNoPackageJson ( allInitFileContents: InitFileConte
       name: cmd.packagename || path.basename ( clearDirectory ),
       description: cmd.desc || ''
     }
-  }
+}
   if ( !found ) {throw Error ( `Could not find ${cmd.type} in ${JSON.stringify ( allInitFileContents, null, 2 )}` )}
   let packageDetailsRawJson = found[ "package.details.json" ].contents;
   packageDetailsRawJson.template = templateName
