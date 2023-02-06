@@ -4,7 +4,7 @@ import { NameAnd } from "@laoban/utils";
 import { CopyFileOptions, SourceTemplateFileDetailsSingleOrArray } from "./copyFiles";
 import { fileOpsStats, meteredFileOps } from "./meteredFileOps";
 import { postProcessorForTest } from "./postProcessor";
-import { value } from "@laoban/utils/dist/src/errors";
+import { value } from "@laoban/utils";
 
 
 const js = JSON.stringify ( {

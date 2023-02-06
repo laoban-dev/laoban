@@ -4,12 +4,11 @@ import { gatherInitData, InitData, isSuccessfulInitData, ProjectDetailsAndTempla
 import { FileOps, parseJson } from "@laoban/fileops";
 import { loabanConfigName, packageDetailsFile } from "../Files";
 import { ActionParams } from "./types";
-import { fromEntries, toForwardSlash } from "@laoban/utils";
+import { ErrorsAnd, fromEntries, hasErrors, toForwardSlash } from "@laoban/utils";
 import { createDeltaForPackageJson } from "./update-template";
 import { ConfigAndIssues } from "../config";
 import { loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "../update";
-import { ErrorsAnd, hasErrors } from "@laoban/utils/dist/src/errors";
 
 export interface HasPackages {
   packages?: string
@@ -27,6 +26,7 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
       else {
         const context = `Loading ${packageDetailsFile} for ${p.directory} from ${templateUrl}`
         const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, { tx: includeAndTransformFile ( context, {}, fileOps ) } ) ( 'package.json' )
+        if (hasErrors(templateJson)) return templateJson
         const packageJson = parseJson ( context ) ( templateJson )
         return packageJson
       }
