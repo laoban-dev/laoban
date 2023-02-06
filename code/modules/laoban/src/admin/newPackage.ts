@@ -36,7 +36,7 @@ function packageJsonDetailsForNoPackageJson ( allInitFileContents: InitFileConte
 
 async function packageDetailsJsonWhenPackageJsonExists ( fileOps: FileOps, parsedLaoBan: any, allInitFileContents: InitFileContents[], cmd: CreatePackageOptions, packageJson: LocationAndParsed<any>, copyFileOptions: CopyFileOptions ): Promise<ErrorsAnd<string>> {
   const initFileContents: initFileContentsWithParsedLaobanJsonAndProjectDetails[] = findInitFileContentsFor ( allInitFileContents, parsedLaoBan );
-  const templatePackageJsonLookup = findTemplateLookup ( `Looking up template package json`,fileOps, copyFileOptions, parsedLaoBan.templates, 'package.json' )
+  const templatePackageJsonLookup =await  findTemplateLookup ( `Looking up template package json`,fileOps, copyFileOptions, parsedLaoBan.templates, 'package.json' )
   if ( hasErrors ( templatePackageJsonLookup ) ) return reportErrors ( templatePackageJsonLookup )
   // const templatePackageJsonLookup = await findTemplatePackageJsonLookup ( fileOps, initFileContents, parsedLaoBan )
   const { contents, location, template } = await makeOneProjectDetails ( initFileContents, cmd.type, packageJson, templatePackageJsonLookup, [] )
