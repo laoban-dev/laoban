@@ -28,6 +28,7 @@ export async function compareExpectedActualFiles ( fileOps: FileOps, expectedDir
   const ignore = options?.ignoreFn || (() => false)
   const compare = compareExpectedActualFile ( fileOps, options );
   const expectedFiles = (await findChildFiles ( fileOps, ignore ) ( expectedDir )).sort ()
+  if ( await fileOps.isDirectory ( actualDir ) === false ) throw Error ( `Expected ${actualDir} to be a directory. It was expected to be created and isn't` )
   const actualFiles = (await findChildFiles ( fileOps, ignore ) ( actualDir )).sort ()
   try {
     expect ( actualFiles ).toEqual ( expectedFiles )

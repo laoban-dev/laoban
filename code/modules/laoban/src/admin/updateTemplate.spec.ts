@@ -29,7 +29,9 @@ async function testIt ( directory: string, cleanTemplates: boolean ) {
   const testDir = fileOps.join ( updateTemplateTestRoot, directory );
   await cleanUpDirectory ( fileOps, testDir, cleanTemplates )
   const actualDisplay = await execute ( testDir, `${prefix} admin updatetemplate --directory package` )
-
+  const expectedDisplay = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, 'expectedDisplay.txt' ) )
+  // expect ( actualDisplay ).toEqual ( expectedDisplay )
+  console.log('actualDisplay', actualDisplay)
   // expect ( actual ).toEqual ( `Updated template in ${fileOps.join ( updateTemplateTestRoot, directory, 'package' )}` )
   const expectedLaoban = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, 'laoban.expected.json' ) )
   const actualLaoban = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, 'laoban.json' ) )

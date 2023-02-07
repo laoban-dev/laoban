@@ -15,7 +15,7 @@ export function postProcessor ( matcher: RegExp, postProcess: PostProcessFn ): P
 export const postProcessorForTest: PostProcessor = postProcessor ( /.*/, ( context ) => async ( text, cmd ) =>
   text.includes ( '{' )
     ? text.replace ( /{/, `{"post": "${cmd}",` )
-    : `${cmd}(${text})`)
+    : `${cmd}(${text})` )
 
 export const postProcessJson: PostProcessor = postProcessor ( /^json$/,
   ( context ) => async ( text, cmd ) => {return JSON.stringify ( parseJson ( context ) ( text ), null, 2 )} )
@@ -105,6 +105,8 @@ export const applyOrUndefined = ( p: PostProcessor ) => ( context, fileOps, copy
   p.applicable ( postProcessCmd ) ? p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : undefined
 
 export const applyAll = ( p: PostProcessor | undefined ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: undefined | string | string[] ) =>
-  foldK ( toArray ( postProcessCmd ), text, async ( t, cmd ) => applyOrOriginal ( p ) ( context, fileOps, copyFileOptions, cfd ) ( t, cmd ) )
+  p
+    ? foldK ( toArray ( postProcessCmd ), text, async ( t, cmd ) => applyOrOriginal ( p ) ( context, fileOps, copyFileOptions, cfd ) ( t, cmd ) )
+    : text
 
 export const defaultPostProcessors = chainPostProcessFn ( postProcessJson, postProcessCheckEnv, postProcessJsonMergeInto, jsonSortPostProcess )

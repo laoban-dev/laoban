@@ -80,7 +80,8 @@ export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
     const initDataToUse = await getInitDataWithoutTemplatesFilteredByPackages ( fileOps, initData, cmd );
     if ( cmd.showimpact ) return showImpact ( ap, initDataToUse, configAndIssues )
 
-    const { suggestions, initFileContents } = initDataToUse;
+    const { suggestions } = initDataToUse;
+    // console.log('suggestions', suggestions)
     suggestions.comments.forEach ( c => console.log ( c ) )
     console.log ( `Would put ${loabanConfigName} into `, suggestions.laobanJsonLocation, ' which allows the following templates', initDataToUse.parsedLaoBan.templates )
     const dirs = initDataToUse.projectDetails.map ( p => fileOps.relative ( initData.suggestions.laobanJsonLocation, p.directory ) )

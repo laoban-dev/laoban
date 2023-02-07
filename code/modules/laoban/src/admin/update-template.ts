@@ -1,10 +1,10 @@
 import { ActionParams } from "./types";
 import { ConfigWithDebug } from "../config";
 import { loabanConfigName, packageDetailsFile } from "../Files";
-import { addPrefixIfFile, CopyFileDetails, fileNameFrom, FileOps, isFilename, isTemplateFileDetails, isUrl, loadFileFromDetails, LocationAndContents, parseJson, saveAll, targetFrom, TemplateControlFile, TemplateFileDetails } from "@laoban/fileops";
+import { fileNameFrom, FileOps, isFilename, isUrl, loadFileFromDetails, loadTemplateDetailsAndFileContents, LocationAndContents, parseJson, saveAll, SourcedTemplateFileDetailsWithContent, targetFrom } from "@laoban/fileops";
 import { getTemplateJsonFileName } from "./newTemplate";
-import { includeAndTransformFile } from "../update";
-import { deepCombineTwoObjects, jsonDelta, JsonDeltaOptions, NameAnd, singleOrArrayOrUndefined, toArray } from "@laoban/utils";
+import { includeAndTransformFile, makeCopyOptions } from "../update";
+import { deepCombineTwoObjects, ErrorsAnd, hasErrors, jsonDelta, JsonDeltaOptions, keep, mapObjectK, NameAnd, singleOrArrayOrUndefined, toArray } from "@laoban/utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { loadConfigForAdmin } from "./laoban-admin";
 import { CommanderStatic } from "commander";
@@ -22,29 +22,29 @@ export function updateTemplateOptions<T extends CommanderStatic> ( envs: NameAnd
 interface TemplateDetailsAndContent {
   templateName: string
   templateDirUrl: string
-  templateJsonFileName: string
-  templateJson: any
+  templateFiles: NameAnd<SourcedTemplateFileDetailsWithContent>
 }
 
-async function findTemplateDetailsAndContent ( fileOps: FileOps, directory: string, error: ( msg: string ) => void, config: ConfigWithDebug ): Promise<TemplateDetailsAndContent> {
+async function findTemplateDetailsAndContent ( fileOps: FileOps, directory: string, config: ConfigWithDebug ): Promise<ErrorsAnd<TemplateDetailsAndContent>> {
   const pdFileName = fileOps.join ( directory, packageDetailsFile );
-  if ( !await fileOps.isFile ( pdFileName ) ) error ( `No package details file found at ${pdFileName}` )
+  if ( !await fileOps.isFile ( pdFileName ) ) return [ `No package details file found at ${pdFileName}` ]
   const pdString = await fileOps.loadFileOrUrl ( pdFileName )
   const pd = parseJson<any> ( `Loading ${pdFileName}` ) ( pdString )
   const templateName = pd.template
-  if ( !templateName ) error ( `No template in ${pdFileName}` )
+  if ( !templateName ) return [ `No template in ${pdFileName}` ]
   const templateDirUrl = config.templates[ templateName ]
-  if ( !templateDirUrl ) error ( `File ${pdFileName}. No template url for ${templateName} in ${JSON.stringify ( config.templates )}` )
-  const templateJsonFileName = getTemplateJsonFileName ( fileOps, templateDirUrl );
+  if ( !templateDirUrl ) return [ `File ${pdFileName}. No template url for ${templateName} in ${JSON.stringify ( config.templates )}` ]
 
-  const template = await fileOps.loadFileOrUrl ( templateJsonFileName )
-  const templateJson = parseJson<TemplateControlFile> ( `Loading template ${templateName} which is ${templateJsonFileName}` ) ( template )
-  if ( !templateJson.files ) error ( `Malformed ${templateJsonFileName}. No files property` )
-  return { templateDirUrl, templateName, templateJsonFileName, templateJson };
+  const context = `Loading template [${templateName}] which maps to [${templateDirUrl}]`;
+  const copyFileOptions = makeCopyOptions ( context, fileOps, {}, config, undefined, pd )
+
+  const templateFiles: ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>> = await loadTemplateDetailsAndFileContents ( context, fileOps, templateDirUrl, copyFileOptions )
+  if ( hasErrors ( templateFiles ) ) return templateFiles;
+  return { templateDirUrl, templateName, templateFiles };
 }
 
 
-function getPostProcessAddingToOriginalForPackageJson ( templateDirUrl: string, f: TemplateFileDetails ) {
+function getPostProcessAddingToOriginalForPackageJson ( templateDirUrl: string, f: SourcedTemplateFileDetailsWithContent ) {
   const isReference = ( p: string ) => p.startsWith ( 'jsonMergeInto' ) || p.startsWith ( 'packageJson(' );
   const modified = toArray ( f.postProcess ).map ( p => {
     if ( isReference ( p ) )
@@ -57,30 +57,31 @@ function getPostProcessAddingToOriginalForPackageJson ( templateDirUrl: string, 
   return singleOrArrayOrUndefined ( [ ...modified, `packageJson(${templateDirUrl}/package.json)` ] )
 }
 
-function transformTemplate ( fileOps: FileOps, td: TemplateDetailsAndContent, error: ( msg: string ) => void ): CopyFileDetails[] {
-
-  const { templateDirUrl, templateJson, templateJsonFileName } = td;
-  const transformedJson: CopyFileDetails[] = templateJson.files.map ( f => {
-    const fileName = fileNameFrom ( f );
-    const target = targetFrom ( f );
-    const file = fileOps.join ( templateDirUrl, fileName );
-    if ( typeof f === 'string' ) return { file: file.replace ( /\\/g, '/' ), target: f }
-    const newFileName = addPrefixIfFile ( fileOps, templateDirUrl, fileName ).replace ( /\\/g, '/' );
+async function transformTemplate ( fileOps: FileOps, td: TemplateDetailsAndContent, error: ( msg: string ) => void ): Promise<NameAnd<SourcedTemplateFileDetailsWithContent>> {
+  const { templateDirUrl, templateName, templateFiles } = td;
+  console.log ( 10, templateFiles )
+  const transformedJson: NameAnd<SourcedTemplateFileDetailsWithContent> = await mapObjectK<SourcedTemplateFileDetailsWithContent, SourcedTemplateFileDetailsWithContent> ( templateFiles, async f => {
+    const { file, target } = f
+    const cleanF = keep ( f, 'file', 'target', 'templated', 'type', 'postProcess', 'sample', 'mergeWithParent', 'directory' );
+    console.log ( 11 )
     if ( target === 'package.json' ) {
       console.log ( 'package.json' )
-      if ( isUrl ( file ) ) return {
-        ...f,
-        file: 'package.json',
-        postProcess: getPostProcessAddingToOriginalForPackageJson ( templateDirUrl, f ),
+      if ( isUrl ( file ) ) {
+        const postProcessAddingToOriginalForPackageJson = getPostProcessAddingToOriginalForPackageJson ( templateDirUrl, f );
+        console.log ( 'postProcessAddingToOriginalForPackageJson', postProcessAddingToOriginalForPackageJson )
+        return {
+          ...cleanF,
+          file: 'package.json',
+          postProcess: postProcessAddingToOriginalForPackageJson,
+        }
       }
-      return { ...f, file: 'package.json' } //keep the original postProcess.
+      return { ...cleanF, file: 'package.json' } //keep the original postProcess.
     }
-    if ( isTemplateFileDetails ( f ) ) {
-      return { ...f, file: newFileName, target }
-    }
-    throw error ( `Malformed ${templateJsonFileName}. File ${JSON.stringify ( f )} is not a string or a {file:..., target: ...}` )
+
+    return { ...cleanF }//, file: newFileName, target }
   } )
-  return transformedJson;
+  console.log ( 12, transformedJson )
+  return transformedJson
 }
 async function loadOriginalAndCurrentPackageJson ( fileOps: FileOps, directory: string, templateDirUrl: string, originalTemplatePackageCfd ) {
   const packageJsonFileName = fileOps.join ( directory, 'package.json' )
@@ -111,18 +112,30 @@ export async function updateTemplate ( { fileOps, cmd, currentDirectory, params,
     process.exit ( 1 )
   }
   const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+
   const directory = cmd.directory || currentDirectory
-  const tdc = await findTemplateDetailsAndContent ( fileOps, directory, error, config );
-  const { templateDirUrl, templateName, templateJson } = tdc
-  const transformedJson = transformTemplate ( fileOps, tdc, error );
-  const originalTemplatePackageCfd = templateJson.files.find ( f => targetFrom ( f ) === 'package.json' )
+  console.log ( 0 )
+  const tdc = await findTemplateDetailsAndContent ( fileOps, directory, config );
+  console.log ( 1 )
+  if ( hasErrors ( tdc ) ) return tdc
+  console.log ( 2 )
+  const { templateDirUrl, templateName, templateFiles } = tdc
+  const originalTemplatePackageCfd = templateFiles[ 'package.json' ]
+  console.log ( 3 ,templateFiles)
   if ( originalTemplatePackageCfd === undefined ) {
     console.log ( `there is no package.json defined in the template file ${templateDirUrl}` )
     return
   }
+  console.log ( 4 )
+
+  const transformedJson = await transformTemplate ( fileOps, tdc, error )
+  console.log ( 5 )
+
   console.log ( 'templateJson', transformedJson )
+  console.log ( 6 )
   const { originalPackageJson, packageJson } = await loadOriginalAndCurrentPackageJson ( fileOps, directory, templateDirUrl, originalTemplatePackageCfd );
   const delta = createDeltaForPackageJson ( originalPackageJson, packageJson, { onlyUpdate: true } );
+  console.log ( 7, 'delta', delta )
   const originalTemplateWasFile = isFilename ( templateDirUrl );
   async function findOriginalRawTemplate () {
     if ( originalTemplateWasFile ) {
@@ -139,7 +152,8 @@ export async function updateTemplate ( { fileOps, cmd, currentDirectory, params,
   const originalRawTemplate = await findOriginalRawTemplate ()
 
   const newPackageJson = originalTemplateWasFile ? deepCombineTwoObjects ( originalRawTemplate, delta ) : delta
-
+  console.log ( 8, 'newPackageJson', newPackageJson )
+  console.log ( 9, '.template.json', transformedJson )
   if ( cmd.dryrun ) {
     console.log ( '.template.json', transformedJson )
     console.log ( 'package.json', newPackageJson )

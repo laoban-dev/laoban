@@ -108,14 +108,14 @@ export interface SourcedTemplateFileDetailsWithContent extends SourcedTemplateFi
 }
 export async function loadFilesInTemplate ( fileData: NameAnd<SourceTemplateFileDetailsSingleOrArray>, fileOps: FileOps, options: CopyFileOptions ): Promise<NameAnd<SourcedTemplateFileDetailsWithContent[]>> {
   async function load ( prefix: string[], fileData: NameAnd<SourceTemplateFileDetailsSingleOrArray> ) {
-    const realtx: TransformTextFn = async ( type, text ) => options.tx ? options.tx ( type, text ) : text
+    const realtx: TransformTextFn = async ( type, text ) => options?.tx ? options.tx ( type, text ) : text
 
     const toMerge: NameAnd<SourcedTemplateFileDetailsWithContent[]> = removeEmptyArrays ( await mapObjectK ( fileData, async ( fas, name ) => {
       return flatMapK ( toArray ( fas ), async fa => {
         const target = [ ...prefix, fa.target ? fa.target : name ].join ( '/' );
         if ( fa.directory ) {return [ { ...fa, name, target, content: await load ( [ ...prefix, name ], fa.directory ) } ]}
-        if ( options.filter && !options.filter ( name, fa ) ) return []
-        return [ fa.sample && !options.allowSamples
+        if ( options?.filter && !options.filter ( name, fa ) ) return []
+        return [ fa.sample && options?.allowSamples !== true
           ? { ...fa, name, content: undefined }
           : {
             ...fa, name, target, content: await fileOps.loadFileOrUrl ( fa.file ).then ( async text =>
@@ -166,7 +166,7 @@ export const postProcessFiles = ( context: string, fileOps: FileOps, options: Co
     if ( fac.directory )
       return { ...fac, content: await postProcessFiles ( context, fileOps, options ) ( fac.content as NameAnd<SourcedTemplateFileDetailsWithContent> ) }
     if ( typeof fac.content === 'string' ) {
-      const content = await applyAll ( options.postProcessor ) ( context, fileOps, options, fac ) ( fac.content, fac.postProcess );
+      const content = await applyAll ( options?.postProcessor ) ( context, fileOps, options, fac ) ( fac.content, fac.postProcess );
       return { ...fac, content }
     }
     return fac

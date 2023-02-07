@@ -1,6 +1,6 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { safeArray } from "./safe";
-import { fromEntries, NameAnd } from "./nameAnd";
+import { fromEntries, mapObject, NameAnd } from "./nameAnd";
 
 export function unique<T> ( ts: T[] | undefined, tagFn: ( t: T ) => string ): T[] {
   const alreadyIn: Set<string> = new Set ()
@@ -15,6 +15,10 @@ export function unique<T> ( ts: T[] | undefined, tagFn: ( t: T ) => string ): T[
   return result
 }
 
+
+export function keep<K extends keyof T, T> ( obj: T, ...keys: K[] ): T {
+  return fromEntries<T> ( ...flatMap<string, [ string, T ]> ( keys as string[], k => obj[ k ] ? [ [ k, obj[ k ] ] ] : [] ) ) as T
+}
 
 export const chain = <From, To> ( ...fns: (( from: From ) => To | undefined)[] ): ( from: From ) => To | undefined => ( from: From ) => {
   for ( let fn of fns ) {
