@@ -2,7 +2,7 @@ import { FileOps, isUrl, loadWithParents, parseJson, Path } from "./fileOps";
 import { CopyFileDetails, CopyFileOptions, SourcedTemplateFileDetails, SourceTemplateFileDetailsSingleOrArray, TemplateFileDetails, TransformTextFn } from "./copyFiles";
 import { Validate } from "@laoban/validation";
 import { allButLastSegment, combineTwoObjects, deepCombineTwoObjects, errors, ErrorsAnd, flatMap, flatMapK, hasErrors, mapErrors, mapErrorsK, mapK, mapObject, mapObjectK, mapObjectKeys, NameAnd, removeEmptyArrays, toArray } from "@laoban/utils";
-import { deletePath } from "@laoban/utils/dist/src/dotLanguage";
+import { deletePath } from "@laoban/utils";
 import { applyAll } from "./postProcessor";
 
 export interface TemplateControlFile {

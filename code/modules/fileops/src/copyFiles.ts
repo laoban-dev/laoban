@@ -2,8 +2,6 @@ import { applyOrOriginal, PostProcessor } from "./postProcessor";
 import { allButLastSegment, NameAnd, safeArray } from "@laoban/utils";
 import { DebugCommands } from "@laoban/debug";
 import { FileOps } from "./fileOps";
-import { deprecate } from "util";
-import { SourcedTemplateFileDetailsWithContent } from "./loadTemplateControlFile";
 
 export type SourceTemplateFileDetailsSingleOrArray = SourcedTemplateFileDetails | SourcedTemplateFileDetails[]
 

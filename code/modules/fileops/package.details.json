@@ -2,7 +2,7 @@
   "template":    "typescript",
   "name":        "@laoban/fileops",
   "description": "Utilities about files: not bound to any way of accessing files",
-  "links":       ["@laoban/utils", "@laoban/validate"],
+  "links":       ["@laoban/utils", "@laoban/validation"],
   "guards":     {
     "publish": true,
     "test":    true,

@@ -1,6 +1,6 @@
 import { FileOps, parseJson } from "./fileOps";
 import { deepCombineTwoObjects, foldK, mapK, NameAnd, objectSortedByKeys, safeObject, toArray } from "@laoban/utils";
-import { findPart } from "@laoban/utils/dist/src/dotLanguage";
+import { findPart } from "@laoban/utils";
 import { CopyFileOptions, TemplateFileDetails, TransformTextFn } from "./copyFiles";
 
 type PostProcessFn = ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, cfd: TemplateFileDetails ) => ( text: string, postProcessCmd: string ) => Promise<string>
