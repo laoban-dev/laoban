@@ -69,7 +69,7 @@ async function cleanTestDirectories () {
     .filter ( s => s !== 'expected' && s !== 'source' && s !== 'laoban.json' && s !== 'laoban.starting.json' )
   await Promise.all ( files.map ( async f => {
     const name = path.join ( passingDir, f )
-    if ( fileOps.isDirectory ( name ) ) return fileOps.removeDirectory ( name, true )
+    if ( await fileOps.isDirectory ( name ) ) return fileOps.removeDirectory ( name, true )
   } ) )
   await fileOps.removeDirectory ( path.join ( passingDir, 'source', 'templates' ), true )
   await fileOps.removeDirectory ( path.join ( passingDir, 'source', 'thenewtemplatedir' ), true )
@@ -91,7 +91,7 @@ describe ( "integration tests for newtemplate", () => {
       "Making template in <root>/passing/source/templates/source"
     ])
     await compareExpectedActualFiles ( fileOps, path.join ( passingDir, 'expected' ), path.join ( passingDir, 'source', 'templates', 'source' ) )
-    expect ( getLaobanJsonTemplates ( passingSourceDir ) ).resolves.toEqual ( {
+    await expect ( getLaobanJsonTemplates ( passingSourceDir ) ).resolves.toEqual ( {
       "something": "here",
       "source": "source\\templates\\source"
     } )
@@ -104,7 +104,7 @@ describe ( "integration tests for newtemplate", () => {
     expect ( toArrayReplacingRoot ( testDir, stdout ) ).toEqual ( [
       "Making template in ../thenewtemplatedir/source"
     ] )
-    expect(getLaobanJsonTemplates(passingSourceDir)).resolves.toEqual({
+    await expect(getLaobanJsonTemplates(passingSourceDir)).resolves.toEqual({
       "something": "here",
       "source": "thenewtemplatedir\\source"
     })
@@ -118,7 +118,7 @@ describe ( "integration tests for newtemplate", () => {
     expect ( toArrayReplacingRoot ( testDir, stdout ) ).toEqual ( [
       "Making template in ../thenewtemplatedir/tempname"
     ] )
-    expect(getLaobanJsonTemplates(passingSourceDir)).resolves.toEqual({
+    await expect(getLaobanJsonTemplates(passingSourceDir)).resolves.toEqual({
       "something": "here",
       "tempname": "thenewtemplatedir\\tempname"
     })

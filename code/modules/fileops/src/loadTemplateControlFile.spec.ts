@@ -90,113 +90,111 @@ const ts = JSON.stringify ( {
   }
 }, null, 2 )
 const tsLoaded: NameAnd<SourceTemplateFileDetailsSingleOrArray> = {
-  ".npmrc": { file: "@test@/typescript/.npmrc", "postProcess": "checkEnv(NPM_TOKEN)", "source": [ "@test@/typescript" ] },
-  "jest.config.json": { file: "@test@/typescript/jest.config.json", "source": [ "@test@/typescript" ] },
-  "tsconfig.json": { file: "@test@/typescript/tsconfig.json", "source": [ "@test@/typescript" ] },
-  "index.ts": { "sample": true, file: "@test@/typescript/index.ts", "source": [ "@test@/typescript" ] },
+  ".npmrc": { file: "@test@/typescript/.npmrc", "postProcess": "checkEnv(NPM_TOKEN)", "source": [ "@test@/typescript_405" ] },
+  "jest.config.json": { file: "@test@/typescript/jest.config.json", "source": [ "@test@/typescript_405" ] },
+  "tsconfig.json": { file: "@test@/typescript/tsconfig.json", "source": [ "@test@/typescript_405" ] },
+  "index.ts": { "sample": true, file: "@test@/typescript/index.ts", "source": [ "@test@/typescript_405" ] },
 
   "src": {
     directory: {
       "justSpecInJs.js": { "file": "@test@/javascript/justSpecInJs.js", "source": [ "@test@/javascript" ] },
-      "justts.ts": { "file": "@test@/typescript/justts.ts", "source": [ "@test@/typescript" ] },
+      "justts.ts": { "file": "@test@/typescript/justts.ts", "source": [ "@test@/typescript_405" ] },
       "somefile.js": [ // in twice because we asked for it in the javascript template, and are overwriting it with the typescript template
         { "file": "@test@/javascript/somefile.js", postProcess: 'pp', "source": [ "@test@/javascript" ] },
-        { "file": "@test@/typescript/somefile.js", postProcess: 'ppts', "source": [ "@test@/typescript" ] }
+        { "file": "@test@/typescript/somefile.js", postProcess: 'ppts', "source": [ "@test@/typescript_405" ] }
       ]
     },
-    "sample": true, "source": [ "@test@/javascript", "@test@/typescript" ]
+    "sample": true, "source": [ "@test@/javascript", "@test@/typescript_405" ]
   },
   "package.json": [
     { "file": "@test@/javascript/package.json", "postProcess": "packageJson()", "source": [ "@test@/javascript" ], "templated": "${}" },
-    { "file": "@test@/typescript/package.json", "templated": "${}", "mergeWithParent": "jsonMerge", "postProcess": "packageJsonSort", "source": [ "@test@/typescript" ] }
+    { "file": "@test@/typescript_405/package.json", "templated": "${}", "mergeWithParent": "jsonMerge", "postProcess": "packageJsonSort", "source": [ "@test@/typescript_405" ] }
   ]
 }
 const tsContentNoSample: NameAnd<SourcedTemplateFileDetailsWithContent[]> = {
-  ".npmrc": [ { "content": "{\"@test@/typescript/.npmrc\":\"content\"}", "target": ".npmrc", "file": "@test@/typescript/.npmrc", "name": ".npmrc", "postProcess": "checkEnv(NPM_TOKEN)", "source": [ "@test@/typescript" ] } ],
-  "index.ts": [ { "file": "@test@/typescript/index.ts", "name": "index.ts", "sample": true, "source": [ "@test@/typescript" ], content: undefined } ],
-  "jest.config.json": [ { "content": "{\"@test@/typescript/jest.config.json\":\"content\"}", "target": "jest.config.json", "file": "@test@/typescript/jest.config.json", "name": "jest.config.json", "source": [ "@test@/typescript" ] } ],
+  ".npmrc": [ { "content": "{\"@test@/typescript/.npmrc\":\"content\"}", "target": ".npmrc", "file": "@test@/typescript/.npmrc", "name": ".npmrc", "postProcess": "checkEnv(NPM_TOKEN)", "source": [ "@test@/typescript_405" ] } ],
+  "index.ts": [ { "file": "@test@/typescript/index.ts", "name": "index.ts", "sample": true, "source": [ "@test@/typescript_405" ], content: undefined } ],
+  "jest.config.json": [ { "content": "{\"@test@/typescript/jest.config.json\":\"content\"}", "target": "jest.config.json", "file": "@test@/typescript/jest.config.json", "name": "jest.config.json", "source": [ "@test@/typescript_405" ] } ],
   "package.json": [
     { "content": "{\"tx\":\"${}\",\"@test@/javascript/package.json\":\"content\"}", "target": "package.json", "file": "@test@/javascript/package.json", "name": "package.json", "postProcess": "packageJson()", "source": [ "@test@/javascript" ], "templated": "${}" },
-    { "content": "{\"tx\":\"${}\",\"@test@/typescript/package.json\":\"content\"}", "target": "package.json", "file": "@test@/typescript/package.json", "mergeWithParent": "jsonMerge", "name": "package.json", "postProcess": "packageJsonSort", "source": [ "@test@/typescript" ], "templated": "${}" } ],
+    { "content": "{\"tx\":\"${}\",\"@test@/typescript_405/package.json\":\"content\"}", "target": "package.json", "file": "@test@/typescript_405/package.json", "mergeWithParent": "jsonMerge", "name": "package.json", "postProcess": "packageJsonSort", "source": [ "@test@/typescript_405" ], "templated": "${}" } ],
   "src": [ {
-    "name": "src", "sample": true, "target": "src", "source": [ "@test@/javascript", "@test@/typescript" ],
+    "name": "src", "sample": true, "target": "src", "source": [ "@test@/javascript", "@test@/typescript_405" ],
     "content": {
       "justSpecInJs.js": [ { "content": "{\"@test@/javascript/justSpecInJs.js\":\"content\"}", "target": "src/justSpecInJs.js", "file": "@test@/javascript/justSpecInJs.js", "name": "justSpecInJs.js", "source": [ "@test@/javascript" ] } ],
-      "justts.ts": [ { "content": "{\"@test@/typescript/justts.ts\":\"content\"}", "target": "src/justts.ts", "file": "@test@/typescript/justts.ts", "name": "justts.ts", "source": [ "@test@/typescript" ] } ],
+      "justts.ts": [ { "content": "{\"@test@/typescript/justts.ts\":\"content\"}", "target": "src/justts.ts", "file": "@test@/typescript/justts.ts", "name": "justts.ts", "source": [ "@test@/typescript_405" ] } ],
       "somefile.js": [ { "content": "{\"@test@/javascript/somefile.js\":\"content\"}", "target": "src/somefile.js", "file": "@test@/javascript/somefile.js", "name": "somefile.js", "postProcess": "pp", "source": [ "@test@/javascript" ] },
-        { "content": "{\"@test@/typescript/somefile.js\":\"content\"}", "target": "src/somefile.js", "file": "@test@/typescript/somefile.js", "name": "somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript" ] } ]
+        { "content": "{\"@test@/typescript/somefile.js\":\"content\"}", "target": "src/somefile.js", "file": "@test@/typescript/somefile.js", "name": "somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript_405" ] } ]
     },
     "directory": {
       "justSpecInJs.js": { "file": "@test@/javascript/justSpecInJs.js", "source": [ "@test@/javascript" ] },
-      "justts.ts": { "file": "@test@/typescript/justts.ts", "source": [ "@test@/typescript" ] },
+      "justts.ts": { "file": "@test@/typescript/justts.ts", "source": [ "@test@/typescript_405" ] },
       "somefile.js": [
         { "file": "@test@/javascript/somefile.js", "postProcess": "pp", "source": [ "@test@/javascript" ] },
-        { "file": "@test@/typescript/somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript" ] } ]
+        { "file": "@test@/typescript/somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript_405" ] } ]
     },
   }
   ],
-  "tsconfig.json": [ { "content": "{\"@test@/typescript/tsconfig.json\":\"content\"}", "target": "tsconfig.json", "file": "@test@/typescript/tsconfig.json", "name": "tsconfig.json", "source": [ "@test@/typescript" ] } ]
+  "tsconfig.json": [ { "content": "{\"@test@/typescript/tsconfig.json\":\"content\"}", "target": "tsconfig.json", "file": "@test@/typescript/tsconfig.json", "name": "tsconfig.json", "source": [ "@test@/typescript_405" ] } ]
 }
 
 const tsContentSample: NameAnd<SourcedTemplateFileDetailsWithContent[]> = {
-  ".npmrc": [ { "content": "{\"@test@/typescript/.npmrc\":\"content\"}", "target": ".npmrc", "file": "@test@/typescript/.npmrc", "name": ".npmrc", "postProcess": "checkEnv(NPM_TOKEN)", "source": [ "@test@/typescript" ] } ],
-  "index.ts": [ { "content": "{\"@test@/typescript/index.ts\":\"content\"}", "target": "index.ts", "file": "@test@/typescript/index.ts", "name": "index.ts", "sample": true, "source": [ "@test@/typescript" ] } ],
-  "jest.config.json": [ { "content": "{\"@test@/typescript/jest.config.json\":\"content\"}", "target": "jest.config.json", "file": "@test@/typescript/jest.config.json", "name": "jest.config.json", "source": [ "@test@/typescript" ] } ],
+  ".npmrc": [ { "content": "{\"@test@/typescript/.npmrc\":\"content\"}", "target": ".npmrc", "file": "@test@/typescript/.npmrc", "name": ".npmrc", "postProcess": "checkEnv(NPM_TOKEN)", "source": [ "@test@/typescript_405" ] } ],
+  "index.ts": [ { "content": "{\"@test@/typescript/index.ts\":\"content\"}", "target": "index.ts", "file": "@test@/typescript/index.ts", "name": "index.ts", "sample": true, "source": [ "@test@/typescript_405" ] } ],
+  "jest.config.json": [ { "content": "{\"@test@/typescript/jest.config.json\":\"content\"}", "target": "jest.config.json", "file": "@test@/typescript/jest.config.json", "name": "jest.config.json", "source": [ "@test@/typescript_405" ] } ],
   "package.json": [
     { "content": "{\"tx\":\"${}\",\"@test@/javascript/package.json\":\"content\"}", "target": "package.json", "file": "@test@/javascript/package.json", "name": "package.json", "postProcess": "packageJson()", "source": [ "@test@/javascript" ], "templated": "${}" },
-    { "content": "{\"tx\":\"${}\",\"@test@/typescript/package.json\":\"content\"}", "target": "package.json", "file": "@test@/typescript/package.json", "mergeWithParent": "jsonMerge", "name": "package.json", "postProcess": "packageJsonSort", "source": [ "@test@/typescript" ], "templated": "${}" } ],
+    { "content": "{\"tx\":\"${}\",\"@test@/typescript_405/package.json\":\"content\"}", "target": "package.json", "file": "@test@/typescript_405/package.json", "mergeWithParent": "jsonMerge", "name": "package.json", "postProcess": "packageJsonSort", "source": [ "@test@/typescript_405" ], "templated": "${}" } ],
   "src": [ {
-    "name": "src", "sample": true, "target": "src", "source": [ "@test@/javascript", "@test@/typescript" ],
+    "name": "src", "sample": true, "target": "src", "source": [ "@test@/javascript", "@test@/typescript_405" ],
     "content": {
       "justSpecInJs.js": [ { "content": "{\"@test@/javascript/justSpecInJs.js\":\"content\"}", "target": "src/justSpecInJs.js", "file": "@test@/javascript/justSpecInJs.js", "name": "justSpecInJs.js", "source": [ "@test@/javascript" ] } ],
-      "justts.ts": [ { "content": "{\"@test@/typescript/justts.ts\":\"content\"}", "target": "src/justts.ts", "file": "@test@/typescript/justts.ts", "name": "justts.ts", "source": [ "@test@/typescript" ] } ],
+      "justts.ts": [ { "content": "{\"@test@/typescript/justts.ts\":\"content\"}", "target": "src/justts.ts", "file": "@test@/typescript/justts.ts", "name": "justts.ts", "source": [ "@test@/typescript_405" ] } ],
       "somefile.js": [
         { "content": "{\"@test@/javascript/somefile.js\":\"content\"}", "target": "src/somefile.js", "file": "@test@/javascript/somefile.js", "name": "somefile.js", "postProcess": "pp", "source": [ "@test@/javascript" ] },
-        { "content": "{\"@test@/typescript/somefile.js\":\"content\"}", "target": "src/somefile.js", "file": "@test@/typescript/somefile.js", "name": "somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript" ] } ]
+        { "content": "{\"@test@/typescript/somefile.js\":\"content\"}", "target": "src/somefile.js", "file": "@test@/typescript/somefile.js", "name": "somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript_405" ] } ]
     },
     "directory": {
       "justSpecInJs.js": { "file": "@test@/javascript/justSpecInJs.js", "source": [ "@test@/javascript" ] },
-      "justts.ts": { "file": "@test@/typescript/justts.ts", "source": [ "@test@/typescript" ] },
+      "justts.ts": { "file": "@test@/typescript/justts.ts", "source": [ "@test@/typescript_405" ] },
       "somefile.js": [
         { "file": "@test@/javascript/somefile.js", "postProcess": "pp", "source": [ "@test@/javascript" ] },
-        { "file": "@test@/typescript/somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript" ] }
+        { "file": "@test@/typescript/somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript_405" ] }
       ]
     },
   } ],
-  "tsconfig.json": [ { "content": "{\"@test@/typescript/tsconfig.json\":\"content\"}", "target": "tsconfig.json", "file": "@test@/typescript/tsconfig.json", "name": "tsconfig.json", "source": [ "@test@/typescript" ] } ]
+  "tsconfig.json": [ { "content": "{\"@test@/typescript/tsconfig.json\":\"content\"}", "target": "tsconfig.json", "file": "@test@/typescript/tsconfig.json", "name": "tsconfig.json", "source": [ "@test@/typescript_405" ] } ]
 }
 
 const tsSampleMerged: NameAnd<SourcedTemplateFileDetailsWithContent> = {
-  ".npmrc": { "content": "{\"@test@/typescript/.npmrc\":\"content\"}", "target": ".npmrc", "file": "@test@/typescript/.npmrc", "name": ".npmrc", "postProcess": "checkEnv(NPM_TOKEN)", "source": [ "@test@/typescript" ] },
-  "index.ts": { "content": "{\"@test@/typescript/index.ts\":\"content\"}", "target": "index.ts", "file": "@test@/typescript/index.ts", "name": "index.ts", "sample": true, "source": [ "@test@/typescript" ] },
-  "jest.config.json": { "content": "{\"@test@/typescript/jest.config.json\":\"content\"}", "target": "jest.config.json", "file": "@test@/typescript/jest.config.json", "name": "jest.config.json", "source": [ "@test@/typescript" ] },
+  ".npmrc": { "content": "{\"@test@/typescript/.npmrc\":\"content\"}", "target": ".npmrc", "file": "@test@/typescript/.npmrc", "name": ".npmrc", "postProcess": "checkEnv(NPM_TOKEN)", "source": [ "@test@/typescript_405" ] },
+  "index.ts": { "content": "{\"@test@/typescript/index.ts\":\"content\"}", "target": "index.ts", "file": "@test@/typescript/index.ts", "name": "index.ts", "sample": true, "source": [ "@test@/typescript_405" ] },
+  "jest.config.json": { "content": "{\"@test@/typescript/jest.config.json\":\"content\"}", "target": "jest.config.json", "file": "@test@/typescript/jest.config.json", "name": "jest.config.json", "source": [ "@test@/typescript_405" ] },
   "package.json": {
-    "content": "{\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript/package.json\": \"content\"\n}",
-    "target": "package.json", "file": "@test@/typescript/package.json", "mergeWithParent": "jsonMerge", "name": "package.json", "postProcess": "packageJsonSort", "source": [ "@test@/javascript", "@test@/typescript" ], "templated": "${}"
+    "content": "{\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript_405/package.json\": \"content\"\n}",
+    "target": "package.json", "file": "@test@/typescript_405/package.json", "mergeWithParent": "jsonMerge", "name": "package.json", "postProcess": "packageJsonSort", "source": [ "@test@/javascript", "@test@/typescript_405" ], "templated": "${}"
   },
   "src": {
-    "name": "src", "sample": true, "target": "src", "source": [ "@test@/javascript", "@test@/typescript" ],
+    "name": "src", "sample": true, "target": "src", "source": [ "@test@/javascript", "@test@/typescript_405" ],
     "content": {
       "justSpecInJs.js": { "content": "{\"@test@/javascript/justSpecInJs.js\":\"content\"}", "target": "src/justSpecInJs.js", "file": "@test@/javascript/justSpecInJs.js", "name": "justSpecInJs.js", "source": [ "@test@/javascript" ] },
-      "justts.ts": { "content": "{\"@test@/typescript/justts.ts\":\"content\"}", "target": "src/justts.ts", "file": "@test@/typescript/justts.ts", "name": "justts.ts", "source": [ "@test@/typescript" ] },
-      "somefile.js": { "content": "{\"@test@/typescript/somefile.js\":\"content\"}", "target": "src/somefile.js", "file": "@test@/typescript/somefile.js", "name": "somefile.js", "postProcess": "ppts", "source": [ "@test@/javascript", "@test@/typescript" ] }
+      "justts.ts": { "content": "{\"@test@/typescript/justts.ts\":\"content\"}", "target": "src/justts.ts", "file": "@test@/typescript/justts.ts", "name": "justts.ts", "source": [ "@test@/typescript_405" ] },
+      "somefile.js": { "content": "{\"@test@/typescript/somefile.js\":\"content\"}", "target": "src/somefile.js", "file": "@test@/typescript/somefile.js", "name": "somefile.js", "postProcess": "ppts", "source": [ "@test@/javascript", "@test@/typescript_405" ] }
     },
     "directory": {
-      "justSpecInJs.js": { "file": "@test@/javascript/justSpecInJs.js", "source": [ "@test@/javascript" ] }, "justts.ts": { "file": "@test@/typescript/justts.ts", "source": [ "@test@/typescript" ] },
+      "justSpecInJs.js": { "file": "@test@/javascript/justSpecInJs.js", "source": [ "@test@/javascript" ] }, "justts.ts": { "file": "@test@/typescript/justts.ts", "source": [ "@test@/typescript_405" ] },
       "somefile.js": [
         { "file": "@test@/javascript/somefile.js", "postProcess": "pp", "source": [ "@test@/javascript" ] },
-        { "file": "@test@/typescript/somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript" ] } ]
+        { "file": "@test@/typescript/somefile.js", "postProcess": "ppts", "source": [ "@test@/typescript_405" ] } ]
     },
   },
   "tsconfig.json": {
     "content": "{\"@test@/typescript/tsconfig.json\":\"content\"}",
     "file": "@test@/typescript/tsconfig.json",
     "name": "tsconfig.json", "target": "tsconfig.json",
-    "source": [
-      "@test@/typescript"
-    ]
-  }
+    "source": [      "@test@/typescript_405"    ]  }
 };
+
 const fileOps: FileOps = {
   ...emptyFileOps
   , loadFileOrUrl: async filename => {
@@ -275,7 +273,7 @@ describe ( "mergeFiles", () => {
     let actual: NameAnd<SourcedTemplateFileDetailsWithContent> = mergeFiles ( 'someContext' ) ( tsContentSample );
     expect ( JSON.parse ( actual[ "package.json" ].content as string ) ).toEqual ( {
       "@test@/javascript/package.json": "content",
-      "@test@/typescript/package.json": "content",
+      "@test@/typescript_405/package.json": "content",
       "tx": "${}"
     } )
   } )
@@ -293,7 +291,7 @@ describe ( "postProcessFiles", () => {
       "post": "packageJsonSort",
       "tx": "${}",
       "@test@/javascript/package.json": "content",
-      "@test@/typescript/package.json": "content"
+      "@test@/typescript_405/package.json": "content"
     } )
     expect ( actual.src.content[ "somefile.js" ].content ).toEqual ( '{"post": "ppts","@test@/typescript/somefile.js":"content"}' )
   } )
@@ -306,7 +304,7 @@ describe ( "saveMergedFiles", () => {
     expect ( metered.savedFiles () ).toEqual ( [
       [ "sometarget/.npmrc", "{\"@test@/typescript/.npmrc\":\"content\"}" ],
       [ "sometarget/jest.config.json", "{\"@test@/typescript/jest.config.json\":\"content\"}" ],
-      [ "sometarget/package.json", "{\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript/package.json\": \"content\"\n}" ],
+      [ "sometarget/package.json", "{\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript_405/package.json\": \"content\"\n}" ],
       [ "sometarget/src/justSpecInJs.js", "{\"@test@/javascript/justSpecInJs.js\":\"content\"}" ],
       [ "sometarget/src/justts.ts", "{\"@test@/typescript/justts.ts\":\"content\"}" ],
       [ "sometarget/src/somefile.js", "{\"@test@/typescript/somefile.js\":\"content\"}" ],
@@ -319,9 +317,9 @@ describe ( "copyFromTemplate", () => {
 
   it ( "should copy the files", async () => {
     const metered = meteredFileOps ( fileOps )
-    await copyFromTemplate ( 'someContext', metered, optionsWithoutSample, "@test@/typescript", 'sometarget' );
+    await copyFromTemplate ( 'someContext', metered, optionsWithoutSample, "@test@/typescript_405", 'sometarget' );
     expect ( metered.savedFiles () ).toEqual ( [
-      [ "sometarget/package.json", "{\"post\": \"packageJsonSort\",\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript/package.json\": \"content\"\n}" ],
+      [ "sometarget/package.json", "{\"post\": \"packageJsonSort\",\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript_405/package.json\": \"content\"\n}" ],
       [ "sometarget/src/somefile.js", "{\"post\": \"ppts\",\"@test@/typescript/somefile.js\":\"content\"}" ],
       [ "sometarget/src/justSpecInJs.js", "{\"@test@/javascript/justSpecInJs.js\":\"content\"}" ],
       [ "sometarget/src/justts.ts", "{\"@test@/typescript/justts.ts\":\"content\"}" ],
@@ -338,9 +336,9 @@ describe ( "copyFromTemplate", () => {
   } )
   it ( "should filter", async () => {
     const metered = meteredFileOps ( fileOps )
-    await copyFromTemplate ( 'someContext', metered, { ...optionsWithoutSample, filter: name => name === 'package.json' }, "@test@/typescript", 'sometarget' );
+    await copyFromTemplate ( 'someContext', metered, { ...optionsWithoutSample, filter: name => name === 'package.json' }, "@test@/typescript_405", 'sometarget' );
     expect ( metered.savedFiles () ).toEqual ( [
-      [ "sometarget/package.json", "{\"post\": \"packageJsonSort\",\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript/package.json\": \"content\"\n}" ] ] )
+      [ "sometarget/package.json", "{\"post\": \"packageJsonSort\",\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript_405/package.json\": \"content\"\n}" ] ] )
     expect ( fileOpsStats ( metered ) ).toEqual ( {
       "createDirCount": 1,
       "loadFileOrUrlCount": 4,
@@ -353,7 +351,7 @@ describe ( "copyFromTemplate", () => {
 
 const templates = {
   javascript: "@test@/javascript",
-  typescript: "@test@/typescript"
+  typescript: "@test@/typescript_405"
 }
 describe ( "findTemplateLookup", () => {
   it ( "should return a map of template names to the named file within each template (most often package.json)", async () => {
@@ -365,7 +363,7 @@ describe ( "findTemplateLookup", () => {
       },
       "typescript": {
         "@test@/javascript/package.json": "content",
-        "@test@/typescript/package.json": "content",
+        "@test@/typescript_405/package.json": "content",
         "post": "packageJsonSort",
         "tx": "${}"
       }
@@ -378,13 +376,13 @@ describe ( "validateTemplates", () => {
   it ( "should return no problems for welformed template", async () => {
     await expect ( await validateTemplates ( 'someContext', fileOps, optionsWithSample, {
       javascript: "@test@/javascript",
-      typescript: "@test@/typescript"
+      typescript: "@test@/typescript_405"
     } ) ).toEqual ( [] )
   } )
   it ( "should report a list of issues for broken templates", async () => {
     await expect ( await validateTemplates ( 'someContext',fileOps, optionsWithSample, {
       javascript: "@test@/javascript",
-      typescript: "@test@/typescript",
+      typescript: "@test@/typescript_405",
       notin: "notin",
       "#doesntparse#": "#doesntparse#",
       "nofiles": "nofiles"

@@ -7,7 +7,7 @@ import { cleanLineEndings } from "@laoban/utils";
 import { NullDebugCommands } from "@laoban/debug";
 
 const fileOps = fileOpsNode ();
-
+jest.setTimeout ( 30000 );
 const updateTemplateTestRoot = fileOps.join ( testRoot, 'updateTemplate' )
 const prefix = "node ../../../code/modules/laoban/dist/index.js ";
 
@@ -30,7 +30,7 @@ async function testIt ( directory: string, cleanTemplates: boolean ) {
   await cleanUpDirectory ( fileOps, testDir, cleanTemplates )
   const actualDisplay = await execute ( testDir, `${prefix} admin updatetemplate --directory package` )
   const expectedDisplay = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, 'expectedDisplay.txt' ) )
-  // expect ( actualDisplay ).toEqual ( expectedDisplay )
+  expect ( cleanLineEndings(actualDisplay).trim() ).toEqual ( cleanLineEndings(expectedDisplay ).trim())
   console.log('actualDisplay', actualDisplay)
   // expect ( actual ).toEqual ( `Updated template in ${fileOps.join ( updateTemplateTestRoot, directory, 'package' )}` )
   const expectedLaoban = await fileOps.loadFileOrUrl ( fileOps.join ( testDir, 'laoban.expected.json' ) )
@@ -44,9 +44,9 @@ async function testIt ( directory: string, cleanTemplates: boolean ) {
 
 describe ( "update template", () => {
   it ( "'blankstart' should make a package.json and a .template.json", async () => {
-    await testIt ( "blankstart", true )
+   return await testIt ( "blankstart", true )
   } );
   it ( "'existing' should make a package.json and a .template.json", async () => {
-    await testIt ( "existing", false )
+    return await testIt ( "existing", false )
   } );
 } )

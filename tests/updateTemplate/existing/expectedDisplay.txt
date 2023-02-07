@@ -1,0 +1,1 @@
+templates { typescript: 'templates/typescript' }
