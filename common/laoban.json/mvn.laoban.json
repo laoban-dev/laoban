@@ -1,14 +1,35 @@
 {
-  "scripts":        {
-  "mvn":                {
-    "description": "generates the type script and java projects",
-    "guard":       "${packageDetails.guards.mvn}",
-    "commands":    [
-      {
-        "name":    "maven",
-        "command": "mvn clean install",
-        "status":  true
-      }
-    ]
+  "scripts": {
+    "ls-mvn":            {
+      "description": "Lists all the maven projects",
+      "commands":    [
+        {
+          "guard":   "${packageDetails.guards.mvn}",
+          "command": "js:process.cwd()"
+        }
+      ]
+    },
+    "mvn-clean-install": {
+      "description": "mvn clean install",
+      "commands":    [
+        {
+          "guard":   "${packageDetails.guards.mvn}",
+          "name":    "mvn-clean-install",
+          "command": "mvn clean install",
+          "status":  true
+        }
+      ]
+    },
+    "compile":           {
+      "description": "mvn compile",
+      "commands":    [
+        {
+          "guard":   "${packageDetails.guards.mvn}",
+          "name":    "compile",
+          "command": "mvn compile",
+          "status":  true
+        }
+      ]
+    }
   }
-}}
+}

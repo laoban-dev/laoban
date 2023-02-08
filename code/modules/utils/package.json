@@ -1,7 +1,7 @@
 {
   "name": "@laoban/utils",
   "description": "Those miscellaneous utilities and types that every project needs",
-  "version": "1.4.1",
+  "version": "1.4.5",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,7 +17,7 @@
     ]
   },
   "dependencies": {
-    "@laoban/debug": "1.4.1"
+    "@laoban/debug": "1.4.5"
   },
   "devDependencies": {
     "typescript": "^4.0.5",

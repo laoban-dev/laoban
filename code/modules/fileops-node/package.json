@@ -1,7 +1,7 @@
 {
   "name": "@laoban/filesops-node",
   "description": "File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test",
-  "version": "1.4.1",
+  "version": "1.4.5",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "node-fetch": "2.6.1",
-    "@laoban/utils": "1.4.1",
-    "@laoban/fileops": "1.4.1"
+    "@laoban/utils": "1.4.5",
+    "@laoban/fileops": "1.4.5"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.6.2",

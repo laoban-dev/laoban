@@ -86,7 +86,7 @@ export function buildShellCommandDetails ( scd: ScriptInContextAndDirectoryWitho
         outputStream,
         details: ({
           command: cmd,
-          commandString: derefence ( `Script ${name}.commandString`, dic, cmd.command, { throwError: true, variableDefn: dollarsBracesVarDefn } ),
+          commandString: derefence ( `Script ${name}.commandString`, dic, cmd.command, { throwError: true, variableDefn: dollarsBracesVarDefn, allowUndefined: true } ),
           dic: dic,
           env: env,
           directory: derefence ( `Script ${name}.directory`, dic, directory, { throwError: true } ),

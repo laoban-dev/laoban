@@ -4,7 +4,7 @@ import { gatherInitData, InitData, isSuccessfulInitData, ProjectDetailsAndTempla
 import { FileOps, parseJson } from "@laoban/fileops";
 import { loabanConfigName, packageDetailsFile } from "../Files";
 import { ActionParams } from "./types";
-import { ErrorsAnd, fromEntries, hasErrors, toForwardSlash } from "@laoban/utils";
+import { ErrorsAnd, fromEntries, hasErrors, reportErrors, toForwardSlash } from "@laoban/utils";
 import { createDeltaForPackageJson } from "./update-template";
 import { ConfigAndIssues } from "../config";
 import { loadLaobanAndIssues, makeCache } from "../configProcessor";
@@ -26,7 +26,7 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
       else {
         const context = `Loading ${packageDetailsFile} for ${p.directory} from ${templateUrl}`
         const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, { tx: includeAndTransformFile ( context, {}, fileOps ) } ) ( 'package.json' )
-        if (hasErrors(templateJson)) return templateJson
+        if ( hasErrors ( templateJson ) ) return templateJson
         const packageJson = parseJson ( context ) ( templateJson )
         return packageJson
       }
@@ -61,10 +61,13 @@ export async function getInitDataWithoutTemplatesFilteredByPackages ( fileOps: F
     .sort ( ( a, b ) => a.directory.localeCompare ( b.directory ) )
   return { ...initData, projectDetails: pdWithoutTemplate }
 }
-export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ) {
+export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ): Promise<void> {
   const { fileOps, currentDirectory, cmd, params, outputStream } = ap
   const initData: ErrorsAnd<InitData> = await gatherInitData ( fileOps, currentDirectory, cmd, false );
-  if ( hasErrors ( initData ) ) return reportError ( initData )
+  if ( hasErrors ( initData ) ) {
+    reportErrors ( initData );
+    return
+  }
   async function findActualTemplateIfExists ( p: ProjectDetailsAndTemplate ) {
     try {
       const s = await fileOps.loadFileOrUrl ( fileOps.join ( p.directory, packageDetailsFile ) )
