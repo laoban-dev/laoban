@@ -20,12 +20,12 @@
         }
       ]
     },
-    "compile":           {
+    "mvn-compile":           {
       "description": "mvn compile",
       "commands":    [
         {
           "guard":   "${packageDetails.guards.mvn}",
-          "name":    "compile",
+          "name":    "mvn-compile",
           "command": "mvn compile",
           "status":  true
         }
