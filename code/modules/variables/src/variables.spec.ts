@@ -18,6 +18,29 @@ describe ( "derefence", () => {
     } )
 
   } )
+
+  describe ( "we should be able to do basic functions on strings", () => {
+    const dic = { a: "camelCaseWords", b: "ALLCAPS", c: "lower", d: "snake_case" }
+    it ( 'should toSnakeCase()', () => {
+      expect ( derefence ( 'context', dic, "${a|toSnakeCase}", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'camel_case_words' )
+
+    } )
+    it ( 'should toUpperCase()', () => {
+      expect ( derefence ( 'context', dic, "${a|toUpperCase}", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'CAMELCASEWORDS' )
+
+    } )
+    it ( 'should toLowerCase()', () => {
+      expect ( derefence ( 'context', dic, "${a|toLowerCase}", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'camelcasewords' )
+
+    } )
+    it ( 'should toTitleCase()', () => {
+      expect ( derefence ( 'context', dic, "${a|toTitleCase}", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'Camelcasewords' )
+
+    } )
+
+  } )
+
+
   describe ( "simple variables with indent like ${a:indentx}", () => {
     it ( "If the string has ${a:indentx} in it, then that is replaced by the dic entry", () => {
       const dic = { a: "A", b: { c: "BC" } }

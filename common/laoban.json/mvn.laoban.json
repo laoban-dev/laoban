@@ -11,6 +11,7 @@
     },
     "mvn-clean-install": {
       "description": "mvn clean install",
+      "inLinksOrder": true,
       "commands":    [
         {
           "guard":   "${packageDetails.guards.mvn}",
@@ -31,6 +32,7 @@
     },
     "mvn-compile":       {
       "description": "mvn compile",
+      "inLinksOrder": true,
       "commands":    [
         {
           "guard":   "${packageDetails.guards.mvn}",

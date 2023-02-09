@@ -1,7 +1,8 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 /** ref is like ${xxx} and this returns dic[xxx]. */
-import { firstSegment, lastSegment, safeArray } from "@laoban/utils";
+import { firstSegment, lastSegment, NameAnd, safeArray } from "@laoban/utils";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
+import { stringFunctions } from "./stringFunctions";
 
 export interface VariableDefn {
   regex: RegExp
@@ -33,13 +34,14 @@ interface DereferenceOptions {
   undefinedIs?: string
   throwError?: true
   variableDefn?: VariableDefn
+  functions?: NameAnd<( s: string ) => string>
 }
 
 
 /** If the string has ${a} in it, then that is replaced by the dic entry */
 export function derefence ( context: string, dic: any, s: string, options?: DereferenceOptions ) {
   if ( options?.variableDefn === undefined ) return s;
-  if (s === undefined)return s
+  if ( s === undefined ) return s
   const regex = options.variableDefn.regex
   let result = s.replace ( regex, match => {
     let result = replaceVar ( context, match, dic, options );
@@ -47,7 +49,6 @@ export function derefence ( context: string, dic: any, s: string, options?: Dere
   } );
   return result;
 }
-
 
 
 function composeVar ( context: string, dic: any, composeString: string, options: DereferenceOptions, commaIfNeeded: boolean ): string {
@@ -65,17 +66,29 @@ function replaceVarOfTrimmed ( context: string, dic: any, withoutStartEnd: strin
   const last = lastSegment ( withoutStartEnd, '.' )
   const { result, error } = processVariable ( context, dic, last, obj, options )
   if ( error !== undefined ) {
-      // console.error('dic',dic)
+    // console.error('dic',dic)
     if ( options?.throwError ) {
-      throw new Error ( context + safeArray ( error ).join ( ',' ) )} else {return `//LAOBAN-UPDATE-ERROR ${context}. ${error}. Value was ${JSON.stringify ( obj )}`}
+      throw new Error ( context + safeArray ( error ).join ( ',' ) )
+    } else {return `//LAOBAN-UPDATE-ERROR ${context}. ${error}. Value was ${JSON.stringify ( obj )}`}
   }
   return result
 }
 export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
-  const withoutStartEnd = options.variableDefn.removeStartEnd ( ref ).trim ()
-  if ( withoutStartEnd.startsWith ( 'compose(' ) && withoutStartEnd.endsWith ( ')' ) ) return composeVar ( context, dic, withoutStartEnd, options, false )
-  if ( withoutStartEnd.startsWith ( 'composeWithCommaIfNeeded(' ) && withoutStartEnd.endsWith ( ')' ) ) return composeVar ( context, dic, withoutStartEnd, options, true )
-  return replaceVarOfTrimmed ( context + ` Ref is ${ref}`, dic, withoutStartEnd, options );
+  const { variableDefn, functions } = options
+  const realFunctions = functions ? functions : stringFunctions
+  const withoutEnd = options.variableDefn.removeStartEnd ( ref ).trim ()
+  const first = firstSegment ( withoutEnd, '|' )
+  function rawString () {
+    if ( first.startsWith ( 'compose(' ) && first.endsWith ( ')' ) ) return composeVar ( context, dic, first, options, false )
+    if ( first.startsWith ( 'composeWithCommaIfNeeded(' ) && first.endsWith ( ')' ) ) return composeVar ( context, dic, first, options, true )
+    return replaceVarOfTrimmed ( context + ` Ref is ${ref}`, dic, first, options );
+  }
+  const result = withoutEnd.split ( '|' ).slice ( 1 ).reduce ( ( acc, s ) => {
+    const fn = realFunctions[ s ]
+    if ( fn === undefined ) throw new Error ( `${context}. Cannot process ${ref} as no function [${s}] is defined. Legal functions are ${Object.keys ( realFunctions ).join ( ',' )}` )
+    return fn ( acc )
+  }, rawString () )
+  return result
 }
 function findIndentString ( parts: string[] ): ProcessedVariableResult {
   const indent = parts.find ( s => s.startsWith ( 'indent' ) );

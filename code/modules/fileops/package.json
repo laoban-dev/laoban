@@ -1,7 +1,7 @@
 {
   "name": "@laoban/fileops",
   "description": "Utilities about files: not bound to any way of accessing files",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,8 +17,8 @@
     ]
   },
   "dependencies": {
-    "@laoban/utils": "1.4.7",
-    "@laoban/validation": "1.4.7"
+    "@laoban/utils": "1.4.8",
+    "@laoban/validation": "1.4.8"
   },
   "devDependencies": {
     "typescript": "^4.0.5",

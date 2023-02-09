@@ -74,3 +74,4 @@
   packageJson. This is far more extensible and most importantly understandable
 * 1.3.2 packageJson(xx,xx) in templates'
 * 1.4.7 New template structure.
+* 1.4.8 String functions such as |toLowerCase, |toTitleCase and |toSnakeCase| added
