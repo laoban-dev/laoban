@@ -44,12 +44,17 @@ const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
   };
 }
 
+async function getVersionOrUndefined ( rawConfig: RawConfig, fileOps: FileOps, versionUrl: string ): Promise<string | undefined> {
+  try {return rawConfig.versionFile ? await fileOps.loadFileOrUrl ( versionUrl ) : undefined;} catch ( e ) {return undefined;}
+}
 export const loadLoabanJsonAndValidate = ( files: FileOps, makeCache: MakeCacheFn, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndFileOpsAndIssues> => {
   const laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
     const { rawConfig, fileOps } = await load ( files, makeCache, debug ) ( laobanConfigFileName )
     const issues = Validate.validate ( `In directory ${lastSegment ( laobanDirectory )}, ${loabanConfigName}`, rawConfig );
-    return { rawConfig, issues: validateLaobanJson ( issues ).errors, fileOps }
+    const versionUrl = derefence ( `loading version`, { ...rawConfig, laobanDirectory }, rawConfig.versionFile, { variableDefn: dollarsBracesVarDefn } );
+    const version = await getVersionOrUndefined ( rawConfig, fileOps, versionUrl )
+    return { rawConfig: { ...rawConfig, version }, issues: validateLaobanJson ( issues ).errors, fileOps }
   } catch ( e ) {
     if ( debug ) console.error ( e )
     return { issues: [ `Could not load laoban.json. Run with --load.laoban.debug to find more` ], fileOps: files }
@@ -123,6 +128,7 @@ export function configProcessor ( path: Path, laoban: string, outputStream: Writ
       throw Error ( `Failed to add ${name} to config. Error is ${e}` )
     }
   }
+  add ( "version", rawConfig )
   add ( "versionFile", rawConfig )
   add ( "log", rawConfig )
   add ( "status", rawConfig )
@@ -130,7 +136,7 @@ export function configProcessor ( path: Path, laoban: string, outputStream: Writ
   add ( "cacheDir", { ...rawConfig, cacheDir: findCache ( path, laoban, undefined, rawConfig.cacheDir ) } )
   add ( "profile", rawConfig )
   add ( "packageManager", rawConfig )
-  if ( rawConfig.templateDir ) add("templateDir", rawConfig);
+  if ( rawConfig.templateDir ) add ( "templateDir", rawConfig );
   result.properties = rawConfig.properties ? rawConfig.properties : {}
   result.defaultEnv = rawConfig.defaultEnv
   result.templates = rawConfig.templates ? rawConfig.templates : {}

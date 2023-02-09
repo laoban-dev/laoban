@@ -1,7 +1,7 @@
 {
   "name": "@laoban/validation",
   "description": "A library for validating json",
-  "version": "1.4.5",
+  "version": "1.4.7",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {

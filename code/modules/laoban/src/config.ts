@@ -12,6 +12,7 @@ export interface ConfigVariables {
   parents?: string | string[];
   templates: NameAnd<string>
   versionFile: string;
+    version: string;
   sessionDir: string;
   cacheDir?: string
   throttle?: number;

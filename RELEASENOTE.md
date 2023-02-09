@@ -73,4 +73,4 @@
 * 1.3.0 Breaking change to package.details.json. Now has packageJson section and everything in it is merged into
   packageJson. This is far more extensible and most importantly understandable
 * 1.3.2 packageJson(xx,xx) in templates'
-* 1.3.
+* 1.4.7 New template structure.

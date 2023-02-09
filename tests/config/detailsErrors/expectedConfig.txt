@@ -1,6 +1,7 @@
 {
     "laobanDirectory": "C://git//laoban//tests//config//detailsErrors",
     "laobanConfig": "C://git//laoban//tests//config//detailsErrors//laoban.json",
+    "version": "someversion",
     "versionFile": "C://git//laoban//tests//config//detailsErrors/version.txt",
     "log": ".log",
     "status": ".status",
