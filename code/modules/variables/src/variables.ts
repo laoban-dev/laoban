@@ -3,6 +3,7 @@
 import { firstSegment, lastSegment, NameAnd, safeArray } from "@laoban/utils";
 import { findPart } from "@laoban/utils/dist/src/dotLanguage";
 import { stringFunctions } from "./stringFunctions";
+import { type } from "os";
 
 export interface VariableDefn {
   regex: RegExp
@@ -83,7 +84,8 @@ function applyFunctions ( withoutEnd: string, context: string, ref: string, opti
       const value = functionCall[ 2 ]
       const fn = realFunctions[ name ]
       if ( fn === undefined ) throw new Error ( `${context}. Cannot process ${ref} as no function [${name}] in ${s} is defined. Legal functions are ${Object.keys ( realFunctions ).join ( ',' )}` )
-      return fn ( acc, value )
+      const result = fn ( acc, value );
+      return result
     }
     const fn = realFunctions[ s ]
     if ( fn === undefined ) throw new Error ( `${context}. Cannot process ${ref} as no function [${s}] is defined. Legal functions are ${Object.keys ( realFunctions ).join ( ',' )}` )
@@ -101,8 +103,10 @@ export function replaceVar ( context: string, ref: string, dic: any, options: De
   }
   const raw = rawString ();
   const result = applyFunctions ( withoutEnd, context, ref, options, raw );
-  if ( result === undefined && !options.allowUndefined ) return `//LAOBAN-UPDATE-ERROR ${context}. ${ref} is undefined`
-
+  if ( result === undefined ) {
+    if ( options?.undefinedIs !== undefined ) return options.undefinedIs
+    return options.allowUndefined ? '' : `//LAOBAN-UPDATE-ERROR ${context}. ${ref} is undefined`;
+  }
   return result
 }
 function findIndentString ( parts: string[] ): ProcessedVariableResult {
@@ -144,7 +148,7 @@ export function processVariable ( context: string, dic: any, nameWithCommands: s
     } else
       return error ( `The value is not an array for a map<<>>` )
   }
-  if ( value === undefined ) return { result: options?.undefinedIs }
+  if ( value === undefined ) return { result: undefined }
 
 
   const parts = nameWithCommands.split ( ':' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
