@@ -75,3 +75,4 @@
 * 1.3.2 packageJson(xx,xx) in templates'
 * 1.4.7 New template structure.
 * 1.4.8 String functions such as |toLowerCase, |toTitleCase and |toSnakeCase| added
+* 1.4.9 Added |default(x) to allow default values to be set

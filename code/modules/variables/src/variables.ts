@@ -73,9 +73,25 @@ function replaceVarOfTrimmed ( context: string, dic: any, withoutStartEnd: strin
   }
   return result
 }
-export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
+function applyFunctions ( withoutEnd: string, context: string, ref: string, options: DereferenceOptions, raw: string ) {
   const { variableDefn, functions } = options
   const realFunctions = functions ? functions : stringFunctions
+  const result = withoutEnd.split ( '|' ).slice ( 1 ).reduce ( ( acc, s ) => {
+    const functionCall = s.match ( /([^(]*)\((.*)\)/ )
+    if ( functionCall ) {
+      const name = functionCall[ 1 ]
+      const value = functionCall[ 2 ]
+      const fn = realFunctions[ name ]
+      if ( fn === undefined ) throw new Error ( `${context}. Cannot process ${ref} as no function [${name}] in ${s} is defined. Legal functions are ${Object.keys ( realFunctions ).join ( ',' )}` )
+      return fn ( acc, value )
+    }
+    const fn = realFunctions[ s ]
+    if ( fn === undefined ) throw new Error ( `${context}. Cannot process ${ref} as no function [${s}] is defined. Legal functions are ${Object.keys ( realFunctions ).join ( ',' )}` )
+    return fn ( acc, undefined )
+  }, raw )
+  return result;
+}
+export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
   const withoutEnd = options.variableDefn.removeStartEnd ( ref ).trim ()
   const first = firstSegment ( withoutEnd, '|' )
   function rawString () {
@@ -83,11 +99,10 @@ export function replaceVar ( context: string, ref: string, dic: any, options: De
     if ( first.startsWith ( 'composeWithCommaIfNeeded(' ) && first.endsWith ( ')' ) ) return composeVar ( context, dic, first, options, true )
     return replaceVarOfTrimmed ( context + ` Ref is ${ref}`, dic, first, options );
   }
-  const result = withoutEnd.split ( '|' ).slice ( 1 ).reduce ( ( acc, s ) => {
-    const fn = realFunctions[ s ]
-    if ( fn === undefined ) throw new Error ( `${context}. Cannot process ${ref} as no function [${s}] is defined. Legal functions are ${Object.keys ( realFunctions ).join ( ',' )}` )
-    return fn ( acc )
-  }, rawString () )
+  const raw = rawString ();
+  const result = applyFunctions ( withoutEnd, context, ref, options, raw );
+  if ( result === undefined && !options.allowUndefined ) return `//LAOBAN-UPDATE-ERROR ${context}. ${ref} is undefined`
+
   return result
 }
 function findIndentString ( parts: string[] ): ProcessedVariableResult {
@@ -129,8 +144,8 @@ export function processVariable ( context: string, dic: any, nameWithCommands: s
     } else
       return error ( `The value is not an array for a map<<>>` )
   }
-  if ( value === undefined && options?.allowUndefined ) return { result: options?.undefinedIs }
-  if ( value === undefined ) return error ( 'no value found' )
+  if ( value === undefined ) return { result: options?.undefinedIs }
+
 
   const parts = nameWithCommands.split ( ':' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
   if ( parts.length === 0 ) return { result: value }

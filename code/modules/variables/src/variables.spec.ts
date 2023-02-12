@@ -9,7 +9,7 @@ describe ( "derefence", () => {
       expect ( derefence ( 'context', dic, "b.c", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'b.c' )
       expect ( derefence ( 'context', dic, "Some data ${a} here", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'Some data A here' )
       expect ( derefence ( 'context', dic, "Some data ${b.c} here", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'Some data BC here' )
-      expect ( derefence ( 'context', dic, "Some data ${d} here", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( "Some data //LAOBAN-UPDATE-ERROR context Ref is ${d}. no value found. Value was undefined here" )
+      expect ( derefence ( 'context', dic, "Some data ${d} here", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( "Some data //LAOBAN-UPDATE-ERROR context. ${d} is undefined here" )
     } )
     it ( "should ignore leading trailing spaces", () => {
       const dic = { a: "A", b: { c: "BC" } }
@@ -35,6 +35,13 @@ describe ( "derefence", () => {
     } )
     it ( 'should toTitleCase()', () => {
       expect ( derefence ( 'context', dic, "${a|toTitleCase}", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'Camelcasewords' )
+
+    } )
+    it ( 'should default(xx) when value defined', () => {
+      expect ( derefence ( 'context', dic, "${a|default(defaultValue)}", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'camelCaseWords' )
+    } )
+    it ( 'should default(xx) when value undefined', () => {
+      expect ( derefence ( 'context', dic, "${z|default(defaultValue)}", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( 'defaultValue' )
 
     } )
 
@@ -63,7 +70,7 @@ describe ( "derefence", () => {
     it ( 'should report an error if the reference isnt an object', () => {
       expect ( derefence ( 'context', dic, '{"one":1,\n${b:object},\n"two":2}', { variableDefn: dollarsBracesVarDefn } ) ).toEqual (
         `{"one":1,
-//LAOBAN-UPDATE-ERROR context Ref is \${b:object}. no value found. Value was undefined,
+//LAOBAN-UPDATE-ERROR context. \${b:object} is undefined,
 "two":2}` )
 
     } )
@@ -155,3 +162,5 @@ describe ( 'derefernence with variableDefn:mustachesVariableDefn', () => {
     expect ( derefence ( 'someContext', dic, 'Hello {{a}}', { variableDefn: mustachesVariableDefn } ) ).toEqual ( 'Hello 1' )
   } )
 } )
+
+
