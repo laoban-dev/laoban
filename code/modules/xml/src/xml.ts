@@ -1,1 +1,5 @@
-export const x = 1
+export interface Xml{
+  parse ( s: string, arrayList: string[] ): any
+  print(s: any): string
+}
+
