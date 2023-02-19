@@ -76,3 +76,4 @@
 * 1.4.7 New template structure.
 * 1.4.8 String functions such as |toLowerCase, |toTitleCase and |toSnakeCase| added
 * 1.4.9 Added |default(x) to allow default values to be set
+* 1.4.11 Added |toPackage and allowed filenames in templates to have variables

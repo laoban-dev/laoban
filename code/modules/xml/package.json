@@ -1,6 +1,6 @@
 {
-  "name": "@laoban/variables",
-  "description": "A library that can dereference ${xxx} in strings",
+  "name": "@laoban/xml",
+  "description": "",
   "version": "1.4.11",
   "main": "dist/index",
   "types": "dist/index",
@@ -16,9 +16,7 @@
       "not op_mini all"
     ]
   },
-  "dependencies": {
-    "@laoban/utils": "1.4.11"
-  },
+  "dependencies": {},
   "devDependencies": {
     "typescript": "^4.0.5",
     "@types/node": "^14.14.7",

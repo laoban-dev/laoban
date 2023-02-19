@@ -4,11 +4,10 @@ import { ConfigWithDebug, PackageAction, PackageDetails, PackageDetailsAndDirect
 import { derefence, dollarsBracesVarDefn, mustachesVariableDefn, VariableDefn } from "@laoban/variables";
 import { loadVersionFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
-import { ErrorsAnd, fromEntries, hasErrors, nextMajorVersion, nextVersion, reportErrors, safeArray, safeObject } from "@laoban/utils";
-import { chainPostProcessFn, combineTransformFns, CopyFileOptions, copyFiles, copyFromTemplate, defaultPostProcessors, FileOps, loadFileFromDetails, loadTemplateControlFile, parseJson, TemplateControlFile, TemplateFileIntermediate, TransformTextFn } from "@laoban/fileops";
+import { ErrorsAnd, findPart, fromEntries, hasErrors, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
+import { chainPostProcessFn, combineTransformFns, CopyFileOptions, copyFromTemplate, defaultPostProcessors, FileOps, loadFileFromDetails, loadTemplateControlFile, parseJson, TemplateControlFile, TemplateFileIntermediate, TransformTextFn } from "@laoban/fileops";
 
 import { postProcessForPackageJson } from "@laoban/node";
-import { findPart } from "@laoban/utils/dist/src/dotLanguage";
 
 
 interface UpdateCmdOptions {
@@ -71,7 +70,7 @@ export async function loadTemplateControlFileOld ( context: string, fileOps: Fil
 
 
 export const loadOneFileFromTemplateControlFileDetails = ( context: string, fileOps: FileOps, templateControlFileUrl: string, options: CopyFileOptions ) => async ( file: string ): Promise<ErrorsAnd<string>> => {
-  const controlFile: ErrorsAnd<TemplateFileIntermediate> = await loadTemplateControlFile ( context, fileOps ) ( file )
+  const controlFile: ErrorsAnd<TemplateFileIntermediate> = await loadTemplateControlFile ( context, fileOps) ( file )
   if ( hasErrors ( controlFile ) ) return controlFile
   const cfd = findPart ( controlFile.files, file )
   if ( cfd === undefined ) throw Error ( `${context}. Cannot find ${file} in file ${templateControlFileUrl}\nControl file is ${JSON.stringify ( controlFile, null, 2 )}` )

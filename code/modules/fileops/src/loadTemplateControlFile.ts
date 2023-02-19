@@ -1,9 +1,9 @@
 import { FileOps, isUrl, loadWithParents, parseJson, Path } from "./fileOps";
-import { CopyFileDetails, CopyFileOptions, SourcedTemplateFileDetails, SourceTemplateFileDetailsSingleOrArray, TemplateFileDetails, TransformTextFn } from "./copyFiles";
+import { applyTx, CopyFileDetails, CopyFileOptions, SourcedTemplateFileDetails, SourceTemplateFileDetailsSingleOrArray, TemplateFileDetails, TransformTextFn } from "./copyFiles";
 import { Validate } from "@laoban/validation";
-import { allButLastSegment, combineTwoObjects, deepCombineTwoObjects, errors, ErrorsAnd, flatMap, flatMapK, hasErrors, mapErrors, mapErrorsK, mapK, mapObject, mapObjectK, mapObjectKeys, NameAnd, removeEmptyArrays, toArray } from "@laoban/utils";
-import { deletePath } from "@laoban/utils";
+import { allButLastSegment, combineTwoObjects, deepCombineTwoObjects, deletePath, errors, ErrorsAnd, flatMap, flatMapK, hasErrors, mapErrors, mapErrorsK, mapK, mapObject, mapObjectK, mapObjectKeys, NameAnd, removeEmptyArrays, toArray } from "@laoban/utils";
 import { applyAll } from "./postProcessor";
+import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 
 export interface TemplateControlFile {
   files: NameAnd<CopyFileDetails>
@@ -108,18 +108,18 @@ export interface SourcedTemplateFileDetailsWithContent extends SourcedTemplateFi
 }
 export async function loadFilesInTemplate ( fileData: NameAnd<SourceTemplateFileDetailsSingleOrArray>, fileOps: FileOps, options: CopyFileOptions ): Promise<NameAnd<SourcedTemplateFileDetailsWithContent[]>> {
   async function load ( prefix: string[], fileData: NameAnd<SourceTemplateFileDetailsSingleOrArray> ) {
-    const realtx: TransformTextFn = async ( type, text ) => options?.tx ? options.tx ( type, text ) : text
 
     const toMerge: NameAnd<SourcedTemplateFileDetailsWithContent[]> = removeEmptyArrays ( await mapObjectK ( fileData, async ( fas, name ) => {
       return flatMapK ( toArray ( fas ), async fa => {
-        const target = [ ...prefix, fa.target ? fa.target : name ].join ( '/' );
+        const rawTarget = [ ...prefix, fa.target ? fa.target : name ].join ( '/' );
+        const target = await applyTx ( options?.tx, '${}' ) ( rawTarget )
         if ( fa.directory ) {return [ { ...fa, name, target, content: await load ( [ ...prefix, name ], fa.directory ) } ]}
         if ( options?.filter && !options.filter ( name, fa ) ) return []
         return [ fa.sample && options?.allowSamples !== true
           ? { ...fa, name, content: undefined }
           : {
             ...fa, name, target, content: await fileOps.loadFileOrUrl ( fa.file ).then ( async text =>
-              fa.templated ? await realtx ( fa.templated, text ) : text )
+              fa.templated ? await applyTx ( options?.tx, fa.templated ) ( text ) : text )
           } ]
       } );
     } ) )

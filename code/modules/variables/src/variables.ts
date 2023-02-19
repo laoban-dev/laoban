@@ -34,6 +34,7 @@ interface DereferenceOptions {
   allowUndefined?: true
   undefinedIs?: string
   throwError?: true
+  emptyTemplateReturnsSelf?: true
   variableDefn?: VariableDefn
   functions?: NameAnd<( s: string ) => string>
 }
@@ -95,6 +96,8 @@ function applyFunctions ( withoutEnd: string, context: string, ref: string, opti
 }
 export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
   const withoutEnd = options.variableDefn.removeStartEnd ( ref ).trim ()
+  if ( withoutEnd === '' && options?.emptyTemplateReturnsSelf ) return ref
+  if (withoutEnd==='') return ''
   const first = firstSegment ( withoutEnd, '|' )
   function rawString () {
     if ( first.startsWith ( 'compose(' ) && first.endsWith ( ')' ) ) return composeVar ( context, dic, first, options, false )

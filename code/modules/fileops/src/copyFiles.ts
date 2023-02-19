@@ -27,8 +27,14 @@ export interface SourcedTemplateFileDetails extends TemplateCoreDetails {
 }
 export type CopyFileDetails = string | TemplateFileDetails
 export type TransformTextFn = ( type: string, text: string ) => Promise<string>
+export const applyTx = ( tx: TransformTextFn|undefined, type: string) =>async (text: string ): Promise<string> =>
+  tx?tx ( type, text ):text;
+
 export function combineTransformFns ( ...fns: TransformTextFn[] ): TransformTextFn {
-  return ( type, text ) => fns.reduce <Promise<string>> ( async ( acc, fn ) => fn ( type, await acc ), Promise.resolve ( text ) )
+  return ( type, text ) => {
+    if (type==='[object Object]') throw new Error(`type is wrong: it is [object Object]`)
+    if (typeof type !== 'string') throw new Error(`type is not a string, it is a  ${typeof type}: ${JSON.stringify(type)}`)
+    return fns.reduce <Promise<string>> ( async ( acc, fn ) => fn ( type, await acc ), Promise.resolve ( text ) ); }
 }
 export interface CopyFileOptions {
   dryrun?: boolean
@@ -62,7 +68,7 @@ export function targetFrom ( f: CopyFileDetails ): string {
   throw new Error ( `Cannot find target in [${JSON.stringify ( f )}]` )
 }
 export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, options: CopyFileOptions, cfd: string | TemplateFileDetails ) {
-  const fileName = fileNameFrom ( cfd );
+  const fileName = await applyTx(options?.tx, '${}')(fileNameFrom ( cfd ));
   const { tx } = options
 
   const target = targetFrom ( cfd )

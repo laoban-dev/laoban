@@ -1,6 +1,6 @@
 {
-  "name": "@laoban/variables",
-  "description": "A library that can dereference ${xxx} in strings",
+  "name": "@laoban/fast-xml-parser",
+  "description": "",
   "version": "1.4.11",
   "main": "dist/index",
   "types": "dist/index",
@@ -17,7 +17,8 @@
     ]
   },
   "dependencies": {
-    "@laoban/utils": "1.4.11"
+    "fast-xml-parser": "4.1.2",
+    "@laoban/xml": "1.4.11"
   },
   "devDependencies": {
     "typescript": "^4.0.5",

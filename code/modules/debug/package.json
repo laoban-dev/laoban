@@ -1,7 +1,7 @@
 {
   "name": "@laoban/debug",
   "description": "A general debug utility that allows debugs to be turned on and off easily and thus left in the code",
-  "version": "1.4.10",
+  "version": "1.4.11",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {

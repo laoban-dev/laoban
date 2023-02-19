@@ -14,8 +14,17 @@ describe ( "derefence", () => {
     it ( "should ignore leading trailing spaces", () => {
       const dic = { a: "A", b: { c: "BC" } }
       expect ( derefence ( 'context', dic, "Some data ${  a  } here", { variableDefn: dollarsBracesVarDefn } ) ).toEqual ( "Some data A here" )
-
     } )
+    it ( "should handle ${} without emptyTemplateReturnsSelf", () => {
+      const dic = { a: "A", b: { c: "BC" } }
+      expect ( derefence ( 'context', dic, "Some data ${} here", { variableDefn: dollarsBracesVarDefn, allowUndefined: true } ) ).toEqual ( "Some data  here" )
+    } )
+    it ( "should handle ${} with emptyTemplateReturnsSelf", () => {
+      const dic = { a: "A", b: { c: "BC" } }
+      expect ( derefence ( 'context', dic, "Some data ${} here", { variableDefn: dollarsBracesVarDefn, allowUndefined: true, emptyTemplateReturnsSelf: true } ) ).toEqual (
+        "Some data ${} here" )
+    } )
+
 
   } )
 
