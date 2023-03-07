@@ -1,8 +1,8 @@
-import { CopyFileOptions, FileOps } from "@laoban/fileops";
+import { CopyFileOptions, FileOps, FileOpsAndXml } from "@laoban/fileops";
 import { Writable } from "stream";
 
 export interface ShortActionParams<Cmd> {
-  fileOps: FileOps,
+  fileOpsAndXml: FileOpsAndXml,
   currentDirectory: string,
   cmd: Cmd,
 

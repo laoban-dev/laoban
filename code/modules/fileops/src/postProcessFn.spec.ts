@@ -21,7 +21,7 @@ let cfd = { file: "somefileName" };
 describe ( 'postProcessFn', () => {
   describe ( 'postProcessJson', () => {
     it ( 'should turn to json, and back to a string (no transformation) ', async () => {
-      expect ( await applyOrOriginal ( postProcessJson ) ( context, fileOps, options, cfd ) ( '{"a":1, "a": 2}', 'json' ) ).toEqual (
+      expect ( await applyOrOriginal ( postProcessJson ) ( context, { fileOps }, options, cfd ) ( '{"a":1, "a": 2}', 'json' ) ).toEqual (
         `{
   "a": 2
 }` )
@@ -30,7 +30,7 @@ describe ( 'postProcessFn', () => {
       expect ( await applyOrUndefined ( postProcessJson ) ( context, fileOps, options, cfd ) ( '{"a":1, "a": 2}', 'somethingelse' ) ).toEqual ( undefined )
     } )
     it ( `should throw an exception if the file isn't json`, () => {
-      expect ( () => applyOrOriginal ( postProcessJson ) ( context, fileOps, options, cfd ) ( 'notjson', 'json' ) ).rejects.toThrow ( 'Invalid JSON for someContext: notjson' )
+      expect ( () => applyOrOriginal ( postProcessJson ) ( context, { fileOps }, options, cfd ) ( 'notjson', 'json' ) ).rejects.toThrow ( 'Invalid JSON for someContext: notjson' )
     } )
   } )
 
@@ -48,10 +48,10 @@ describe ( 'postProcessFn', () => {
     afterEach ( () => console.error = original )
 
     it ( 'should return the input if the env variable is set', async () => {
-      await expect ( applyOrOriginal ( postProcessCheckEnv ) ( context, fileOps, options, cfd ) ( 'someText', 'checkEnv(inin)' ) ).resolves.toEqual ( 'someText' )
+      await expect ( applyOrOriginal ( postProcessCheckEnv ) ( context, { fileOps }, options, cfd ) ( 'someText', 'checkEnv(inin)' ) ).resolves.toEqual ( 'someText' )
     } )
     it ( 'should write to error, but still return the input if the env variable is not set', async () => {
-      await expect ( applyOrOriginal ( postProcessCheckEnv ) ( context, fileOps, options, cfd ) ( 'someText', 'checkEnv(isnotin)' ) ).resolves.toEqual ( 'someText' )
+      await expect ( applyOrOriginal ( postProcessCheckEnv ) ( context, { fileOps }, options, cfd ) ( 'someText', 'checkEnv(isnotin)' ) ).resolves.toEqual ( 'someText' )
       expect ( error ).toHaveBeenCalledWith ( `someContext
   requires the env variable [isnotin] to exist and it doesn't. This might cause problems` )
     } )
@@ -65,7 +65,7 @@ describe ( 'postProcessFn', () => {
   } )
 
   describe ( 'postProcessJsonMergeInto', () => {
-    const ppFn = applyOrOriginal ( postProcessJsonMergeInto ) ( context, fileOps, options, cfd )
+    const ppFn = applyOrOriginal ( postProcessJsonMergeInto ) ( context, { fileOps }, options, cfd )
     it ( 'should not crash with zero merges', async () => {
       await expect ( await ppFn ( '{"this": 1}', 'jsonMergeInto()' ) ).toEqual ( JSON.stringify ( { "this": 1 }, null, 2 ) )
     } )
@@ -105,7 +105,7 @@ const fn1a: PostProcessor = postProcessor ( /^one$/, ( context, fileOps, options
   throw Error ( 'should not be called' )
 } )
 
-const composed = applyOrUndefined(chainPostProcessFn ( fn1, fn1a, fn2 ))
+const composed = applyOrUndefined ( chainPostProcessFn ( fn1, fn1a, fn2 ) )
 
 describe ( "composePostProcessFn", () => {
   it ( "should compose the passed in PostProcessFns", async () => {

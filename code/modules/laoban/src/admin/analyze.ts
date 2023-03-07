@@ -18,14 +18,14 @@ interface AnalyzePackagesCmd extends TypeCmdOptions, HasPackages {
   showimpact?: boolean
 }
 
-export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionParams<AnalyzePackagesCmd>, initData: SuccessfullInitData, configAndIssues: ConfigAndIssues ) {
+export async function showImpact ( { fileOpsAndXml, currentDirectory, cmd }: ActionParams<AnalyzePackagesCmd>, initData: SuccessfullInitData, configAndIssues: ConfigAndIssues ) {
   async function findTemplatePackage ( p: ProjectDetailsAndTemplate ) {
     if ( configAndIssues.issues.length === 0 ) {
       const templateUrl = configAndIssues.config.templates[ p.template ]
       if ( templateUrl === undefined ) console.log ( `Directory ${p.directory} uses template ${p.template} which is not defined in ${loabanConfigName}` )
       else {
         const context = `Loading ${packageDetailsFile} for ${p.directory} from ${templateUrl}`
-        const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOps, templateUrl, { tx: includeAndTransformFile ( context, {}, fileOps ) } ) ( 'package.json' )
+        const templateJson = await loadOneFileFromTemplateControlFileDetails ( context, fileOpsAndXml, templateUrl, { tx: includeAndTransformFile ( context, {}, fileOpsAndXml ) } ) ( 'package.json' )
         if ( hasErrors ( templateJson ) ) return templateJson
         const packageJson = parseJson ( context ) ( templateJson )
         return packageJson
@@ -35,6 +35,7 @@ export async function showImpact ( { fileOps, currentDirectory, cmd }: ActionPar
   }
   const result: [ string, any ][] = await Promise.all<[ string, any ]> ( initData.projectDetails.map ( async p => {
     const templatePackage = await findTemplatePackage ( p )
+    const{fileOps}=fileOpsAndXml
     const packageJsonAsString = await fileOps.loadFileOrUrl ( fileOps.join ( p.directory, 'package.json' ) )
     const packageJson = parseJson ( `Parsing package.json in ${p.directory}` ) ( packageJsonAsString )
     // console.log(' createDeltaForPackageJson', templatePackage, packageJson)
@@ -62,7 +63,8 @@ export async function getInitDataWithoutTemplatesFilteredByPackages ( fileOps: F
   return { ...initData, projectDetails: pdWithoutTemplate }
 }
 export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ): Promise<void> {
-  const { fileOps, currentDirectory, cmd, params, outputStream } = ap
+  const { fileOpsAndXml, currentDirectory, cmd, params, outputStream } = ap
+  const{fileOps}=fileOpsAndXml
   const initData: ErrorsAnd<InitData> = await gatherInitData ( fileOps, currentDirectory, cmd, false );
   if ( hasErrors ( initData ) ) {
     reportErrors ( initData );
@@ -78,7 +80,7 @@ export async function analyze ( ap: ActionParams<AnalyzePackagesCmd> ): Promise<
     }
   }
   if ( isSuccessfulInitData ( initData ) ) {
-    const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
+    const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOpsAndXml, makeCache ) ( process.cwd (), params, outputStream )
     if ( configAndIssues.issues.length > 0 ) console.log ( `Cannot use an existing ${loabanConfigName}` )
     const initDataToUse = await getInitDataWithoutTemplatesFilteredByPackages ( fileOps, initData, cmd );
     if ( cmd.showimpact ) return showImpact ( ap, initDataToUse, configAndIssues )

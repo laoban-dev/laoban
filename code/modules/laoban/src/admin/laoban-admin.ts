@@ -3,7 +3,7 @@ import { NameAnd, reportErrors } from "@laoban/utils";
 import { gatherInitData, init, InitData, isSuccessfulInitData } from "./init";
 import { analyze } from "./analyze";
 import { newPackage } from "./newPackage";
-import { CopyFileOptions, FileOps } from "@laoban/fileops";
+import { CopyFileOptions, FileOps, FileOpsAndXml } from "@laoban/fileops";
 import { makeIntoTemplate, newTemplate, updateAllTemplates } from "./newTemplate";
 import { loabanConfigTestName, PackageDetailFiles, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ConfigAndIssues, ConfigWithDebug } from "../config";
@@ -40,22 +40,24 @@ function justInitUrl<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ):
 }
 
 
-export async function loadConfigForAdmin ( fileOps: FileOps, cmd: any, currentDirectory: string, params: string[], outputStream: Writable ): Promise<ConfigWithDebug> {
-  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
+export async function loadConfigForAdmin ( fileOpsAndXml: FileOpsAndXml, cmd: any, currentDirectory: string, params: string[], outputStream: Writable ): Promise<ConfigWithDebug> {
+  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOpsAndXml, makeCache ) ( process.cwd (), params, outputStream )
   const config = await abortWithReportIfAnyIssues ( configAndIssues );
   return addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) ( config )
 }
 
-async function clearCache ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
-  const config = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+async function clearCache ( { fileOpsAndXml, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
+  const { fileOps } = fileOpsAndXml
+  const config = await loadConfigForAdmin ( fileOpsAndXml, cmd, currentDirectory, params, outputStream )
   if ( config.cacheDir )
     return fileOps.removeDirectory ( config.cacheDir, true )
   else
     console.log ( 'Cache directory is not defined in laoban.json' )
 
 }
-async function profile ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
-  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+async function profile ( { fileOpsAndXml, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
+  const { fileOps } = fileOpsAndXml
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOpsAndXml, cmd, currentDirectory, params, outputStream )
   const pds = await PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
   await Promise.all ( pds.map ( d => loadProfile ( config, d.directory ).then ( p => ({ directory: d.directory, profile: findProfilesFromString ( p ) }) ) ) ).//
     then ( p => {
@@ -66,8 +68,9 @@ async function profile ( { fileOps, cmd, currentDirectory, params, outputStream 
       prettyPrintProfiles ( output ( config ), 'average', data, p => (p.average / 1000).toFixed ( 3 ) )
     } )
 }
-async function config ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ) {
-  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+async function config ( { fileOpsAndXml, cmd, currentDirectory, params, outputStream }: ActionParams<any> ) {
+  const { fileOps } = fileOpsAndXml
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOpsAndXml, cmd, currentDirectory, params, outputStream )
   let simpleConfig = { ...config }
   if ( !cmd.all ) delete simpleConfig.scripts
   delete simpleConfig.outputStream
@@ -75,15 +78,17 @@ async function config ( { fileOps, cmd, currentDirectory, params, outputStream }
 }
 
 
-async function validate ( { fileOps, cmd, currentDirectory, params, outputStream, copyOptions }: ActionParams<any> ): Promise<void> {
-  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+async function validate ( { fileOpsAndXml, cmd, currentDirectory, params, outputStream, copyOptions }: ActionParams<any> ): Promise<void> {
+  const { fileOps } = fileOpsAndXml
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOpsAndXml, cmd, currentDirectory, params, outputStream )
   const pds = await PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
-  const issues = await validatePackageDetailsAndTemplates ( fileOps, config, copyOptions, pds )
-  await abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOps } )
+  const issues = await validatePackageDetailsAndTemplates ( fileOpsAndXml, config, copyOptions, pds )
+  await abortWithReportIfAnyIssues ( { config, outputStream: config.outputStream, issues, params, fileOpsAndXml } )
 }
 
-async function templates ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
-  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCache ) ( process.cwd (), params, outputStream )
+async function templates ( { fileOpsAndXml, cmd, currentDirectory, params, outputStream }: ActionParams<any> ): Promise<void> {
+  const { fileOps } = fileOpsAndXml
+  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOpsAndXml, makeCache ) ( process.cwd (), params, outputStream )
   if ( configAndIssues.config ) {
     console.log ( 'templates', configAndIssues.config.templates )
   } else {
@@ -107,14 +112,15 @@ export class LaobanAdmin {
   private params: string[];
   private program: any;
   private parsed: any;
-  public constructor ( fileOps: FileOps, currentDirectory: string, envs: NameAnd<string>, params: string[], outputStream: Writable ) {
+  public constructor ( fileOpsAndXml: FileOpsAndXml, currentDirectory: string, envs: NameAnd<string>, params: string[], outputStream: Writable ) {
     this.params = params;
+    const { fileOps } = fileOpsAndXml
     let program = require ( 'commander' )
     this.program = program.name ( 'laoban admin' ).usage ( '<command> [options]' ).option ( '--load.laoban.debug' )
     const addCommand = ( name: string, description: string, fn: ( ActionParams ) => Promise<void>, moreOptions?: ( env: NameAnd<string>, p: any ) => void ) => {
       let thisP = program.command ( name )
         .description ( description )
-        .action ( cmd => fn ( { fileOps, currentDirectory, cmd, params, outputStream } ) )
+        .action ( cmd => fn ( { fileOpsAndXml, currentDirectory, cmd, params, outputStream } ) )
       if ( moreOptions ) moreOptions ( envs, thisP )
       return thisP
     };
@@ -142,7 +148,7 @@ export class LaobanAdmin {
       .option ( '-d,--desc <desc>', 'The description of the package, defaults to an empty string' )
       .option ( '--nuke', 'If the directory already exists, it will be deleted and recreated', false )
       .option ( '--force', 'Will create even if the package already exists ', false )
-      .action ( ( name, cmd ) => newPackage ( fileOps, currentDirectory, name, cmd, params, outputStream ).then ( postCommand ( program, fileOps ) ) )
+      .action ( ( name, cmd ) => newPackage ( fileOpsAndXml, currentDirectory, name, cmd, params, outputStream ).then ( postCommand ( program, fileOps ) ) )
 
     addCommand ( 'newtemplate', `Creates a templates from the specified directory (copies files to template dir). It will usually make far too many files!`, newTemplate, initUrlOption )
       .option ( '--directory <directory>', 'The directory to use as the source. Defaults to the current directory.' )

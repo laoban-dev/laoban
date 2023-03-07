@@ -1,5 +1,5 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, findChildFiles, findMatchingK, loadAllFilesIn, parseJson, partitionLocationAndContents, Path } from "@laoban/fileops";
+import { CopyFileDetails, copyFiles, fileNameFrom, FileOps, FileOpsAndXml, findChildFiles, findMatchingK, loadAllFilesIn, parseJson, partitionLocationAndContents, Path } from "@laoban/fileops";
 import { NullDebugCommands } from "@laoban/debug";
 import { allButLastSegment, lastSegment, unique } from "@laoban/utils";
 import { findLaobanUpOrDown } from "./init";
@@ -77,9 +77,9 @@ async function createNeededDirectoriesForFilesNames ( copyFileDetails: string[],
   if ( cmd.dryrun ) console.log ( `Directories to create: ${JSON.stringify ( directoriesToCreate )}` )
   else await Promise.all ( directoriesToCreate.map ( d => fileOps.createDir ( d ) ) )
 }
-async function copyTemplateFilesToTemplate ( fileOps: FileOps, directory: string, target: string, cmd: CreateTemplateOptions, copyFileDetails: string[] ) {
-  const cf = copyFiles ( `Copying files to template ${target}`, fileOps, NullDebugCommands, directory, target,
-    { tx: async ( type, text ) => text, dryrun: cmd.dryrun , postProcessor: postProcessTurnPackageJsonIntoTemplate} )
+async function copyTemplateFilesToTemplate ( fileOpsAndXml: FileOpsAndXml, directory: string, target: string, cmd: CreateTemplateOptions, copyFileDetails: string[] ) {
+  const cf = copyFiles ( `Copying files to template ${target}`, fileOpsAndXml, NullDebugCommands, directory, target,
+    { tx: async ( type, text ) => text, dryrun: cmd.dryrun, postProcessor: postProcessTurnPackageJsonIntoTemplate } )
   const copyFileDetailsWithPackageJsonSpecial: CopyFileDetails[] = copyFileDetails.map ( file =>
     lastSegment ( file ) === 'package.json' ? { file, postProcess: "turnIntoPackageJsonTemplate" } : file )
 
@@ -110,7 +110,8 @@ async function checkDirectoryExists ( fileOps: FileOps, directory: string ) {
     process.exit ( 1 )
   }
 }
-export async function newTemplate ( { fileOps, currentDirectory, cmd }: ActionParams<CreateTemplateOptions> ): Promise<void> {
+export async function newTemplate ( { fileOpsAndXml, currentDirectory, cmd }: ActionParams<CreateTemplateOptions> ): Promise<void> {
+  const { fileOps } = fileOpsAndXml;
   const { directory, templateName, target } = calculateNewTemplateOptions ( fileOps, currentDirectory, cmd );
   await checkDirectoryExists ( fileOps, directory );
 
@@ -119,14 +120,15 @@ export async function newTemplate ( { fileOps, currentDirectory, cmd }: ActionPa
   if ( !cmd.dryrun ) console.log ( 'Making template in', target )
 
   await createNeededDirectoriesForFilesNames ( fileNames, fileOps, target, cmd );
-  await copyTemplateFilesToTemplate ( fileOps, directory, target, cmd, fileNames );
+  await copyTemplateFilesToTemplate ( fileOpsAndXml, directory, target, cmd, fileNames );
 
   await updateLaobanWithNewTemplate ( fileOps, cmd, directory, templateName, target );
   const templateJson = makeDotTemplateJson ( fileNames );
   await saveDotTemplateJson ( cmd, templateJson, fileOps, target );
 }
 
-export async function makeIntoTemplate ( { fileOps, currentDirectory, cmd }: ShortActionParams<CreateTemplateOptions> ): Promise<void> {
+export async function makeIntoTemplate ( { fileOpsAndXml, currentDirectory, cmd }: ShortActionParams<CreateTemplateOptions> ): Promise<void> {
+  const { fileOps } = fileOpsAndXml;
   const directory = calculateDirectory ( fileOps, currentDirectory, cmd )
   const templateName = calculateTemplateName ( cmd, directory );
   await checkDirectoryExists ( fileOps, directory );
@@ -149,7 +151,8 @@ export async function makeIntoTemplate ( { fileOps, currentDirectory, cmd }: Sho
 }
 
 export async function updateAllTemplates ( params: ShortActionParams<CreateTemplateOptions> ): Promise<void> {
-  const { fileOps, currentDirectory, cmd } = params;
+  const { fileOpsAndXml, currentDirectory, cmd } = params;
+  const { fileOps } = fileOpsAndXml;
   const directory = calculateDirectory ( fileOps, currentDirectory, cmd )
   const filesAndDirs = await fileOps.listFiles ( directory )
   const dirs = await findMatchingK ( filesAndDirs, async f => await fileOps.isDirectory ( fileOps.join ( directory, f ) ) )

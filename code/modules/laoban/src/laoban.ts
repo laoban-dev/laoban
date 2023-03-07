@@ -15,7 +15,7 @@ import { CommanderStatic } from "commander";
 import { addDebug } from "@laoban/debug";
 
 import { updateConfigFilesFromTemplates } from "./update";
-import { FileOps, Path } from "@laoban/fileops";
+import { FileOps, FileOpsAndXml, Path } from "@laoban/fileops";
 import { postCommand } from "./postCommand";
 import { stringOrUndefinedAsString, toArray } from "@laoban/utils";
 
@@ -133,7 +133,8 @@ export class Cli {
 
   constructor ( configAndIssues: ConfigAndIssues, executeGenerations: ExecuteGenerations, configOrReportIssues: ConfigOrReportIssues ) {
     const version = require ( "../../package.json" ).version
-    const fileOps = configAndIssues.fileOps
+    const fileOpsAndXml = configAndIssues.fileOpsAndXml
+    const { fileOps } = fileOpsAndXml
     this.params = configAndIssues.params
     var program = require ( 'commander' )
       .name ( 'laoban' )
@@ -192,7 +193,7 @@ export class Cli {
     packageAction ( program, 'status', statusAction ( fileOps ), 'shows the initStatus of the project in the current directory', defaultOptions )
     action ( program, 'packages', packagesAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
-    packageAction ( program, 'update', updateConfigFilesFromTemplates ( fileOps ),
+    packageAction ( program, 'update', updateConfigFilesFromTemplates ( fileOpsAndXml ),
       `overwrites the package.json based on the ${packageDetailsFile}, and copies other template files overwrite project's`,
       extraUpdateOptions, defaultOptions )
 
@@ -263,8 +264,8 @@ export function executeGenerations ( outputStream: Writable, fileOps: FileOps ):
   return GenerationsDecorators.normalDecorators () ( executeAllGenerations ( executeGeneration ( fileOps, outputStream ), shellReporter ( fileOps, outputStream ) ) )
 }
 
-export async function makeStandardCli ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir, outputStream: Writable, params: string[] ) {
-  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOps, makeCacheFn ) ( process.cwd (), params, outputStream )
+export async function makeStandardCli ( fileOpsAndXml: FileOpsAndXml, makeCacheFn: MakeCacheFnFromLaobanDir, outputStream: Writable, params: string[] ) {
+  const configAndIssues: ConfigAndIssues = await loadLaobanAndIssues ( fileOpsAndXml, makeCacheFn ) ( process.cwd (), params, outputStream )
   // console.log('makeStandardCli', configAndIssues.config)
-  return new Cli ( configAndIssues, executeGenerations ( outputStream, fileOps ), abortWithReportIfAnyIssues );
+  return new Cli ( configAndIssues, executeGenerations ( outputStream, fileOpsAndXml.fileOps ), abortWithReportIfAnyIssues );
 }

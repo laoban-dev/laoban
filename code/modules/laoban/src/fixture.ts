@@ -9,6 +9,7 @@ import { Writable } from "stream";
 
 import { makeCache } from "./configProcessor";
 import { fileOpsNode } from "@laoban/filesops-node";
+import { fastXmlParser } from "@laoban/fast-xml-parser";
 
 
 export let testRoot = path.resolve ( findLaoban ( process.cwd () ), '..', 'tests' );
@@ -38,7 +39,8 @@ export function executeCli ( cwd: string, cmd: string ): Promise<string> {
   let data: string[] = []
   let stream: Writable = rememberWritable ( data )
   let args: string[] = [ ...process.argv.slice ( 0, 2 ), ...cmd.split ( ' ' ).slice ( 1 ) ];
-  return executeInChangedDirectory ( cwd, () => makeStandardCli ( fileOps, makeCache, stream, args ).then ( cli => cli.start () ).then ( () => data.join ( '' ) ) )
+  const fileOpsAndXml = { fileOps, xml: fastXmlParser };
+  return executeInChangedDirectory ( cwd, () => makeStandardCli ( fileOpsAndXml, makeCache, stream, args ).then ( cli => cli.start () ).then ( () => data.join ( '' ) ) )
 }
 
 

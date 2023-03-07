@@ -4,7 +4,7 @@ import { Writable } from "stream";
 // @ts-ignore
 import { Debug } from "@laoban/debug";
 import { combineTwoObjects, NameAnd, safeArray, safeObject, unique } from "@laoban/utils";
-import { FileOps } from "@laoban/fileops";
+import { FileOps, FileOpsAndXml } from "@laoban/fileops";
 
 
 export interface ConfigVariables {
@@ -42,7 +42,7 @@ export function combineRawConfigs ( r1: RawConfig, r2: RawConfig ): RawConfig {
   return result
 }
 export function combineRawConfigsAndFileOps ( r1: RawConfigAndFileOps, r2: RawConfigAndFileOps ): RawConfigAndFileOps {
-  return { rawConfig: combineRawConfigs ( r1.rawConfig, r2.rawConfig ), fileOps: r2.fileOps }
+  return { rawConfig: combineRawConfigs ( r1.rawConfig, r2.rawConfig ), fileOpsAndXml: r2.fileOpsAndXml }
 }
 
 export interface PackageJson {
@@ -209,7 +209,7 @@ export interface PackageDetails {
 }
 export interface RawConfigAndFileOps {
   rawConfig?: RawConfig,
-  fileOps: FileOps
+  fileOpsAndXml: FileOpsAndXml
 }
 
 export interface RawConfigAndFileOpsAndIssues extends RawConfigAndFileOps {
@@ -217,7 +217,7 @@ export interface RawConfigAndFileOpsAndIssues extends RawConfigAndFileOps {
 }
 export interface ConfigAndIssues extends HasOutputStream {
   config?: Config,
-  fileOps: FileOps
+  fileOpsAndXml: FileOpsAndXml
   params: string[]
   issues: string[]
 }

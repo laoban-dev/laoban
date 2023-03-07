@@ -4,7 +4,7 @@ import { groupBy } from "./utils";
 // @ts-ignore
 import { Validate } from "@laoban/validation";
 import { flatten } from "@laoban/utils";
-import { FileOps, validateTemplates } from "@laoban/fileops";
+import { FileOps, FileOpsAndXml, validateTemplates } from "@laoban/fileops";
 
 
 export function validateLaobanJson ( v: Validate<RawConfig> ): Validate<RawConfig> {
@@ -29,7 +29,7 @@ function validateCommand ( v: Validate<CommandDefn | string> ) {
 }
 
 
-export async function validatePackageDetailsAndTemplates ( fileOps: FileOps, c: ConfigWithDebug,copyFileOptions, pds: PackageDetailsAndDirectory[] ): Promise<string[]> {
+export async function validatePackageDetailsAndTemplates ( fileOpsAndXml: FileOpsAndXml, c: ConfigWithDebug,copyFileOptions, pds: PackageDetailsAndDirectory[] ): Promise<string[]> {
   const detailsIssues = pds.filter ( pd => !pd.packageDetails ).map ( ( { directory, errorParsing } ) =>
     `Directory ${directory} has ${errorParsing ? 'invalid json in' : 'no '} package.details.json file` )
   const goodPds = pds.filter ( pd => pd.packageDetails );
@@ -41,7 +41,7 @@ export async function validatePackageDetailsAndTemplates ( fileOps: FileOps, c: 
       [] ) )
   let pdsIssues: string[] = flatten ( goodPds.map ( pd => validatePackageDetails ( Validate.validate ( `Project details in ${pd.directory}`, pd.packageDetails ) ).errors ) )
 
-  const templateIssues = await validateTemplates ( `s`, fileOps, copyFileOptions, c.templates );
+  const templateIssues = await validateTemplates ( `s`, fileOpsAndXml, copyFileOptions, c.templates );
   const allIssues = [ ...detailsIssues, ...duplicateErrors, ...pdsIssues, ...templateIssues ]
   return allIssues
 }

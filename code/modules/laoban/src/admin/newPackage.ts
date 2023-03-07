@@ -2,7 +2,7 @@
 import { findInitFileContents, findInitFileContentsFor, InitFileContents, initFileContentsWithParsedLaobanJsonAndProjectDetails, makeOneProjectDetails, TypeCmdOptions } from "./init";
 import path from "path";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { CopyFileOptions, FileOps, findTemplateLookup, loadJsonFileOrUndefined, LocationAndParsed } from "@laoban/fileops";
+import { CopyFileOptions, FileOps, FileOpsAndXml, findTemplateLookup, loadJsonFileOrUndefined, LocationAndParsed } from "@laoban/fileops";
 import { packageDetailsFile } from "../Files";
 import { ConfigWithDebug } from "../config";
 import { loadConfigForAdmin } from "./laoban-admin";
@@ -43,8 +43,9 @@ async function packageDetailsJsonWhenPackageJsonExists ( fileOps: FileOps, parse
   return contents
 }
 
-export async function newPackage ( fileOps: FileOps, currentDirectory: string, name: string | undefined, cmd: CreatePackageOptions, params: string[], outputStream: Writable ) {
-  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+export async function newPackage ( fileOpsAndXml: FileOpsAndXml, currentDirectory: string, name: string | undefined, cmd: CreatePackageOptions, params: string[], outputStream: Writable ) {
+  const { fileOps } = fileOpsAndXml
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOpsAndXml, cmd, currentDirectory, params, outputStream )
   const templateName = cmd.template || cmd.type
   if ( !Object.keys ( config.templates ).includes ( templateName ) ) {
     console.error ( `Template ${templateName} not known. Legal values are [${Object.keys ( config.templates )}]` )
@@ -67,7 +68,7 @@ export async function newPackage ( fileOps: FileOps, currentDirectory: string, n
   const { type, allInitFileContents } = ifc;
   const packageJson = await loadJsonFileOrUndefined<any> ( ``, fileOps, clearDirectory, 'package.json' )
   let packageDetailsJson: ErrorsAnd<string> = await (packageJson
-    ? packageDetailsJsonWhenPackageJsonExists ( fileOps, config, allInitFileContents, cmd, packageJson, makeCopyOptions ( `Copying into ${clearDirectory}`,fileOps, {}, config, undefined, undefined ) )
+    ? packageDetailsJsonWhenPackageJsonExists ( fileOps, config, allInitFileContents, cmd, packageJson, makeCopyOptions ( `Copying into ${clearDirectory}`,fileOpsAndXml, {}, config, undefined, undefined ) )
     : Promise.resolve ( packageJsonDetailsForNoPackageJson ( allInitFileContents, cmd, clearDirectory, templateName ) ))
   if ( hasErrors ( packageDetailsJson ) ) return reportErrors ( packageDetailsJson )
   console.log ( packageDetailsFile, packageDetailsJson )

@@ -25,7 +25,8 @@
     "@laoban/debug",
     "@laoban/node",
     "@laoban/filesops-node",
-    "@laoban/comparefiles"
+    "@laoban/comparefiles",
+    "@laoban/fast-xml-parser"
   ],
   "guards":      {
     "publish": true,

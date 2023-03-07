@@ -348,7 +348,8 @@ interface InitCmdOptions extends TypeCmdOptions, HasPackages {
   dryrun?: boolean
   force?: boolean
 }
-export async function init ( { fileOps, cmd, currentDirectory }: ActionParams<InitCmdOptions> ): Promise<void> {
+export async function init ( { fileOpsAndXml, cmd, currentDirectory }: ActionParams<InitCmdOptions> ): Promise<void> {
+  const {fileOps} = fileOpsAndXml
   const clearDirectory = path.join ( currentDirectory ).replace ( /\\/g, '/' )
   if ( cmd.dryrun && cmd.force ) {
     console.log ( 'Cannot have --dryrun and --force' )

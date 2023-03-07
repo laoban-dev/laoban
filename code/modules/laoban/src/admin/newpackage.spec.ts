@@ -21,7 +21,7 @@ async function clean ( dir: string, packages: string[] ) {
 async function setup ( dir: string, ...packages: string[] ) {
   await clean ( dir, packages )
   const dirOps = inDirectoryFileOps ( fileOps, dir )
-  await Promise.all ( packages.map ( p => copyDirectory ( dirOps, `${p}_start`, p ) ) )
+  await Promise.all ( packages.map ( p => copyDirectory ( { fileOps: dirOps }, `${p}_start`, p ) ) )
 
 }
 
@@ -35,7 +35,7 @@ async function testIt ( category: string, test: string, command: string, pcks: s
   const cleanFn = ( s: string ) => cleanLineEndings ( s ).trim ()
 
   expect ( cleanFn ( display ) ).toEqual ( cleanFn ( expected ) )
-    await fileOps.removeDirectory ( path.join ( testDir, '.cache' ), true )
+  await fileOps.removeDirectory ( path.join ( testDir, '.cache' ), true )
   for ( let pck of pcks ) {
     await fileOps.removeFile ( path.join ( testDir, pck, '.log' ) )
     await fileOps.removeDirectory ( path.join ( testDir, pck, 'dist' ), true )

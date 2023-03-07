@@ -1,7 +1,7 @@
 import { ActionParams } from "./types";
 import { ConfigWithDebug } from "../config";
 import { loabanConfigName, packageDetailsFile } from "../Files";
-import { fileNameFrom, FileOps, isFilename, isUrl, loadFileFromDetails, loadTemplateDetailsAndFileContents, LocationAndContents, parseJson, saveAll, SourcedTemplateFileDetailsWithContent, targetFrom } from "@laoban/fileops";
+import { fileNameFrom, FileOps, FileOpsAndXml, isFilename, isUrl, loadFileFromDetails, loadTemplateDetailsAndFileContents, LocationAndContents, parseJson, saveAll, SourcedTemplateFileDetailsWithContent, targetFrom } from "@laoban/fileops";
 import { getTemplateJsonFileName } from "./newTemplate";
 import { includeAndTransformFile, makeCopyOptions } from "../update";
 import { deepCombineTwoObjects, ErrorsAnd, hasErrors, jsonDelta, JsonDeltaOptions, keep, mapObjectK, NameAnd, singleOrArrayOrUndefined, toArray } from "@laoban/utils";
@@ -25,7 +25,8 @@ interface TemplateDetailsAndContent {
   templateFiles: NameAnd<SourcedTemplateFileDetailsWithContent>
 }
 
-async function findTemplateDetailsAndContent ( fileOps: FileOps, directory: string, config: ConfigWithDebug ): Promise<ErrorsAnd<TemplateDetailsAndContent>> {
+async function findTemplateDetailsAndContent ( fileOpsAndXml: FileOpsAndXml, directory: string, config: ConfigWithDebug ): Promise<ErrorsAnd<TemplateDetailsAndContent>> {
+  const { fileOps } = fileOpsAndXml
   const pdFileName = fileOps.join ( directory, packageDetailsFile );
   if ( !await fileOps.isFile ( pdFileName ) ) return [ `No package details file found at ${pdFileName}` ]
   const pdString = await fileOps.loadFileOrUrl ( pdFileName )
@@ -36,9 +37,9 @@ async function findTemplateDetailsAndContent ( fileOps: FileOps, directory: stri
   if ( !templateDirUrl ) return [ `File ${pdFileName}. No template url for ${templateName} in ${JSON.stringify ( config.templates )}` ]
 
   const context = `Loading template [${templateName}] which maps to [${templateDirUrl}]`;
-  const copyFileOptions = makeCopyOptions ( context, fileOps, {}, config, undefined, pd )
+  const copyFileOptions = makeCopyOptions ( context, fileOpsAndXml, {}, config, undefined, pd )
 
-  const templateFiles: ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>> = await loadTemplateDetailsAndFileContents ( context, fileOps, templateDirUrl, copyFileOptions )
+  const templateFiles: ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>> = await loadTemplateDetailsAndFileContents ( context, fileOpsAndXml, templateDirUrl, copyFileOptions )
   if ( hasErrors ( templateFiles ) ) return templateFiles;
   return { templateDirUrl, templateName, templateFiles };
 }
@@ -97,15 +98,16 @@ export function createDeltaForPackageJson ( originalPackageJson: any, packageJso
   // console.log ( 'jsonDelta - result', result )
   return result;
 }
-export async function updateTemplate ( { fileOps, cmd, currentDirectory, params, outputStream }: ActionParams<UpdateTemplateCmd> ): Promise<void> {
+export async function updateTemplate ( { fileOpsAndXml, cmd, currentDirectory, params, outputStream }: ActionParams<UpdateTemplateCmd> ): Promise<void> {
+  const { fileOps } = fileOpsAndXml
   function error ( msg: string ) {
     console.error ( msg )
     process.exit ( 1 )
   }
-  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOps, cmd, currentDirectory, params, outputStream )
+  const config: ConfigWithDebug = await loadConfigForAdmin ( fileOpsAndXml, cmd, currentDirectory, params, outputStream )
 
   const directory = cmd.directory || currentDirectory
-  const tdc = await findTemplateDetailsAndContent ( fileOps, directory, config );
+  const tdc = await findTemplateDetailsAndContent ( fileOpsAndXml, directory, config );
   if ( hasErrors ( tdc ) ) {
     reportError ( tdc );
     return

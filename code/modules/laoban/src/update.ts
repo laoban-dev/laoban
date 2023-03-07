@@ -5,7 +5,7 @@ import { derefence, dollarsBracesVarDefn, mustachesVariableDefn, VariableDefn } 
 import { loadVersionFile } from "./modifyPackageJson";
 import { DebugCommands } from "@laoban/debug";
 import { ErrorsAnd, findPart, fromEntries, hasErrors, nextMajorVersion, nextVersion, safeArray, safeObject } from "@laoban/utils";
-import { chainPostProcessFn, combineTransformFns, CopyFileOptions, copyFromTemplate, defaultPostProcessors, FileOps, loadFileFromDetails, loadTemplateControlFile, parseJson, TemplateControlFile, TemplateFileIntermediate, TransformTextFn } from "@laoban/fileops";
+import { chainPostProcessFn, combineTransformFns, CopyFileOptions, copyFromTemplate, defaultPostProcessors, FileOps, FileOpsAndXml, loadFileFromDetails, loadTemplateControlFile, parseJson, TemplateControlFile, TemplateFileIntermediate, TransformTextFn } from "@laoban/fileops";
 
 import { postProcessForPackageJson } from "@laoban/node";
 
@@ -31,8 +31,9 @@ interface UpdateCmdOptions {
 //   } )
 // }
 
-export const includeFiles = ( fileOps: FileOps ): TransformTextFn => async ( type: string, text: string ): Promise<string> => {
+export const includeFiles = ( fileOpsAndXml: FileOpsAndXml ): TransformTextFn => async ( type: string, text: string ): Promise<string> => {
   let regExp = /\${include\(([^)]*)\)/g;
+  const { fileOps } = fileOpsAndXml
   const includes = text.match ( regExp )
   if ( !includes ) return Promise.resolve ( text )
   const urlsAndContent: string [][] = await Promise.all<string[]> ( includes.map ( ( includeStr ) => {
@@ -53,8 +54,8 @@ export const transformFile = ( context: string, dic: any ): TransformTextFn => (
 };
 
 
-export const includeAndTransformFile = ( context: string, dic: any, fileOps: FileOps ): TransformTextFn =>
-  combineTransformFns ( includeFiles ( fileOps ), transformFile ( context, dic ) )
+export const includeAndTransformFile = ( context: string, dic: any, fileOpsAndXml: FileOpsAndXml ): TransformTextFn =>
+  combineTransformFns ( includeFiles ( fileOpsAndXml ), transformFile ( context, dic ) )
 
 export async function loadTemplateControlFileOld ( context: string, fileOps: FileOps, laobanDirectory: string | undefined, templateControlFileUrl: string ): Promise<TemplateControlFile> {
   function findPrefix () {
@@ -69,18 +70,18 @@ export async function loadTemplateControlFileOld ( context: string, fileOps: Fil
 }
 
 
-export const loadOneFileFromTemplateControlFileDetails = ( context: string, fileOps: FileOps, templateControlFileUrl: string, options: CopyFileOptions ) => async ( file: string ): Promise<ErrorsAnd<string>> => {
-  const controlFile: ErrorsAnd<TemplateFileIntermediate> = await loadTemplateControlFile ( context, fileOps) ( file )
+export const loadOneFileFromTemplateControlFileDetails = ( context: string, fileOpsAndXml: FileOpsAndXml, templateControlFileUrl: string, options: CopyFileOptions ) => async ( file: string ): Promise<ErrorsAnd<string>> => {
+  const controlFile: ErrorsAnd<TemplateFileIntermediate> = await loadTemplateControlFile ( context, fileOpsAndXml ) ( file )
   if ( hasErrors ( controlFile ) ) return controlFile
   const cfd = findPart ( controlFile.files, file )
   if ( cfd === undefined ) throw Error ( `${context}. Cannot find ${file} in file ${templateControlFileUrl}\nControl file is ${JSON.stringify ( controlFile, null, 2 )}` )
-  const { target, postProcessed } = await loadFileFromDetails ( context, fileOps, templateControlFileUrl, options, cfd )
+  const { target, postProcessed } = await loadFileFromDetails ( context, fileOpsAndXml, templateControlFileUrl, options, cfd )
   return postProcessed
 };
-export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: PackageDetailsAndDirectory, options: CopyFileOptions ): Promise<void> {
-  return copyFromTemplate ( `Copying template files from ${templateUrl} to ${p.directory}`, fileOps, options, templateUrl, p.directory )
+export async function copyTemplateDirectoryFromConfigFile ( fileOpsAndXml: FileOpsAndXml, d: DebugCommands, laobanDirectory: string, templateUrl: string, p: PackageDetailsAndDirectory, options: CopyFileOptions ): Promise<void> {
+  return copyFromTemplate ( `Copying template files from ${templateUrl} to ${p.directory}`, fileOpsAndXml, options, templateUrl, p.directory )
   // const prefix = templateUrl.includes ( ':' ) || templateUrl.startsWith ( '@' ) ? templateUrl : path.join ( laobanDirectory, templateUrl )
-  // const controlFile: ErrorsAnd<TemplateFileIntermediate> = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOps ) ( prefix );
+  // const controlFile: ErrorsAnd<TemplateFileIntermediate> = await loadTemplateControlFile ( `Error copying template file in ${p.directory}`, fileOpsAndXml ) ( prefix );
   // console.log ( 'controlFile', controlFile )
   // if ( hasErrors ( controlFile ) ) {
   //   reportErrors ( controlFile );
@@ -89,10 +90,10 @@ export async function copyTemplateDirectoryFromConfigFile ( fileOps: FileOps, d:
   // d.message ( () => [ `template control file ${prefix} for ${p.directory} is `, controlFile ] )
   // if ( controlFile.files === undefined ) {throw Error ( `Template control file ${prefix} is malformed. It is missing the files property` )}
   // const target = p.directory
-  // return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOps, d, prefix, target,
+  // return copyFiles ( `Copying template ${templateUrl} to ${target}`, fileOpsAndXml, d, prefix, target,
   //   options ) ( safeArray ( controlFile.files ) )
 }
-export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, options: CopyFileOptions ): Promise<void> {
+export function copyTemplateDirectory ( fileOpsAndXml: FileOpsAndXml, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, options: CopyFileOptions ): Promise<void> {
   let d = config.debug ( 'update' )
   const template = p.packageDetails?.template
   const target = p.directory
@@ -102,7 +103,7 @@ export function copyTemplateDirectory ( fileOps: FileOps, config: ConfigWithDebu
     console.error ( `Cannot find template ${template} for ${target}. Legal values are [${Object.keys ( config.templates )}]` )
     return
   }
-  return copyTemplateDirectoryFromConfigFile ( fileOps, d, config.laobanDirectory, namedTemplateUrl, p, options )
+  return copyTemplateDirectoryFromConfigFile ( fileOpsAndXml, d, config.laobanDirectory, namedTemplateUrl, p, options )
 }
 let lastVersion: string | undefined = undefined
 export async function updateVersionIfNeeded ( fileOps: FileOps, config: ConfigWithDebug, cmd: UpdateCmdOptions ) {
@@ -130,24 +131,25 @@ interface DryRunAndAllowSamples {
   dryrun?: boolean
   allowsamples?: boolean
 }
-export function makeCopyOptions ( context: string, fileOps: FileOps, cmd: DryRunAndAllowSamples, config: ConfigWithDebug, version: string | undefined, p: PackageDetailsAndDirectory | undefined ): CopyFileOptions {
+export function makeCopyOptions ( context: string, fileOpsAndXml: FileOpsAndXml, cmd: DryRunAndAllowSamples, config: ConfigWithDebug, version: string | undefined, p: PackageDetailsAndDirectory | undefined ): CopyFileOptions {
   const packageDetails: PackageDetails | undefined = p?.packageDetails
   const allowSamples = cmd.allowsamples
   let lookupForJsonMergeInto = { ...config, version, packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails?.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
-  const tx = includeAndTransformFile ( context, lookupForJsonMergeInto, fileOps );
+  const tx = includeAndTransformFile ( context, lookupForJsonMergeInto, fileOpsAndXml );
   return {
     allowSamples, dryrun: cmd.dryrun,
     postProcessor: chainPostProcessFn ( defaultPostProcessors, postProcessForPackageJson ),
     lookupForJsonMergeInto, tx
   };
 }
-export const updateConfigFilesFromTemplates = ( fileOps: FileOps ): PackageAction<void[]> => async ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
+export const updateConfigFilesFromTemplates = ( fileOpsAndXml: FileOpsAndXml ): PackageAction<void[]> => async ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
   let d = config.debug ( 'update' )
+  const { fileOps } = fileOpsAndXml
   const version = await updateVersionIfNeeded ( fileOps, config, cmd )
   return Promise.all ( pds.map ( async pd => {
-    const copyOptions = makeCopyOptions ( `updating ${pd.directory}`, fileOps, cmd, config, version, pd );
+    const copyOptions = makeCopyOptions ( `updating ${pd.directory}`, fileOpsAndXml, cmd, config, version, pd );
     return d.k ( () => `${pd.directory} copyTemplateDirectory`, () =>
-      copyTemplateDirectory ( fileOps, config,
+      copyTemplateDirectory ( fileOpsAndXml, config,
         { ...pd, version, properties: safeObject ( config.properties ) },
         copyOptions ) )
     // const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOpsNode.loadFileOrUrl ( path.join ( p.directory, 'package.json' ) ) )

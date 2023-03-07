@@ -8,7 +8,7 @@ import { validateLaobanJson } from "./validation";
 import { Writable } from "stream";
 import { output } from "./utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
-import { cachedFileOps, fileNameWithoutShortCuts, FileOps, fileOpsStats, inDirectoryFileOps, meteredFileOps, parseJson, Path, shortCutFileOps, shortCuts } from "@laoban/fileops";
+import { cachedFileOps, fileNameWithoutShortCuts, FileOps, FileOpsAndXml, fileOpsStats, inDirectoryFileOps, meteredFileOps, parseJson, Path, shortCutFileOps, shortCuts } from "@laoban/fileops";
 import { lastSegment, toArray } from "@laoban/utils";
 import WritableStream = NodeJS.WritableStream;
 
@@ -21,12 +21,14 @@ export function findCache ( path: Path, laobanDir, rawConfig, cacheDir: string )
 export type MakeCacheFn = ( rawConfig: RawConfigAndFileOps ) => FileOps
 export type MakeCacheFnFromLaobanDir = ( laobanDir: string ) => MakeCacheFn
 
-export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOps }: RawConfigAndFileOps ): FileOps => {
+export const makeCache = ( laobanDir: string ) => ( { rawConfig, fileOpsAndXml }: RawConfigAndFileOps ): FileOps => {
+  const fileOps = fileOpsAndXml.fileOps
   const actualCache = findCache ( fileOps, laobanDir, rawConfig.cacheDir, undefined )
   return shortCutFileOps ( inDirectoryFileOps ( cachedFileOps ( meteredFileOps ( fileOps ), actualCache ), laobanDir ), shortCuts )
 };
 
-const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
+const load = ( fileOpsAndXml: FileOpsAndXml, makeCache: MakeCacheFn, debug: boolean ) => {
+  const fileOps = fileOpsAndXml.fileOps
   return async ( filename ): Promise<RawConfigAndFileOps> => {
     if ( debug ) console.log ( `About to try and load ${filename}`, fileOpsStats ( fileOps ) )
     const fileContent = await fileOps.loadFileOrUrl ( filename )
@@ -35,10 +37,11 @@ const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
     // console.log ( `load ${filename}`, rawConfig.templates )
     const ps = toArray ( rawConfig.parents );
     if ( debug ) console.log ( `\nParents are`, ps )
-    const withCache = makeCache ( { rawConfig, fileOps } );
-    let rawResult = { rawConfig, fileOps: withCache };
+    const withCache = makeCache ( { rawConfig, fileOpsAndXml } );
+    const fileOpsAndXmlWithCache = { ...fileOpsAndXml, fileOps: withCache };
+    let rawResult = { rawConfig, fileOpsAndXml: fileOpsAndXmlWithCache };
     if ( ps.length === 0 ) return rawResult
-    const configs: RawConfigAndFileOps[] = await Promise.all ( ps.map ( load ( withCache, makeCache, debug ) ) )
+    const configs: RawConfigAndFileOps[] = await Promise.all ( ps.map ( load ( fileOpsAndXmlWithCache, makeCache, debug ) ) )
     const result: RawConfigAndFileOps = { ...[ ...configs, rawResult ].reduce ( combineRawConfigsAndFileOps ) };
     return result
   };
@@ -47,17 +50,17 @@ const load = ( fileOps: FileOps, makeCache: MakeCacheFn, debug: boolean ) => {
 async function getVersionOrUndefined ( rawConfig: RawConfig, fileOps: FileOps, versionUrl: string ): Promise<string | undefined> {
   try {return rawConfig.versionFile ? await fileOps.loadFileOrUrl ( versionUrl ) : undefined;} catch ( e ) {return undefined;}
 }
-export const loadLoabanJsonAndValidate = ( files: FileOps, makeCache: MakeCacheFn, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndFileOpsAndIssues> => {
+export const loadLoabanJsonAndValidate = ( origFileOpsAndXml: FileOpsAndXml, makeCache: MakeCacheFn, debug: boolean ) => async ( laobanDirectory: string ): Promise<RawConfigAndFileOpsAndIssues> => {
   const laobanConfigFileName = laobanFile ( laobanDirectory );
   try {
-    const { rawConfig, fileOps } = await load ( files, makeCache, debug ) ( laobanConfigFileName )
+    const { rawConfig, fileOpsAndXml } = await load ( origFileOpsAndXml, makeCache, debug ) ( laobanConfigFileName )
     const issues = Validate.validate ( `In directory ${lastSegment ( laobanDirectory )}, ${loabanConfigName}`, rawConfig );
     const versionUrl = derefence ( `loading version`, { ...rawConfig, laobanDirectory }, rawConfig.versionFile, { variableDefn: dollarsBracesVarDefn } );
-    const version = await getVersionOrUndefined ( rawConfig, fileOps, versionUrl )
-    return { rawConfig: { ...rawConfig, version }, issues: validateLaobanJson ( issues ).errors, fileOps }
+    const version = await getVersionOrUndefined ( rawConfig, fileOpsAndXml.fileOps, versionUrl )
+    return { rawConfig: { ...rawConfig, version }, issues: validateLaobanJson ( issues ).errors, fileOpsAndXml }
   } catch ( e ) {
     if ( debug ) console.error ( e )
-    return { issues: [ `Could not load laoban.json. Run with --load.laoban.debug to find more` ], fileOps: files }
+    return { issues: [ `Could not load laoban.json. Run with --load.laoban.debug to find more` ], fileOpsAndXml: origFileOpsAndXml }
   }
 }
 
@@ -73,10 +76,10 @@ export let abortWithReportIfAnyIssues: ConfigOrReportIssues = ( configAndIssues 
 
 export function loadConfigOrIssues ( path: Path, outputStream: Writable, params: string[], fn: ( dir: string ) => Promise<RawConfigAndFileOpsAndIssues>, debug: boolean ): ( laoban: string ) => Promise<ConfigAndIssues> {
   return laoban =>
-    fn ( laoban ).then ( ( { rawConfig, issues, fileOps } ) => {
+    fn ( laoban ).then ( ( { rawConfig, issues, fileOpsAndXml } ) => {
         if ( debug ) outputStream.write ( `rawConfig is\n${JSON.stringify ( rawConfig, null, 2 )}\nIssues are ${issues}\n` )
         const config = issues.length > 0 ? undefined : configProcessor ( path, laoban, outputStream, rawConfig );
-        return { issues, outputStream, config, params, fileOps };
+        return { issues, outputStream, config, params, fileOpsAndXml: fileOpsAndXml };
       }
     )
 }
@@ -155,17 +158,18 @@ export function configProcessor ( path: Path, laoban: string, outputStream: Writ
   }
   return result
 }
-export const loadLaobanAndIssues = ( fileOps: FileOps, makeCacheFn: MakeCacheFnFromLaobanDir ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {
+export const loadLaobanAndIssues = ( fileOpsAndXml: FileOpsAndXml, makeCacheFn: MakeCacheFnFromLaobanDir ) => async ( dir: string, params: string[], outputStream: Writable ): Promise<ConfigAndIssues> => {
   try {
     const debug = params.includes ( '--load.laoban.debug' )
     const laoban = findLaoban ( process.cwd () )
     if ( debug ) console.log ( `Found laoban.json at ${laoban}\n` )
-    return loadConfigOrIssues ( fileOps, outputStream, params, loadLoabanJsonAndValidate ( fileOps, makeCacheFn ( laoban ), debug ), debug ) ( laoban );
+    const fileOps = fileOpsAndXml.fileOps;
+    return loadConfigOrIssues ( fileOps, outputStream, params, loadLoabanJsonAndValidate ( fileOpsAndXml, makeCacheFn ( laoban ), debug ), debug ) ( laoban );
   } catch ( e ) {
     return {
       outputStream,
       params,
-      fileOps,
+      fileOpsAndXml,
       issues: [ `Error while starting  ${e.message}` ]
     }
   }

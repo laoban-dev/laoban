@@ -10,20 +10,22 @@ import { chainPostProcessFn, CopyFileOptions, defaultPostProcessors, shortCutFil
 import { setOriginalEnv } from "./src/originalEnv";
 import { postProcessForPackageJson } from "@laoban/node";
 import { includeAndTransformFile } from "./src/update";
-
-
+import { fastXmlParser } from "@laoban/fast-xml-parser";
 
 
 export function runLoabanAdmin ( newArgs: string[] ) {
-  const admin = new LaobanAdmin ( shortCutFileOps ( fileOpsNode (), shortCuts ), process.cwd (), process.env, newArgs, process.stdout )
+  const fileOps = shortCutFileOps ( fileOpsNode (), shortCuts );
+  const admin = new LaobanAdmin ( { fileOps, xml: fastXmlParser }, process.cwd (), process.env, newArgs, process.stdout )
   return admin.start ()
 }
 export function runLoaban ( args: string[] ) {
   if ( args?.[ 2 ] === 'admin' ) {
     const newArgs = [ args[ 0 ], args[ 1 ], ...args.slice ( 3 ) ]
     return runLoabanAdmin ( newArgs );
-  } else
-    return makeStandardCli ( fileOpsNode (), makeCache, process.stdout, args ).then ( cli => cli.start () )
+  } else {
+    const fileOpsAndXml = { fileOps: fileOpsNode (), xml: fastXmlParser };
+    return makeStandardCli ( fileOpsAndXml, makeCache, process.stdout, args ).then ( cli => cli.start () )
+  }
 }
 
 try {

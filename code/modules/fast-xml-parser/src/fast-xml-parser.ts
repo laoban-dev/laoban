@@ -1,6 +1,6 @@
 import { Xml } from "@laoban/xml";
 import { XMLBuilder, XMLParser } from "fast-xml-parser";
-import { safeArray } from "@laoban/utils";
+import { findPart, safeArray } from "@laoban/utils";
 
 const parserOptions = {
   ignoreAttributes: false
@@ -16,8 +16,9 @@ const builderOptions = {
 
 const builder = new XMLBuilder ( builderOptions );
 export const fastXmlParser: Xml = {
+  part: ( s: any, path: string ): any => findPart ( s, path ),
   parse: ( s: string, arrayList: string[] ): any => {
-    const array = safeArray(arrayList)
+    const array = safeArray ( arrayList )
     return new XMLParser ( {
       ...parserOptions,
       isArray: ( name, jpath, isLeafNode, isAttribute ) => {

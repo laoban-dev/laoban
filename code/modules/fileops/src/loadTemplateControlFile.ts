@@ -2,7 +2,7 @@ import { FileOps, isUrl, loadWithParents, parseJson, Path } from "./fileOps";
 import { applyTx, CopyFileDetails, CopyFileOptions, SourcedTemplateFileDetails, SourceTemplateFileDetailsSingleOrArray, TemplateFileDetails, TransformTextFn } from "./copyFiles";
 import { Validate } from "@laoban/validation";
 import { allButLastSegment, combineTwoObjects, deepCombineTwoObjects, deletePath, errors, ErrorsAnd, flatMap, flatMapK, hasErrors, mapErrors, mapErrorsK, mapK, mapObject, mapObjectK, mapObjectKeys, NameAnd, removeEmptyArrays, toArray } from "@laoban/utils";
-import { applyAll } from "./postProcessor";
+import { applyAll, FileOpsAndXml } from "./postProcessor";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 
 export interface TemplateControlFile {
@@ -95,18 +95,22 @@ const parse = ( path: Path ) => ( context: string ) => {
   }
 }
 
-const loadFile = ( fileOps: FileOps ) => filename => fileOps.loadFileOrUrl ( fileOps.join ( filename, '.template.json' ) );
+const loadFile = ( fileOpsAndXml: FileOpsAndXml ) => filename => {
+  const { fileOps } = fileOpsAndXml;
+  return fileOps.loadFileOrUrl ( fileOps.join ( filename, '.template.json' ) );
+};
 
 
-export const loadTemplateControlFile = ( context: string, fileOps: FileOps ): ( filename: string ) => Promise<ErrorsAnd<TemplateFileIntermediate>> =>
-  loadWithParents<TemplateControlFile, TemplateFileIntermediate> ( context, loadFile ( fileOps ), parse ( fileOps ), findChildren, x => x as TemplateFileIntermediate, merge )
+export const loadTemplateControlFile = ( context: string, fileOpsAndXml: FileOpsAndXml ): ( filename: string ) => Promise<ErrorsAnd<TemplateFileIntermediate>> =>
+  loadWithParents<TemplateControlFile, TemplateFileIntermediate> ( context, loadFile ( fileOpsAndXml ), parse ( fileOpsAndXml.fileOps ), findChildren, x => x as TemplateFileIntermediate, merge )
 
 
 export interface SourcedTemplateFileDetailsWithContent extends SourcedTemplateFileDetails {
   name: string
   content: undefined | string | NameAnd<SourcedTemplateFileDetailsWithContent | SourcedTemplateFileDetailsWithContent[]>
 }
-export async function loadFilesInTemplate ( fileData: NameAnd<SourceTemplateFileDetailsSingleOrArray>, fileOps: FileOps, options: CopyFileOptions ): Promise<NameAnd<SourcedTemplateFileDetailsWithContent[]>> {
+export async function loadFilesInTemplate ( fileData: NameAnd<SourceTemplateFileDetailsSingleOrArray>, fileOpsAndXml: FileOpsAndXml, options: CopyFileOptions ): Promise<NameAnd<SourcedTemplateFileDetailsWithContent[]>> {
+  const { fileOps } = fileOpsAndXml;
   async function load ( prefix: string[], fileData: NameAnd<SourceTemplateFileDetailsSingleOrArray> ) {
 
     const toMerge: NameAnd<SourcedTemplateFileDetailsWithContent[]> = removeEmptyArrays ( await mapObjectK ( fileData, async ( fas, name ) => {
@@ -161,12 +165,12 @@ export const mergeFiles = ( context: string ) => ( fileData: NameAnd<SourcedTemp
   return merged;
 };
 
-export const postProcessFiles = ( context: string, fileOps: FileOps, options: CopyFileOptions ) => async ( files: NameAnd<SourcedTemplateFileDetailsWithContent> ): Promise<NameAnd<SourcedTemplateFileDetailsWithContent>> => {
+export const postProcessFiles = ( context: string, fileOpsAndXml: FileOpsAndXml, options: CopyFileOptions ) => async ( files: NameAnd<SourcedTemplateFileDetailsWithContent> ): Promise<NameAnd<SourcedTemplateFileDetailsWithContent>> => {
   const result = await mapObjectK ( files, async ( fac, name ) => {
     if ( fac.directory )
-      return { ...fac, content: await postProcessFiles ( context, fileOps, options ) ( fac.content as NameAnd<SourcedTemplateFileDetailsWithContent> ) }
+      return { ...fac, content: await postProcessFiles ( context, fileOpsAndXml, options ) ( fac.content as NameAnd<SourcedTemplateFileDetailsWithContent> ) }
     if ( typeof fac.content === 'string' ) {
-      const content = await applyAll ( options?.postProcessor ) ( context, fileOps, options, fac ) ( fac.content, fac.postProcess );
+      const content = await applyAll ( options?.postProcessor ) ( context, fileOpsAndXml, options, fac ) ( fac.content, fac.postProcess );
       return { ...fac, content }
     }
     return fac
@@ -198,20 +202,21 @@ export async function saveMergedFiles ( context: string, fileOps: FileOps, optio
     mapK ( toArray ( fac ), async fac =>
       saveOneTemplateFile ( context, fileOps, options, targetRoot, fac ) ) )
 }
-export async function loadTemplateDetailsAndFileContents ( context: string, fileOps: FileOps, template: string, options: CopyFileOptions ): Promise<ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>>> {
-  const templateFile = await loadTemplateControlFile ( context, fileOps ) ( template )
-  const filesAndContent = await mapErrorsK ( templateFile, async ( { files } ) => await loadFilesInTemplate ( files, fileOps, options ) )
+export async function loadTemplateDetailsAndFileContents ( context: string, fileOpsAndXml: FileOpsAndXml, template: string, options: CopyFileOptions ): Promise<ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>>> {
+
+  const templateFile = await loadTemplateControlFile ( context, fileOpsAndXml ) ( template )
+  const filesAndContent = await mapErrorsK ( templateFile, async ( { files } ) => await loadFilesInTemplate ( files, fileOpsAndXml, options ) )
   const merged = mapErrors ( filesAndContent, mergeFiles ( context ) )
-  const postProcessed = await mapErrorsK ( merged, postProcessFiles ( context, fileOps, options ) )
+  const postProcessed = await mapErrorsK ( merged, postProcessFiles ( context, fileOpsAndXml, options ) )
   return postProcessed;
 }
-export async function copyFromTemplate ( context: string, fileOps: FileOps, options: CopyFileOptions, template: string, targetRoot: string ) {
-  const postProcessed: ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>> = await loadTemplateDetailsAndFileContents ( context, fileOps, template, options );
-  await mapErrorsK ( postProcessed, files => saveMergedFiles ( context, fileOps, options, targetRoot, files ) )
+export async function copyFromTemplate ( context: string, fileOpsAndXml: FileOpsAndXml, options: CopyFileOptions, template: string, targetRoot: string ) {
+  const postProcessed: ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>> = await loadTemplateDetailsAndFileContents ( context, fileOpsAndXml, template, options );
+  await mapErrorsK ( postProcessed, files => saveMergedFiles ( context, fileOpsAndXml.fileOps, options, targetRoot, files ) )
 }
 export async function findTemplateLookup ( context: string, fileOps: FileOps, options: CopyFileOptions, templates: NameAnd<string>, filename: string ): Promise<ErrorsAnd<any>> {
   return mapObjectK ( templates, async ( template, name ) => {
-    const data = await loadTemplateDetailsAndFileContents ( context, fileOps, template, {
+    const data = await loadTemplateDetailsAndFileContents ( context, {fileOps}, template, {
       ...options, filter: name => name === filename
     } )
 
@@ -223,6 +228,6 @@ export async function findTemplateLookup ( context: string, fileOps: FileOps, op
   } )
 }
 
-export const validateTemplates = async ( context: string, fileOps: FileOps, options: CopyFileOptions, templates: NameAnd<any> ): Promise<string[]> =>
+export const validateTemplates = async ( context: string, fileOpsAndXml: FileOpsAndXml, options: CopyFileOptions, templates: NameAnd<any> ): Promise<string[]> =>
   flatMapK ( Object.entries ( templates ), async ( [ name, url ] ) =>
-    errors ( await loadTemplateDetailsAndFileContents ( context, fileOps, url, options ) ) );
+    errors ( await loadTemplateDetailsAndFileContents ( context, fileOpsAndXml, url, options ) ) );

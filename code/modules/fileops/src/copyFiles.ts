@@ -1,4 +1,4 @@
-import { applyOrOriginal, PostProcessor } from "./postProcessor";
+import { applyOrOriginal, FileOpsAndXml, PostProcessor } from "./postProcessor";
 import { allButLastSegment, NameAnd, safeArray } from "@laoban/utils";
 import { DebugCommands } from "@laoban/debug";
 import { FileOps } from "./fileOps";
@@ -17,6 +17,7 @@ export interface TemplateCoreDetails {
   mergeWithParent?: 'jsonMerge'
 }
 export interface TemplateFileDetails extends TemplateCoreDetails {
+  xmlArrays?: string[],
   mergeWithParent?: 'jsonMerge'
   directory?: NameAnd<TemplateFileDetails | string>
 }
@@ -27,14 +28,15 @@ export interface SourcedTemplateFileDetails extends TemplateCoreDetails {
 }
 export type CopyFileDetails = string | TemplateFileDetails
 export type TransformTextFn = ( type: string, text: string ) => Promise<string>
-export const applyTx = ( tx: TransformTextFn|undefined, type: string) =>async (text: string ): Promise<string> =>
-  tx?tx ( type, text ):text;
+export const applyTx = ( tx: TransformTextFn | undefined, type: string ) => async ( text: string ): Promise<string> =>
+  tx ? tx ( type, text ) : text;
 
 export function combineTransformFns ( ...fns: TransformTextFn[] ): TransformTextFn {
   return ( type, text ) => {
-    if (type==='[object Object]') throw new Error(`type is wrong: it is [object Object]`)
-    if (typeof type !== 'string') throw new Error(`type is not a string, it is a  ${typeof type}: ${JSON.stringify(type)}`)
-    return fns.reduce <Promise<string>> ( async ( acc, fn ) => fn ( type, await acc ), Promise.resolve ( text ) ); }
+    if ( type === '[object Object]' ) throw new Error ( `type is wrong: it is [object Object]` )
+    if ( typeof type !== 'string' ) throw new Error ( `type is not a string, it is a  ${typeof type}: ${JSON.stringify ( type )}` )
+    return fns.reduce <Promise<string>> ( async ( acc, fn ) => fn ( type, await acc ), Promise.resolve ( text ) );
+  }
 }
 export interface CopyFileOptions {
   dryrun?: boolean
@@ -42,9 +44,9 @@ export interface CopyFileOptions {
   allowSample?: boolean
   postProcessor?: PostProcessor
   lookupForJsonMergeInto?: NameAnd<any>
-  filter?: (name: string,  s: SourcedTemplateFileDetails ) => boolean
+  filter?: ( name: string, s: SourcedTemplateFileDetails ) => boolean
 }
-async function postProcess ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, t: CopyFileDetails, text: string ): Promise<string> {
+async function postProcess ( context: string, fileOps: FileOpsAndXml, copyFileOptions: CopyFileOptions, t: CopyFileDetails, text: string ): Promise<string> {
   if ( !isTemplateFileDetails ( t ) ) return text
   const { postProcessor } = copyFileOptions
   if ( !postProcessor ) return text
@@ -67,8 +69,8 @@ export function targetFrom ( f: CopyFileDetails ): string {
   if ( typeof f === 'string' ) return f
   throw new Error ( `Cannot find target in [${JSON.stringify ( f )}]` )
 }
-export async function loadFileFromDetails ( context: string, fileOps: FileOps, rootUrl: string | undefined, options: CopyFileOptions, cfd: string | TemplateFileDetails ) {
-  const fileName = await applyTx(options?.tx, '${}')(fileNameFrom ( cfd ));
+export async function loadFileFromDetails ( context: string, fileOpsAndXml: FileOpsAndXml, rootUrl: string | undefined, options: CopyFileOptions, cfd: string | TemplateFileDetails ) {
+  const fileName = await applyTx ( options?.tx, '${}' ) ( fileNameFrom ( cfd ) );
   const { tx } = options
 
   const target = targetFrom ( cfd )
@@ -78,9 +80,10 @@ export async function loadFileFromDetails ( context: string, fileOps: FileOps, r
     throw Error ( `trying to load ${JSON.stringify ( cfd )} without a rootUrl` )
   }
   const fullname = calcFileName ()
+  const fileOps = fileOpsAndXml.fileOps;
   const text = await fileOps.loadFileOrUrl ( fullname )
   const txformed: string = tx && isTemplateFileDetails ( cfd ) ? await tx ( cfd.type, text ) : text
-  const postProcessed = await postProcess ( context, fileOps, options, cfd, txformed )
+  const postProcessed = await postProcess ( context, fileOpsAndXml, options, cfd, txformed )
   return { target, postProcessed };
 }
 export interface CopyFileOptions {
@@ -88,11 +91,12 @@ export interface CopyFileOptions {
   allowSamples?: boolean
   tx?: ( type: string, text: string ) => Promise<string>,
 }
-export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootUrl: string, targetRoot: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
+export function copyFileAndTransform ( fileOpsAndXml: FileOpsAndXml, d: DebugCommands, rootUrl: string, targetRoot: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
   const { dryrun, allowSamples } = options
+  const { fileOps } = fileOpsAndXml
 
   return async ( cfd ) => {
-    const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOps, rootUrl, options, cfd );
+    const { target, postProcessed } = await loadFileFromDetails ( `Post processing ${targetRoot}, ${JSON.stringify ( cfd )}`, fileOpsAndXml, rootUrl, options, cfd );
     if ( isTemplateFileDetails ( cfd ) && cfd.sample ) {
       if ( !allowSamples ) return
       if ( await fileOps.isFile ( targetRoot + '/' + target ) ) return
@@ -106,21 +110,22 @@ export function copyFileAndTransform ( fileOps: FileOps, d: DebugCommands, rootU
     return fileOps.saveFile ( filename, postProcessed );
   }
 }
-export function copyFile ( fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
-  return copyFileAndTransform ( fileOps, d, rootUrl, target, options )
+export function copyFile ( fileOpsAndXml: FileOpsAndXml, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fd: CopyFileDetails ) => Promise<void> {
+  return copyFileAndTransform ( fileOpsAndXml, d, rootUrl, target, options )
 }
-export function copyFiles ( context: string, fileOps: FileOps, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fs: CopyFileDetails[] ) => Promise<void> {
-  const cf = copyFileAndTransform ( fileOps, d, rootUrl, target, options )
+export function copyFiles ( context: string, fileOpsAndXml: FileOpsAndXml, d: DebugCommands, rootUrl: string, target: string, options: CopyFileOptions ): ( fs: CopyFileDetails[] ) => Promise<void> {
+  const cf = copyFileAndTransform ( fileOpsAndXml, d, rootUrl, target, options )
   return fs => Promise.all ( fs.map ( f => cf ( f ).catch ( e => {
     console.error ( e );
     throw Error ( `Error ${context}\nFile ${JSON.stringify ( f )}\n${e}` )
   } ) ) ).then ( () => {} )
 }
-export const copyDirectory = async ( fileOps: FileOps, from: string, to: string ): Promise<void> => {
+export const copyDirectory = async ( fileOpsAndXml: FileOpsAndXml, from: string, to: string ): Promise<void> => {
+  const { fileOps } = fileOpsAndXml
   if ( await fileOps.isDirectory ( from ) ) {
     await fileOps.createDir ( to )
     const files = await fileOps.listFiles ( from )
-    await Promise.all ( files.map ( f => copyDirectory ( fileOps, fileOps.join ( from, f ), fileOps.join ( to, f ) ) ) )
+    await Promise.all ( files.map ( f => copyDirectory ( fileOpsAndXml, fileOps.join ( from, f ), fileOps.join ( to, f ) ) ) )
   } else if ( await fileOps.isFile ( from ) )
     await fileOps.saveFile ( to, await fileOps.loadFileOrUrl ( from ) )
 };

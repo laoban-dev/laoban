@@ -192,7 +192,8 @@ const tsSampleMerged: NameAnd<SourcedTemplateFileDetailsWithContent> = {
     "content": "{\"@test@/typescript/tsconfig.json\":\"content\"}",
     "file": "@test@/typescript/tsconfig.json",
     "name": "tsconfig.json", "target": "tsconfig.json",
-    "source": [      "@test@/typescript_405"    ]  }
+    "source": [ "@test@/typescript_405" ]
+  }
 };
 
 const fileOps: FileOps = {
@@ -217,23 +218,23 @@ const optionsWithSample: CopyFileOptions = {
 
 describe ( "load template file", () => {
   it ( "should load a simple javascript template file, enriching the data in it", async () => {
-    await expect ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "@test@/javascript" ) ).toEqual ( { files: jsLoaded } )
+    await expect ( await loadTemplateControlFile ( `someContext`, { fileOps } ) ( "@test@/javascript" ) ).toEqual ( { files: jsLoaded } )
   } );
   it ( "should load a typescript template file, enriching the data in it", async () => {
-    await expect ( value ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "@test@/typescript_405" ) ).files ).toEqual ( tsLoaded )
+    await expect ( value ( await loadTemplateControlFile ( `someContext`, { fileOps } ) ( "@test@/typescript_405" ) ).files ).toEqual ( tsLoaded )
   } );
   it ( "should return an error if a file is not found", async () => {
-    await expect ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "notin" ) ).toEqual ( [
+    await expect ( await loadTemplateControlFile ( `someContext`, { fileOps } ) ( "notin" ) ).toEqual ( [
       "someContext Error loading notin: Error: not found"
     ] )
   } )
   it ( "should return an error if the template control file doesn't parse", async () => {
-    await expect ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "#doesntparse#" ) ).toEqual ( [
+    await expect ( await loadTemplateControlFile ( `someContext`, { fileOps } ) ( "#doesntparse#" ) ).toEqual ( [
       "someContext Error loading #doesntparse#: Error: Invalid JSON for someContext. Url #doesntparse#: {not json"
     ] )
   } )
   it ( "should return an error if the template control file doesn't have a files", async () => {
-    await expect ( await loadTemplateControlFile ( `someContext`, fileOps ) ( "nofiles" ) ).toEqual ( [
+    await expect ( await loadTemplateControlFile ( `someContext`, { fileOps } ) ( "nofiles" ) ).toEqual ( [
       "Invalid template control file nofiles: someContext. Url nofiles.files is not an object."
     ] )
 
@@ -241,20 +242,20 @@ describe ( "load template file", () => {
 } )
 describe ( 'loadFiles', () => {
   it ( 'should load simple javascript template files without sample', async () => {
-    const loaded = await loadFilesInTemplate ( jsLoaded, fileOps, optionsWithoutSample )
+    const loaded = await loadFilesInTemplate ( jsLoaded, { fileOps }, optionsWithoutSample )
     expect ( loaded ).toEqual ( jsWithContentNoSample )
   } )
   it ( 'should load simple javascript template files with sample', async () => {
-    const loaded = await loadFilesInTemplate ( jsLoaded, fileOps, optionsWithSample )
+    const loaded = await loadFilesInTemplate ( jsLoaded, { fileOps }, optionsWithSample )
     expect ( loaded ).toEqual ( jsWithContentSample )
   } )
   it ( 'should load typescript template files without sample', async () => {
-    const loaded = await loadFilesInTemplate ( tsLoaded, fileOps, optionsWithoutSample )
+    const loaded = await loadFilesInTemplate ( tsLoaded, { fileOps }, optionsWithoutSample )
 
     expect ( loaded ).toEqual ( tsContentNoSample )
   } )
   it ( 'should load typescript template files withsample', async () => {
-    const loaded = await loadFilesInTemplate ( tsLoaded, fileOps, optionsWithSample )
+    const loaded = await loadFilesInTemplate ( tsLoaded, { fileOps }, optionsWithSample )
     expect ( loaded ).toEqual ( tsContentSample )
   } )
 } )
@@ -281,12 +282,12 @@ describe ( "mergeFiles", () => {
 
 describe ( "postProcessFiles", () => {
   it ( "should post process the files if needed - simple javascript", async () => {
-    const actual = await postProcessFiles ( 'someContext', fileOps, optionsWithoutSample ) ( jsNoSampleMerged );
+    const actual = await postProcessFiles ( 'someContext', { fileOps }, optionsWithoutSample ) ( jsNoSampleMerged );
     expect ( actual[ "package.json" ].content ).toEqual ( '{"post": "packageJson()","tx":"${}","@test@/javascript/package.json":"content"}' )
     expect ( actual.src.content[ "somefile.js" ].content ).toEqual ( '{"post": "pp","@test@/javascript/somefile.js":"content"}' )
   } )
   it ( "should post process the files if needed - more complex typescript", async () => {
-    const actual = await postProcessFiles ( 'someContext', fileOps, optionsWithoutSample ) ( tsSampleMerged );
+    const actual = await postProcessFiles ( 'someContext', { fileOps }, optionsWithoutSample ) ( tsSampleMerged );
     expect ( JSON.parse ( actual[ "package.json" ].content.toString () ) ).toEqual ( {
       "post": "packageJsonSort",
       "tx": "${}",
@@ -317,7 +318,7 @@ describe ( "copyFromTemplate", () => {
 
   it ( "should copy the files", async () => {
     const metered = meteredFileOps ( fileOps )
-    await copyFromTemplate ( 'someContext', metered, optionsWithoutSample, "@test@/typescript_405", 'sometarget' );
+    await copyFromTemplate ( 'someContext', { fileOps: metered }, optionsWithoutSample, "@test@/typescript_405", 'sometarget' );
     expect ( metered.savedFiles () ).toEqual ( [
       [ "sometarget/package.json", "{\"post\": \"packageJsonSort\",\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript_405/package.json\": \"content\"\n}" ],
       [ "sometarget/src/somefile.js", "{\"post\": \"ppts\",\"@test@/typescript/somefile.js\":\"content\"}" ],
@@ -336,7 +337,7 @@ describe ( "copyFromTemplate", () => {
   } )
   it ( "should filter", async () => {
     const metered = meteredFileOps ( fileOps )
-    await copyFromTemplate ( 'someContext', metered, { ...optionsWithoutSample, filter: name => name === 'package.json' }, "@test@/typescript_405", 'sometarget' );
+    await copyFromTemplate ( 'someContext', {fileOps:metered}, { ...optionsWithoutSample, filter: name => name === 'package.json' }, "@test@/typescript_405", 'sometarget' );
     expect ( metered.savedFiles () ).toEqual ( [
       [ "sometarget/package.json", "{\"post\": \"packageJsonSort\",\n  \"tx\": \"${}\",\n  \"@test@/javascript/package.json\": \"content\",\n  \"@test@/typescript_405/package.json\": \"content\"\n}" ] ] )
     expect ( fileOpsStats ( metered ) ).toEqual ( {
@@ -355,7 +356,7 @@ const templates = {
 }
 describe ( "findTemplateLookup", () => {
   it ( "should return a map of template names to the named file within each template (most often package.json)", async () => {
-    await expect ( await findTemplateLookup (`someContext`, fileOps, optionsWithSample, templates, "package.json" ) ).toEqual ( {
+    await expect ( await findTemplateLookup ( `someContext`, fileOps, optionsWithSample, templates, "package.json" ) ).toEqual ( {
       "javascript": {
         "@test@/javascript/package.json": "content",
         "post": "packageJson()",
@@ -374,13 +375,13 @@ describe ( "findTemplateLookup", () => {
 
 describe ( "validateTemplates", () => {
   it ( "should return no problems for welformed template", async () => {
-    await expect ( await validateTemplates ( 'someContext', fileOps, optionsWithSample, {
+    await expect ( await validateTemplates ( 'someContext', {fileOps}, optionsWithSample, {
       javascript: "@test@/javascript",
       typescript: "@test@/typescript_405"
     } ) ).toEqual ( [] )
   } )
   it ( "should report a list of issues for broken templates", async () => {
-    await expect ( await validateTemplates ( 'someContext',fileOps, optionsWithSample, {
+    await expect ( await validateTemplates ( 'someContext', {fileOps}, optionsWithSample, {
       javascript: "@test@/javascript",
       typescript: "@test@/typescript_405",
       notin: "notin",
@@ -390,7 +391,7 @@ describe ( "validateTemplates", () => {
       "someContext Error loading notin: Error: not found",
       "someContext Error loading #doesntparse#: Error: Invalid JSON for someContext. Url #doesntparse#: {not json",
       "Invalid template control file nofiles: someContext. Url nofiles.files is not an object."
-    ])
+    ] )
   } )
 } )
 

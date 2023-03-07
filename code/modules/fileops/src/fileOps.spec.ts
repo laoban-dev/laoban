@@ -72,14 +72,14 @@ describe ( "fileOpsNode", () => {
 describe ( "copyFile", () => {
   it ( "it should copy a file", async () => {
     const fileOps = foundFileOps ();
-    await copyFile ( fileOps, NullDebugCommands, 'rootUrl', 'target', {} ) ( 'url' )
+    await copyFile ( {fileOps}, NullDebugCommands, 'rootUrl', 'target', {} ) ( 'url' )
     expect ( fileOps.savedFiles () ).toEqual ( [ [ "target/url", "loaded_rootUrl/url" ] ] )
   } )
 } )
 describe ( "copyFiles", () => {
   it ( "it should copy files", async () => {
     const fileOps = foundFileOps ();
-    await copyFiles ( 'someContext', fileOps, NullDebugCommands, 'rootUrl', 'target', { tx: ( type, text ) => Promise.resolve ( text ) } ) ( [ 'url1', 'url2' ] )
+    await copyFiles ( 'someContext', {fileOps}, NullDebugCommands, 'rootUrl', 'target', { tx: ( type, text ) => Promise.resolve ( text ) } ) ( [ 'url1', 'url2' ] )
     expect ( fileOps.savedFiles () ).toEqual ( [
       [ "target/url1", "loaded_rootUrl/url1" ],
       [ "target/url2", "loaded_rootUrl/url2" ]

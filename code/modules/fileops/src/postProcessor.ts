@@ -2,11 +2,16 @@ import { FileOps, parseJson } from "./fileOps";
 import { deepCombineTwoObjects, foldK, mapK, NameAnd, objectSortedByKeys, safeObject, toArray } from "@laoban/utils";
 import { findPart } from "@laoban/utils";
 import { CopyFileOptions, TemplateFileDetails, TransformTextFn } from "./copyFiles";
+import { Xml } from "@laoban/xml";
 
-type PostProcessFn = ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, cfd: TemplateFileDetails ) => ( text: string, postProcessCmd: string ) => Promise<string>
+export interface FileOpsAndXml {
+  fileOps: FileOps,
+  xml?: Xml
+}
+type PostProcessFn = ( context: string, fileOpsAndXml: FileOpsAndXml, copyFileOptions: CopyFileOptions, cfd: TemplateFileDetails ) => ( text: string, postProcessCmd: string ) => Promise<string>
 export interface PostProcessor {
   applicable: ( postProcessCmd: string ) => boolean
-  postProcess: ( context: string, fileOps: FileOps, copyFileOptions: CopyFileOptions, cfd: TemplateFileDetails ) => ( text: string, postProcessCmd: string ) => Promise<string>
+  postProcess: ( context: string, fileOpsAndXml: FileOpsAndXml, copyFileOptions: CopyFileOptions, cfd: TemplateFileDetails ) => ( text: string, postProcessCmd: string ) => Promise<string>
 }
 
 export function postProcessor ( matcher: RegExp, postProcess: PostProcessFn ): PostProcessor {
@@ -53,8 +58,9 @@ export const partToMerge = ( context: string, fileOps: FileOps, tx: TransformTex
 
 
 const jsonMergeIntoRegEx = /^jsonMergeInto\(.*\)$/;
-export const postProcessJsonMergeInto: PostProcessor = postProcessor ( jsonMergeIntoRegEx, ( context, fileOps, copyFileOptions, cfd ) => async ( text, cmd ) => {
+export const postProcessJsonMergeInto: PostProcessor = postProcessor ( jsonMergeIntoRegEx, ( context, fileOpsAndXml, copyFileOptions, cfd ) => async ( text, cmd ) => {
   const { tx } = copyFileOptions
+  const { fileOps } = fileOpsAndXml
   if ( cmd.match ( jsonMergeIntoRegEx ) ) {
     const commaSeparatedFiles = cmd.slice ( 14, -1 )
     const files = commaSeparatedFiles.split ( ',' ).map ( s => s.trim () ).filter ( s => s.length > 0 )
@@ -71,6 +77,23 @@ export const jsonSortPostProcess: PostProcessor = postProcessor ( /jsonSort/, ( 
   const sorted = objectSortedByKeys ( json )
   return JSON.stringify ( sorted, null, 2 )
 } )
+
+const xmlMergeIntoRegEx = /^xmlMergeInto\(.*\)$/;
+export const xmlMergeInto: PostProcessor = postProcessor ( xmlMergeIntoRegEx,
+  ( context, fileOpsAndXml, copyFileOptions, cfd ) => {
+    const { xml } = fileOpsAndXml
+    if ( xml === undefined ) throw Error ( `xmlMergeInto: xml is undefined - software error` )
+    return async ( text, cmd ) => {
+      try {
+        const xmlDom = xml.parse ( text, cfd.xmlArrays )
+        return xml.print ( xmlDom )
+      } catch ( e ) {
+        console.error ( `Error parsing ${context} as xml` )
+        console.error ( e )
+        return text
+      }
+    }
+  } )
 
 export function chainPostProcessFn ( ...ps: PostProcessor[] ): PostProcessor {
   return {
@@ -95,10 +118,10 @@ export function doAllPostProcessor ( matcher: RegExp, p: PostProcessor, cmds: ( 
 }
 
 
-export const applyOrOriginal = ( p: PostProcessor | undefined ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: string ) => {
+export const applyOrOriginal = ( p: PostProcessor | undefined ) => ( context, fileOps: FileOpsAndXml, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: string ) => {
   if ( !p ) return text;
   let applicable = p.applicable ( postProcessCmd );
-  const result = applicable ? p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : text;
+  const result = applicable ? await p.postProcess ( context, fileOps, copyFileOptions, cfd ) ( text, postProcessCmd ) : text;
   return result;
 }
 export const applyOrUndefined = ( p: PostProcessor ) => ( context, fileOps, copyFileOptions, cfd ) => async ( text: string, postProcessCmd: string ) =>
