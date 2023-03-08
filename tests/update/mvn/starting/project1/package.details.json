@@ -3,11 +3,13 @@
   "name":        "project1",
   "description": "A sample maven project",
   "mvn":         {
-    "dependencies": {
-      "dependency": {
-        "groupId":    "dev.laoban",
-        "artifactId": "someArtifact",
-        "version":    "someVersion"
+    "project": {
+      "dependencies": {
+        "dependency": {
+          "groupId":    "dev.laoban",
+          "artifactId": "someArtifact",
+          "version":    "someVersion"
+        }
       }
     }
   },
