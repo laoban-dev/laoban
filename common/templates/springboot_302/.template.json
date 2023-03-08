@@ -1,0 +1,8 @@
+{
+  "files": {
+    "pom.xml":                                                        {
+      "target":    "pom.xml",
+      "templated": "{{}}"
+    }
+  }
+}
