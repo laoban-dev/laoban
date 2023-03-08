@@ -2,7 +2,9 @@
   "files": {
     "pom.xml":                                                        {
       "target":    "pom.xml",
-      "templated": "{{}}"
+      "templated": "{{}}",
+      "postProcess": "xmlMergeInto($packageDetails.mvn)",
+      "xmlArrays": ["dependencies.dependency", "dependencyManagement.dependencies.dependency"]
     }
   }
 }

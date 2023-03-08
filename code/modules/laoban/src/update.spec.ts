@@ -30,4 +30,7 @@ describe ( "laoban update", () => {
   it ( "should update mvn projects", async () => {
     await testIt ( "mvn" )
   } )
+  it ( "should update mvn projects when group not specified in laoban.json", async () => {
+    await testIt ( "mvnNoGroup" )
+  } )
 } )

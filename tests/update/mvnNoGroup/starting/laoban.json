@@ -14,9 +14,6 @@
   "templates":      {
     "mvn": "@laoban@/templates/springboot_302"
   },
-  "variables":      {
-    "group": "dev.laoban.group"
-  },
   "scripts":        {
     "mvn-test":   {
       "description":  "runs all the mvn tests",
