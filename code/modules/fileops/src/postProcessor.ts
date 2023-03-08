@@ -85,8 +85,15 @@ export const xmlMergeInto: PostProcessor = postProcessor ( xmlMergeIntoRegEx,
     if ( xml === undefined ) throw Error ( `xmlMergeInto: xml is undefined - software error` )
     return async ( text, cmd ) => {
       try {
+        const paths = cmd.slice ( 13, -1 ).split ( ',' ).map ( s => s.trim ().slice ( 1 ) ).filter ( s => s.length > 0 )
+
+        const toMerge = paths.map ( p => safeObject ( findPart ( copyFileOptions?.lookupForJsonMergeInto, p ) ) )
+        // console.log ( 'xmlMergeInto', cmd, paths )
+        // console.log ( 'toMerge', toMerge )
+
         const xmlDom = xml.parse ( text, cfd.xmlArrays )
-        return xml.print ( xmlDom )
+        const merged = [ xmlDom, ...toMerge ].reduce ( deepCombineTwoObjects )
+        return xml.print ( merged )
       } catch ( e ) {
         console.error ( `Error parsing ${context} as xml` )
         console.error ( e )
@@ -132,4 +139,4 @@ export const applyAll = ( p: PostProcessor | undefined ) => ( context, fileOps, 
     ? foldK ( toArray ( postProcessCmd ), text, async ( t, cmd ) => applyOrOriginal ( p ) ( context, fileOps, copyFileOptions, cfd ) ( t, cmd ) )
     : text
 
-export const defaultPostProcessors = chainPostProcessFn ( postProcessJson, postProcessCheckEnv, postProcessJsonMergeInto, jsonSortPostProcess )
+export const defaultPostProcessors = chainPostProcessFn ( postProcessJson, postProcessCheckEnv, postProcessJsonMergeInto, jsonSortPostProcess, xmlMergeInto )
