@@ -8,7 +8,7 @@
         <version>3.0.2</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>{{group}}</groupId>
+    <groupId>{{group|default(Set the group in laoban.json variables)}}</groupId>
     <artifactId>{{packageDetails.name}}</artifactId>
     <version>{{version}}</version>
     <name>{{packageDetails.name}}</name>
