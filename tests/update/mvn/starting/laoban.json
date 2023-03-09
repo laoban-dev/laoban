@@ -5,7 +5,7 @@
     "@laoban@/laoban.json/javascript.laoban.json",
     "@laoban@/laoban.json/typescript.laoban.json",
     "@laoban@/laoban.json/typescript.publish.laoban.json",
-    "../../../../common/laoban.json/mvn.laoban.json"
+    "@laoban@/laoban.json/mvn.laoban.json"
   ],
   "properties":     {
     "license":    "MIT",
