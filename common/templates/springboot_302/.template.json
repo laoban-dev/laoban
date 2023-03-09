@@ -4,7 +4,7 @@
       "target":      "pom.xml",
       "templated":   "{{}}",
       "postProcess": "xmlMergeInto($packageDetails.mvn)",
-      "xmlArrays":   ["project.dependencies", "project.dependencyManagement.dependencies"]
+      "xmlArrays":   ["project.dependencies.dependency","project.dependencyManagement.dependencies.dependency"]
     }
   }
 }

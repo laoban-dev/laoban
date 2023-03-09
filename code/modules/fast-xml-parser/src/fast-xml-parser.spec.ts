@@ -43,6 +43,7 @@ describe ( "Xml", () => {
     </dependency>
   </dependencies>
 </project>`, [ dependencyPath ] )
+    console.log('toMerge', JSON.stringify(toMerge))
     const inp = fastXmlParser.parse ( input, [ dependencyPath ] )
     const txed = deepCombineTwoObjects ( inp, toMerge )
     const output = fastXmlParser.print ( txed )
