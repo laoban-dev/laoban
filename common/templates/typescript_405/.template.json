@@ -13,7 +13,7 @@
       "file":            "./package.json",
       "template":        "${}",
       "mergeWithParent": "json",
-      "postProcess":     "packageJson(@laoban@/templates/javascript/package.json)"
+      "postProcess":     "packageJson()"
     }
   }
 }
