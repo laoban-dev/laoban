@@ -1,0 +1,43 @@
+{
+  "name": "js",
+  "description": "A sample javascript project",
+  "version": "start.version",
+  "main": "index",
+  "bin": {
+    "laoban": "dist/index.js"
+  },
+  "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ],
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ]
+  },
+  "dependencies": {
+    "fs-extra": "^9.0.1",
+    "commander": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.5"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
+  ],
+  "keywords": [
+    "monorepo",
+    "devops"
+  ],
+  "license": "MIT",
+  "repository": "git@github.com:phil-rice/laoban.git",
+  "scripts": {
+    "test": "jest --config jest.config.json",
+    "test:watch": "npm run test -- --watch"
+  }
+}

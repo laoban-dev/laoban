@@ -24,6 +24,7 @@ async function testIt ( dir: string ) {
   await compareExpectedActualFiles ( fileOps,
     fileOps.join ( root, 'expected' ),
     fileOps.join ( root, 'projects' ) )
+  await fileOps.removeDirectory ( laobanDir, true )
 }
 
 describe ( "laoban update", () => {
@@ -32,5 +33,8 @@ describe ( "laoban update", () => {
   } )
   it ( "should update mvn projects when group not specified in laoban.json", async () => {
     await testIt ( "mvnNoGroup" )
+  } )
+  it ( "should update package.json projects", async () => {
+    await testIt ( "packageJson" )
   } )
 } )

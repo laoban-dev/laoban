@@ -26,6 +26,11 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
     </dependency>
+    <dependency>
+      <groupId>dev.laoban</groupId>
+      <artifactId>someArtifact</artifactId>
+      <version>someVersion</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -39,10 +44,3 @@
     </plugins>
   </build>
 </project>
-<dependencies>
-  <dependency>
-    <groupId>dev.laoban</groupId>
-    <artifactId>someArtifact</artifactId>
-    <version>someVersion</version>
-  </dependency>
-</dependencies>

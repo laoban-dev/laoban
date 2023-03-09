@@ -4,15 +4,15 @@
   "description": "A sample maven project",
   "mvn":         {
     "project": {
-      "dependencies": [
-        {
-          "dependency": {
+      "dependencies": {
+        "dependency": [
+          {
             "groupId":    "dev.laoban",
             "artifactId": "someArtifact",
             "version":    "someVersion"
           }
-        }
-      ]
+        ]
+      }
     }
   },
   "links":       [],
