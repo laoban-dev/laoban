@@ -203,11 +203,14 @@ export async function saveMergedFiles ( context: string, fileOps: FileOps, optio
       saveOneTemplateFile ( context, fileOps, options, targetRoot, fac ) ) )
 }
 export async function loadTemplateDetailsAndFileContents ( context: string, fileOpsAndXml: FileOpsAndXml, template: string, options: CopyFileOptions ): Promise<ErrorsAnd<NameAnd<SourcedTemplateFileDetailsWithContent>>> {
-
   const templateFile = await loadTemplateControlFile ( context, fileOpsAndXml ) ( template )
+  // console.log('loadTemplateDetailsAndFileContents - templateFile', JSON.stringify(templateFile, null, 2))
   const filesAndContent = await mapErrorsK ( templateFile, async ( { files } ) => await loadFilesInTemplate ( files, fileOpsAndXml, options ) )
+  // console.log('loadTemplateDetailsAndFileContents - files and content', JSON.stringify(filesAndContent, null, 2))
   const merged = mapErrors ( filesAndContent, mergeFiles ( context ) )
+  // console.log('loadTemplateDetailsAndFileContents - merged', JSON.stringify(merged, null, 2))
   const postProcessed = await mapErrorsK ( merged, postProcessFiles ( context, fileOpsAndXml, options ) )
+  // console.log('loadTemplateDetailsAndFileContents - postProcessed', JSON.stringify(postProcessed, null, 2))
   return postProcessed;
 }
 export async function copyFromTemplate ( context: string, fileOpsAndXml: FileOpsAndXml, options: CopyFileOptions, template: string, targetRoot: string ) {
