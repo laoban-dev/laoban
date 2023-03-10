@@ -12,10 +12,10 @@
     "mvn":               {
       "description":  "mvn use -- and then specify the maven arguments e.g. laoban mvn -- clean install",
       "inLinksOrder": true,
-      "commands":     {
+      "commands": [    {
         "guard":   "${packageDetails.guards.mvn}",
         "command": "mvn ${argsAfterMinus}"
-      }
+      }]
     },
     "mvn-clean-install": {
       "description":  "mvn clean install",
