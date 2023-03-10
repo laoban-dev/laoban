@@ -17,9 +17,9 @@
     ]
   },
   "dependencies": {
-    "node-fetch": "2.6.1",
+    "@laoban/fileops": "1.4.14",
     "@laoban/utils": "1.4.14",
-    "@laoban/fileops": "1.4.14"
+    "node-fetch": "^2.6.9"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.6.2",

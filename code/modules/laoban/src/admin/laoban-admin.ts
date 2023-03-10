@@ -14,7 +14,7 @@ import { output } from "../utils";
 import { addDebug } from "@laoban/debug";
 import { validatePackageDetailsAndTemplates } from "../validation";
 import { ActionParams } from "./types";
-import { CommanderStatic } from "commander";
+import { Command } from "commander";
 import { updateTemplate, updateTemplateOptions } from "./update-template";
 import { postCommand } from "../postCommand";
 import { ErrorsAnd, hasErrors } from "@laoban/utils/dist/src/errors";
@@ -25,15 +25,15 @@ const initUrl = ( envs: NameAnd<string> ) => {
   return env ? env : "@laoban@/init/allInits.json";
 };
 
-function initUrlOption<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ): T {
+function initUrlOption<T extends Command> ( envs: NameAnd<string>, p: T ): T {
   p.option ( '--listTypes', "lists the types of projects that can be created (and doesn't create anything)", false )
     .option ( '-l,--legaltypes <legal...>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes. Defaults to the list returned by --listtypes", )
   return p
 }
-function initOptions<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ): T {
+function initOptions<T extends Command> ( envs: NameAnd<string>, p: T ): T {
   return justInitUrl ( envs, p ).option ( '-t,--type <type>', "the type of project to create. An example is 'typescript'. You can find a list of them by --listtypes", 'typescript' )
 }
-function justInitUrl<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ): T {
+function justInitUrl<T extends Command> ( envs: NameAnd<string>, p: T ): T {
   const defaultInitUrl = initUrl ( envs );
   return p.option ( '-i,--initurl <initurl>', "The url that allows the types to be decoded. Used for testing and or if you have your own set", defaultInitUrl )
 

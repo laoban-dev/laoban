@@ -11,7 +11,7 @@ import { output, partition, Strings } from "./utils";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
 import { Writable } from "stream";
-import { CommanderStatic } from "commander";
+import { Command } from "commander";
 import { addDebug } from "@laoban/debug";
 
 import { updateConfigFilesFromTemplates } from "./update";
@@ -85,7 +85,7 @@ let packagesAction: Action<void> = ( fileOps: FileOps, config: ConfigWithDebug, 
     .catch ( displayError ( config.outputStream ) )
 }
 
-function extraUpdateOptions ( program: CommanderStatic ) {
+function extraUpdateOptions ( program: Command ) {
   program.option ( '--setVersion <version>', 'sets the version' )
   program.option ( '-m,--minor', 'update minor version' )
   program.option ( '--major', 'update major version' )
@@ -94,7 +94,7 @@ function extraUpdateOptions ( program: CommanderStatic ) {
 }
 
 
-const ignoreGuardOption = ( s: ScriptDetails ) => ( program: CommanderStatic ) => {
+const ignoreGuardOption = ( s: ScriptDetails ) => ( program: Command ) => {
   if ( scriptHasGuard ( s ) ) program.option ( '--ignoreGuards', 'Runs the command ignoring any guards. This may give erratic behaviour!' )
   return program
 };
@@ -102,7 +102,7 @@ export class Cli {
   private program: any;
   private params: string[]
 
-  defaultOptions ( configAndIssues: ConfigAndIssues ): ( program: CommanderStatic ) => any {
+  defaultOptions ( configAndIssues: ConfigAndIssues ): ( program: Command ) => any {
     return program => {
       let defaultThrottle = configAndIssues.config ? configAndIssues.config.throttle : 0
       return program.//
@@ -121,12 +121,12 @@ export class Cli {
     }
   }
 
-  minimalOptions ( configAndIssues: ConfigAndIssues ): ( program: CommanderStatic ) => any {
+  minimalOptions ( configAndIssues: ConfigAndIssues ): ( program: Command ) => any {
     return program => program
       .option ( '--debug <debug>', "enables debugging. debug is a comma separated list.legal values include [session,update,link]" )
   }
 
-  configOptions ( program: CommanderStatic ) {
+  configOptions ( program: Command ) {
     return program.option ( '--all', "Includes the scripts" )
   }
 
@@ -136,7 +136,7 @@ export class Cli {
     const fileOpsAndXml = configAndIssues.fileOpsAndXml
     const { fileOps } = fileOpsAndXml
     this.params = configAndIssues.params
-    var program = require ( 'commander' )
+    var program: Command = require ( 'commander' )
       .name ( 'laoban' )
       .usage ( '<command> [options]' )
       .arguments ( '' )

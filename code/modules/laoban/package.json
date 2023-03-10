@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "fs-extra": "^9.0.1",
-    "commander": "^6.2.0",
+    "commander": "^10.0.0",
     "@laoban/variables": "1.4.14",
     "@laoban/generations": "1.4.14",
     "@laoban/validation": "1.4.14",

@@ -7,14 +7,14 @@ import { includeAndTransformFile, makeCopyOptions } from "../update";
 import { deepCombineTwoObjects, ErrorsAnd, hasErrors, jsonDelta, JsonDeltaOptions, keep, mapObjectK, NameAnd, singleOrArrayOrUndefined, toArray } from "@laoban/utils";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { loadConfigForAdmin } from "./laoban-admin";
-import { CommanderStatic } from "commander";
+import { Command } from "commander";
 
 interface UpdateTemplateCmd {
   directory?: string
   dryrun?: boolean
 }
 
-export function updateTemplateOptions<T extends CommanderStatic> ( envs: NameAnd<string>, p: T ): T {
+export function updateTemplateOptions<T extends Command> ( envs: NameAnd<string>, p: T ): T {
   return p.option ( '-d,--directory <directory>', 'the directory of the template to update' )
     .option ( '-d,--dryrun', `Just displays the files that would be created` )
 }

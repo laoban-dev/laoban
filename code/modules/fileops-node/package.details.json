@@ -8,10 +8,10 @@
   ],
   "packageJson": {
     "dependencies":    {
-      "node-fetch": "2.6.1"
+      "node-fetch": "3.3.0"
     },
     "devDependencies": {
-      "@types/node-fetch": "^2.6.2"
+      "@types/node-fetch": "3"
     }
   },
   "guards":     {
