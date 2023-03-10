@@ -9,10 +9,11 @@ import { FileOps, FileOpsAndXml } from "@laoban/fileops";
 
 export interface ConfigVariables {
   templateDir: string;
+  argsAfterMinus: string[];
   parents?: string | string[];
   templates: NameAnd<string>
   versionFile: string;
-    version: string;
+  version: string;
   sessionDir: string;
   cacheDir?: string
   throttle?: number;
@@ -22,7 +23,7 @@ export interface ConfigVariables {
   packageManager: string;
   variables?: { [ name: string ]: string }
   properties?: NameAnd<string>
-  defaultEnv?:NameAnd<string>
+  defaultEnv?: NameAnd<string>
 }
 export interface RawConfig extends ConfigVariables {
   scripts?: ScriptDefns
@@ -170,7 +171,7 @@ export interface ScriptDefn {
 }
 
 export function scriptHasGuard ( script: ScriptDefn ): boolean {
-  return script.guard !== undefined || script.commands.reduce((acc, c) => hasGuard(c)|| acc, false)
+  return script.guard !== undefined || script.commands.reduce ( ( acc, c ) => hasGuard ( c ) || acc, false )
 }
 
 export interface CommandDefn {

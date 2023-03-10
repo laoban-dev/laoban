@@ -165,6 +165,7 @@ export class Cli {
 
     function scriptAction<T> ( p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
       return packageAction ( p, name, ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
+
         const badPds = pds.filter ( p => !p.packageDetails )
         if ( badPds.length > 0 ) console.log ( `The following projects have errors in their project.details.json: ${badPds.map ( p => p.directory ).join ()}` )
         const goodPds = pds.filter ( p => p.packageDetails )

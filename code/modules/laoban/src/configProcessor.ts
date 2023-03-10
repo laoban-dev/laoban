@@ -77,8 +77,11 @@ export let abortWithReportIfAnyIssues: ConfigOrReportIssues = ( configAndIssues 
 export function loadConfigOrIssues ( path: Path, outputStream: Writable, params: string[], fn: ( dir: string ) => Promise<RawConfigAndFileOpsAndIssues>, debug: boolean ): ( laoban: string ) => Promise<ConfigAndIssues> {
   return laoban =>
     fn ( laoban ).then ( ( { rawConfig, issues, fileOpsAndXml } ) => {
-        if ( debug ) outputStream.write ( `rawConfig is\n${JSON.stringify ( rawConfig, null, 2 )}\nIssues are ${issues}\n` )
-        const config = issues.length > 0 ? undefined : configProcessor ( path, laoban, outputStream, rawConfig );
+        const index = toArray ( params ).indexOf ( '--' )
+        const argsAfterMinus = index === -1 ? [] : params.slice ( index + 1 )
+        rawConfig[ 'argsAfterMinus' ] = argsAfterMinus
+        if ( debug ) outputStream.write ( `rawConfig is\n${JSON.stringify ( rawConfig, null, 2 )}\nIssues are ${issues}\nArgsAfterMinus: ${argsAfterMinus}` )
+        const config = issues.length > 0 ? undefined : configProcessor ( path, laoban, outputStream, { ...rawConfig, argsAfterMinus } );
         return { issues, outputStream, config, params, fileOpsAndXml: fileOpsAndXml };
       }
     )
@@ -141,6 +144,7 @@ export function configProcessor ( path: Path, laoban: string, outputStream: Writ
   add ( "packageManager", rawConfig )
   if ( rawConfig.templateDir ) add ( "templateDir", rawConfig );
   result.properties = rawConfig.properties ? rawConfig.properties : {}
+  result.argsAfterMinus = rawConfig.argsAfterMinus
   result.defaultEnv = rawConfig.defaultEnv
   result.templates = rawConfig.templates ? rawConfig.templates : {}
   result.sessionDir = rawConfig.sessionDir ? rawConfig.sessionDir : path.join ( laoban, '.session' )

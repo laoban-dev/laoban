@@ -1,6 +1,6 @@
 {
   "packageManager": "yarn",
-  "parents": [
+  "parents":        [
     "../common/laoban.json/core.laoban.json",
     "../common/laoban.json/javascript.laoban.json",
     "../common/laoban.json/typescript.laoban.json",
@@ -8,21 +8,30 @@
     "../common/laoban.json/ls.laoban.json",
     "../common/laoban.json/react.laoban.json"
   ],
-  "properties": {
-    "license": "MIT",
+  "properties":     {
+    "license":    "MIT",
     "repository": "git@github.com:phil-rice/laoban.git"
   },
-  "scripts": {
-    "threethings": {
+  "scripts":        {
+    "threethings":          {
       "description": "Executes three commands for tests",
-      "commands": [
+      "commands":    [
         "echo one",
         "echo two",
         "echo three"
       ]
+    }, "mvn": {
+      "description":  "mvn use -- and then specify the maven arguments e.g. laoban mvn -- clean install",
+      "inLinksOrder": true,
+      "commands":     [
+        {
+          "name":    "mvn",
+          "command": "echo mvn ${argsAfterMinus}"
+        }
+      ]
     }
   },
-  "defaultEnv": {
+  "defaultEnv":     {
     "TEST_DEFAULT": "test"
   }
 }
