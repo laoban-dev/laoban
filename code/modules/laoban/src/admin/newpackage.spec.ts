@@ -21,7 +21,8 @@ async function clean ( dir: string, packages: string[] ) {
 async function setup ( dir: string, ...packages: string[] ) {
   await clean ( dir, packages )
   const dirOps = inDirectoryFileOps ( fileOps, dir )
-  await Promise.all ( packages.map ( p => copyDirectory ( { fileOps: dirOps }, `${p}_start`, p ) ) )
+  await Promise.all ( packages.map ( p =>
+    copyDirectory ( dirOps, `${p}_start`, p ) ) )
 
 }
 
