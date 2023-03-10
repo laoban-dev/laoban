@@ -35,7 +35,8 @@ function makeSc ( config: ConfigWithDebug, sessionId: string, details: PackageDe
     sessionId,
     dirWidth: Strings.maxLength ( details.map ( d => d.directory ) ) - config.laobanDirectory.length,
     dryrun: cmd.dryrun, variables: cmd.variables, shell: cmd.shellDebug, quiet: cmd.quiet, links: cmd.links, throttle: cmd.throttle,
-    config, details: script, timestamp: new Date (), genPlan: cmd.generationPlan,
+    config,
+    details: script, timestamp: new Date (), genPlan: cmd.generationPlan,
     context: { shellDebug: cmd.shellDebug, directories: details }
   }
   return sc;
@@ -151,10 +152,14 @@ export class Cli {
     }
     function action<T> ( p: any, name: string, a: Action<T>, description: string, ...options: (( p: any ) => any)[] ) {
       return command ( p, name, description, options )
-        .action ( cmd => configOrReportIssues ( configAndIssues ).then ( addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) )
-          .then ( ( configWithDebug: ConfigWithDebug ) => a ( fileOps, configWithDebug, cmd )
-            .then ( postCommand ( p, fileOps ) )
-            .catch ( displayError ( configWithDebug.outputStream ) ) ) )
+        .action ( ( p1, p2, p3 ) => { // nightmare. p1,p2,p3 ... p1 might be passthruargs. It might not...
+          const cmd = p3 ? p2 : p1
+          const passThruArgs = p3 ? p1 : []
+          return configOrReportIssues ( configAndIssues ).then ( addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) )
+            .then ( ( configWithDebug: ConfigWithDebug ) => a ( fileOps, { ...configWithDebug, passThruArgs: passThruArgs?.join ( " " ) }, cmd )
+              .then ( postCommand ( p, fileOps ) )
+              .catch ( displayError ( configWithDebug.outputStream ) ) );
+        } )
     }
     function packageAction<T> ( p: any, name: string, a: PackageAction<T>, description: string, ...options: (( p: any ) => any)[] ) {
       return action ( p, name, ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) =>
@@ -164,8 +169,9 @@ export class Cli {
     }
 
     function scriptAction<T> ( p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
-      return packageAction ( p, name, ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
-
+      const passThruArgs = scriptFn ().passThruArgs;
+      const nameWithVarargs = passThruArgs ? `${name} [passThruArgs...]` : name
+      return packageAction ( p, nameWithVarargs, ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
         const badPds = pds.filter ( p => !p.packageDetails )
         if ( badPds.length > 0 ) console.log ( `The following projects have errors in their project.details.json: ${badPds.map ( p => p.directory ).join ()}` )
         const goodPds = pds.filter ( p => p.packageDetails )
@@ -201,7 +207,8 @@ export class Cli {
 
     if ( configAndIssues.issues.length == 0 )
       (configAndIssues.config.scripts).sort ( ( a, b ) => a.name.localeCompare ( b.name ) )
-        .forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions, ignoreGuardOption ( script ) ) )
+        .forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions,
+          ignoreGuardOption ( script ) ) )
 
     program.on ( '--help', () => {
       let log = output ( configAndIssues )

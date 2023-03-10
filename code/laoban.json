@@ -13,20 +13,21 @@
     "repository": "git@github.com:phil-rice/laoban.git"
   },
   "scripts":        {
-    "threethings":          {
+    "threethings": {
       "description": "Executes three commands for tests",
       "commands":    [
         "echo one",
         "echo two",
         "echo three"
       ]
-    }, "mvn": {
+    }, "mvn":      {
       "description":  "mvn use -- and then specify the maven arguments e.g. laoban mvn -- clean install",
       "inLinksOrder": true,
+      "passThruArgs": "the arguments that are passed through to maven",
       "commands":     [
         {
           "name":    "mvn",
-          "command": "echo mvn ${argsAfterMinus}"
+          "command": "echo mvn ${passThruArgs}"
         }
       ]
     }

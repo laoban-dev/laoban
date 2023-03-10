@@ -9,7 +9,6 @@ import { FileOps, FileOpsAndXml } from "@laoban/fileops";
 
 export interface ConfigVariables {
   templateDir: string;
-  argsAfterMinus: string[];
   parents?: string | string[];
   templates: NameAnd<string>
   versionFile: string;
@@ -53,6 +52,7 @@ export interface PackageJson {
 export interface ScriptDetails {
   name: string,
   description: string,
+  passThruArgs?: string,
   guard?: GuardDefn,
   osGuard?: string,
   pmGuard?: string,
@@ -117,6 +117,7 @@ export type ScriptAction<T> = ( config: ConfigWithDebug, cmd: any, generations: 
 
 export interface Config extends ConfigVariables, HasLaobanDirectory, HasOutputStream {
   laobanConfig: string,
+  passThruArgs?: string,
   sessionDir: string,
   variables: { [ name: string ]: string },
   scripts: ScriptDetails[],
@@ -162,6 +163,7 @@ export const guardFrom = ( g: GuardDefn | undefined ): string | undefined => {
 
 export interface ScriptDefn {
   description: string,
+  passThruArgs?: string,
   guard?: GuardDefn,
   inLinksOrder?: boolean,
   showShell?: boolean,

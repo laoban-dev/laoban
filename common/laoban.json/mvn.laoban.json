@@ -10,11 +10,12 @@
       ]
     },
     "mvn":               {
-      "description":  "mvn use -- and then specify the maven arguments e.g. laoban mvn -- clean install",
+      "description":  "Calls mvn with the arguments. So for example 'laoban mvn clean install'",
       "inLinksOrder": true,
+      "passThruArgs": "the arguments that are passed through to maven",
       "commands": [    {
         "guard":   "${packageDetails.guards.mvn}",
-        "command": "mvn ${argsAfterMinus}"
+        "command": "mvn ${passThruArgs}"
       }]
     },
     "mvn-clean-install": {

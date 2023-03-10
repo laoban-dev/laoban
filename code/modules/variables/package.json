@@ -1,7 +1,7 @@
 {
   "name": "@laoban/variables",
   "description": "A library that can dereference ${xxx} in strings",
-  "version": "1.4.18",
+  "version": "1.4.26",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,7 +17,7 @@
     ]
   },
   "dependencies": {
-    "@laoban/utils": "1.4.18"
+    "@laoban/utils": "1.4.26"
   },
   "devDependencies": {
     "typescript": "^4.0.5",
