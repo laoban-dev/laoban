@@ -79,3 +79,4 @@
 * 1.4.11 Added |toPackage and allowed filenames in templates to have variables
 * 1.4.14 Heart and lung transplant. XML manipulation now in the codebase
 * 1.4.16 Updated dependencies
+* 1.4.26 Now can have passThurArgs (see @laoban.json@/templates/springboot_302). This allows laoban mvn x x x x
