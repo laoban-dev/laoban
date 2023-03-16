@@ -121,7 +121,7 @@ export function makeCopyOptions ( context: string, fileOpsAndXml: FileOpsAndXml,
   const packageDetails: PackageDetails | undefined = p?.packageDetails
   const allowSamples = cmd.allowsamples
   const links = { dependencies: fromEntries ( ...(safeArray ( packageDetails?.links ).map<[ string, string ]> ( s => [ s, version ] )) ) };
-  const groupId = config?.variables?.group
+  const groupId = (config as any)?.group
   const mavenLinks = groupId ? {
     project: {
       dependencies: {
