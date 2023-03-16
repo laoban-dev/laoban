@@ -87,9 +87,10 @@ export const xmlMergeInto: PostProcessor = postProcessor ( xmlMergeIntoRegEx,
       try {
         const paths = cmd.slice ( 13, -1 ).split ( ',' ).map ( s => s.trim ().slice ( 1 ) ).filter ( s => s.length > 0 )
 
+        // console.log('xmlMergeInto', paths, JSON.stringify(copyFileOptions?.lookupForJsonMergeInto.packageDetails,null,2) )
         const toMerge = paths.map ( p => safeObject ( findPart ( copyFileOptions?.lookupForJsonMergeInto, p ) ) )
         // console.log ( 'xmlMergeInto', cmd, paths )
-        // console.log ( 'toMerge', toMerge )
+        // console.log ( 'toMerge', JSON.stringify(toMerge) )
 
         const xmlDom = xml.parse ( text, cfd.xmlArrays )
         const merged = [ xmlDom, ...toMerge ].reduce ( deepCombineTwoObjects )

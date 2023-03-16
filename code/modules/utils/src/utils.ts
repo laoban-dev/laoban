@@ -28,6 +28,10 @@ export const chain = <From, To> ( ...fns: (( from: From ) => To | undefined)[] )
   return undefined
 }
 
+export function collect<T, T1> ( t: T[], filter: ( t: T ) => boolean, map: ( t: T ) => T1 ): T1[] {
+  return t.filter ( filter ).map ( map )
+}
+
 export function flatten<T> ( t: T[][] ): T[] {
   return ([] as T[]).concat ( ...t )
 }

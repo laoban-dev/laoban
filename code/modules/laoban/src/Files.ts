@@ -5,6 +5,7 @@ import { HasLaobanDirectory, PackageDetails, PackageDetailsAndDirectory } from "
 import { Debug } from "@laoban/debug";
 import { childDirs, FileOps, findMatchingK, parseJson } from "@laoban/fileops";
 import { findFileUp } from "@laoban/fileops";
+import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -47,14 +48,14 @@ export class PackageDetailFiles {
     // p.message(() =>['p.message'])
     function find () {
       if ( options.packages ) return p.k ( () => `options.projects= [${options.packages}]`, () =>
-        PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, root ).then ( pd => pd.filter ( p => p.directory.match ( options.packages ) ) ) )
-      if ( options.all ) return p.k ( () => "options.allProjects", () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, root ) );
-      if ( options.one ) return p.k ( () => "optionsOneProject", () => PackageDetailFiles.loadPackageDetails ( fileOps ) ( process.cwd () ).then ( x => [ x ] ) )
-      return PackageDetailFiles.loadPackageDetails ( fileOps ) ( process.cwd () ).then ( pd => {
+        PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, hasRoot,root ).then ( pd => pd.filter ( p => p.directory.match ( options.packages ) ) ) )
+      if ( options.all ) return p.k ( () => "options.allProjects", () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps,hasRoot, root ) );
+      if ( options.one ) return p.k ( () => "optionsOneProject", () => PackageDetailFiles.loadPackageDetails ( fileOps ,hasRoot) ( process.cwd () ).then ( x => [ x ] ) )
+      return PackageDetailFiles.loadPackageDetails ( fileOps ,hasRoot ) ( process.cwd () ).then ( pd => {
           p.message ( () => [ "using default project rules. Looking in ", process.cwd (), 'pd.details', pd.packageDetails ? pd.packageDetails.name : `No ${packageDetailsFile} found` ] )
           return pd.packageDetails ?
-            p.k ( () => 'Using project details from process.cwd()', () => PackageDetailFiles.loadPackageDetails ( fileOps ) ( process.cwd () ) ).then ( x => [ x ] ) :
-            p.k ( () => 'Using project details under root', () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, root ) )
+            p.k ( () => 'Using project details from process.cwd()', () => PackageDetailFiles.loadPackageDetails ( fileOps  ,hasRoot) ( process.cwd () ) ).then ( x => [ x ] ) :
+            p.k ( () => 'Using project details under root', () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps ,hasRoot, root ) )
         }
       )
     }
@@ -65,17 +66,18 @@ export class PackageDetailFiles {
   }
 
 
-  static async findAndLoadPackageDetailsFromChildren ( fileOps: FileOps, root: string ): Promise<PackageDetailsAndDirectory[]> {
+  static async findAndLoadPackageDetailsFromChildren ( fileOps: FileOps,dic: any, root: string ): Promise<PackageDetailsAndDirectory[]> {
     let dirs = await this.findPackageDirectories ( fileOps ) ( root );
-    return Promise.all ( dirs.map ( this.loadPackageDetails ( fileOps ) ) )
+    return Promise.all ( dirs.map ( this.loadPackageDetails ( fileOps, dic ) ) )
   }
 
-  static loadPackageDetails = ( fileOps: FileOps ) => async ( directory: string ): Promise<PackageDetailsAndDirectory> => {
+  static loadPackageDetails = ( fileOps: FileOps, dic: any ) => async ( directory: string ): Promise<PackageDetailsAndDirectory> => {
     try {
       let rootAndFileName = fileOps.join ( directory, packageDetailsFile );
       const asString = await fileOps.loadFileOrUrl ( rootAndFileName );
+      const derefed = derefence(`loadPackageDetails from ${directory}`, dic, asString, {variableDefn: dollarsBracesVarDefn})
       try {
-        let packageDetails = asString && parseJson<PackageDetails> ( `File ${rootAndFileName}` ) ( asString );
+        let packageDetails = asString && parseJson<PackageDetails> ( `File ${rootAndFileName}` ) ( derefed );
         return { directory, packageDetails }
       } catch ( e ) {
         return { directory, errorParsing: true }

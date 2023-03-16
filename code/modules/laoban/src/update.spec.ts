@@ -19,8 +19,8 @@ async function testIt ( dir: string ) {
   await copyDirectory ( fileOps, path.join ( root, 'starting' ), laobanDir )
   const disp = await execute ( laobanDir, `${prefix} update` )
   const expected = await fileOps.loadFileOrUrl ( path.join ( root, 'expectedDisplay.txt' ) )
-  await fileOps.removeDirectory ( path.join ( laobanDir, '.cache' ), true )
   expect ( cleanLineEndings ( disp ) ).toEqual ( cleanLineEndings ( expected ) )
+  await fileOps.removeDirectory ( path.join ( laobanDir, '.cache' ), true )
   await compareExpectedActualFiles ( fileOps,
     fileOps.join ( root, 'expected' ),
     fileOps.join ( root, 'projects' ) )

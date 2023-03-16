@@ -1,7 +1,7 @@
 {
   "template":    "typescript",
   "name":        "@laoban/variables",
-  "description": "A library that can dereference ${xxx} in strings",
+  "description": "A library that can dereference variables in strings",
   "links":       [
     "@laoban/utils"
   ],

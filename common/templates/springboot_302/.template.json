@@ -3,8 +3,8 @@
     "pom.xml": {
       "target":      "pom.xml",
       "templated":   "{{}}",
-      "postProcess": "xmlMergeInto($packageDetails.mvn)",
-      "xmlArrays":   ["project.dependencies.dependency","project.dependencyManagement.dependencies.dependency"]
+      "postProcess": "xmlMergeInto($mavenLinks,$packageDetails.mvn)",
+      "xmlArrays":   ["project.dependencies.dependency", "project.dependencyManagement.dependencies.dependency"]
     }
   }
 }

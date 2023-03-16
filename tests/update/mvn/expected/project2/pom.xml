@@ -27,7 +27,7 @@
       <artifactId>spring-boot-starter-test</artifactId>
     </dependency>
     <dependency>
-      <groupId>dev.laoban</groupId>
+      <groupId>dev.laoban.group</groupId>
       <artifactId>someArtifact</artifactId>
       <version>someVersion</version>
     </dependency>

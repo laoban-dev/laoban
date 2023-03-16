@@ -1,7 +1,7 @@
 {
   "name": "@laoban/comparefiles",
   "description": "",
-  "version": "1.4.26",
+  "version": "1.4.28",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,8 +17,8 @@
     ]
   },
   "dependencies": {
-    "@laoban/fileops": "1.4.26",
-    "@laoban/utils": "1.4.26"
+    "@laoban/fileops": "1.4.28",
+    "@laoban/utils": "1.4.28"
   },
   "devDependencies": {
     "typescript": "^4.0.5",

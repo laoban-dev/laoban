@@ -16,20 +16,6 @@ interface UpdateCmdOptions {
   major?: string
   dryrun?: boolean
 }
-// export function copyTemplateDirectoryByConfig ( fileOps: FileOps, config: ConfigWithDebug, p: PackageDetailsDirectoryPropertiesAndVersion, template: string, target: string ): Promise<void> {
-//   console.log ( 'copyTemplateDirectoryByConfig', config.templateDir, template )
-//   let src = path.join ( config.templateDir, template );
-//   let d = config.debug ( 'update' );
-//   return d.k ( () => `copyTemplateDirectory directory from ${src}, to ${target}`, async () => {
-//     fse.copySync ( src, target )
-//     // no idea why the fse.copy doesn't work here... it just fails silently
-//     let packageJsonFileName = path.join ( p.directory, 'package.json' );
-//     const exists = await fileOps.isFile ( packageJsonFileName )
-//     if ( !exists ) return Promise.resolve ()
-//     const raw = await d.k ( () => `${p.directory} loadPackageJson`, () => fileOps.loadFileOrUrl ( packageJsonFileName ) )
-//     return d.k ( () => `${p.directory} savePackageJsonFile`, () => savePackageJsonFile ( p.directory, modifyPackageJson ( JSON.parse ( raw ), p.version, p.packageDetails ) ) )
-//   } )
-// }
 
 export const includeFiles = ( fileOpsAndXml: FileOpsAndXml ): TransformTextFn => async ( type: string, text: string ): Promise<string> => {
   let regExp = /\${include\(([^)]*)\)/g;
@@ -134,7 +120,17 @@ interface DryRunAndAllowSamples {
 export function makeCopyOptions ( context: string, fileOpsAndXml: FileOpsAndXml, cmd: DryRunAndAllowSamples, config: ConfigWithDebug, version: string | undefined, p: PackageDetailsAndDirectory | undefined ): CopyFileOptions {
   const packageDetails: PackageDetails | undefined = p?.packageDetails
   const allowSamples = cmd.allowsamples
-  let lookupForJsonMergeInto = { ...config, version, packageDetails, links: { dependencies: fromEntries ( ...(safeArray ( packageDetails?.links ).map<[ string, string ]> ( s => [ s, version ] )) ) } };
+  const links = { dependencies: fromEntries ( ...(safeArray ( packageDetails?.links ).map<[ string, string ]> ( s => [ s, version ] )) ) };
+  const groupId = config?.variables?.group
+  const mavenLinks = groupId ? {
+    project: {
+      dependencies: {
+        dependency: safeArray ( packageDetails?.links )
+          .map ( artifactId => ({ groupId, artifactId, version }) )
+      }
+    }
+  } : {};
+  let lookupForJsonMergeInto = { ...config, version, packageDetails, links, mavenLinks };
   const tx = includeAndTransformFile ( context, lookupForJsonMergeInto, fileOpsAndXml );
   return {
     allowSamples, dryrun: cmd.dryrun,

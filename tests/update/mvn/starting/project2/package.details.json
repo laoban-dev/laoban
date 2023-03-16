@@ -7,7 +7,7 @@
       "dependencies": {
         "dependency": [
           {
-            "groupId":    "dev.laoban",
+            "groupId":    "${group}",
             "artifactId": "someArtifact",
             "version":    "someVersion"
           },

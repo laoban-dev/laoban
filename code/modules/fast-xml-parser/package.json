@@ -1,7 +1,7 @@
 {
   "name": "@laoban/fast-xml-parser",
   "description": "",
-  "version": "1.4.26",
+  "version": "1.4.28",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -18,9 +18,9 @@
   },
   "dependencies": {
     "fast-xml-parser": "4.1.2",
-    "@laoban/xml": "1.4.26",
-    "@laoban/utils": "1.4.26",
-    "@laoban/fileops": "1.4.26"
+    "@laoban/xml": "1.4.28",
+    "@laoban/utils": "1.4.28",
+    "@laoban/fileops": "1.4.28"
   },
   "devDependencies": {
     "typescript": "^4.0.5",
