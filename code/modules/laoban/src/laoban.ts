@@ -2,29 +2,24 @@
 import { PackageDetailFiles, packageDetailsFile } from "./Files";
 import * as fse from "fs-extra";
 import { abortWithReportIfAnyIssues, loadLaobanAndIssues, MakeCacheFnFromLaobanDir } from "./configProcessor";
-import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, PackageAction, PackageDetailsAndDirectory, ScriptDetails, scriptHasGuard, ScriptInContext, ScriptInContextAndDirectoryWithoutStream } from "./config";
+
 import * as path from "path";
 import { compactStatus, DirectoryAndCompactedStatusMap, prettyPrintData, toPrettyPrintData, toStatusDetails } from "./status";
 import * as os from "os";
-import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, ExecuteCommand, ExecuteGenerations, executeOneGeneration, ExecuteOneGeneration, executeScript, ExecuteScript, Generations, nameAndCommandExecutor, timeIt } from "./executors";
-import { output, partition, Strings } from "./utils";
+import { decorateExecutor, execFile, execInSpawn, execJS, executeAllGenerations, executeOneGeneration, executeScript, nameAndCommandExecutor, timeIt } from "./executors";
+import { output, Strings } from "./utils";
 import { AppendToFileIf, CommandDecorators, GenerationDecorators, GenerationsDecorators, ScriptDecorators } from "./decorators";
 import { shellReporter } from "./report";
 import { Writable } from "stream";
 import { Command } from "commander";
-import { addDebug } from "@laoban/debug";
 
 import { updateConfigFilesFromTemplates } from "./update";
 import { FileOps, FileOpsAndXml, Path } from "@laoban/fileops";
-import { postCommand } from "./postCommand";
 import { stringOrUndefinedAsString, toArray } from "@laoban/utils";
+import { action, ActionParams, displayError, packageAction } from "@laoban/cli";
+import { Action, Config, ConfigAndIssues, ConfigOrReportIssues, ConfigWithDebug, ExecuteCommand, ExecuteGenerations, ExecuteOneGeneration, ExecuteScript, Generations, PackageAction, PackageDetailsAndDirectory, ScriptDetails, scriptHasGuard, ScriptInContext, ScriptInContextAndDirectoryWithoutStream } from "@laoban/config";
 
 
-const displayError = ( outputStream: Writable ) => ( e: Error ) => {
-  let chunk = (e.message ? e.message : e.toString ()).split ( '\n' ).slice ( 0, 2 ).join ( '\n' ) + "\n";
-  if ( outputStream.writableEnded ) console.error ( chunk )
-  else outputStream.write ( chunk );
-}
 export const makeSessionId = ( d: Date, suffix: any, params: string[] ) =>
   [ d.toISOString ().replace ( /:/g, '_' ), suffix, ...params.slice ( 3 ).map ( s => s.replace ( /[^[A-Za-z0-9._-]/g, '' ) ) ].join ( '_' );
 
@@ -103,6 +98,7 @@ export class Cli {
   private program: any;
   private params: string[]
 
+
   defaultOptions ( configAndIssues: ConfigAndIssues ): ( program: Command ) => any {
     return program => {
       let defaultThrottle = configAndIssues.config ? configAndIssues.config.throttle : 0
@@ -145,33 +141,17 @@ export class Cli {
 
 
     let defaultOptions = this.defaultOptions ( configAndIssues )
-    function command ( program: any, cmd: string, description: string, fns: (( a: any ) => any)[] ) {
-      let p = program.command ( cmd ).description ( description )
-      fns.forEach ( fn => p = fn ( p ) )
-      return p
-    }
-    function action<T> ( p: any, name: string, a: Action<T>, description: string, ...options: (( p: any ) => any)[] ) {
-      return command ( p, name, description, options )
-        .action ( ( p1, p2, p3 ) => { // nightmare. p1,p2,p3 ... p1 might be passthruargs. It might not...
-          const cmd = p3 ? p2 : p1
-          const passThruArgs = p3 ? p1 : []
-          return configOrReportIssues ( configAndIssues ).then ( addDebug ( cmd.debug, x => console.log ( '#', ...x ) ) )
-            .then ( ( configWithDebug: ConfigWithDebug ) => a ( fileOps, { ...configWithDebug, passThruArgs: passThruArgs?.join ( " " ) }, cmd )
-              .then ( postCommand ( p, fileOps ) )
-              .catch ( displayError ( configWithDebug.outputStream ) ) );
-        } )
-    }
-    function packageAction<T> ( p: any, name: string, a: PackageAction<T>, description: string, ...options: (( p: any ) => any)[] ) {
-      return action ( p, name, ( fileOps: FileOps, config: ConfigWithDebug, cmd: any ) =>
-        PackageDetailFiles.workOutPackageDetails ( fileOps, config, cmd )
-          .then ( pds => a ( config, cmd, pds ) )
-          .catch ( displayError ( config.outputStream ) ), description, ...options )
-    }
 
-    function scriptAction<T> ( p: any, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
+    const actionParams: ActionParams = {
+      program,
+      configOrReportIssues,
+      configAndIssues,
+      fileOps
+    }
+    function scriptAction<T> ( actionParams: ActionParams, name: string, description: string, scriptFn: () => ScriptDetails, fn: ( gens: Generations ) => Promise<T>, ...options: (( p: any ) => any)[] ) {
       const passThruArgs = scriptFn ().passThruArgs;
       const nameWithVarargs = passThruArgs ? `${name} [passThruArgs...]` : name
-      return packageAction ( p, nameWithVarargs, ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
+      return packageAction ( actionParams, nameWithVarargs, ( config: ConfigWithDebug, cmd: any, pds: PackageDetailsAndDirectory[] ) => {
         const badPds = pds.filter ( p => !p.packageDetails )
         if ( badPds.length > 0 ) console.log ( `The following projects have errors in their project.details.json: ${badPds.map ( p => p.directory ).join ()}` )
         const goodPds = pds.filter ( p => p.packageDetails )
@@ -192,22 +172,22 @@ export class Cli {
       }, description, ...options )
     }
     program.command ( 'admin <command>', 'admin commands. For example cleaning/modifying the project (creating new packages, set up templates...' )
-    scriptAction ( program, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
+    scriptAction ( actionParams, 'run', 'runs an arbitary command (the rest of the command line).', () => ({
       name: 'run', description: 'runs an arbitrary command (the rest of the command line).',
       commands: [ { name: 'run', command: program.args.slice ( 1 ).filter ( n => !n.startsWith ( '-' ) ).join ( ' ' ), status: false } ]
     }), executeGenerations, defaultOptions )
 
-    packageAction ( program, 'status', statusAction ( fileOps ), 'shows the initStatus of the project in the current directory', defaultOptions )
-    action ( program, 'packages', packagesAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
+    packageAction ( actionParams, 'status', statusAction ( fileOps ), 'shows the initStatus of the project in the current directory', defaultOptions )
+    action ( actionParams, 'packages', packagesAction, 'lists the packages under the laoban directory', this.minimalOptions ( configAndIssues ) )
 
-    packageAction ( program, 'update', updateConfigFilesFromTemplates ( fileOpsAndXml ),
+    packageAction ( actionParams, 'update', updateConfigFilesFromTemplates ( fileOpsAndXml ),
       `overwrites the package.json based on the ${packageDetailsFile}, and copies other template files overwrite project's`,
       extraUpdateOptions, defaultOptions )
 
 
     if ( configAndIssues.issues.length == 0 )
       (configAndIssues.config.scripts).sort ( ( a, b ) => a.name.localeCompare ( b.name ) )
-        .forEach ( script => scriptAction ( program, script.name, script.description, () => script, executeGenerations, defaultOptions,
+        .forEach ( script => scriptAction ( actionParams, script.name, script.description, () => script, executeGenerations, defaultOptions,
           ignoreGuardOption ( script ) ) )
 
     program.on ( '--help', () => {

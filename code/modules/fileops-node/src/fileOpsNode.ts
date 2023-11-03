@@ -1,16 +1,21 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import { promises, writeFileSync } from "fs";
-import fetch from 'node-fetch';
 import { createHash } from "crypto";
 import { FileOps } from "@laoban/fileops";
 import path from "path";
+import { ProxyAgent } from 'proxy-agent';
+import fetch, { RequestInit } from 'node-fetch'
+
+
+const agent = new ProxyAgent ();
 
 
 function loadFile ( fileName: string ): Promise<string> {
   return promises.readFile ( fileName ).then ( buffer => buffer.toString ( 'utf-8' ) )
 }
 function loadUrl ( fileOrUrl: string ): Promise<string> {
-  return fetch ( fileOrUrl ).then ( async res => {
+  const init: RequestInit = { agent }
+  return fetch ( fileOrUrl, init ).then ( async res => {
     let text = await res.text ();
     if ( res.status >= 400 ) throw Error ( `Cannot load file [${fileOrUrl}] . Status is ${res.status}\n      Response was ${text}` )
     return text;

@@ -19,14 +19,16 @@
     ]
   },
   "links":       [
-    "@laoban/variables",
     "@laoban/generations",
-    "@laoban/validation",
-    "@laoban/debug",
-    "@laoban/node",
-    "@laoban/filesops-node",
+    "@laoban/cli",
     "@laoban/comparefiles",
-    "@laoban/fast-xml-parser"
+    "@laoban/config",
+    "@laoban/debug",
+    "@laoban/fast-xml-parser",
+    "@laoban/filesops-node",
+    "@laoban/node",
+    "@laoban/validation",
+    "@laoban/variables"
   ],
   "guards":      {
     "publish": true,

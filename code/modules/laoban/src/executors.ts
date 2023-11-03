@@ -1,6 +1,6 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
 import * as cp from 'child_process'
-import { CommandDefn, Envs, PackageDetailsAndDirectory, ScriptInContext, ScriptInContextAndDirectory, ScriptInContextAndDirectoryWithoutStream } from "./config";
+import { CommandDefn, CommandDetails, Envs, ExecuteCommand, ExecuteGenerations, ExecuteOneGeneration, ExecuteScript, GenerationsResult, RawCommandExecutor, RawShellResult, ScriptInContextAndDirectoryWithoutStream, ScriptResult, ShellCommandDetails, ShellResult } from "@laoban/config";
 import { cleanUpEnv } from "./configProcessor";
 import * as path from "path";
 
@@ -21,44 +21,7 @@ export function execute ( cwd: string, cmd: string ): Promise<string> {
   } )
 }
 
-export interface RawShellResult {
-  err: any
-}
-export interface ShellResult extends RawShellResult {
-  details: ShellCommandDetails<CommandDetails>
-  duration: number
-}
 
-export interface ScriptResult {
-  scd: ScriptInContextAndDirectoryWithoutStream,
-  results: ShellResult[],
-  duration: number
-}
-export function isScriptResult ( r: any ): r is ScriptResult {
-  return r.scd !== undefined && r.results !== undefined && r.duration !== undefined
-}
-
-export type  Generation = ScriptInContextAndDirectoryWithoutStream[]
-export type  Generations = Generation[]
-export type GenerationResult = ScriptResult[]
-export type GenerationsResult = GenerationResult[]
-
-
-export interface ShellCommandDetails<Cmd> {
-  scriptInContext: ScriptInContext,
-  detailsAndDirectory: PackageDetailsAndDirectory
-  details: Cmd
-  outputStream: Writable
-  logStreams: WriteStream[]  // The streams to write the output to
-}
-
-export interface CommandDetails {
-  command: CommandDefn,
-  dic: any, //All the things that can be used to deference variables
-  env: Envs //The envs with their variables dereferenced
-  directory: string, // the actual directory that the command will be executed in
-  commandString: string
-}
 
 function calculateDirectory ( directory: string, command: CommandDefn ) { return (command.directory) ? path.join ( directory, command.directory ) : directory;}
 
@@ -132,19 +95,6 @@ function executeOneAfterTheOther<From, To> ( fn: ( from: From ) => Promise<To> )
 }
 
 
-export type RawCommandExecutor = ( d: ShellCommandDetails<CommandDetails> ) => Promise<RawShellResult>
-
-export type ExecuteCommand = ( d: ShellCommandDetails<CommandDetails> ) => Promise<ShellResult[]>
-
-export type ExecuteScript = ( s: ScriptInContextAndDirectoryWithoutStream ) => Promise<ScriptResult>
-export type ExecuteScriptWithStreams = ( s: ScriptInContextAndDirectory ) => Promise<ScriptResult>
-
-
-export type ExecuteGeneration = ( generation: Generation ) => Promise<GenerationResult>
-
-export type ExecuteOneGeneration = ( generation: Generation ) => Promise<GenerationResult>
-
-export type ExecuteGenerations = ( generations: Generations ) => Promise<GenerationsResult>
 
 export function nameAndCommandExecutor ( lookup: NameAnd<RawCommandExecutor>, defaultExecutor: RawCommandExecutor ): RawCommandExecutor {
   return d => {

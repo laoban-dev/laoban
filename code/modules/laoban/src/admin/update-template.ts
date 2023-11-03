@@ -1,5 +1,5 @@
 import { ActionParams } from "./types";
-import { ConfigWithDebug } from "../config";
+import { ConfigWithDebug } from "@laoban/config";
 import { loabanConfigName, packageDetailsFile } from "../Files";
 import { fileNameFrom, FileOps, FileOpsAndXml, isFilename, isUrl, loadFileFromDetails, loadTemplateDetailsAndFileContents, LocationAndContents, parseJson, saveAll, SourcedTemplateFileDetailsWithContent, targetFrom } from "@laoban/fileops";
 import { getTemplateJsonFileName } from "./newTemplate";

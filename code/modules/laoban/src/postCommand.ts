@@ -1,6 +1,7 @@
 import { FileOps, fileOpsStats } from "@laoban/fileops";
-import { isScriptResult } from "./executors";
+
 import { flatMap, toArray, toForwardSlash } from "@laoban/utils";
+import { isScriptResult } from "@laoban/config";
 
 export function postCommand ( p: any, fileOps: FileOps ) {
   return <T> ( gensRess: T ) => {

@@ -1,0 +1,12 @@
+{
+  "template":     "typescript",
+  "name":         "@laoban/cli",
+  "description":  "methods for creating a cli",
+  "dependencies": {"commander": "^10.0.0"},
+  "links":        ["@laoban/utils", "@laoban/config"],
+  "guards":       {
+    "publish": true,
+    "test":    true,
+    "compile": true
+  }
+}

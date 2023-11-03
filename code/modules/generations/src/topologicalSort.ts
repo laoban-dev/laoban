@@ -31,8 +31,8 @@ const foldIntoAcc = ( graph: NameViewOfGraph ) => ( acc: TopologicalSortAcc, nam
     const parentGeneration = acc[ parent ]
     if ( parentGeneration === undefined || gen > parentGeneration ) { // if the child hasn't been visited, or if the existing generation is not big enough
       result[ parent ] = gen
-      const children = safeArray ( graph[ parent ] );
-      children.forEach ( gc => fold ( gc, gen + 1 ) )
+    const children = safeArray ( graph[ parent ] );
+    children.forEach ( gc => fold ( gc, gen + 1 ) )
     }
   }
   fold ( name, 0 )
@@ -43,6 +43,7 @@ export const topologicalSortNames = ( graph: NameAnd<string[]> ): GenerationName
   const nameToGeneration = Object.keys ( graph ).reduce ( fold, {} )
   var result: string[][] = []
   function addToGeneration ( [ name, gen ]: [ string, number ] ) {
+
     const existing = result[ gen ]
     if ( existing === undefined ) result[ gen ] = []
     result[ gen ].push ( name )
@@ -61,5 +62,5 @@ export const topologicalSort = <G> ( tc: TopologicalSortTypeClasses<G> ) => ( no
   if ( Object.keys ( loops ).length > 0 ) return tc.loopMessage ( nodes, loops )
   const generationNames = topologicalSortNames ( stringGraph )
   debug.message ( () => [ `topologicalSort - generationNames`, generationNames ] )
-  return generationNames.map ( gen => gen.filter ( g => nameMap[ g ] !== undefined ).map ( name => nameMap[ name ] ) ).reverse ().filter(gs => gs.length>0)
+  return generationNames.map ( gen => gen.filter ( g => nameMap[ g ] !== undefined ).map ( name => nameMap[ name ] ) ).reverse ().filter ( gs => gs.length > 0 )
 }

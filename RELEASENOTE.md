@@ -82,3 +82,5 @@
 * 1.4.26 Now can have passThurArgs (see @laoban.json@/templates/springboot_302). This allows laoban mvn x x x x
 * 1.4.27 have some dereferencing in packageDetails (can use config)
 * 1.4.29 have $mavenLinks for templates making it much easier for mvn templates to be linked
+* 1.4.31 when getting urls, laoban now can use the proxy if set. 
+* 

@@ -4,7 +4,7 @@ import path from "path";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { CopyFileOptions, FileOps, FileOpsAndXml, findTemplateLookup, loadJsonFileOrUndefined, LocationAndParsed } from "@laoban/fileops";
 import { packageDetailsFile } from "../Files";
-import { ConfigWithDebug } from "../config";
+import { ConfigWithDebug } from "@laoban/config";
 import { loadConfigForAdmin } from "./laoban-admin";
 import { Writable } from "stream";
 

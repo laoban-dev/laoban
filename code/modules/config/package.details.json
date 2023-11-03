@@ -1,0 +1,13 @@
+{
+  "template":     "typescript",
+  "name":         "@laoban/config",
+  "description":  "Laoban's configuration",
+
+  "dependencies": {"commander": "^10.0.0"},
+  "links":        ["@laoban/utils"],
+  "guards":       {
+    "publish": true,
+    "test":    true,
+    "compile": true
+  }
+}

@@ -6,7 +6,7 @@ import { newPackage } from "./newPackage";
 import { CopyFileOptions, FileOps, FileOpsAndXml } from "@laoban/fileops";
 import { makeIntoTemplate, newTemplate, updateAllTemplates } from "./newTemplate";
 import { loabanConfigTestName, PackageDetailFiles, packageDetailsFile, packageDetailsTestFile } from "../Files";
-import { ConfigAndIssues, ConfigWithDebug } from "../config";
+import { ConfigAndIssues, ConfigWithDebug } from "@laoban/config";
 import { abortWithReportIfAnyIssues, loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { Writable } from "stream";
 import { findProfilesFromString, loadProfile, prettyPrintProfileData, prettyPrintProfiles } from "../profiling";

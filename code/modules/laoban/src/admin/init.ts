@@ -5,7 +5,7 @@ import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { laobanJsonLocations, } from "./fileLocations";
 import path from "path";
 import { FileOps, findChildFiles, findTemplateLookup, loadWithParents, LocationAnd, LocationAndParsed, parseJson } from "@laoban/fileops";
-import { combineRawConfigs } from "../config";
+import { combineRawConfigs } from "@laoban/config";
 
 import { findLaobanOrUndefined, loabanConfigName, loabanConfigTestName, packageDetailsFile, packageDetailsTestFile } from "../Files";
 import { ActionParams } from "./types";

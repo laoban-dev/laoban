@@ -215,13 +215,13 @@ describe ( "topological sort names", () => {
   } )
 } )
 
+let tc: TopologicalSortTypeClasses<Thing> = {
+  debug: () => NullDebugCommands,
+  name: t => t.name,
+  children: t => t.children,
+  loopMessage: ( gs, loops ) => {throw Error ( `had error in ${JSON.stringify ( gs )}\nLoops: ${JSON.stringify ( loops )}` )}
+}
 describe ( "topologicalSort", () => {
-  let tc: TopologicalSortTypeClasses<Thing> = {
-    debug: () => NullDebugCommands,
-    name: t => t.name,
-    children: t => t.children,
-    loopMessage: ( gs, loops ) => {throw Error ( `had error in ${JSON.stringify ( gs )}\nLoops: ${JSON.stringify ( loops )}` )}
-  }
   it ( "should handle an empty graph", () => {
     expect ( topologicalSort ( tc ) ( [] ) ).toEqual ( [] )
   } )
@@ -245,3 +245,29 @@ describe ( "topologicalSort", () => {
     expect ( () => topologicalSort ( tc ) ( [ thing0WithLoop ] ) ).toThrow ( `had error in ` )
   } )
 } )
+
+describe ( "loop generations bug", () => {
+    it ( "should give the correct result", () => {
+      const audit: Thing = { name: "audit", children: [ "optics" ] };
+      const api: Thing = { name: "api", children: [ "eventProcessor", "eventStore", "idValueStore" ] };
+      const eventFixture: Thing = { name: "eventFixture", children: [ "events", "audit" ] };
+      const eventProcessor: Thing = { name: "eventProcessor", children: [ "events", "audit", "eventFixture" ] };
+      const events: Thing = { name: "events", children: [ "optics" ] };
+      const eventStore: Thing = { name: "eventStore", children: [ "events", "eventFixture" ] };
+      const idValueStore: Thing = { name: "idValueStore", children: [ "utils", "audit" ] };
+      const optics: Thing = { name: "optics", children: [ "utils" ] };
+      const utils: Thing = { name: "utils", children: [] };
+      const expected = [
+        [ "utils" ],
+        [ "optics", "events" ],
+        [ "audit", "eventFixturex" ],//duplicated bug. The eventFuture is dependent on audit, and should be in a later generation
+        [ "eventProcessor", "eventStore", "idValueStore" ],
+        [ "api" ]
+      ];
+      const nodes = [ audit, api, eventFixture, eventProcessor, events, eventStore, idValueStore, optics, utils ];
+      expect ( topologicalSort ( tc ) ( [  api,eventFixture,audit, eventProcessor, events, eventStore, idValueStore, optics, utils ] ).map ( gs => gs.map ( g => g.name ) ) ).toEqual ( expected )
+      expect ( topologicalSort ( tc ) ( nodes.reverse () ).map ( gs => gs.map ( g => g.name ).reverse () ) ).toEqual ( expected )
+    } )
+
+  }
+)

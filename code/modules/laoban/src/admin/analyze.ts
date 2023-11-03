@@ -6,7 +6,7 @@ import { loabanConfigName, packageDetailsFile } from "../Files";
 import { ActionParams } from "./types";
 import { ErrorsAnd, fromEntries, hasErrors, reportErrors, toForwardSlash } from "@laoban/utils";
 import { createDeltaForPackageJson } from "./update-template";
-import { ConfigAndIssues } from "../config";
+import { ConfigAndIssues } from "@laoban/config";
 import { loadLaobanAndIssues, makeCache } from "../configProcessor";
 import { includeAndTransformFile, loadOneFileFromTemplateControlFileDetails } from "../update";
 
