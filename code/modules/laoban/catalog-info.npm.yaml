@@ -14,13 +14,13 @@ spec:
   owner: phil-rice
   lifecycle: experimental
   dependsOn: 
-   -  component:@laoban/generations
-   -  component:@laoban/cli
-   -  component:@laoban/comparefiles
-   -  component:@laoban/config
-   -  component:@laoban/debug
-   -  component:@laoban/fast-xml-parser
-   -  component:@laoban/filesops-node
-   -  component:@laoban/node
-   -  component:@laoban/validation
-   -  component:@laoban/variables
+   -  component:laoban-generations
+   -  component:laoban-cli
+   -  component:laoban-comparefiles
+   -  component:laoban-config
+   -  component:laoban-debug
+   -  component:laoban-fast-xml-parser
+   -  component:laoban-filesops-node
+   -  component:laoban-node
+   -  component:laoban-validation
+   -  component:laoban-variables

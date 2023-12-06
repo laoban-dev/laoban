@@ -2,7 +2,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: @laoban/filesops-node
+  name: laoban-filesops-node
   description: File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test
   tags:
     - java
@@ -14,5 +14,5 @@ spec:
   owner: phil-rice
   lifecycle: experimental
   dependsOn: 
-   -  component:@laoban/utils
-   -  component:@laoban/fileops
+   -  component:laoban-utils
+   -  component:laoban-fileops

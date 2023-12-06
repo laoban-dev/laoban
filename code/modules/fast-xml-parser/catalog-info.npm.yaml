@@ -2,7 +2,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: @laoban/fast-xml-parser
+  name: laoban-fast-xml-parser
   description: 
   tags:
     - java
@@ -14,6 +14,6 @@ spec:
   owner: phil-rice
   lifecycle: experimental
   dependsOn: 
-   -  component:@laoban/xml
-   -  component:@laoban/utils
-   -  component:@laoban/fileops
+   -  component:laoban-xml
+   -  component:laoban-utils
+   -  component:laoban-fileops

@@ -2,7 +2,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: @runbook/trainingcourse
+  name: runbook-trainingcourse
   description: A cli for manipulating git repositories to help in training
   tags:
     - java
@@ -14,4 +14,4 @@ spec:
   owner: phil-rice
   lifecycle: experimental
   dependsOn: 
-   -  component:@laoban/fileops
+   -  component:laoban-fileops

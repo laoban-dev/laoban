@@ -2,7 +2,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: @laoban/validation
+  name: laoban-validation
   description: A library for validating json
   tags:
     - java

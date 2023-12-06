@@ -2,7 +2,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: @laoban/fileops
+  name: laoban-fileops
   description: Utilities about files: not bound to any way of accessing files
   tags:
     - java
@@ -14,6 +14,6 @@ spec:
   owner: phil-rice
   lifecycle: experimental
   dependsOn: 
-   -  component:@laoban/utils
-   -  component:@laoban/validation
-   -  component:@laoban/xml
+   -  component:laoban-utils
+   -  component:laoban-validation
+   -  component:laoban-xml
