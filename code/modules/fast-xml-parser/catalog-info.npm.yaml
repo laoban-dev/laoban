@@ -5,7 +5,6 @@ metadata:
   name: laoban-fast-xml-parser
   description: ""
   tags:
-    - java
     - npm
   annotations:
     backstage.io/source-location: Unknown scm

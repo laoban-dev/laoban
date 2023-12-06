@@ -5,7 +5,6 @@ metadata:
   name: laoban
   description: A cli for managing projects that have many npm packages
   tags:
-    - java
     - npm
   annotations:
     backstage.io/source-location: Unknown scm

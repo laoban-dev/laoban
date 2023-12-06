@@ -5,7 +5,6 @@ metadata:
   name: laoban-generations
   description: A library that typologically sorts data into generations
   tags:
-    - java
     - npm
   annotations:
     backstage.io/source-location: Unknown scm

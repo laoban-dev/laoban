@@ -5,7 +5,6 @@ metadata:
   name: laoban-cli
   description: methods for creating a cli
   tags:
-    - java
     - npm
   annotations:
     backstage.io/source-location: Unknown scm

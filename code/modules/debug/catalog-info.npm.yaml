@@ -5,7 +5,6 @@ metadata:
   name: laoban-debug
   description: A general debug utility that allows debugs to be turned on and off easily and thus left in the code
   tags:
-    - java
     - npm
   annotations:
     backstage.io/source-location: Unknown scm

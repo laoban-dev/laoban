@@ -5,7 +5,6 @@ metadata:
   name: laoban-filesops-node
   description: File operations (interfaces are in utils). This mainly decouples from the actual version of the files software and makes file operations easy to test
   tags:
-    - java
     - npm
   annotations:
     backstage.io/source-location: Unknown scm

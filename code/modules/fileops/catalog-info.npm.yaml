@@ -5,7 +5,6 @@ metadata:
   name: laoban-fileops
   description: "Utilities about files: not bound to any way of accessing files"
   tags:
-    - java
     - npm
   annotations:
     backstage.io/source-location: Unknown scm
