@@ -2,22 +2,22 @@
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
-  name: location.laoban/code/package.json
+  name: location.laoban-package-json
 spec:
   type: url
   targets:
-    - ./code/modules/cli/catalog-info.npm.yaml
-    - ./code/modules/comparefiles/catalog-info.npm.yaml
-    - ./code/modules/config/catalog-info.npm.yaml
-    - ./code/modules/debug/catalog-info.npm.yaml
-    - ./code/modules/fast-xml-parser/catalog-info.npm.yaml
-    - ./code/modules/fileops-node/catalog-info.npm.yaml
-    - ./code/modules/fileops/catalog-info.npm.yaml
-    - ./code/modules/generations/catalog-info.npm.yaml
-    - ./code/modules/laoban/catalog-info.npm.yaml
-    - ./code/modules/node/catalog-info.npm.yaml
-    - ./code/modules/trainingcourse/catalog-info.npm.yaml
-    - ./code/modules/utils/catalog-info.npm.yaml
-    - ./code/modules/validation/catalog-info.npm.yaml
-    - ./code/modules/variables/catalog-info.npm.yaml
-    - ./code/modules/xml/catalog-info.npm.yaml
+    - ./modules/cli/catalog-info.npm.yaml
+    - ./modules/comparefiles/catalog-info.npm.yaml
+    - ./modules/config/catalog-info.npm.yaml
+    - ./modules/debug/catalog-info.npm.yaml
+    - ./modules/fast-xml-parser/catalog-info.npm.yaml
+    - ./modules/fileops-node/catalog-info.npm.yaml
+    - ./modules/fileops/catalog-info.npm.yaml
+    - ./modules/generations/catalog-info.npm.yaml
+    - ./modules/laoban/catalog-info.npm.yaml
+    - ./modules/node/catalog-info.npm.yaml
+    - ./modules/trainingcourse/catalog-info.npm.yaml
+    - ./modules/utils/catalog-info.npm.yaml
+    - ./modules/validation/catalog-info.npm.yaml
+    - ./modules/variables/catalog-info.npm.yaml
+    - ./modules/xml/catalog-info.npm.yaml
