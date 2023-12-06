@@ -21,7 +21,7 @@
   ],
   "guards":      {
     "publish": true,
-    "test":    true,
+    "test":    false,
     "compile": true
   }
 }

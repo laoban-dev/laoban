@@ -97,7 +97,7 @@ function applyFunctions ( withoutEnd: string, context: string, ref: string, opti
 export function replaceVar ( context: string, ref: string, dic: any, options: DereferenceOptions | undefined ): string {
   const withoutEnd = options.variableDefn.removeStartEnd ( ref ).trim ()
   if ( withoutEnd === '' && options?.emptyTemplateReturnsSelf ) return ref
-  if (withoutEnd==='') return ''
+  if ( withoutEnd === '' ) return ''
   const first = firstSegment ( withoutEnd, '|' )
   function rawString () {
     if ( first.startsWith ( 'compose(' ) && first.endsWith ( ')' ) ) return composeVar ( context, dic, first, options, false )
@@ -108,6 +108,7 @@ export function replaceVar ( context: string, ref: string, dic: any, options: De
   const result = applyFunctions ( withoutEnd, context, ref, options, raw );
   if ( result === undefined ) {
     if ( options?.undefinedIs !== undefined ) return options.undefinedIs
+    if ( options?.throwError ) throw new Error ( `Undefined variable ${context} ${ref}` )
     return options.allowUndefined ? '' : `//LAOBAN-UPDATE-ERROR ${context}. ${ref} is undefined`;
   }
   return result

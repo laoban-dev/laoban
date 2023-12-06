@@ -259,8 +259,8 @@ describe ( "loop generations bug", () => {
       const utils: Thing = { name: "utils", children: [] };
       const expected = [
         [ "utils" ],
-        [ "optics", "events" ],
-        [ "audit", "eventFixturex" ],//duplicated bug. The eventFuture is dependent on audit, and should be in a later generation
+        [  "events","optics" ],
+        [ "audit", "eventFixture" ],//duplicated bug. The eventFuture is dependent on audit, and should be in a later generation
         [ "eventProcessor", "eventStore", "idValueStore" ],
         [ "api" ]
       ];

@@ -11,17 +11,12 @@
     "license": "MIT",
     "repository": "git@github.com:phil-rice/laoban.git"
   },
-  "scripts": {
-    "threethings": {
-      "description": "Executes three commands for tests",
-      "commands": [
-        "echo one",
-        "echo two",
-        "echo three"
-      ]
-    }
-  },
   "templates": {
-    "typescript": "templates/typescript"
+    "javascript": "@laoban@/templates/javascript",
+    "typescript": "@laoban@/templates/typescript_405",
+    "typescript_react": "@laoban@/templates/typescript_react"
+  },
+  "defaultEnv": {
+    "NPM_TOKEN": ""
   }
 }
