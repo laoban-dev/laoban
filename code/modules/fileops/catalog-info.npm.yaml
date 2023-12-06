@@ -3,7 +3,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: laoban-fileops
-  description: Utilities about files: not bound to any way of accessing files
+  description: "Utilities about files: not bound to any way of accessing files"
   tags:
     - java
     - npm
