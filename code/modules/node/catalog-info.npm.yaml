@@ -6,7 +6,7 @@ metadata:
   description: The parts of Laoban that are just about package.json
   tags:
     - java
-    - maven
+    - npm
   annotations:
     backstage.io/source-location: Unknown scm
 spec:

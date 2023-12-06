@@ -6,7 +6,7 @@ metadata:
   description: Laoban's configuration
   tags:
     - java
-    - maven
+    - npm
   annotations:
     backstage.io/source-location: Unknown scm
 spec:

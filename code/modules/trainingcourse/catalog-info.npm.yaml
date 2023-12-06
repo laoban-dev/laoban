@@ -6,7 +6,7 @@ metadata:
   description: A cli for manipulating git repositories to help in training
   tags:
     - java
-    - maven
+    - npm
   annotations:
     backstage.io/source-location: Unknown scm
 spec:

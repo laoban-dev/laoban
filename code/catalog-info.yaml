@@ -2,7 +2,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
-  name: location.@laoban/package.json
+  name: location.laoban/package.json
 spec:
   type: url
   targets:

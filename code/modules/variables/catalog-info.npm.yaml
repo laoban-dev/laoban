@@ -6,7 +6,7 @@ metadata:
   description: A library that can dereference variables in strings
   tags:
     - java
-    - maven
+    - npm
   annotations:
     backstage.io/source-location: Unknown scm
 spec:

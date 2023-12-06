@@ -6,7 +6,7 @@ metadata:
   description: A cli for managing projects that have many npm packages
   tags:
     - java
-    - maven
+    - npm
   annotations:
     backstage.io/source-location: Unknown scm
 spec:

@@ -6,7 +6,7 @@ metadata:
   description: Utilities about files: not bound to any way of accessing files
   tags:
     - java
-    - maven
+    - npm
   annotations:
     backstage.io/source-location: Unknown scm
 spec:

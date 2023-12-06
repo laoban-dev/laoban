@@ -6,7 +6,7 @@ metadata:
   description: Those miscellaneous utilities and types that every project needs
   tags:
     - java
-    - maven
+    - npm
   annotations:
     backstage.io/source-location: Unknown scm
 spec:
