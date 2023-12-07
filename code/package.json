@@ -1,5 +1,8 @@
 {
-  "name":       "laoban",
+  "name":       "laoban-root",
+  "backstage":  {
+    "owner": "phil-rice"
+  },
   "private":    true,
   "workspaces": ["modules/*"]
 }
