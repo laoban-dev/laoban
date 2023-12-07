@@ -6,8 +6,10 @@ metadata:
   description: A library for validating json
   tags:
     - npm
+
   annotations:
     backstage.io/source-location: Unknown scm
+
 spec:
   type: library
   owner: phil-rice

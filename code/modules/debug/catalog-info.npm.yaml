@@ -6,8 +6,10 @@ metadata:
   description: A general debug utility that allows debugs to be turned on and off easily and thus left in the code
   tags:
     - npm
+
   annotations:
     backstage.io/source-location: Unknown scm
+
 spec:
   type: library
   owner: phil-rice

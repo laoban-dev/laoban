@@ -10,6 +10,9 @@
       "fs-extra":  "^9.0.1",
       "commander": "^10.0.0"
     },
+    "backstage": {
+      "techdocs": "."
+    },
     "devDependencies": {
       "@types/fs-extra": "^9.0.5"
     },

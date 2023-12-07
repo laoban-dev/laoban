@@ -6,8 +6,10 @@ metadata:
   description: Those miscellaneous utilities and types that every project needs
   tags:
     - npm
+
   annotations:
     backstage.io/source-location: Unknown scm
+
 spec:
   type: library
   owner: phil-rice
