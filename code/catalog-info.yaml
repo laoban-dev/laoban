@@ -2,10 +2,11 @@
 apiVersion: backstage.io/v1alpha1
 kind: Location
 metadata:
-  name: location.laoban-package-json
+  name: location.laoban
 spec:
   type: url
   targets:
+    - ./catalog-info.npm.yaml
     - ./modules/cli/catalog-info.npm.yaml
     - ./modules/comparefiles/catalog-info.npm.yaml
     - ./modules/config/catalog-info.npm.yaml
