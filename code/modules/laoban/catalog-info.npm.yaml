@@ -8,7 +8,7 @@ metadata:
     - npm
 
   annotations:
-    backstage.io/source-location: Unknown scm
+    backstage.io/source-location: git@github.com:phil-rice/laoban.git
     backstage.io/techdocs-ref: dir:.
 spec:
   type: library
