@@ -1,7 +1,8 @@
 {
   "name":       "laoban-root",
   "backstage":  {
-    "owner": "phil-rice"
+    "owner": "phil-rice",
+    "scm":   "git@github.com:phil-rice/laoban.git"
   },
   "private":    true,
   "workspaces": ["modules/*"]
