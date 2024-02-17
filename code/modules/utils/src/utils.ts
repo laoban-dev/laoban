@@ -48,6 +48,10 @@ export function mapK<V, To> ( vs: V[], fn: ( v: V ) => Promise<To> ): Promise<To
   return Promise.all<To> ( vs.map ( fn ) )
 }
 
+export function mapAndRecoverK<V, To> ( vs: V[], fn: ( v: V ) => Promise<To>, recover: ( v: V, e: any ) => To ): Promise<To[]> {
+  return Promise.all<To> ( vs.map ( v => fn ( v ).catch ( e => recover ( v, e ) ) ) )
+}
+
 export function flatMapK<From, To> ( ts: From[], fn: ( from: From ) => Promise<To[]> ): Promise<To[]> {
   return mapK ( ts, fn ).then ( flatten )
 }

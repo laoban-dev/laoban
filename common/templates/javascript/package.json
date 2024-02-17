@@ -1,17 +1,17 @@
 {
-  "name":        "${packageDetails.name}",
-  "description": "${packageDetails.description}",
-  "version":     "${version}",
-  "license": "${properties.license}",
-  "repository": "${properties.repository}",
-  "files": [
+  "name":         "${packageDetails.name}",
+  "description":  "${packageDetails.description}",
+  "version":      "${version}",
+  "license":      "${properties.license}",
+  "repository":   "${properties.repository}",
+  "files":        [
     "dist/index.js",
     "dist/index.d.ts",
     "dist/src/"
   ],
-  "main": "index",
-  "scripts": {
-    "test": "jest --config jest.config.json",
+  "main":         "index",
+  "scripts":      {
+    "test":       "jest --config jest.config.json",
     "test:watch": "npm run test -- --watch"
   },
   "browserslist": {
@@ -20,7 +20,7 @@
       "last 1 firefox version",
       "last 1 safari version"
     ],
-    "production": [
+    "production":  [
       ">0.2%",
       "not dead",
       "not op_mini all"

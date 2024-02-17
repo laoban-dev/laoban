@@ -1,12 +1,11 @@
 //Copyright (c)2020-2023 Philip Rice. <br />Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the Software), to dealin the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:  <br />The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED AS
-import { NameAnd } from "@laoban/utils";
-import { ErrorsAnd, hasErrors, mapErrors } from "@laoban/utils";
+import { ErrorsAnd, hasErrors, NameAnd } from "@laoban/utils";
 
 
 export const shortCuts: NameAnd<string> = { laoban: 'https://raw.githubusercontent.com/phil-rice/laoban/master/common' };
 
 export interface CopyFileFns {
-  loadFileOrUrl: ( fileOrUrl: string ) => Promise<string>
+  loadFileOrUrl: ( fileOrUrl: string, headers?: NameAnd<string> ) => Promise<string>
   saveFile ( filename: string, text: string ): Promise<void>
 }
 export interface LogFileFns {
@@ -21,10 +20,16 @@ export const simplePath: Path = {
   relative ( from: string, to: string ): string {return to} //not relative at all!
 }
 
+export type FileAndType = {
+  name: string
+  isDirectory: () => boolean
+  isFile: () => boolean
+}
 export interface FileOps extends CopyFileFns, Path, LogFileFns {
   digest ( s: string ): string
   createDir: ( dir: string ) => Promise<string | undefined>
   listFiles ( root: string ): Promise<string[]>
+  listFileWithType ( root: string ): Promise<FileAndType[]>
   isDirectory ( filename: string ): Promise<boolean>
   isFile ( filename: string ): Promise<boolean>
   removeDirectory ( filename: string, recursive: boolean ): Promise<void>
@@ -90,6 +95,7 @@ export const emptyFileOps: FileOps = {
   loadFileOrUrl (): Promise<string> {return Promise.resolve ( "" );},
   digest (): string {return "";},
   listFiles (): Promise<string[]> {return Promise.resolve ( [] );},
+  listFileWithType (): Promise<FileAndType[]> {return Promise.resolve ( [] );},
   saveFile (): Promise<void> {return Promise.resolve ();},
   isDirectory (): Promise<boolean> {return Promise.resolve ( false )},
   isFile: (): Promise<boolean> => {return Promise.resolve ( false )},
@@ -97,6 +103,7 @@ export const emptyFileOps: FileOps = {
   removeFile: (): Promise<void> => Promise.resolve (),
   log: () => Promise.resolve ()
 }
+
 
 interface ShortCutFileOps extends FileOps {
   nameAndPrefix: NameAnd<string>
@@ -127,7 +134,7 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
     isDirectory: ( filename: string ) => fileOps.isDirectory ( processFileForShortCuts ( nameAndPrefix, filename ) ),
     removeFile: ( filename: string ) => fileOps.removeFile ( processFileForShortCuts ( nameAndPrefix, filename ) ),
     removeDirectory: ( filename: string, recursive: boolean ) => fileOps.removeDirectory ( processFileForShortCuts ( nameAndPrefix, filename ), recursive ),
-    loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFileForShortCuts ( nameAndPrefix, fileOrUrl ) ),
+    loadFileOrUrl: ( fileOrUrl, headers?: NameAnd<string> ) => fileOps.loadFileOrUrl ( processFileForShortCuts ( nameAndPrefix, fileOrUrl ), headers ),
     createDir: dir => fileOps.createDir ( processFileForShortCuts ( nameAndPrefix, dir ) ),
     saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFileForShortCuts ( nameAndPrefix, filename ), text ),
     log: ( filename: string, text: string ) => fileOps.log ( processFileForShortCuts ( nameAndPrefix, filename ), text ),
@@ -136,6 +143,40 @@ export function shortCutFileOps ( fileOps: FileOps, nameAndPrefix: NameAnd<strin
     relative: fileOps.relative
   }
 }
+
+export function withAuthFileOps ( fileOps: FileOps, token: string ): FileOps {
+  return {
+    ...fileOps,
+    loadFileOrUrl: ( url, headers?: NameAnd<string> ) => {
+      const newHeaders: NameAnd<string> = ({ ...headers || {}, Authorization: `Bearer ${token}` })
+      return fileOps.loadFileOrUrl ( url, newHeaders )
+    }
+  }
+}
+
+export function cleanUpProjectData(pd: any){
+  const result : any = {}
+  Object.entries(pd).forEach(([projName, projData]) =>{
+    const newProjData : any = {}
+    Object.entries(projData).forEach(([repoName, repoValue]) => {
+        newProjData[decodeURI(repoName)] = {...repoValue, project: decodeURI(repoValue.project), repo: decodeURI(repoValue.repo)}
+    })
+    result[decodeURI(projName)] = newProjData
+  })
+  return result
+}
+
+
+export function withHeaders ( fileOps: FileOps,extraHeaders: NameAnd<string> ): FileOps {
+  return {
+    ...fileOps,
+    loadFileOrUrl: ( url, headers?: NameAnd<string> ) => {
+      const newHeaders: NameAnd<string> = ({ ...headers || {}, ...extraHeaders})
+      return fileOps.loadFileOrUrl ( url, newHeaders )
+    }
+  }
+}
+
 
 export interface InDirectoryFileOps extends FileOps {
   directory: string
@@ -156,7 +197,7 @@ export function inDirectoryFileOps ( fileOps: FileOps, directory: string ): InDi
     isDirectory: ( filename: string ) => fileOps.isDirectory ( processFile ( filename ) ),
     removeFile: ( filename: string ) => fileOps.removeFile ( processFile ( filename ) ),
     removeDirectory: ( filename: string, recursive: boolean ) => fileOps.removeDirectory ( processFile ( filename ), recursive ),
-    loadFileOrUrl: ( fileOrUrl ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ) ),
+    loadFileOrUrl: ( fileOrUrl, headers?: NameAnd<string> ) => fileOps.loadFileOrUrl ( processFile ( fileOrUrl ), headers ),
     createDir: dir => fileOps.createDir ( processFile ( dir ) ),
     saveFile: ( filename: string, text: string ) => fileOps.saveFile ( processFile ( filename ), text ),
     log: ( filename: string, text: string ) => fileOps.log ( processFile ( filename ), text ),
