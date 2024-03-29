@@ -1,9 +1,19 @@
 {
-  "template":    "typescript",
-  "name":        "lib2",
+  "template": "typescript",
+  "name": "lib2",
   "description": "A test lib2",
-  "links":       [],
-  "details":     {
-    "publish": false
+  "packageJson": {
+    "dependencies": {},
+    "devDependencies": {},
+    "bins": {},
+    "keywords": []
+  },
+  "links": [
+    "lib1"
+  ],
+  "guards": {
+    "compile": true,
+    "publish": false,
+    "test": true
   }
 }
