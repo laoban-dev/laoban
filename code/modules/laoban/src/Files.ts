@@ -7,6 +7,7 @@ import { childDirs, FileOps, findMatchingK, parseJson } from "@laoban/fileops";
 import { findFileUp } from "@laoban/fileops";
 import { derefence, dollarsBracesVarDefn } from "@laoban/variables";
 import { HasLaobanDirectory, PackageDetails, PackageDetailsAndDirectory } from "@laoban/config";
+import { NameAnd } from "@laoban/utils";
 
 
 export let loabanConfigName = 'laoban.json'
@@ -32,10 +33,6 @@ export function findLaoban ( directory: string ): string {
   return dir
 }
 
-export async function findVersionNumber ( fileOps: FileOps, dir: string ): Promise<string> {
-  const packageJsonDir = await findFileUp ( dir, async s => fileOps.isFile ( fileOps.join ( packageJsonDir, 'package.json' ) ) )
-  return fileOps.loadFileOrUrl ( fileOps.join ( packageJsonDir, 'package.json' ) ).then ( s => JSON.parse ( s ).version )
-}
 
 interface PackageDetailOptions {
   all?: boolean,
@@ -43,20 +40,20 @@ interface PackageDetailOptions {
   packages?: string,
 }
 export class PackageDetailFiles {
-  static workOutPackageDetails ( fileOps: FileOps, hasRoot: HasLaobanDirectory & { debug: Debug }, options: PackageDetailOptions ): Promise<PackageDetailsAndDirectory[]> {
+  static workOutPackageDetails ( fileOps: FileOps, hasRoot: HasLaobanDirectory & { debug: Debug, variables: NameAnd<string> }, options: PackageDetailOptions ): Promise<PackageDetailsAndDirectory[]> {
     let p = hasRoot.debug ( 'projects' )
     let root = hasRoot.laobanDirectory
     // p.message(() =>['p.message'])
     function find () {
-      if ( options.packages ) return p.k ( () => `options.projects= [${options.packages}]`, () =>
-        PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, hasRoot,root ).then ( pd => pd.filter ( p => p.directory.match ( options.packages ) ) ) )
-      if ( options.all ) return p.k ( () => "options.allProjects", () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps,hasRoot, root ) );
-      if ( options.one ) return p.k ( () => "optionsOneProject", () => PackageDetailFiles.loadPackageDetails ( fileOps ,hasRoot) ( process.cwd () ).then ( x => [ x ] ) )
-      return PackageDetailFiles.loadPackageDetails ( fileOps ,hasRoot ) ( process.cwd () ).then ( pd => {
+      if ( options.packages ) return p.k ( () => `options.projects= [${options.packages}, dic =>${JSON.stringify ( hasRoot )}]`, () =>
+        PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, hasRoot, root ).then ( pd => pd.filter ( p => p.directory.match ( options.packages ) ) ) )
+      if ( options.all ) return p.k ( () => `options.allProjects dic =>${JSON.stringify ( hasRoot )}`, () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, hasRoot, root ) );
+      if ( options.one ) return p.k ( () => `optionsOneProject dic =>${JSON.stringify ( hasRoot )}`, () => PackageDetailFiles.loadPackageDetails ( fileOps, hasRoot ) ( process.cwd () ).then ( x => [ x ] ) )
+      return PackageDetailFiles.loadPackageDetails ( fileOps, hasRoot ) ( process.cwd () ).then ( pd => {
           p.message ( () => [ "using default project rules. Looking in ", process.cwd (), 'pd.details', pd.packageDetails ? pd.packageDetails.name : `No ${packageDetailsFile} found` ] )
           return pd.packageDetails ?
-            p.k ( () => 'Using project details from process.cwd()', () => PackageDetailFiles.loadPackageDetails ( fileOps  ,hasRoot) ( process.cwd () ) ).then ( x => [ x ] ) :
-            p.k ( () => 'Using project details under root', () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps ,hasRoot, root ) )
+            p.k ( () => `Using project details from process.cwd(), dic =>${JSON.stringify(hasRoot)}`, () => PackageDetailFiles.loadPackageDetails ( fileOps, hasRoot ) ( process.cwd () ) ).then ( x => [ x ] ) :
+            p.k ( () => `Using project details under root, dic =>${JSON.stringify(hasRoot)}`, () => PackageDetailFiles.findAndLoadPackageDetailsFromChildren ( fileOps, hasRoot, root ) )
         }
       )
     }
@@ -67,7 +64,7 @@ export class PackageDetailFiles {
   }
 
 
-  static async findAndLoadPackageDetailsFromChildren ( fileOps: FileOps,dic: any, root: string ): Promise<PackageDetailsAndDirectory[]> {
+  static async findAndLoadPackageDetailsFromChildren ( fileOps: FileOps, dic: any, root: string ): Promise<PackageDetailsAndDirectory[]> {
     let dirs = await this.findPackageDirectories ( fileOps ) ( root );
     return Promise.all ( dirs.map ( this.loadPackageDetails ( fileOps, dic ) ) )
   }
@@ -76,7 +73,7 @@ export class PackageDetailFiles {
     try {
       let rootAndFileName = fileOps.join ( directory, packageDetailsFile );
       const asString = await fileOps.loadFileOrUrl ( rootAndFileName );
-      const derefed = derefence(`loadPackageDetails from ${directory}`, dic, asString, {variableDefn: dollarsBracesVarDefn})
+      const derefed = derefence ( `loadPackageDetails from ${directory}`, dic, asString, { variableDefn: dollarsBracesVarDefn, emptyTemplateReturnsSelf: true } )
       try {
         let packageDetails = asString && parseJson<PackageDetails> ( `File ${rootAndFileName}` ) ( derefed );
         return { directory, packageDetails }

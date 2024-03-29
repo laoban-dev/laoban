@@ -1,7 +1,7 @@
 {
   "name": "@laoban/node",
   "description": "The parts of Laoban that are just about package.json",
-  "version": "1.4.40",
+  "version": "1.4.49",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,7 +17,7 @@
     ]
   },
   "dependencies": {
-    "@laoban/fileops": "1.4.40"
+    "@laoban/fileops": "1.4.49"
   },
   "devDependencies": {
     "typescript": "^4.0.5",

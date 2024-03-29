@@ -8,14 +8,14 @@
   ],
   "packageJson": {
     "dependencies":    {
-      "node-fetch": "2.6.9",
+      "node-fetch":          "2.6.7",
       "@runbook/node-fetch": "0.2.5"
     },
     "devDependencies": {
-      "@types/node-fetch": "2.6.2"
+      "@types/node-fetch": "2.6.11"
     }
   },
-  "guards":     {
+  "guards":      {
     "publish": true,
     "test":    true,
     "compile": true

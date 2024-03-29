@@ -4,12 +4,9 @@ import { makeStandardCli } from "./src/laoban";
 
 import { makeCache } from "./src/configProcessor";
 import { fileOpsNode } from "@laoban/filesops-node";
-import { findVersionNumber } from "./src/Files";
 import { LaobanAdmin } from "./src/admin/laoban-admin";
-import { chainPostProcessFn, CopyFileOptions, defaultPostProcessors, shortCutFileOps, shortCuts } from "@laoban/fileops";
+import { shortCutFileOps, shortCuts } from "@laoban/fileops";
 import { setOriginalEnv } from "./src/originalEnv";
-import { postProcessForPackageJson } from "@laoban/node";
-import { includeAndTransformFile } from "./src/update";
 import { fastXmlParser } from "@laoban/fast-xml-parser";
 
 
