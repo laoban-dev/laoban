@@ -1,7 +1,7 @@
 {
   "name": "@laoban/config",
   "description": "Laoban's configuration",
-  "version": "1.4.49",
+  "version": "1.4.55",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,7 +17,7 @@
     ]
   },
   "dependencies": {
-    "@laoban/utils": "1.4.49"
+    "@laoban/utils": "1.4.55"
   },
   "devDependencies": {
     "typescript": "^4.0.5",

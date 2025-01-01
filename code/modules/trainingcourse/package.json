@@ -1,7 +1,7 @@
 {
   "name": "@runbook/trainingcourse",
   "description": "A cli for manipulating git repositories to help in training",
-  "version": "1.4.49",
+  "version": "1.4.55",
   "main": "dist/index",
   "types": "dist/index",
   "bin": {
@@ -20,7 +20,7 @@
     ]
   },
   "dependencies": {
-    "@laoban/fileops": "1.4.49"
+    "@laoban/fileops": "1.4.55"
   },
   "devDependencies": {
     "typescript": "^4.0.5",
