@@ -1,7 +1,7 @@
 {
   "name": "@laoban/xml",
   "description": "",
-  "version": "1.4.55",
+  "version": "1.4.57",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {

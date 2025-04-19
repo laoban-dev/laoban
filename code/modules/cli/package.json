@@ -1,7 +1,7 @@
 {
   "name": "@laoban/cli",
   "description": "methods for creating a cli",
-  "version": "1.4.55",
+  "version": "1.4.57",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,8 +17,8 @@
     ]
   },
   "dependencies": {
-    "@laoban/utils": "1.4.55",
-    "@laoban/config": "1.4.55"
+    "@laoban/utils": "1.4.57",
+    "@laoban/config": "1.4.57"
   },
   "devDependencies": {
     "typescript": "^4.0.5",
