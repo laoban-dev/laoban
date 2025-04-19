@@ -56,20 +56,6 @@ export function calcAllGenerationRecurse ( scds: ScriptInContextAndDirectory[], 
   if ( newGen.length == 0 ) return start;
   return calcAllGenerationRecurse ( scds, { existing: [ ...start.existing, ...newGen ], generations: [ ...start.generations, newGen ] } )
 }
-export function prettyPrintGenerations ( hasStream: HasOutputStream, scds: ScriptInContextAndDirectory[], gen: GenerationCalc ) {
-  let log = output ( hasStream )
-  gen.generations.forEach ( ( g, i ) => {
-    log ( `Generation ${i}` )
-    log ( '  ' + g.join ( ", " ) )
-  } )
-  let missing = new Set ( scds.map ( p => p.detailsAndDirectory.packageDetails.name ) )
-  gen.generations.forEach ( g => g.forEach ( n => missing.delete ( n ) ) )
-  if ( missing.size > 0 ) {
-    log ( '' )
-    log ( "Missing: can't put in a generation" )
-    log ( '  ' + [ ...missing ].sort ().join ( "," ) )
-  }
-}
 
 function getChildrenRecurse ( pds: ScriptInContextAndDirectory[], existing: string[] ) {
   let thisTree = {}
@@ -86,4 +72,19 @@ function getChildrenRecurse ( pds: ScriptInContextAndDirectory[], existing: stri
       delete thisTree[ k ]
   }
   return [ ...Object.keys ( thisTree ) ].sort ()
+}
+
+export function prettyPrintGenerations ( hasStream: HasOutputStream, scds: ScriptInContextAndDirectory[], gen: GenerationCalc ) {
+  let log = output ( hasStream )
+  gen.generations.forEach ( ( g, i ) => {
+    log ( `Generation ${i}` )
+    log ( '  ' + g.join ( ", " ) )
+  } )
+  let missing = new Set ( scds.map ( p => p.detailsAndDirectory.packageDetails.name ) )
+  gen.generations.forEach ( g => g.forEach ( n => missing.delete ( n ) ) )
+  if ( missing.size > 0 ) {
+    log ( '' )
+    log ( "Missing: can't put in a generation" )
+    log ( '  ' + [ ...missing ].sort ().join ( "," ) )
+  }
 }

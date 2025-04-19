@@ -28,7 +28,7 @@ const foldIntoAcc = ( graph: NameViewOfGraph ) => ( acc: TopologicalSortAcc, nam
   if ( existing !== undefined ) return acc
   const result = { ...acc }
   function fold ( parent: string, gen: number ) {
-    const parentGeneration = acc[ parent ]
+    const parentGeneration = result[ parent ]
     if ( parentGeneration === undefined || gen > parentGeneration ) { // if the child hasn't been visited, or if the existing generation is not big enough
       result[ parent ] = gen
     const children = safeArray ( graph[ parent ] );
