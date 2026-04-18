@@ -1,0 +1,21 @@
+{
+  "template": "typescript",
+  "name": "@laoban/records",
+  "description": "Types and utilities for working with records (objects with string keys)",
+  "links": [
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

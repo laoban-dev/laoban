@@ -1,0 +1,21 @@
+{
+  "template": "typescript",
+  "name": "@laoban/observability",
+  "description": "Types and utilities for working with logs, metrics, debug and traces",
+  "links": [
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

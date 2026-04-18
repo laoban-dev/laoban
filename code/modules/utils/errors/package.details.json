@@ -1,0 +1,23 @@
+{
+  "template": "typescript",
+  "name": "@laoban/errors",
+  "description": "Error monad",
+  "links": [
+    "@laoban/records",
+    "@laoban/safe"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

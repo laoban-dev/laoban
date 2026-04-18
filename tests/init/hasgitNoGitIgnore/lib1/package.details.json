@@ -1,0 +1,17 @@
+{
+  "template": "typescript",
+  "name": "lib1",
+  "description": "A test lib1",
+  "packageJson": {
+    "dependencies": {},
+    "devDependencies": {},
+    "bins": {},
+    "keywords": []
+  },
+  "links": [],
+  "guards": {
+    "compile": true,
+    "publish": false,
+    "test": true
+  }
+}

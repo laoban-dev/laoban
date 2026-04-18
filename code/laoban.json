@@ -1,38 +1,41 @@
 {
   "packageManager": "yarn",
-  "parents":        [
-    "../common/laoban.json/core.laoban.json",
-    "../common/laoban.json/javascript.laoban.json",
-    "../common/laoban.json/typescript.laoban.json",
-    "../common/laoban.json/typescript.publish.laoban.json",
-    "../common/laoban.json/ls.laoban.json",
-    "../common/laoban.json/react.laoban.json"
+  "parents": [
+    "@laoban@/laoban.json/core.laoban.json",
+    "@laoban@/laoban.json/javascript.laoban.json",
+    "@laoban@/laoban.json/typescript.laoban.json",
+    "@laoban@/laoban.json/typescript.publish.laoban.json",
+    "@laoban@/laoban.json/react.laoban.json"
   ],
-  "properties":     {
-    "license":    "MIT",
+  "templates": {
+    "typescript": "templates/typescript"
+  },
+  "properties": {
+    "license": "MIT",
     "repository": "git@github.com:phil-rice/laoban.git"
   },
-  "scripts":        {
+  "scripts": {
     "threethings": {
       "description": "Executes three commands for tests",
-      "commands":    [
+      "commands": [
         "echo one",
         "echo two",
         "echo three"
       ]
-    }, "mvn":      {
-      "description":  "mvn use -- and then specify the maven arguments e.g. laoban mvn -- clean install",
+    },
+    "mvn": {
+      "description": "mvn use -- and then specify the maven arguments e.g. laoban mvn -- clean install",
       "inLinksOrder": true,
       "passThruArgs": "the arguments that are passed through to maven",
-      "commands":     [
+      "commands": [
         {
-          "name":    "mvn",
+          "name": "mvn",
           "command": "echo mvn ${passThruArgs}"
         }
       ]
     }
   },
-  "defaultEnv":     {
+  "defaultEnv": {
     "TEST_DEFAULT": "test"
   }
 }

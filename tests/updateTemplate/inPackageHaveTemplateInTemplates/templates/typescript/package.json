@@ -1,7 +1,7 @@
 {
   "devDependencies": {
-    "typescript": "^newtypescriptversion",
-    "original": "voriginal",
-    "jest": "^26.6.0"
+    "typescript": "^6.0.0",
+    "original":   "voriginal",
+    "jest":       "^26.6.3"
   }
 }

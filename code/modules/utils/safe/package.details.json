@@ -1,0 +1,22 @@
+{
+  "template": "typescript",
+  "name": "@laoban/safe",
+  "description": "returns safe versions of objects and arrays that are frozen",
+  "links": [
+    "@laoban/records"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

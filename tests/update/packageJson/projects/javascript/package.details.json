@@ -1,0 +1,26 @@
+{
+  "template":    "javascript",
+  "name":        "js",
+  "description": "A sample javascript project",
+  "packageJson": {
+    "bin":             {
+      "laoban": "dist/index.js"
+    },
+    "dependencies":    {
+      "fs-extra":  "^9.0.1",
+      "commander": "^6.2.0"
+    },
+    "devDependencies": {
+      "@types/fs-extra": "^9.0.5"
+    },
+    "keywords":        [
+      "monorepo",
+      "devops"
+    ]
+  },
+  "links":       [],
+  "guards":      {
+    "mvn":     true,
+    "publish": true
+  }
+}

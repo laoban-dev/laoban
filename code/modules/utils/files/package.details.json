@@ -1,0 +1,21 @@
+{
+  "template": "typescript",
+  "name": "@laoban/files",
+  "description": "Interfaces and utilities for working with files. This does not implement the interfaces",
+  "links": [
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}
