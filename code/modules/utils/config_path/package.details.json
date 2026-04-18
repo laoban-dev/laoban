@@ -1,0 +1,25 @@
+{
+  "template": "typescript",
+  "name": "@laoban/config_path",
+  "description": "TypeScript utilities for validating dot-path strings in configuration objects. Allows any structurally valid path to prevent typos while authoring config, even when optional properties or union shortcut types are used.",
+  "links": [
+  ],
+  "packageJson": {
+    "files": [
+      "build/"
+    ],
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+      "start": "react-scripts start"
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": false,
+    "react": false
+  }
+}

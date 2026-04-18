@@ -1,0 +1,28 @@
+{
+  "template": "typescript",
+  "name": "@laoban/template",
+  "description": "core templating support for rendering derived files from generic context data with path lookup, transforms, and structured errors/warnings",
+  "links": [
+    "@laoban/config_path",
+    "@laoban/errors",
+    "@laoban/records"
+  ],
+  "packageJson": {
+    "files": [
+      "build/"
+    ],
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+      "start": "react-scripts start"
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": false,
+    "react": false
+  }
+}
