@@ -1,0 +1,26 @@
+{
+  "template": "typescript",
+  "name": "@laoban/laoban_config",
+  "description": "The types, loader and validation for laoban.json.",
+  "links": [
+    "@laoban/errors",
+    "@laoban/files",
+    "@laoban/merge",
+    "@laoban/observability",
+    "@laoban/safe"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": false,
+    "react": false
+  }
+}

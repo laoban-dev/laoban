@@ -1,0 +1,21 @@
+{
+  "template": "typescript",
+  "name": "@laoban/merge",
+  "description": "how we merge javascript objects, arrays and primitives.",
+  "links": [
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

@@ -1,7 +1,7 @@
 {
   "name": "@laoban/config_path",
   "description": "TypeScript utilities for validating dot-path strings in configuration objects. Allows any structurally valid path to prevent typos while authoring config, even when optional properties or union shortcut types are used.",
-  "version": "1.4.59",
+  "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {

@@ -1,7 +1,7 @@
 {
   "name": "@laoban/files",
   "description": "Interfaces and utilities for working with files. This does not implement the interfaces",
-  "version": "1.4.59",
+  "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,6 +17,8 @@
     ]
   },
   "dependencies": {
+    "@laoban/errors": "2.0.0",
+    "@laoban/observability": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {

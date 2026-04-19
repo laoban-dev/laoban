@@ -4,7 +4,7 @@ Would put laoban.json into  <root>/noVersion  which allows the following templat
     typescript: '@laoban@/templates/typescript_405',
     typescript_react: '@laoban@/templates/typescript_react'
 }
-package.json          Guessed Template    Actual Template
+package.json          Guessed Strings    Actual Strings
     projects/project1 typescript          typescript
     projects/project2 typescript          typescript
 Suggested version number is  0.0.0

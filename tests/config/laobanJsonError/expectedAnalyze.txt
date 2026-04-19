@@ -5,7 +5,7 @@ Would put laoban.json into  <root>/laobanJsonError  which allows the following t
     typescript: '@laoban@/templates/typescript_405',
     typescript_react: '@laoban@/templates/typescript_react'
 }
-package.json          Guessed Template    Actual Template
+package.json          Guessed Strings    Actual Strings
     projects/project1 typescript          typescript
     projects/project2 typescript          typescript
 Suggested version number is  someversion

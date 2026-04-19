@@ -1,0 +1,23 @@
+{
+  "template": "typescript",
+  "name": "@laoban/observability_node",
+  "description": "node implementation of types and utilities for working with logs, metrics, debug and traces defined in @laoban/observability",
+  "links": [
+    "@laoban/observability",
+    "@laoban/safe"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

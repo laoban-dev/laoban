@@ -1,330 +1,107 @@
 # @laoban/template
 
-Generic template rendering for derived files, with configurable variable syntax, path-based lookup, transforms, and structured warnings/errors.
+Generic template rendering for derived files.
 
-## Why this exists
+This package renders template text against a supplied dictionary using:
 
-Laoban generates derived files such as:
+- configurable variable syntax
+- dotted-path lookup with escaping for dotted keys
+- explicit template functions
+- explicit observability
+- structured `ErrorsOr` results with warnings
 
-- `package.json`
-- `tsconfig.json`
-- `jest.config.json`
-- `.env`
-- `pom.xml`
+The design goal is that the simple is simple, and the complex is possible.
 
-Those files need values drawn from structured data such as workspace configuration, module metadata, and generation-time variables.
+Most callers should be able to render a template using defaults. More advanced callers can override variable syntax, missing-value behaviour, functions, and observability explicitly.
 
-`@laoban/template` is the small core that turns:
+## Quick start
 
-```text
-{
-  "name": "${packageDetails.name}",
-  "version": "${version}"
-}
-```
-
-into rendered output using a supplied context object.
-
-This package is intentionally small. It is not a file loader, not a project discovery mechanism, and not a general workflow engine. It is just the rendering core.
-
-## Design goals
-
-The design is shaped by a few simple rules:
-
-- keep the common case simple
-- allow richer behaviour without turning the engine into a mess
-- keep token recognition separate from expression resolution
-- keep the engine generic over context shape
-- report structured warnings and errors instead of relying only on exceptions
-- make delimiter syntax configurable
-
-## Main idea
-
-The engine renders template text against a generic context.
-
-A template contains variable markers such as:
+A template such as:
 
 ```text
-Hello ${packageDetails.name}
+Hello ${packageDetails.name|toUpperCase}
 ```
 
-The engine:
+or, when a key itself contains a dot:
 
-- finds variable markers in the text
-- extracts the expression inside them
-- resolves that expression against the supplied context
-- optionally applies functions/transforms
-- returns rendered text plus any warnings/errors
-
-## Public types
-
-```ts
-export type Template<T> = {
-    raw: string
-}
-
-export type VariableDefn = {
-    regex: RegExp
-    removeStartEnd: (raw: string) => string
-}
-
-export type RenderOptions<T> = {
-    onMissing?: 'error' | 'warning' | 'empty' | 'keep'
-    functions?: Record<string, TemplateFunction<T>>
-    variableDefn?: VariableDefn
-}
-
-export type TemplateFunction<T> = (args: {
-    value: unknown
-    context: T
-    params: string[]
-}) => unknown
-
-export type TemplateIssue = {
-    path: string[]
-    message: string
-    severity: 'warning' | 'error'
-    expression?: string
-}
-
-export type RenderResult = {
-    text: string
-    warnings: TemplateIssue[]
-    errors: TemplateIssue[]
-}
-
-export type TemplateEngine =
-    <T>(template: Template<T> | string, context: T, options?: RenderOptions<T>) => RenderResult
+```text
+Hello ${'package.json'.name|toUpperCase}
 ```
 
-## Why the context is generic
+can be rendered against a dictionary object.
 
-The template engine must not assume one fixed Laoban context shape.
-
-Different callers may want different context objects:
-
-- full workspace + module metadata
-- a small context for one generated file
-- an enriched context with temporary values
-- a context created for nested rendering
-
-So the engine is generic in `T`:
+If you are happy with the defaults, the simplest call is:
 
 ```ts
-export type TemplateEngine =
-    <T>(template: Template<T> | string, context: T, options?: RenderOptions<T>) => RenderResult
+const dictionary = {
+  packageDetails: {
+    name: "@laoban/template"
+  }
+};
+
+const result = renderTemplate(
+  "Hello ${packageDetails.name|toUpperCase}",
+  dictionary
+);
 ```
 
-This keeps the engine reusable and avoids baking Laoban-specific structure into the core.
+Expected rendered value:
 
-## Variable syntax is configurable
-
-One of the useful ideas in the old implementation was that variable syntax should not be hard-coded.
-
-Different formats and sub-languages can want different delimiters. The engine therefore separates:
-
-- how variables are recognised in text
-- what the contents of those variables mean
-
-That is the purpose of `VariableDefn`.
-
-Example definitions:
-
-```ts
-export const dollarsBracesVarDefn: VariableDefn = {
-    regex: /(\$\{[^}]*\})/g,
-    removeStartEnd: s => s.slice(2, -1)
-}
-
-export const mustachesVarDefn: VariableDefn = {
-    regex: /(\{\{.*?\}\})/g,
-    removeStartEnd: s => s.slice(2, -2)
-}
-
-export const colonPrefixedVarDefn: VariableDefn = {
-    regex: /(:[a-zA-Z0-9._]+)/g,
-    removeStartEnd: s => s.slice(1)
-}
-
-export const doubleAngleVarDefn: VariableDefn = {
-    regex: /(<<[^>]*>>)/g,
-    removeStartEnd: s => s.slice(2, -2)
-}
+```text
+Hello @LAOBAN/TEMPLATE
 ```
 
-Typical default is `${...}`, but the engine should not depend on that being the only valid syntax.
+## How to call it
 
-## Expressions
+Call the engine with:
 
-The first intended expression form is a dotted path into the supplied context.
+- a template string or `Template`
+- a dictionary object
+- an optional config object
 
-Examples:
-
-- `${version}`
-- `${packageDetails.name}`
-- `${packageDetails.guards.compile}`
-- `${workspace.properties.react}`
-
-These are resolved at runtime from the template text.
-
-## Missing values
-
-Missing values need explicit behaviour.
-
-The engine supports:
+Conceptually:
 
 ```ts
-onMissing?: 'error' | 'warning' | 'empty' | 'keep'
+const result = renderTemplate(template, dictionary, config)
 ```
 
-Meaning:
+If no config is provided, the renderer uses sensible defaults:
 
-- `error`  
-  record an error for missing values
+- `variableDefn`: `dollarsBracesVarDefn`
+- `onMissing`: `"error"`
+- `functions`: the built-in default function set (created internally)
+- `observability`: `nullObservability`
 
-- `warning`  
-  record a warning but continue
+`renderTemplate` wires in built-in functions internally when `config.functions` is omitted.
+The package root exports `renderTemplate` and types; `defaultTemplateFns` is not exported from `index.ts`.
 
-- `empty`  
-  replace missing values with an empty string
+This is the simple case.
 
-- `keep`  
-  leave the original template marker in place
+If you need more control, pass an explicit config object. That is the complex-is-possible case.
 
-This is much clearer than mixing exceptions, magic strings, and several boolean flags.
-
-## Structured issues
-
-Rendering returns both text and issues:
+Example:
 
 ```ts
-export type RenderResult = {
-    text: string
-    warnings: TemplateIssue[]
-    errors: TemplateIssue[]
-}
+const config = {
+  variableDefn: dollarsBracesVarDefn,
+  onMissing: "keep" as const,
+  functions,
+  observability
+};
+
+const result = renderTemplate(template, dictionary, config);
 ```
 
-This is deliberate.
+Rendering should not depend on hidden global function registries, ambient logging, or hard-wired metrics.
 
-Template failures are usually configuration or data problems, not necessarily programmer bugs. The engine should therefore provide structured diagnostics that higher-level Laoban code can report cleanly.
+## Dictionary
 
-A `TemplateIssue` includes:
+The dictionary is generic.
 
-- `path` for structured location/context
-- `message` for human-readable explanation
-- `severity`
-- `expression` when relevant
-
-This matches the wider Laoban direction of explicit, composable error handling.
-
-## Functions / transforms
-
-Simple substitution is not always enough. Templates often need some lightweight value transformation.
-
-That is why `RenderOptions` allows caller-supplied functions:
+That means you can render using whatever shape makes sense for the caller:
 
 ```ts
-functions?: Record<string, TemplateFunction<T>>
-```
-
-A function receives:
-
-- the current value
-- the whole context
-- any parsed parameters
-
-```ts
-export type TemplateFunction<T> = (args: {
-    value: unknown
-    context: T
-    params: string[]
-}) => unknown
-```
-
-This keeps the engine small while still making custom behaviour possible.
-
-The core package provides the mechanism, not necessarily a large built-in function library.
-
-## Why the engine is a function type
-
-The engine has one main responsibility: render.
-
-So the public abstraction is a function, not an object with methods:
-
-```ts
-export type TemplateEngine =
-    <T>(template: Template<T> | string, context: T, options?: RenderOptions<T>) => RenderResult
-```
-
-That keeps the surface area small and makes the intent obvious.
-
-It also fits the wider Laoban preference for small composable pieces rather than large service objects.
-
-## Expected internal structure
-
-Even though the public API is tiny, the implementation should still separate concerns.
-
-A likely internal breakdown is:
-
-### Token extraction
-
-Find occurrences of the current `VariableDefn` inside text.
-
-### Expression extraction
-
-Strip delimiters and get the raw expression text.
-
-### Expression parsing
-
-Interpret the raw expression, initially as:
-
-- a dotted path
-- optionally followed by transforms
-
-### Resolution
-
-Resolve the path against the supplied context.
-
-### Rendering
-
-Convert the resolved value into output text.
-
-### Issue accumulation
-
-Collect warnings and errors into the final `RenderResult`.
-
-The previous implementation became hard to evolve because too many of these responsibilities were mixed together.
-
-## Intended initial scope
-
-The first version should stay small.
-
-### In scope
-
-- configurable variable delimiters
-- dotted path lookup
-- configurable missing-value behaviour
-- structured warnings/errors
-- optional transform mechanism
-
-### Not initially in scope unless clearly needed
-
-- many bespoke mini-languages
-- multiple overlapping command syntaxes
-- control flow embedded everywhere
-- deep template DSL behaviour
-- file loading/writing
-- workspace/module discovery
-
-The aim is to avoid reproducing the accidental complexity of the old code.
-
-## Example
-
-Context:
-
-```ts
-const context = {
+const dictionary = {
   version: "1.2.3",
   packageDetails: {
     name: "@laoban/template",
@@ -332,51 +109,282 @@ const context = {
       compile: true
     }
   }
-}
+};
 ```
 
-Template:
+Example template:
 
-```ts
-const template = `{
+```text
+{
   "name": "${packageDetails.name}",
   "version": "${version}"
-}`
-```
-
-Conceptual result:
-
-```ts
-{
-  text: `{
-  "name": "@laoban/template",
-  "version": "1.2.3"
-}`,
-  warnings: [],
-  errors: []
 }
 ```
 
-Missing value example:
+## Variable syntax
+
+Variable syntax is configurable through `variableDefn`.
+
+Example `${...}` syntax:
 
 ```ts
-const template = `compile=${packageDetails.guards.compile}
-publish=${packageDetails.guards.publish}`
+const dollarsBracesVarDefn = {
+  regex: /(\$\{[^}]*\})/g,
+  removeStartEnd: (raw: string) => raw.slice(2, -1)
+};
 ```
 
-With `onMissing: 'warning'`, rendering can continue while still reporting that `packageDetails.guards.publish` was not present.
+Example `{{...}}` syntax:
 
-## Summary
+```ts
+const mustachesVarDefn = {
+  regex: /(\{\{.*?\}\})/g,
+  removeStartEnd: (raw: string) => raw.slice(2, -2)
+};
+```
 
-`@laoban/template` is the small generic rendering core for Laoban derived files.
+Example `:name` syntax:
 
-It provides:
+```ts
+const colonPrefixedVarDefn = {
+  regex: /(:[a-zA-Z0-9._]+)/g,
+  removeStartEnd: (raw: string) => raw.slice(1)
+};
+```
 
-- generic rendering over any context type
-- configurable variable syntax
-- path-based expression resolution
-- optional transforms
-- structured warnings and errors
-- explicit missing-value behaviour
+Use the syntax that best matches the target file format and the risk of delimiter clashes.
 
-It is intentionally narrow in scope so that the rest of Laoban can build on it without being constrained by a large or messy templating subsystem.
+## Expressions
+
+The basic expression form is a dotted path into the supplied dictionary.
+
+Examples:
+
+```text
+${version}
+${packageDetails.name}
+${packageDetails.guards.compile}
+${workspace.properties.react}
+```
+
+If a key itself contains a dot, quote that segment:
+
+```text
+${'package.json'.name}
+```
+
+Functions are applied with pipe syntax:
+
+```text
+${packageDetails.name|toUpperCase}
+${packageDetails.name|toLowerCase}
+${description|default(no description)}
+```
+
+The meaning is:
+
+1. resolve the path
+2. apply the functions from left to right
+3. render the final value
+
+If path resolution fails, `onMissing` is applied before function execution.
+That means `${missing.value|default(no description)}` will not call `default(...)`.
+
+## Functions
+
+Template functions are passed explicitly in config. If no functions are supplied, the renderer uses a default set of common string functions.
+
+The default functions are:
+
+- `urlEncode` — URL-encodes the current value
+- `lastSegment` — returns the last segment of a slash-separated path
+- `forwardSlashToDot` — replaces `/` with `.`
+- `toLowerCase` — converts to lower case
+- `toUpperCase` — converts to upper case
+- `toTitleCase` — converts words to title case
+- `toFirstUpper` — converts the first character to upper case
+- `toSnakeCase` — converts camelCase to snake_case
+- `toPackage` — replaces `.` with `/`
+- `default` — returns the current value unless it is `undefined` or `null`, otherwise returns the first parameter
+
+Example usage:
+
+```text
+${packageDetails.name|toUpperCase}
+${module.path|forwardSlashToDot}
+${description|default(no description)}
+```
+
+A template function receives:
+
+- the current value
+- the whole dictionary
+- function parameters
+- the full expression
+- the function name
+- the explicit config object
+
+Conceptually:
+
+```ts
+type TemplateFn<T> = (args: {
+  value: unknown
+  dictionary: T
+  params: string[]
+  expression: string
+  functionName: string
+  config: TemplateConfig<T>
+}) => ErrorsOr<unknown, TemplateIssue>
+```
+
+### Custom functions
+
+You can replace or extend the defaults with your own function map.
+
+Example:
+
+```ts
+import { value } from "@laoban/errors";
+
+const functions = {
+  trim: ({ value: v }) => value(String(v).trim())
+};
+```
+
+## Observability
+
+Observability is passed explicitly in config.
+
+Both the renderer and the template functions receive observability explicitly. This allows logging, debug output, count metrics, and duration metrics to be aligned with template execution.
+
+Example:
+
+```ts
+const config = {
+  variableDefn: dollarsBracesVarDefn,
+  onMissing: "error" as const,
+  functions,
+  observability
+};
+```
+
+Typical uses include:
+
+- debug logging for parse, resolve, and function steps
+- count metrics for missing values and function calls
+- duration metrics for render time and expensive functions
+
+## Missing values
+
+Missing values are controlled by `onMissing`.
+
+Supported modes:
+
+- `error`
+- `warning`
+- `empty`
+- `keep`
+
+### `error`
+
+Record a structured error for the missing value.
+
+### `warning`
+
+Preserve the issue as a warning and continue.
+
+### `empty`
+
+Replace the missing value with an empty string.
+
+### `keep`
+
+Leave the original marker in the output.
+
+Example:
+
+```text
+compile=${packageDetails.guards.compile}
+publish=${packageDetails.guards.publish}
+```
+
+If `publish` is missing:
+
+- `error` returns an error result
+- `warning` returns a value with warnings
+- `empty` renders `publish=`
+- `keep` renders `publish=${packageDetails.guards.publish}`
+
+## Result model
+
+Rendering returns `ErrorsOr<string, TemplateIssue>`.
+
+That means:
+
+- successful rendering returns a string value
+- successful rendering may also carry warnings
+- expected rendering failures return structured issues
+- failures are not represented primarily by exceptions
+
+## Full example
+
+This example does not rely on any defaults.
+
+```ts
+import { value } from "@laoban/errors";
+
+const dollarsBracesVarDefn = {
+  regex: /(\$\{[^}]*\})/g,
+  removeStartEnd: (raw: string) => raw.slice(2, -1)
+};
+
+const functions = {
+  toUpperCase: ({ value: v }) => value(String(v).toUpperCase()),
+  default: ({ value: v, params }) =>
+    value(v === undefined || v === null ? params[0] : v)
+};
+
+const dictionary = {
+  version: "1.2.3",
+  "package.json": {
+    name: "@laoban/template"
+  }
+};
+
+const config = {
+  variableDefn: dollarsBracesVarDefn,
+  onMissing: "error" as const,
+  functions,
+  observability
+};
+
+const template = `{
+  "name": "${'package.json'.name|toUpperCase}",
+  "version": "${version}",
+  "description": "${description|default(no description)}"
+}`;
+
+const result = renderTemplate(template, dictionary, config);
+```
+
+Expected rendered output:
+
+```json
+{
+  "name": "@LAOBAN/TEMPLATE",
+  "version": "1.2.3",
+  "description": "no description"
+}
+```
+
+## Appendix: why it is shaped like this
+
+This package is deliberately explicit.
+
+- The dictionary is generic so callers are not forced into one fixed top-level shape.
+- Variable syntax is configurable because different target file formats want different delimiters.
+- Functions are passed explicitly rather than coming from a hidden registry.
+- Observability is passed explicitly so logging, debug output, and metrics align with template execution.
+- Rendering returns `ErrorsOr` so expected failures and warnings remain structured and composable.
+
+The guiding idea is that the simple is simple, and the complex is possible.

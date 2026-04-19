@@ -1,7 +1,7 @@
 {
   "name": "ts",
   "description": "A sample typescript project",
-  "version": "start.version",
+  "version": "1.2.8",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -19,7 +19,7 @@
   "dependencies": {
     "something": "^9.0.1",
     "else": "^6.2.0",
-    "js": "start.version"
+    "js": "1.2.8"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.5",

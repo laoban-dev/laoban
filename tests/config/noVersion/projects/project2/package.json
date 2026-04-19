@@ -1,7 +1,7 @@
 {
   "name": "proj2",
   "description": "A simple implementation of lens using type script",
-  "version": "0.0.0",
+  "version": "1.2.8",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {

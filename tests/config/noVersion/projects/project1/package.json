@@ -1,7 +1,7 @@
 {
   "name": "proj1",
   "description": "A sample project",
-  "version": "0.0.0",
+  "version": "1.2.8",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {

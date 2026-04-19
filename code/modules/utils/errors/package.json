@@ -1,7 +1,7 @@
 {
   "name": "@laoban/errors",
   "description": "Error monad",
-  "version": "1.4.59",
+  "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
@@ -17,8 +17,8 @@
     ]
   },
   "dependencies": {
-    "@laoban/records": "1.4.59",
-    "@laoban/safe": "1.4.59",
+    "@laoban/records": "2.0.0",
+    "@laoban/safe": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {

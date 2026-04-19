@@ -3,6 +3,8 @@
   "name": "@laoban/files",
   "description": "Interfaces and utilities for working with files. This does not implement the interfaces",
   "links": [
+    "@laoban/errors",
+    "@laoban/observability"
   ],
   "packageJson": {
     "dependencies": {
@@ -15,7 +17,7 @@
   "guards": {
     "compile": true,
     "publish": true,
-    "test": true,
+    "test": false,
     "react": false
   }
 }

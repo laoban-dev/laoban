@@ -1,0 +1,24 @@
+{
+  "template": "typescript",
+  "name": "@laoban/files_node",
+  "description": "Implementation of @laoban/files interfaces for node",
+  "links": [
+    "@laoban/errors",
+
+    "@laoban/files"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": false,
+    "react": false
+  }
+}

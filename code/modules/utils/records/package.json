@@ -1,7 +1,7 @@
 {
   "name": "@laoban/records",
   "description": "Types and utilities for working with records (objects with string keys)",
-  "version": "1.4.59",
+  "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
   "browserslist": {
