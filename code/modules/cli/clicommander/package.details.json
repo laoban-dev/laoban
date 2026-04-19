@@ -1,5 +1,5 @@
 {
-  "template": "typescript",
+  "template": "node",
   "name": "@laoban/commander",
   "description": "The adapter for commander.js, used by the cli module to define commands and options in a type safe way.",
   "links": [

@@ -8,9 +8,11 @@
     "@laoban@/laoban.json/react.laoban.json"
   ],
   "templates": {
-    "typescript": "templates/typescript"
+    "typescript": "templates/typescript",
+    "node": "templates/node"
   },
   "properties": {
+    "types_node": "^25.6.0",
     "license": "MIT",
     "repository": "git@github.com:phil-rice/laoban.git"
   },

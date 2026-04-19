@@ -1,5 +1,5 @@
 {
-  "template": "typescript",
+  "template": "node",
   "name": "@laoban/files_node",
   "description": "Implementation of @laoban/files interfaces for node",
   "links": [

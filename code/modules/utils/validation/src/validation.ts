@@ -252,8 +252,9 @@ export function mustBeType<T, DebugContext extends string = ValidatorDebugContex
 
 export const ifPresent = <T>(
     validator: Validator<T>
-): Validator<T | undefined | null> =>
-    (context: ValidationContext, observability) => (input: T | undefined | null): ErrorsOr<T | undefined | null, ValidationIssue> =>
+): Validator<T | undefined > =>
+    (context: ValidationContext, observability) =>
+        (input: T | undefined ): ErrorsOr<T | undefined , ValidationIssue> =>
         input === undefined || input === null
             ? value(input)
             : validator(context, observability)(input);

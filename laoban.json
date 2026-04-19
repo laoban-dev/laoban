@@ -9,7 +9,8 @@
   ],
   "properties": {
     "license": "MIT",
-    "repository": "git@github.com:phil-rice/laoban.git"
+    "repository": "git@github.com:phil-rice/laoban.git",
+
   },
   "templates": {
     "javascript": "@laoban@/templates/javascript",

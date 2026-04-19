@@ -1,16 +1,13 @@
-import path from "path";
-import { access } from "fs/promises";
-
 import { ErrorsOr, errors, value } from "@laoban/errors";
 import {
     defaultFindContainingDirectoryConfig,
     DirectoryName,
-    FileExistsFn,
     Filename,
     FindContainingDirectoryConfig,
+    FindContainingDirectoryDefaults,
     FileOpIssue,
     FileOpIssueKind,
-    JoinPathFn,
+    makeFileOpIssue,
 } from "./fileops";
 
 const makeIssue = (
@@ -19,117 +16,45 @@ const makeIssue = (
     context: FileOpIssue["context"],
     cause?: unknown,
     code?: string,
-): FileOpIssue => ({
-    kind,
-    message,
-    context: cause === undefined ? context : { ...context, cause },
-    ...(code === undefined ? {} : { code }),
-    severity: "error",
-});
+): FileOpIssue => makeFileOpIssue(kind, message, context, cause, code);
 
-export const defaultFindContainingDirectoryFileExists: FileExistsFn = async (
-    filename,
-    config,
-) => {
-    const observability = config?.observability;
-    const start = Date.now();
+export const findContainingDirectory =
+    (defaults: FindContainingDirectoryDefaults) =>
+        async (
+            start: DirectoryName,
+            markerFileName: Filename,
+            config: FindContainingDirectoryConfig = {},
+        ): Promise<ErrorsOr<DirectoryName, FileOpIssue>> => {
+            const fullConfig = defaultFindContainingDirectoryConfig(defaults, config);
 
-    try {
-        await access(filename);
-        observability?.countMetric("fileops.findContainingDirectory.fileExists.success");
-        observability?.durationMetric(
-            "fileops.findContainingDirectory.fileExists.ms",
-            Date.now() - start,
-        );
-        return value(true);
-    } catch (cause) {
-        const code =
-            typeof cause === "object" &&
-            cause !== null &&
-            "code" in cause &&
-            typeof (cause as { code?: unknown }).code === "string"
-                ? (cause as { code: string }).code
-                : undefined;
+            const {
+                fileExists,
+                pathOps: { dirname, resolvePath, joinPath },
+            } = fullConfig.infrastructure;
 
-        observability?.durationMetric(
-            "fileops.findContainingDirectory.fileExists.ms",
-            Date.now() - start,
-        );
+            let current = resolvePath(start);
+            let previous = "";
 
-        if (code === "ENOENT") {
-            observability?.countMetric("fileops.findContainingDirectory.fileExists.notFound");
-            return value(false);
-        }
+            while (current !== previous) {
+                const candidate = joinPath(current, markerFileName);
+                const exists = await fileExists(candidate, fullConfig);
 
-        observability?.countMetric("fileops.findContainingDirectory.fileExists.failure");
-        return errors(
-            makeIssue(
-                code === "EACCES" || code === "EPERM" ? "notReadable" : "io",
-                `Failed checking existence of [${filename}]`,
-                {
-                    operation: "findContainingDirectory",
-                    filename,
-                },
-                cause,
-                code,
-            ),
-        );
-    }
-};
+                if ("errors" in exists) return exists;
+                if (exists.value) return value(current);
 
-export const defaultFindContainingDirectoryDirname = (
-    directory: DirectoryName,
-): DirectoryName => path.dirname(directory);
+                previous = current;
+                current = dirname(current);
+            }
 
-export const defaultFindContainingDirectoryResolvePath = (
-    somePath: string,
-): DirectoryName => path.resolve(somePath);
-
-export const defaultFindContainingDirectoryJoinPath: JoinPathFn = (
-    directory: DirectoryName,
-    filename: Filename,
-): string => path.join(directory, filename);
-
-export const findContainingDirectory = async (
-    start: DirectoryName,
-    markerFileName: Filename,
-    config: FindContainingDirectoryConfig = {},
-): Promise<ErrorsOr<DirectoryName, FileOpIssue>> => {
-    const fullConfig = defaultFindContainingDirectoryConfig(
-        {
-            fileExists: defaultFindContainingDirectoryFileExists,
-            dirname: defaultFindContainingDirectoryDirname,
-            resolvePath: defaultFindContainingDirectoryResolvePath,
-            joinPath: defaultFindContainingDirectoryJoinPath,
-        },
-        config,
-    );
-
-    const { fileExists, dirname, resolvePath, joinPath } = fullConfig;
-
-    let current = resolvePath(start);
-    let previous = "";
-
-    while (current !== previous) {
-        const candidate = joinPath(current, markerFileName);
-        const exists = await fileExists(candidate, fullConfig);
-
-        if ("errors" in exists) return exists;
-        if (exists.value) return value(current);
-
-        previous = current;
-        current = dirname(current);
-    }
-
-    return errors(
-        makeIssue(
-            "notFound",
-            `Could not find containing directory for marker file [${markerFileName}] starting at [${start}]`,
-            {
-                operation: "findContainingDirectory",
-                start,
-                markerFileName,
-            },
-        ),
-    );
-};
+            return errors(
+                makeIssue(
+                    "notFound",
+                    `Could not find containing directory for marker file [${markerFileName}] starting at [${start}]`,
+                    {
+                        operation: "findContainingDirectory",
+                        start,
+                        markerFileName,
+                    },
+                ),
+            );
+        };

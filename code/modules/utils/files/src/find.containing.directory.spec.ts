@@ -4,7 +4,11 @@ import {
     steppingTimeService,
 } from "@laoban/observability";
 
-import { FileDebugContext, FindContainingDirectoryConfig } from "./fileops";
+import {
+    FileDebugContext,
+    FindContainingDirectoryConfig,
+    FindContainingDirectoryDefaults,
+} from "./fileops";
 import { findContainingDirectory } from "./find.containing.directory";
 
 describe("findContainingDirectory", () => {
@@ -19,7 +23,9 @@ describe("findContainingDirectory", () => {
     );
 
     let recorded: ReturnType<typeof recordingObservability<FileDebugContext>>;
+    let defaults: FindContainingDirectoryDefaults;
     let config: FindContainingDirectoryConfig;
+    let finder: ReturnType<typeof findContainingDirectory>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -28,19 +34,29 @@ describe("findContainingDirectory", () => {
             "test-correlation-id",
             steppingTimeService(1000, 5),
         );
+
+        defaults = {
+            infrastructure: {
+                fileExists,
+                pathOps: {
+                    dirname,
+                    resolvePath,
+                    joinPath,
+                },
+            },
+        };
+
         config = {
             observability: recorded.observability,
-            fileExists,
-            dirname,
-            resolvePath,
-            joinPath,
         };
+
+        finder = findContainingDirectory(defaults);
     });
 
     it("returns the starting directory when the marker file exists there", async () => {
         fileExists.mockResolvedValue(value(true));
 
-        const result = await findContainingDirectory(
+        const result = await finder(
             "/workspace/project",
             "laoban.json",
             config,
@@ -63,7 +79,7 @@ describe("findContainingDirectory", () => {
             .mockResolvedValueOnce(value(false))
             .mockResolvedValueOnce(value(true));
 
-        const result = await findContainingDirectory(
+        const result = await finder(
             "/workspace/project/packages/a",
             "laoban.json",
             config,
@@ -94,7 +110,7 @@ describe("findContainingDirectory", () => {
     it("returns notFound when it reaches the root without finding the marker", async () => {
         fileExists.mockResolvedValue(value(false));
 
-        const result = await findContainingDirectory(
+        const result = await finder(
             "/workspace/project",
             "laoban.json",
             config,
@@ -132,7 +148,7 @@ describe("findContainingDirectory", () => {
         });
         fileExists.mockResolvedValue(existsError);
 
-        const result = await findContainingDirectory(
+        const result = await finder(
             "/workspace/project",
             "laoban.json",
             config,
@@ -145,7 +161,40 @@ describe("findContainingDirectory", () => {
         expect(recorded.logs).toEqual([]);
     });
 
-    it("uses custom path functions when provided", async () => {
+    it("uses defaults path functions when config does not provide infrastructure", async () => {
+        fileExists
+            .mockResolvedValueOnce(value(false))
+            .mockResolvedValueOnce(value(false))
+            .mockResolvedValueOnce(value(true));
+
+        const result = await finder(
+            "/workspace/project/packages/a",
+            "laoban.json",
+            {
+                observability: recorded.observability,
+            },
+        );
+
+        expect(resolvePath).toHaveBeenCalledWith("/workspace/project/packages/a");
+        expect(fileExists).toHaveBeenNthCalledWith(
+            1,
+            "/workspace/project/packages/a/laoban.json",
+            expect.any(Object),
+        );
+        expect(fileExists).toHaveBeenNthCalledWith(
+            2,
+            "/workspace/project/packages/laoban.json",
+            expect.any(Object),
+        );
+        expect(fileExists).toHaveBeenNthCalledWith(
+            3,
+            "/workspace/project/laoban.json",
+            expect.any(Object),
+        );
+        expect(result).toEqual(value("/workspace/project"));
+    });
+
+    it("allows config infrastructure to override defaults", async () => {
         const customDirname = jest.fn((dir: string) =>
             dir === "c" ? "b" : dir === "b" ? "a" : dir,
         );
@@ -157,12 +206,16 @@ describe("findContainingDirectory", () => {
             .mockResolvedValueOnce(value(false))
             .mockResolvedValueOnce(value(true));
 
-        const result = await findContainingDirectory("ignored", "marker.txt", {
+        const result = await finder("ignored", "marker.txt", {
             observability: recorded.observability,
-            fileExists,
-            dirname: customDirname,
-            resolvePath: customResolvePath,
-            joinPath: customJoinPath,
+            infrastructure: {
+                fileExists,
+                pathOps: {
+                    dirname: customDirname,
+                    resolvePath: customResolvePath,
+                    joinPath: customJoinPath,
+                },
+            },
         });
 
         expect(customResolvePath).toHaveBeenCalledWith("ignored");
@@ -170,10 +223,9 @@ describe("findContainingDirectory", () => {
         expect(fileExists).toHaveBeenNthCalledWith(2, "b/marker.txt", expect.any(Object));
         expect(fileExists).toHaveBeenNthCalledWith(3, "a/marker.txt", expect.any(Object));
         expect(result).toEqual(value("a"));
-        expect(recorded.counts).toEqual([]);
-        expect(recorded.durations).toEqual([]);
-        expect(recorded.debug).toEqual([]);
-        expect(recorded.logs).toEqual([]);
+        expect(dirname).not.toHaveBeenCalled();
+        expect(resolvePath).not.toHaveBeenCalled();
+        expect(joinPath).not.toHaveBeenCalled();
     });
 
     it("records only what fileExists records", async () => {
@@ -189,7 +241,7 @@ describe("findContainingDirectory", () => {
                 return value(true);
             });
 
-        const result = await findContainingDirectory(
+        const result = await finder(
             "/workspace/project/packages",
             "laoban.json",
             config,
@@ -229,7 +281,7 @@ describe("findContainingDirectory", () => {
                 return value(true);
             });
 
-        const result = await findContainingDirectory(
+        const result = await finder(
             "/workspace/project/packages",
             "laoban.json",
             config,
@@ -245,7 +297,7 @@ describe("findContainingDirectory", () => {
     it("records no observability when fileExists records nothing", async () => {
         fileExists.mockResolvedValue(value(true));
 
-        await findContainingDirectory(
+        await finder(
             "/workspace/project",
             "laoban.json",
             config,

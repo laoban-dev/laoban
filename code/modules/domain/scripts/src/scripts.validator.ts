@@ -1,5 +1,5 @@
 import {
-    composeOr,
+    composeOr, ifPresent,
     mustBeArrayOf,
     mustBeBoolean,
     mustBeBooleanIfPresent,
@@ -59,7 +59,7 @@ export const validateRawLaobanCommandObject: Validator<RawLaobanCommandObject> =
         {
             name: mustBeStringIfPresent,
             command: mustBeString,
-            guard: nullableValidator(validateScriptGuard),
+            guard: ifPresent(validateScriptGuard),
             directory: mustBeStringIfPresent,
             status: mustBeBooleanIfPresent,
         },
@@ -89,7 +89,7 @@ export const validateRawLaobanScript: Validator<RawLaobanScript> =
         {
             description: mustBeString,
             commands: mustBeArrayOf(validateRawLaobanCommand),
-            guard: nullableValidator(validateScriptGuard),
+            guard: ifPresent(validateScriptGuard),
             osGuard: mustBeStringIfPresent,
             inLinksOrder: mustBeBooleanIfPresent,
             showShell: mustBeBooleanIfPresent,
@@ -111,7 +111,7 @@ export const validateLaobanCommand: Validator<LaobanCommand> =
         {
             name: mustBeStringIfPresent,
             command: mustBeString,
-            guard: nullableValidator(validateScriptGuard),
+            guard: ifPresent(validateScriptGuard),
             directory: mustBeStringIfPresent,
             status: mustBeBoolean,
         },
@@ -133,7 +133,7 @@ export const validateLaobanScript: Validator<LaobanScript> =
         {
             description: mustBeString,
             commands: mustBeArrayOf(validateLaobanCommand),
-            guard: nullableValidator(validateScriptGuard),
+            guard: ifPresent(validateScriptGuard),
             osGuard: mustBeStringIfPresent,
             inLinksOrder: mustBeBoolean,
             showShell: mustBeBoolean,

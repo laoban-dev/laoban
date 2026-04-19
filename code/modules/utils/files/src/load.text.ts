@@ -1,14 +1,11 @@
-import { promises as fs } from "fs";
-
-import { ErrorsOr, errors, value } from "@laoban/errors";
+import {ErrorsOr, errors} from "@laoban/errors";
 import {
     defaultLoadTextConfig,
     FileOpIssue,
-    FileOpIssueKind,
-    FileOrUrl,
-    LoadTextConfig,
+    FileOpIssueKind, LoadFileFn,
+    LoadTextConfig, LoadTextDefaults,
     LoadTextSource,
-    RequiredLoadTextConfig,
+    makeFileOpIssue,
 } from "./fileops";
 
 const isHttpUrl = (source: string): boolean =>
@@ -20,130 +17,19 @@ const makeIssue = (
     context: FileOpIssue["context"],
     cause?: unknown,
     code?: string,
-): FileOpIssue => ({
-    kind,
-    message,
-    context: cause === undefined ? context : { ...context, cause },
-    ...(code === undefined ? {} : { code }),
-    severity: "error",
-});
+): FileOpIssue => makeFileOpIssue(kind, message, context, cause, code);
 
-const classifyFileError = (
-    filename: FileOrUrl,
-    cause: unknown,
-): FileOpIssue => {
-    const code =
-        typeof cause === "object" &&
-        cause !== null &&
-        "code" in cause &&
-        typeof (cause as { code?: unknown }).code === "string"
-            ? (cause as { code: string }).code
-            : undefined;
-
-    const kind: FileOpIssueKind =
-        code === "ENOENT"
-            ? "notFound"
-            : code === "EACCES" || code === "EPERM"
-                ? "notReadable"
-                : "io";
-
-    return makeIssue(
-        kind,
-        `Failed to read file [${filename}]`,
-        {
-            operation: "load",
-            filename,
-        },
-        cause,
-        code,
-    );
-};
-
-export const defaultLoadFile = async (
-    filename: FileOrUrl,
-    config?: LoadTextConfig,
-): Promise<ErrorsOr<string, FileOpIssue>> => {
-    const { observability } = defaultLoadTextConfig(
-        { loadFile: defaultLoadFile, loadUrl: defaultLoadUrl },
-        config,
-    );
-    const start = Date.now();
-
-    try {
-        const text = await fs.readFile(filename, "utf8");
-        observability.countMetric("fileops.load.file.success");
-        observability.durationMetric("fileops.load.file.ms", Date.now() - start);
-        return value(text);
-    } catch (cause) {
-        observability.countMetric("fileops.load.file.failure");
-        observability.durationMetric("fileops.load.file.ms", Date.now() - start);
-        return errors(classifyFileError(filename, cause));
-    }
-};
-
-export const defaultLoadUrl = async (
-    url: string,
-    config?: LoadTextConfig,
-): Promise<ErrorsOr<string, FileOpIssue>> => {
-    const { observability } = defaultLoadTextConfig(
-        { loadFile: defaultLoadFile, loadUrl: defaultLoadUrl },
-        config,
-    );
-    const start = Date.now();
-
-    try {
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            observability.countMetric("fileops.load.url.failure");
-            observability.durationMetric("fileops.load.url.ms", Date.now() - start);
-            return errors(
-                makeIssue(
-                    "notReadable",
-                    `Failed to load URL [${url}]. Status ${response.status}`,
-                    {
-                        operation: "load",
-                        filename: url,
-                    },
-                ),
-            );
-        }
-
-        const text = await response.text();
-        observability.countMetric("fileops.load.url.success");
-        observability.durationMetric("fileops.load.url.ms", Date.now() - start);
-        return value(text);
-    } catch (cause) {
-        observability.countMetric("fileops.load.url.failure");
-        observability.durationMetric("fileops.load.url.ms", Date.now() - start);
-        return errors(
-            makeIssue(
-                "invalidUrl",
-                `Failed to load URL [${url}]`,
-                {
-                    operation: "load",
-                    filename: url,
-                },
-                cause,
-            ),
-        );
-    }
-};
-
-export const loadFromMarker = async (
+export const loadFromMarker = (defaults: LoadTextDefaults) => async (
     source: LoadTextSource,
-    config?: LoadTextConfig,
+    config: LoadTextConfig,
 ): Promise<ErrorsOr<string, FileOpIssue>> => {
-    const fullConfig = defaultLoadTextConfig(
-        { loadFile: defaultLoadFile, loadUrl: defaultLoadUrl },
-        config,
-    );
-    const { markers } = fullConfig;
+    const fullConfig = defaultLoadTextConfig(defaults, config,);
+    const {markers} = fullConfig;
 
     for (const [marker, replacement] of Object.entries(markers)) {
         if (source.startsWith(marker)) {
             const resolvedSource = `${replacement}${source.slice(marker.length)}`;
-            return loadText(resolvedSource, fullConfig);
+            return loadText(defaults)(resolvedSource, fullConfig);
         }
     }
 
@@ -159,17 +45,14 @@ export const loadFromMarker = async (
     );
 };
 
-export const loadText = async (
+export const loadText = (defaults: LoadTextDefaults): LoadFileFn => async (
     source: LoadTextSource,
     config?: LoadTextConfig,
 ): Promise<ErrorsOr<string, FileOpIssue>> => {
-    const fullConfig: RequiredLoadTextConfig = defaultLoadTextConfig(
-        { loadFile: defaultLoadFile, loadUrl: defaultLoadUrl },
-        config,
-    );
-    const { loadFile, loadUrl } = fullConfig;
+    const fullConfig = defaultLoadTextConfig(defaults, config,);
+    const {loadFile, loadUrl} = fullConfig.infrastructure;
 
     if (isHttpUrl(source)) return loadUrl(source, fullConfig);
-    if (source.startsWith("@")) return loadFromMarker(source, fullConfig);
+    if (source.startsWith("@")) return loadFromMarker(defaults)(source, fullConfig);
     return loadFile(source, fullConfig);
 };

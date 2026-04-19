@@ -341,15 +341,18 @@ async function invokeCliCommand<Ctx, DebugContext extends string>(
         observability.durationMetric('cli.command.duration', duration);
         observability.durationMetric(`${metricBase}.duration`, duration);
 
-        const errorResult = makeErrorFromException(e, {
-            kind: 'cli.commander',
-            message: `Failed to execute command ${commandPath.join(' ')}`,
-            context: {
-                commandPath,
-                correlationId: observability.correlationId,
-                debugContext,
-            },
-        });
+        const errorResult = makeErrorFromException(
+            `Failed to execute command ${commandPath.join(" ")}`,
+            {
+                kind: "cli.commander",
+                message: `Failed to execute command ${commandPath.join(" ")}`,
+                context: {
+                    commandPath,
+                    correlationId: observability.correlationId,
+                    debugContext,
+                },
+            }
+        );
 
         observability.debug(debugContext, 'error', 'cli.command.failed', {
             commandPath,

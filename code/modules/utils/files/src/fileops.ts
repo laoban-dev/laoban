@@ -17,18 +17,20 @@ export type FileOpIssueKind =
     | "io"
     | "unexpected";
 
+export type FileOpIssueContext = Readonly<{
+    operation: FileDebugContext;
+    filename?: FileOrUrl;
+    resolvedFilename?: string;
+    marker?: string;
+    start?: DirectoryName;
+    markerFileName?: Filename;
+    cause?: unknown;
+}>;
+
 export type FileOpIssue = Readonly<{
     kind: FileOpIssueKind;
     message: string;
-    context?: Readonly<{
-        operation: FileDebugContext;
-        filename?: FileOrUrl;
-        resolvedFilename?: string;
-        marker?: string;
-        start?: DirectoryName;
-        markerFileName?: Filename;
-        cause?: unknown;
-    }>;
+    context?: FileOpIssueContext;
     code?: string;
     severity?: "error" | "warning";
 }>;
@@ -48,34 +50,36 @@ export type FileExistsFn = (
     config?: FindContainingDirectoryConfig
 ) => Promise<ErrorsOr<boolean, FileOpIssue>>;
 
-export type DirnameFn = (
-    directory: DirectoryName
-) => DirectoryName;
+export interface PathOps {
+    dirname(directory: DirectoryName): DirectoryName;
+    resolvePath(path: string): DirectoryName;
+    joinPath(directory: DirectoryName, filename: Filename): FileOrUrl;
+}
 
-export type ResolvePathFn = (
-    path: string
-) => DirectoryName;
-export type JoinPathFn = (
-    directory: DirectoryName,
-    filename: Filename
-) => FileOrUrl;
+export interface LoadTextInfrastructure {
+    loadFile: LoadFileFn;
+    loadUrl: LoadUrlFn;
+}
+
+export interface FindContainingDirectoryInfrastructure {
+    fileExists: FileExistsFn;
+    pathOps: PathOps;
+}
+
 export type LoadTextConfig = Readonly<{
     observability?: Observability<FileDebugContext>;
     markers?: Readonly<Record<string, string>>;
-    loadFile?: LoadFileFn;
-    loadUrl?: LoadUrlFn;
+    infrastructure?: LoadTextInfrastructure;
 }>;
 
 export type RequiredLoadTextConfig = Readonly<{
     observability: Observability<FileDebugContext>;
     markers: Readonly<Record<string, string>>;
-    loadFile: LoadFileFn;
-    loadUrl: LoadUrlFn;
+    infrastructure: LoadTextInfrastructure;
 }>;
 
 export type LoadTextDefaults = Readonly<{
-    loadFile: LoadFileFn;
-    loadUrl: LoadUrlFn;
+    infrastructure: LoadTextInfrastructure;
 }>;
 
 export const defaultLoadTextConfig = (
@@ -84,31 +88,21 @@ export const defaultLoadTextConfig = (
 ): RequiredLoadTextConfig => ({
     observability: config.observability ?? nullObservability<FileDebugContext>(),
     markers: config.markers ?? {},
-    loadFile: config.loadFile ?? defaults.loadFile,
-    loadUrl: config.loadUrl ?? defaults.loadUrl,
+    infrastructure: config.infrastructure ?? defaults.infrastructure,
 });
 
 export type FindContainingDirectoryConfig = Readonly<{
     observability?: Observability<FileDebugContext>;
-    fileExists?: FileExistsFn;
-    dirname?: DirnameFn;
-    resolvePath?: ResolvePathFn;
-    joinPath?: JoinPathFn;
+    infrastructure?: FindContainingDirectoryInfrastructure;
 }>;
 
 export type RequiredFindContainingDirectoryConfig = Readonly<{
     observability: Observability<FileDebugContext>;
-    fileExists: FileExistsFn;
-    dirname: DirnameFn;
-    resolvePath: ResolvePathFn;
-    joinPath: JoinPathFn;
+    infrastructure: FindContainingDirectoryInfrastructure;
 }>;
 
 export type FindContainingDirectoryDefaults = Readonly<{
-    fileExists: FileExistsFn;
-    dirname: DirnameFn;
-    resolvePath: ResolvePathFn;
-    joinPath: JoinPathFn;
+    infrastructure: FindContainingDirectoryInfrastructure;
 }>;
 
 export const defaultFindContainingDirectoryConfig = (
@@ -116,10 +110,7 @@ export const defaultFindContainingDirectoryConfig = (
     config: FindContainingDirectoryConfig = {}
 ): RequiredFindContainingDirectoryConfig => ({
     observability: config.observability ?? nullObservability<FileDebugContext>(),
-    fileExists: config.fileExists ?? defaults.fileExists,
-    dirname: config.dirname ?? defaults.dirname,
-    resolvePath: config.resolvePath ?? defaults.resolvePath,
-    joinPath: config.joinPath ?? defaults.joinPath,
+    infrastructure: config.infrastructure ?? defaults.infrastructure,
 });
 
 /**
@@ -153,15 +144,20 @@ export interface FileOps {
 export const makeFileOpIssue = (
     kind: FileOpIssueKind,
     message: string,
-    context?: FileOpIssue["context"],
+    context?: FileOpIssueContext,
     cause?: unknown,
     code?: string,
 ): FileOpIssue => ({
     kind,
     message,
-    ...(context === undefined && cause === undefined ? {} : {
-        context: cause === undefined ? context : { ...context, cause },
-    }),
+    ...(context === undefined
+        ? {}
+        : {
+            context:
+                cause === undefined
+                    ? context
+                    : { ...context, cause },
+        }),
     ...(code === undefined ? {} : { code }),
     severity: "error",
 });

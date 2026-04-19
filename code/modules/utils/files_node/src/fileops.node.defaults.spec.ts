@@ -1,250 +1,342 @@
-import { recordingObservability, steppingTimeService } from "@laoban/observability";
+import * as path from "path";
+import { access, readFile } from "fs/promises";
 
+import { errors, value } from "@laoban/errors";
 import {
-    nodeDirname,
-    nodeFileExists,
-    nodeJoinPath,
-    nodeLoadFile,
-    nodeLoadUrl,
-    nodeResolvePath,
-} from "./fileops.node.defaults";
+    recordingObservability,
+    steppingTimeService,
+} from "@laoban/observability";
 
-describe("file.node.defaults", () => {
-    describe("nodeLoadFile", () => {
-        it("loads an existing file and records success observability", async () => {
-            const recorded = recordingObservability<"load" | "findContainingDirectory">(
-                {},
-                "test-correlation-id",
-                steppingTimeService(1000, 5),
-            );
+import { nodeFileOpsDefaults } from "./fileops.node.defaults";
+import {FileDebugContext} from "@laoban/files";
 
-            const result = await nodeLoadFile(__filename, {
-                observability: recorded.observability,
-            });
+jest.mock("fs/promises", () => ({
+    access: jest.fn(),
+    readFile: jest.fn(),
+}));
 
-            expect("value" in result).toBe(true);
-            if ("value" in result) {
-                expect(result.value).toContain('describe("file.node.defaults"');
-            }
+describe("nodeFileOpsDefaults", () => {
+    let recorded: ReturnType<typeof recordingObservability<FileDebugContext>>;
 
-            expect(recorded.counts).toEqual(["fileops.load.file.success"]);
-            expect(recorded.durations).toEqual([
-                { name: "fileops.load.file.ms", durationMs: 5 },
-            ]);
-            expect(recorded.debug).toEqual([]);
-            expect(recorded.logs).toEqual([]);
+    beforeEach(() => {
+        jest.clearAllMocks();
+        recorded = recordingObservability<FileDebugContext>(
+            {},
+            "test-correlation-id",
+            steppingTimeService(1000, 5),
+        );
+    });
+
+    describe("findContainingDirectory.infrastructure.pathOps", () => {
+        const { pathOps } = nodeFileOpsDefaults.findContainingDirectory.infrastructure;
+
+        it("dirname delegates to node path.dirname", () => {
+            expect(pathOps.dirname("/a/b/c")).toEqual(path.dirname("/a/b/c"));
         });
 
-        it("returns notFound for a missing file and records failure observability", async () => {
-            const recorded = recordingObservability<"load" | "findContainingDirectory">(
-                {},
-                "test-correlation-id",
-                steppingTimeService(1000, 5),
-            );
-            const missing = `${__filename}.missing`;
+        it("resolvePath delegates to node path.resolve", () => {
+            expect(pathOps.resolvePath("./a/b")).toEqual(path.resolve("./a/b"));
+        });
 
-            const result = await nodeLoadFile(missing, {
-                observability: recorded.observability,
-            });
-
-            expect("errors" in result).toBe(true);
-            if ("errors" in result) {
-                expect(result.errors).toEqual([
-                    {
-                        kind: "notFound",
-                        message: `Failed to read file [${missing}]`,
-                        severity: "error",
-                        context: {
-                            operation: "load",
-                            filename: missing,
-                            cause: expect.anything(),
-                        },
-                        code: "ENOENT",
-                    },
-                ]);
-            }
-
-            expect(recorded.counts).toEqual(["fileops.load.file.failure"]);
-            expect(recorded.durations).toEqual([
-                { name: "fileops.load.file.ms", durationMs: 5 },
-            ]);
-            expect(recorded.debug).toEqual([]);
-            expect(recorded.logs).toEqual([]);
+        it("joinPath delegates to node path.join", () => {
+            expect(pathOps.joinPath("/a/b", "file.txt")).toEqual(path.join("/a/b", "file.txt"));
         });
     });
 
-    describe("nodeLoadUrl", () => {
-        const originalFetch = global.fetch;
+    describe("findContainingDirectory.infrastructure.fileExists", () => {
+        const fileExists = nodeFileOpsDefaults.findContainingDirectory.infrastructure.fileExists;
 
-        afterEach(() => {
-            global.fetch = originalFetch;
-            jest.restoreAllMocks();
-        });
+        it("returns true when access succeeds", async () => {
+            (access as jest.Mock).mockResolvedValue(undefined);
 
-        it("loads a url and records success observability", async () => {
-            const recorded = recordingObservability<"load" | "findContainingDirectory">(
-                {},
-                "test-correlation-id",
-                steppingTimeService(2000, 7),
-            );
-
-            global.fetch = jest.fn().mockResolvedValue({
-                ok: true,
-                text: async () => "url text",
-            } as Response);
-
-            const result = await nodeLoadUrl("https://example.com/a.txt", {
+            const result = await fileExists("/tmp/file.txt", {
                 observability: recorded.observability,
             });
 
-            expect(result).toEqual({ value: "url text" });
-            expect(recorded.counts).toEqual(["fileops.load.url.success"]);
-            expect(recorded.durations).toEqual([
-                { name: "fileops.load.url.ms", durationMs: 7 },
-            ]);
-            expect(recorded.debug).toEqual([]);
-            expect(recorded.logs).toEqual([]);
-        });
-
-        it("returns notReadable when the response is not ok and records failure observability", async () => {
-            const recorded = recordingObservability<"load" | "findContainingDirectory">(
-                {},
-                "test-correlation-id",
-                steppingTimeService(2000, 7),
-            );
-
-            global.fetch = jest.fn().mockResolvedValue({
-                ok: false,
-                status: 404,
-                text: async () => "",
-            } as Response);
-
-            const result = await nodeLoadUrl("https://example.com/missing.txt", {
-                observability: recorded.observability,
-            });
-
-            expect(result).toEqual({
-                errors: [
-                    {
-                        kind: "notReadable",
-                        message: "Failed to load URL [https://example.com/missing.txt]. Status 404",
-                        severity: "error",
-                        context: {
-                            operation: "load",
-                            filename: "https://example.com/missing.txt",
-                        },
-                    },
-                ],
-            });
-            expect(recorded.counts).toEqual(["fileops.load.url.failure"]);
-            expect(recorded.durations).toEqual([
-                { name: "fileops.load.url.ms", durationMs: 7 },
-            ]);
-            expect(recorded.debug).toEqual([]);
-            expect(recorded.logs).toEqual([]);
-        });
-
-        it("returns invalidUrl when fetch throws and records failure observability", async () => {
-            const recorded = recordingObservability<"load" | "findContainingDirectory">(
-                {},
-                "test-correlation-id",
-                steppingTimeService(2000, 7),
-            );
-
-            global.fetch = jest.fn().mockRejectedValue(new Error("boom"));
-
-            const result = await nodeLoadUrl("https://bad.example.com", {
-                observability: recorded.observability,
-            });
-
-            expect(result).toEqual({
-                errors: [
-                    {
-                        kind: "invalidUrl",
-                        message: "Failed to load URL [https://bad.example.com]",
-                        severity: "error",
-                        context: {
-                            operation: "load",
-                            filename: "https://bad.example.com",
-                            cause: expect.any(Error),
-                        },
-                    },
-                ],
-            });
-            expect(recorded.counts).toEqual(["fileops.load.url.failure"]);
-            expect(recorded.durations).toEqual([
-                { name: "fileops.load.url.ms", durationMs: 7 },
-            ]);
-            expect(recorded.debug).toEqual([]);
-            expect(recorded.logs).toEqual([]);
-        });
-    });
-
-    describe("nodeFileExists", () => {
-        it("returns true for an existing file and records success observability", async () => {
-            const recorded = recordingObservability<"load" | "findContainingDirectory">(
-                {},
-                "test-correlation-id",
-                steppingTimeService(3000, 3),
-            );
-
-            const result = await nodeFileExists(__filename, {
-                observability: recorded.observability,
-            });
-
-            expect(result).toEqual({ value: true });
+            expect(access).toHaveBeenCalledWith("/tmp/file.txt");
+            expect(result).toEqual(value(true));
             expect(recorded.counts).toEqual([
                 "fileops.findContainingDirectory.fileExists.success",
             ]);
             expect(recorded.durations).toEqual([
                 {
                     name: "fileops.findContainingDirectory.fileExists.ms",
-                    durationMs: 3,
+                    durationMs: 5,
                 },
             ]);
-            expect(recorded.debug).toEqual([]);
-            expect(recorded.logs).toEqual([]);
         });
 
-        it("returns false for a missing file and records notFound observability", async () => {
-            const recorded = recordingObservability<"load" | "findContainingDirectory">(
-                {},
-                "test-correlation-id",
-                steppingTimeService(3000, 3),
-            );
-            const missing = `${__filename}.missing`;
+        it("returns false when access throws ENOENT", async () => {
+            const cause = Object.assign(new Error("missing"), { code: "ENOENT" });
+            (access as jest.Mock).mockRejectedValue(cause);
 
-            const result = await nodeFileExists(missing, {
+            const result = await fileExists("/tmp/missing.txt", {
                 observability: recorded.observability,
             });
 
-            expect(result).toEqual({ value: false });
+            expect(result).toEqual(value(false));
             expect(recorded.counts).toEqual([
                 "fileops.findContainingDirectory.fileExists.notFound",
             ]);
             expect(recorded.durations).toEqual([
                 {
                     name: "fileops.findContainingDirectory.fileExists.ms",
-                    durationMs: 3,
+                    durationMs: 5,
                 },
             ]);
-            expect(recorded.debug).toEqual([]);
-            expect(recorded.logs).toEqual([]);
+        });
+
+        it("returns notReadable when access throws EACCES", async () => {
+            const cause = Object.assign(new Error("denied"), { code: "EACCES" });
+            (access as jest.Mock).mockRejectedValue(cause);
+
+            const result = await fileExists("/tmp/secret.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "notReadable",
+                    message: "Failed checking existence of [/tmp/secret.txt]",
+                    severity: "error",
+                    code: "EACCES",
+                    context: {
+                        operation: "findContainingDirectory",
+                        filename: "/tmp/secret.txt",
+                        cause,
+                    },
+                }),
+            );
+            expect(recorded.counts).toEqual([
+                "fileops.findContainingDirectory.fileExists.failure",
+            ]);
+            expect(recorded.durations).toEqual([
+                {
+                    name: "fileops.findContainingDirectory.fileExists.ms",
+                    durationMs: 5,
+                },
+            ]);
+        });
+
+        it("returns io when access throws unknown code", async () => {
+            const cause = Object.assign(new Error("boom"), { code: "EIO" });
+            (access as jest.Mock).mockRejectedValue(cause);
+
+            const result = await fileExists("/tmp/file.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "io",
+                    message: "Failed checking existence of [/tmp/file.txt]",
+                    severity: "error",
+                    code: "EIO",
+                    context: {
+                        operation: "findContainingDirectory",
+                        filename: "/tmp/file.txt",
+                        cause,
+                    },
+                }),
+            );
+        });
+
+        it("works without observability", async () => {
+            (access as jest.Mock).mockResolvedValue(undefined);
+
+            const result = await fileExists("/tmp/file.txt");
+
+            expect(result).toEqual(value(true));
         });
     });
 
-    describe("path helpers", () => {
-        it("nodeDirname returns the parent directory", () => {
-            expect(nodeDirname("/a/b/c")).toBe("/a/b");
+    describe("loadText.infrastructure.loadFile", () => {
+        const loadFile = nodeFileOpsDefaults.loadText.infrastructure.loadFile;
+
+        it("returns text when readFile succeeds", async () => {
+            (readFile as jest.Mock).mockResolvedValue("hello world");
+
+            const result = await loadFile("/tmp/file.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(readFile).toHaveBeenCalledWith("/tmp/file.txt", "utf8");
+            expect(result).toEqual(value("hello world"));
+            expect(recorded.counts).toEqual(["fileops.load.file.success"]);
+            expect(recorded.durations).toEqual([
+                { name: "fileops.load.file.ms", durationMs: 5 },
+            ]);
         });
 
-        it("nodeResolvePath resolves a path", () => {
-            expect(nodeResolvePath(".")).toEqual(expect.any(String));
+        it("returns notFound when readFile throws ENOENT", async () => {
+            const cause = Object.assign(new Error("missing"), { code: "ENOENT" });
+            (readFile as jest.Mock).mockRejectedValue(cause);
+
+            const result = await loadFile("/tmp/missing.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "notFound",
+                    message: "Failed to read file [/tmp/missing.txt]",
+                    severity: "error",
+                    code: "ENOENT",
+                    context: {
+                        operation: "load",
+                        filename: "/tmp/missing.txt",
+                        cause,
+                    },
+                }),
+            );
+            expect(recorded.counts).toEqual(["fileops.load.file.failure"]);
+            expect(recorded.durations).toEqual([
+                { name: "fileops.load.file.ms", durationMs: 5 },
+            ]);
         });
 
-        it("nodeJoinPath joins a directory and filename", () => {
-            const joined = nodeJoinPath("/a/b", "c.txt");
-            expect(joined.endsWith("a/b/c.txt") || joined.endsWith("a\\b\\c.txt")).toBe(true);
+        it("returns notReadable when readFile throws EPERM", async () => {
+            const cause = Object.assign(new Error("denied"), { code: "EPERM" });
+            (readFile as jest.Mock).mockRejectedValue(cause);
+
+            const result = await loadFile("/tmp/secret.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "notReadable",
+                    message: "Failed to read file [/tmp/secret.txt]",
+                    severity: "error",
+                    code: "EPERM",
+                    context: {
+                        operation: "load",
+                        filename: "/tmp/secret.txt",
+                        cause,
+                    },
+                }),
+            );
+        });
+
+        it("returns io when readFile throws unknown code", async () => {
+            const cause = Object.assign(new Error("disk"), { code: "EIO" });
+            (readFile as jest.Mock).mockRejectedValue(cause);
+
+            const result = await loadFile("/tmp/file.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "io",
+                    message: "Failed to read file [/tmp/file.txt]",
+                    severity: "error",
+                    code: "EIO",
+                    context: {
+                        operation: "load",
+                        filename: "/tmp/file.txt",
+                        cause,
+                    },
+                }),
+            );
+        });
+    });
+
+    describe("loadText.infrastructure.loadUrl", () => {
+        const loadUrl = nodeFileOpsDefaults.loadText.infrastructure.loadUrl;
+        const originalFetch = global.fetch;
+
+        beforeEach(() => {
+            global.fetch = jest.fn();
+        });
+
+        afterAll(() => {
+            global.fetch = originalFetch;
+        });
+
+        it("returns text when fetch succeeds with ok response", async () => {
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                status: 200,
+                text: jest.fn().mockResolvedValue("downloaded text"),
+            });
+
+            const result = await loadUrl("https://example.com/a.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(global.fetch).toHaveBeenCalledWith("https://example.com/a.txt");
+            expect(result).toEqual(value("downloaded text"));
+            expect(recorded.counts).toEqual(["fileops.load.url.success"]);
+            expect(recorded.durations).toEqual([
+                { name: "fileops.load.url.ms", durationMs: 5 },
+            ]);
+        });
+
+        it("returns notReadable when fetch returns non-ok response", async () => {
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: false,
+                status: 404,
+                text: jest.fn(),
+            });
+
+            const result = await loadUrl("https://example.com/missing.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "notReadable",
+                    message: "Failed to load URL [https://example.com/missing.txt]. Status 404",
+                    severity: "error",
+                    context: {
+                        operation: "load",
+                        filename: "https://example.com/missing.txt",
+                    },
+                }),
+            );
+            expect(recorded.counts).toEqual(["fileops.load.url.failure"]);
+            expect(recorded.durations).toEqual([
+                { name: "fileops.load.url.ms", durationMs: 5 },
+            ]);
+        });
+
+        it("returns invalidUrl when fetch throws", async () => {
+            const cause = new Error("network");
+            (global.fetch as jest.Mock).mockRejectedValue(cause);
+
+            const result = await loadUrl("https://example.com/a.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "invalidUrl",
+                    message: "Failed to load URL [https://example.com/a.txt]",
+                    severity: "error",
+                    context: {
+                        operation: "load",
+                        filename: "https://example.com/a.txt",
+                        cause,
+                    },
+                }),
+            );
+            expect(recorded.counts).toEqual(["fileops.load.url.failure"]);
+            expect(recorded.durations).toEqual([
+                { name: "fileops.load.url.ms", durationMs: 5 },
+            ]);
+        });
+
+        it("works without observability", async () => {
+            (global.fetch as jest.Mock).mockResolvedValue({
+                ok: true,
+                status: 200,
+                text: jest.fn().mockResolvedValue("text"),
+            });
+
+            const result = await loadUrl("https://example.com/a.txt");
+
+            expect(result).toEqual(value("text"));
         });
     });
 });

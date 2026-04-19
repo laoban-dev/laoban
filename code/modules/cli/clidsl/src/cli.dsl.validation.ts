@@ -81,7 +81,7 @@ export const validateCliPositionalStringsFieldDef: Validator<CliPositionalString
         variadic: mustBeBooleanIfPresent,
     }, true);
 
-const shortNameValidator : Validator<string> = ifPresent(combineValidators(mustBeString, exactLength(1)))
+const shortNameValidator : Validator<string|undefined> = ifPresent(combineValidators(mustBeString, exactLength(1)))
 export const validateCliOptionStringFieldDef: Validator<CliOptionStringFieldDef, CliValidationDebugContext> =
     mustBeObjectWithFields<CliOptionStringFieldDef, CliValidationDebugContext>({
         kind: mustBeLiteral("optionString"),

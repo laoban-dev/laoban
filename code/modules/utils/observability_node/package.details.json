@@ -1,5 +1,5 @@
 {
-  "template": "typescript",
+  "template": "node",
   "name": "@laoban/observability_node",
   "description": "node implementation of types and utilities for working with logs, metrics, debug and traces defined in @laoban/observability",
   "links": [

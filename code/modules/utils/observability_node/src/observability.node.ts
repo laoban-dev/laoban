@@ -1,4 +1,4 @@
-import { isValue } from "@laoban/errors";
+import {isValue} from "@laoban/errors";
 import {
     type CorrelationId,
     countMetricFor,
@@ -9,12 +9,12 @@ import {
     nullCountMetric,
     nullDurationMetric,
     nullObservability,
-    type Observability,
+    type Observability, realTimeService,
     shouldDebug,
 } from "@laoban/observability";
-import { safeString } from "@laoban/safe";
-import { renderTemplate } from "@laoban/template";
-import { fileLogSink, type NodeLogSink } from "./log.sinks";
+import {safeString} from "@laoban/safe";
+import {renderTemplate} from "@laoban/template";
+import {fileLogSink, type NodeLogSink} from "./log.sinks";
 
 export type SinkFactory = (fileName: string) => NodeLogSink;
 
@@ -115,7 +115,7 @@ export function createNodeObservability<Context extends string>(
         debugLevels,
         countMetric: countMetrics ? countMetricFor(countMetrics) : nullCountMetric,
         durationMetric: durationMetrics ? durationMetricFor(durationMetrics) : nullDurationMetric,
-
+        timeService: realTimeService,
         logger: (level, ...msg) => {
             const timestamp = now().toISOString();
             const message = renderMessages(msg, baseDictionary);

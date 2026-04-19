@@ -1,26 +1,29 @@
 import path from "path";
-import { access, readFile } from "fs/promises";
+import {access, readFile} from "fs/promises";
 
-import { errors, value } from "@laoban/errors";
-import { realTimeService } from "@laoban/observability";
+import {errors, value} from "@laoban/errors";
 import {
-    DirectoryName,
-    DirnameFn,
     FileExistsFn,
     FileOpIssue,
     FileOpIssueKind,
     FileOrUrl,
-    Filename,
     FindContainingDirectoryConfig,
-    JoinPathFn,
     LoadFileFn,
     LoadTextConfig,
     LoadUrlFn,
-    ResolvePathFn,
     makeFileOpIssue,
 } from "@laoban/files";
+import {FileOpsDefaults} from "./fileops.node";
 
-const errorCode = (cause: unknown): string | undefined =>
+const makeIssue = (
+    kind: FileOpIssueKind,
+    message: string,
+    context: FileOpIssue["context"],
+    cause?: unknown,
+    code?: string,
+): FileOpIssue => makeFileOpIssue(kind, message, context, cause, code);
+
+const extractCode = (cause: unknown): string | undefined =>
     typeof cause === "object" &&
     cause !== null &&
     "code" in cause &&
@@ -28,89 +31,119 @@ const errorCode = (cause: unknown): string | undefined =>
         ? (cause as { code: string }).code
         : undefined;
 
-const classifyFileReadError = (
+const nodeFileExists: FileExistsFn = async (
     filename: FileOrUrl,
-    cause: unknown,
-): FileOpIssue => {
-    const code = errorCode(cause);
+    config?: FindContainingDirectoryConfig,
+) => {
+    const observability = config?.observability;
+    const start = observability?.timeService.now() ?? Date.now();
 
-    const kind: FileOpIssueKind =
-        code === "ENOENT"
-            ? "notFound"
-            : code === "EACCES" || code === "EPERM"
-                ? "notReadable"
-                : "io";
+    try {
+        await access(filename);
 
-    return makeFileOpIssue(
-        kind,
-        `Failed to read file [${filename}]`,
-        {
-            operation: "load",
-            filename,
-        },
-        cause,
-        code,
-    );
+        observability?.countMetric("fileops.findContainingDirectory.fileExists.success");
+        observability?.durationMetric(
+            "fileops.findContainingDirectory.fileExists.ms",
+            (observability?.timeService.now() ?? Date.now()) - start,
+        );
+
+        return value(true);
+    } catch (cause) {
+        const code = extractCode(cause);
+
+        observability?.durationMetric(
+            "fileops.findContainingDirectory.fileExists.ms",
+            (observability?.timeService.now() ?? Date.now()) - start,
+        );
+
+        if (code === "ENOENT") {
+            observability?.countMetric("fileops.findContainingDirectory.fileExists.notFound");
+            return value(false);
+        }
+
+        observability?.countMetric("fileops.findContainingDirectory.fileExists.failure");
+
+        return errors<FileOpIssue>(
+            makeIssue(
+                code === "EACCES" || code === "EPERM" ? "notReadable" : "io",
+                `Failed checking existence of [${filename}]`,
+                {
+                    operation: "findContainingDirectory",
+                    filename,
+                },
+                cause,
+                code,
+            ),
+        );
+    }
 };
 
-const classifyExistsCheckError = (
-    filename: FileOrUrl,
-    cause: unknown,
-): FileOpIssue => {
-    const code = errorCode(cause);
-
-    return makeFileOpIssue(
-        code === "EACCES" || code === "EPERM" ? "notReadable" : "io",
-        `Failed checking existence of [${filename}]`,
-        {
-            operation: "findContainingDirectory",
-            filename,
-        },
-        cause,
-        code,
-    );
-};
-
-const timeServiceFor = (
-    config?: LoadTextConfig | FindContainingDirectoryConfig,
-) => config?.observability?.timeService ?? realTimeService;
-
-export const nodeLoadFile: LoadFileFn = async (
+const nodeLoadFile: LoadFileFn = async (
     filename: FileOrUrl,
     config?: LoadTextConfig,
 ) => {
     const observability = config?.observability;
-    const timeService = timeServiceFor(config);
-    const start = timeService.now();
+    const start = observability?.timeService.now() ?? Date.now();
 
     try {
         const text = await readFile(filename, "utf8");
+
         observability?.countMetric("fileops.load.file.success");
-        observability?.durationMetric("fileops.load.file.ms", timeService.now() - start);
+        observability?.durationMetric(
+            "fileops.load.file.ms",
+            (observability?.timeService.now() ?? Date.now()) - start,
+        );
+
         return value(text);
     } catch (cause) {
+        const code = extractCode(cause);
+        const kind: FileOpIssueKind =
+            code === "ENOENT"
+                ? "notFound"
+                : code === "EACCES" || code === "EPERM"
+                    ? "notReadable"
+                    : "io";
+
         observability?.countMetric("fileops.load.file.failure");
-        observability?.durationMetric("fileops.load.file.ms", timeService.now() - start);
-        return errors(classifyFileReadError(filename, cause));
+        observability?.durationMetric(
+            "fileops.load.file.ms",
+            (observability?.timeService.now() ?? Date.now()) - start,
+        );
+
+        return errors<FileOpIssue>(
+            makeIssue(
+                kind,
+                `Failed to read file [${filename}]`,
+                {
+                    operation: "load",
+                    filename,
+                },
+                cause,
+                code,
+            ),
+        );
     }
 };
 
-export const nodeLoadUrl: LoadUrlFn = async (
+const nodeLoadUrl: LoadUrlFn = async (
     url: string,
     config?: LoadTextConfig,
 ) => {
     const observability = config?.observability;
-    const timeService = timeServiceFor(config);
-    const start = timeService.now();
+    const start = observability?.timeService.now() ?? Date.now();
 
     try {
         const response = await fetch(url);
 
         if (!response.ok) {
             observability?.countMetric("fileops.load.url.failure");
-            observability?.durationMetric("fileops.load.url.ms", timeService.now() - start);
-            return errors(
-                makeFileOpIssue(
+            observability?.durationMetric(
+                "fileops.load.url.ms",
+                (observability?.timeService.now() ?? Date.now()) - start,
+            );
+
+            return errors<FileOpIssue>(
+                makeIssue(
                     "notReadable",
                     `Failed to load URL [${url}]. Status ${response.status}`,
                     {
@@ -122,14 +155,23 @@ export const nodeLoadUrl: LoadUrlFn = async (
         }
 
         const text = await response.text();
+
         observability?.countMetric("fileops.load.url.success");
-        observability?.durationMetric("fileops.load.url.ms", timeService.now() - start);
+        observability?.durationMetric(
+            "fileops.load.url.ms",
+            (observability?.timeService.now() ?? Date.now()) - start,
+        );
+
         return value(text);
     } catch (cause) {
         observability?.countMetric("fileops.load.url.failure");
-        observability?.durationMetric("fileops.load.url.ms", timeService.now() - start);
-        return errors(
-            makeFileOpIssue(
+        observability?.durationMetric(
+            "fileops.load.url.ms",
+            (observability?.timeService.now() ?? Date.now()) - start,
+        );
+
+        return errors<FileOpIssue>(
+            makeIssue(
                 "invalidUrl",
                 `Failed to load URL [${url}]`,
                 {
@@ -142,49 +184,21 @@ export const nodeLoadUrl: LoadUrlFn = async (
     }
 };
 
-export const nodeFileExists: FileExistsFn = async (
-    filename: FileOrUrl,
-    config?: FindContainingDirectoryConfig,
-) => {
-    const observability = config?.observability;
-    const timeService = timeServiceFor(config);
-    const start = timeService.now();
-
-    try {
-        await access(filename);
-        observability?.countMetric("fileops.findContainingDirectory.fileExists.success");
-        observability?.durationMetric(
-            "fileops.findContainingDirectory.fileExists.ms",
-            timeService.now() - start,
-        );
-        return value(true);
-    } catch (cause) {
-        const code = errorCode(cause);
-
-        observability?.durationMetric(
-            "fileops.findContainingDirectory.fileExists.ms",
-            timeService.now() - start,
-        );
-
-        if (code === "ENOENT") {
-            observability?.countMetric("fileops.findContainingDirectory.fileExists.notFound");
-            return value(false);
-        }
-
-        observability?.countMetric("fileops.findContainingDirectory.fileExists.failure");
-        return errors(classifyExistsCheckError(filename, cause));
-    }
+export const nodeFileOpsDefaults: FileOpsDefaults = {
+    findContainingDirectory: {
+        infrastructure: {
+            fileExists: nodeFileExists,
+            pathOps: {
+                dirname: (directory) => path.dirname(directory),
+                resolvePath: (somePath) => path.resolve(somePath),
+                joinPath: (directory, filename) => path.join(directory, filename),
+            },
+        },
+    },
+    loadText: {
+        infrastructure: {
+            loadFile: nodeLoadFile,
+            loadUrl: nodeLoadUrl,
+        },
+    },
 };
-
-export const nodeDirname: DirnameFn = (
-    directory: DirectoryName,
-): DirectoryName => path.dirname(directory);
-
-export const nodeResolvePath: ResolvePathFn = (
-    pathName: string,
-): DirectoryName => path.resolve(pathName);
-
-export const nodeJoinPath: JoinPathFn = (
-    directory: DirectoryName,
-    filename: Filename,
-): FileOrUrl => path.join(directory, filename);

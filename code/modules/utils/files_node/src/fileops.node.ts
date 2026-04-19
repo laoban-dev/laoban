@@ -1,27 +1,20 @@
-import {FileOps, findContainingDirectory, loadText} from "@laoban/files";
 import {
-    nodeDirname,
-    nodeFileExists,
-    nodeJoinPath,
-    nodeLoadFile,
-    nodeLoadUrl,
-    nodeResolvePath,
-} from "./fileops.node.defaults";
+    FileOps,
+    findContainingDirectory,
+    FindContainingDirectoryDefaults,
+    loadText,
+    LoadTextDefaults
+} from "@laoban/files";
 
-export const fileOpsNode = (): FileOps => ({
-    loadText: (source, config = {}) =>
-        loadText(source, {
-            ...config,
-            loadFile: config.loadFile ?? nodeLoadFile,
-            loadUrl: config.loadUrl ?? nodeLoadUrl,
-        }),
+export type FileOpsDefaults = Readonly<{
+    findContainingDirectory: FindContainingDirectoryDefaults;
+    loadText: LoadTextDefaults;
+}>;
 
-    findContainingDirectory: (start, markerFileName, config = {}) =>
-        findContainingDirectory(start, markerFileName, {
-            ...config,
-            fileExists: config.fileExists ?? nodeFileExists,
-            dirname: config.dirname ?? nodeDirname,
-            resolvePath: config.resolvePath ?? nodeResolvePath,
-            joinPath: config.joinPath ?? nodeJoinPath,
-        }),
+export const fileOps = (defaults: FileOpsDefaults): FileOps => ({
+    findContainingDirectory: (start, markerFileName, config) =>
+        findContainingDirectory(defaults.findContainingDirectory)(start, markerFileName, config),
+
+    loadText: (source, config) =>
+        loadText(defaults.loadText)(source, config),
 });
