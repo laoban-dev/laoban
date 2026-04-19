@@ -1,0 +1,28 @@
+{
+  "template": "typescript",
+  "name": "@laoban/commander",
+  "description": "The adapter for commander.js, used by the cli module to define commands and options in a type safe way.",
+  "links": [
+    "@laoban/clidsl",
+    "@laoban/errors",
+    "@laoban/observability",
+    "@laoban/safe",
+    "@laoban/strings",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "dependencies": {
+      "commander": "^14.0.0"
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

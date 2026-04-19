@@ -3,6 +3,7 @@ import {
     nullDurationMetric,
     nullLogger,
     nullObservability,
+    realTimeService,
     shouldDebug,
     type DebugLevels,
     type LogLevel,
@@ -85,6 +86,21 @@ describe('nullDurationMetric', () => {
     })
 })
 
+describe('realTimeService', () => {
+    it('returns a number', () => {
+        expect(typeof realTimeService.now()).toBe('number')
+    })
+
+    it('returns a plausible current time in milliseconds', () => {
+        const before = Date.now()
+        const actual = realTimeService.now()
+        const after = Date.now()
+
+        expect(actual).toBeGreaterThanOrEqual(before)
+        expect(actual).toBeLessThanOrEqual(after)
+    })
+})
+
 describe('nullObservability', () => {
     it('uses the supplied correlation id', () => {
         const obs = nullObservability<TestContext>('corr-123')
@@ -104,6 +120,18 @@ describe('nullObservability', () => {
         expect(obs.debugLevels).toEqual({})
     })
 
+    it('uses the real time service', () => {
+        const obs = nullObservability<TestContext>('corr-123')
+
+        expect(obs.timeService).toBe(realTimeService)
+    })
+
+    it('provides a callable time service', () => {
+        const obs = nullObservability<TestContext>('corr-123')
+
+        expect(typeof obs.timeService.now()).toBe('number')
+    })
+
     it('provides callable no-op functions', () => {
         const obs = nullObservability<TestContext>('corr-123')
 
@@ -121,6 +149,7 @@ describe('nullObservability', () => {
         expect(typeof obs.debug).toBe('function')
         expect(typeof obs.countMetric).toBe('function')
         expect(typeof obs.durationMetric).toBe('function')
+        expect(typeof obs.timeService.now).toBe('function')
         expect(obs.debugLevels).toEqual({})
     })
 

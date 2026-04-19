@@ -1,0 +1,25 @@
+{
+  "template": "typescript",
+  "name": "@laoban/clidsl",
+  "description": "The DSL for a CLI, which is used to define the commands, their arguments and options, and the help text.",
+  "links": [
+    "@laoban/errors",
+    "@laoban/observability",
+    "@laoban/safe",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

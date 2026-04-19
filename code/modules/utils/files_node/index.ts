@@ -1,1 +1,1 @@
-export * from './src/fileops.node'
+export * from './src/fileops.node.defaults'

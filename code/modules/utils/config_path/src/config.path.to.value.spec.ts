@@ -1,5 +1,5 @@
 import { configPathToValue } from "./config.path.to.value";
-import { getAllConfigPaths } from "@loom-ts/records";
+import { getAllConfigPaths } from "./path";
 
 describe("configPathToValue", () => {
     test("retrieves nested value", () => {

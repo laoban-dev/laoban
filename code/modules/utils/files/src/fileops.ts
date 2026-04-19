@@ -44,7 +44,8 @@ export type LoadUrlFn = (
 ) => Promise<ErrorsOr<string, FileOpIssue>>;
 
 export type FileExistsFn = (
-    filename: FileOrUrl
+    filename: FileOrUrl,
+    config?: FindContainingDirectoryConfig
 ) => Promise<ErrorsOr<boolean, FileOpIssue>>;
 
 export type DirnameFn = (
@@ -54,7 +55,10 @@ export type DirnameFn = (
 export type ResolvePathFn = (
     path: string
 ) => DirectoryName;
-
+export type JoinPathFn = (
+    directory: DirectoryName,
+    filename: Filename
+) => FileOrUrl;
 export type LoadTextConfig = Readonly<{
     observability?: Observability<FileDebugContext>;
     markers?: Readonly<Record<string, string>>;
@@ -89,6 +93,7 @@ export type FindContainingDirectoryConfig = Readonly<{
     fileExists?: FileExistsFn;
     dirname?: DirnameFn;
     resolvePath?: ResolvePathFn;
+    joinPath?: JoinPathFn;
 }>;
 
 export type RequiredFindContainingDirectoryConfig = Readonly<{
@@ -96,12 +101,14 @@ export type RequiredFindContainingDirectoryConfig = Readonly<{
     fileExists: FileExistsFn;
     dirname: DirnameFn;
     resolvePath: ResolvePathFn;
+    joinPath: JoinPathFn;
 }>;
 
 export type FindContainingDirectoryDefaults = Readonly<{
     fileExists: FileExistsFn;
     dirname: DirnameFn;
     resolvePath: ResolvePathFn;
+    joinPath: JoinPathFn;
 }>;
 
 export const defaultFindContainingDirectoryConfig = (
@@ -112,6 +119,7 @@ export const defaultFindContainingDirectoryConfig = (
     fileExists: config.fileExists ?? defaults.fileExists,
     dirname: config.dirname ?? defaults.dirname,
     resolvePath: config.resolvePath ?? defaults.resolvePath,
+    joinPath: config.joinPath ?? defaults.joinPath,
 });
 
 /**
@@ -141,3 +149,19 @@ export interface FileOps {
         config?: LoadTextConfig
     ): Promise<ErrorsOr<string, FileOpIssue>>;
 }
+
+export const makeFileOpIssue = (
+    kind: FileOpIssueKind,
+    message: string,
+    context?: FileOpIssue["context"],
+    cause?: unknown,
+    code?: string,
+): FileOpIssue => ({
+    kind,
+    message,
+    ...(context === undefined && cause === undefined ? {} : {
+        context: cause === undefined ? context : { ...context, cause },
+    }),
+    ...(code === undefined ? {} : { code }),
+    severity: "error",
+});

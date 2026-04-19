@@ -1,7 +1,7 @@
 import path from "path";
-import {access} from "fs/promises";
+import { access } from "fs/promises";
 
-import {ErrorsOr, errors, value} from "@laoban/errors";
+import { ErrorsOr, errors, value } from "@laoban/errors";
 import {
     defaultFindContainingDirectoryConfig,
     DirectoryName,
@@ -10,6 +10,7 @@ import {
     FindContainingDirectoryConfig,
     FileOpIssue,
     FileOpIssueKind,
+    JoinPathFn,
 } from "./fileops";
 
 const makeIssue = (
@@ -21,14 +22,25 @@ const makeIssue = (
 ): FileOpIssue => ({
     kind,
     message,
-    context: cause === undefined ? context : {...context, cause},
-    ...(code === undefined ? {} : {code}),
+    context: cause === undefined ? context : { ...context, cause },
+    ...(code === undefined ? {} : { code }),
     severity: "error",
 });
 
-export const defaultFindContainingDirectoryFileExists: FileExistsFn = async filename => {
+export const defaultFindContainingDirectoryFileExists: FileExistsFn = async (
+    filename,
+    config,
+) => {
+    const observability = config?.observability;
+    const start = Date.now();
+
     try {
         await access(filename);
+        observability?.countMetric("fileops.findContainingDirectory.fileExists.success");
+        observability?.durationMetric(
+            "fileops.findContainingDirectory.fileExists.ms",
+            Date.now() - start,
+        );
         return value(true);
     } catch (cause) {
         const code =
@@ -39,8 +51,17 @@ export const defaultFindContainingDirectoryFileExists: FileExistsFn = async file
                 ? (cause as { code: string }).code
                 : undefined;
 
-        if (code === "ENOENT") return value(false);
+        observability?.durationMetric(
+            "fileops.findContainingDirectory.fileExists.ms",
+            Date.now() - start,
+        );
 
+        if (code === "ENOENT") {
+            observability?.countMetric("fileops.findContainingDirectory.fileExists.notFound");
+            return value(false);
+        }
+
+        observability?.countMetric("fileops.findContainingDirectory.fileExists.failure");
         return errors(
             makeIssue(
                 code === "EACCES" || code === "EPERM" ? "notReadable" : "io",
@@ -64,6 +85,11 @@ export const defaultFindContainingDirectoryResolvePath = (
     somePath: string,
 ): DirectoryName => path.resolve(somePath);
 
+export const defaultFindContainingDirectoryJoinPath: JoinPathFn = (
+    directory: DirectoryName,
+    filename: Filename,
+): string => path.join(directory, filename);
+
 export const findContainingDirectory = async (
     start: DirectoryName,
     markerFileName: Filename,
@@ -74,33 +100,19 @@ export const findContainingDirectory = async (
             fileExists: defaultFindContainingDirectoryFileExists,
             dirname: defaultFindContainingDirectoryDirname,
             resolvePath: defaultFindContainingDirectoryResolvePath,
+            joinPath: defaultFindContainingDirectoryJoinPath,
         },
         config,
     );
 
-    const {observability, fileExists, dirname, resolvePath} = fullConfig;
-
-    observability.debug(
-        "findContainingDirectory",
-        "debug",
-        "Searching for containing directory",
-        {start, markerFileName},
-    );
+    const { fileExists, dirname, resolvePath, joinPath } = fullConfig;
 
     let current = resolvePath(start);
     let previous = "";
 
     while (current !== previous) {
-        const candidate = path.join(current, markerFileName);
-
-        observability.debug(
-            "findContainingDirectory",
-            "debug",
-            "Checking candidate",
-            candidate,
-        );
-
-        const exists = await fileExists(candidate);
+        const candidate = joinPath(current, markerFileName);
+        const exists = await fileExists(candidate, fullConfig);
 
         if ("errors" in exists) return exists;
         if (exists.value) return value(current);

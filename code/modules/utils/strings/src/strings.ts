@@ -3,3 +3,12 @@ export function getLastSegment(path?: string | null): string {
     const segments = path.split("/").filter(Boolean);
     return segments.length ? segments[segments.length - 1] : "";
 }
+
+
+export function toKebabCase(name: string | null | undefined): string | null | undefined {
+    if (name === null || name === undefined) return name;
+    return name
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .replace(/_/g, '-')
+        .toLowerCase();
+}

@@ -1,62 +1,70 @@
-import { MergeOptions } from "@laoban/merge";
-import {DirectoryName, Filename, FileOps} from "@laoban/files";
-import {ErrorsOr} from "@laoban/errors";
-import {Observability} from "@laoban/observability";
+import type { MergeOptions } from "@laoban/merge";
+import type { DirectoryName, Filename, FileOps } from "@laoban/files";
+import type { ErrorsOr } from "@laoban/errors";
+import type { Observability } from "@laoban/observability";
+
+import type {
+    LaobanScripts,
+    RawLaobanScripts,
+} from "@laoban/scripts";
 
 export type PackageManagerName = string;
 export type FileOrUrl = string;
 
-export interface LaobanConfig<Script> {
+export interface LaobanConfig {
     packageManager: PackageManagerName;
     versionFile: string;
     parents: FileOrUrl[];
     properties: Record<string, string>;
     templates: Record<string, FileOrUrl>;
     defaultEnv: Record<string, string>;
-    scripts: Record<string, Script>;
+    scripts: LaobanScripts;
     skipDirectories: string[];
 }
 
-export type LaobanConfigFile<Script> = Partial<LaobanConfig<Script>>;
+export interface LaobanConfigFile {
+    packageManager?: PackageManagerName;
+    versionFile?: string;
+    parents?: FileOrUrl[];
+    properties?: Record<string, string>;
+    templates?: Record<string, FileOrUrl>;
+    defaultEnv?: Record<string, string>;
+    scripts?: RawLaobanScripts;
+    skipDirectories?: string[];
+}
 
-export type LaobanConfigLoadContext =
+export type LaobanConfigLoadArea =
     | "find"
     | "load"
     | "parse"
     | "parents"
-    | "merge";
+    | "merge"
+    | "validate";
 
-export interface LoadLaobanConfigConfig<Context extends string = LaobanConfigLoadContext> {
+export type LaobanConfigDiagnosticContext = Readonly<{
+    currentFile?: Filename;
+    loadPath: Filename[];
+}>;
+
+export interface LaobanConfigLoadConfig<
+    Area extends string = LaobanConfigLoadArea
+> {
     fileOps: FileOps;
-    observability: Observability<Context>;
+    observability: Observability<Area>;
     markerFileName: Filename;
     mergeOptions?: MergeOptions;
 }
 
-export interface LoadedLaobanConfig<Script> {
-    config: LaobanConfig<Script>;
+export interface LoadedLaobanConfig {
+    config: LaobanConfig;
     configFile: Filename;
     configDirectory: DirectoryName;
     loadedFiles: Filename[];
 }
 
-export type FindLaobanConfigFile<Context extends string = LaobanConfigLoadContext> = (
-    config: LoadLaobanConfigConfig<Context>,
-    start: Filename | DirectoryName
-) => Promise<ErrorsOr<Filename>>;
-
-export type LoadOneLaobanConfigFile<
-    Script,
-    Context extends string = LaobanConfigLoadContext
-> = (
-    config: LoadLaobanConfigConfig<Context>,
-    file: Filename
-) => Promise<ErrorsOr<LaobanConfigFile<Script>>>;
-
 export type LaobanConfigLoader<
-    Script,
-    Context extends string = LaobanConfigLoadContext
+    Area extends string = LaobanConfigLoadArea
 > = (
-    config: LoadLaobanConfigConfig<Context>,
+    config: LaobanConfigLoadConfig<Area>,
     start: Filename | DirectoryName
-) => Promise<ErrorsOr<LoadedLaobanConfig<Script>>>;
+) => Promise<ErrorsOr<LoadedLaobanConfig>>;

@@ -14,6 +14,10 @@ export type CountMetric = (name: string) => void
 
 export type DurationMetric = (name: string, durationMs: number) => void
 
+export type TimeService = {
+    now: () => number
+}
+
 export type DebugLevels<Context extends string> = Partial<Record<Context, LogLevel[]>>
 
 export type Observability<Context extends string> = Readonly<{
@@ -23,6 +27,7 @@ export type Observability<Context extends string> = Readonly<{
     countMetric: CountMetric
     durationMetric: DurationMetric
     debugLevels: DebugLevels<Context>
+    timeService: TimeService
 }>
 
 export const shouldDebug = <Context extends string>(
@@ -34,6 +39,24 @@ export const shouldDebug = <Context extends string>(
 export const nullLogger: Logger = () => {}
 export const nullCountMetric: CountMetric = () => {}
 export const nullDurationMetric: DurationMetric = () => {}
+export const realTimeService: TimeService = { now: () => Date.now() }
+export const fixedTimeService = (now: number): TimeService => ({
+    now: () => now,
+})
+
+export const steppingTimeService = (
+    start: number = 0,
+    stepMs: number = 1
+): TimeService => {
+    let current = start
+    return {
+        now: () => {
+            const result = current
+            current += stepMs
+            return result
+        },
+    }
+}
 
 export const nullObservability = <Context extends string>(
     correlationId: CorrelationId = 'none'
@@ -44,4 +67,5 @@ export const nullObservability = <Context extends string>(
     countMetric: nullCountMetric,
     durationMetric: nullDurationMetric,
     debugLevels: {},
+    timeService: realTimeService,
 })

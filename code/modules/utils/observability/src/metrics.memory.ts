@@ -17,9 +17,10 @@ export const countMetricFor = (counts: CountMetrics): CountMetric =>
 export const durationMetricFor = (durations: DurationMetrics): DurationMetric =>
     (name: string, durationMs: number) => {
         const current = durations[name] ?? { count: 0, totalMs: 0 };
-        current.count += 1;
-        current.totalMs += durationMs;
-        durations[name] = current;
+        durations[name] = {
+            count: current.count + 1,
+            totalMs: current.totalMs + durationMs,
+        };
     };
 
 export const averageDurationMs = (
@@ -41,8 +42,8 @@ export const prettyPrintDurationMetrics = (durations: DurationMetrics): string =
     Object.entries(durations)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([name, value]) => {
-            const average = value.count === 0 ? 0 : value.totalMs / value.count;
-            return `${name}: count=${value.count}, totalMs=${value.totalMs}, averageMs=${average}`;
+            const averageMs = value.count === 0 ? 0 : value.totalMs / value.count;
+            return `${name}: count=${value.count}, totalMs=${value.totalMs}, averageMs=${averageMs}`;
         })
         .join('\n');
 

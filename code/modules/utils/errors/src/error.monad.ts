@@ -142,6 +142,7 @@ export function errorsOrThrow<T, E extends BaseIssue = BaseIssue>(e: ErrorsOr<T,
 }
 
 /**
+ *
  * Extract the Errors object or throw if a value is present unexpectedly.
  */
 export function errorObjectOrThrow<T, E extends BaseIssue = BaseIssue>(e: ErrorsOr<T, E>): Errors<E> {

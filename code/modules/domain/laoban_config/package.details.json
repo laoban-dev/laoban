@@ -7,7 +7,9 @@
     "@laoban/files",
     "@laoban/merge",
     "@laoban/observability",
-    "@laoban/safe"
+    "@laoban/safe",
+    "@laoban/scripts",
+    "@laoban/validation"
   ],
   "packageJson": {
     "dependencies": {
@@ -20,7 +22,7 @@
   "guards": {
     "compile": true,
     "publish": true,
-    "test": false,
+    "test": true,
     "react": false
   }
 }

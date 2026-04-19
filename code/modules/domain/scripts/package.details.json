@@ -1,0 +1,25 @@
+{
+  "template": "typescript",
+  "name": "@laoban/scripts",
+  "description": "The types and validation for scripts",
+  "links": [
+    "@laoban/errors",
+    "@laoban/observability",
+    "@laoban/safe",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

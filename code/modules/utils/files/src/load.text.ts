@@ -1,7 +1,15 @@
 import { promises as fs } from "fs";
 
 import { ErrorsOr, errors, value } from "@laoban/errors";
-import { defaultLoadTextConfig, FileOpIssue, FileOpIssueKind, FileOrUrl, LoadTextConfig, LoadTextSource, RequiredLoadTextConfig } from "./fileops";
+import {
+    defaultLoadTextConfig,
+    FileOpIssue,
+    FileOpIssueKind,
+    FileOrUrl,
+    LoadTextConfig,
+    LoadTextSource,
+    RequiredLoadTextConfig,
+} from "./fileops";
 
 const isHttpUrl = (source: string): boolean =>
     source.startsWith("http://") || source.startsWith("https://");
@@ -61,8 +69,6 @@ export const defaultLoadFile = async (
     );
     const start = Date.now();
 
-    observability.debug("load", "debug", "Loading file", filename);
-
     try {
         const text = await fs.readFile(filename, "utf8");
         observability.countMetric("fileops.load.file.success");
@@ -84,8 +90,6 @@ export const defaultLoadUrl = async (
         config,
     );
     const start = Date.now();
-
-    observability.debug("load", "debug", "Loading URL", url);
 
     try {
         const response = await fetch(url);
@@ -134,18 +138,11 @@ export const loadFromMarker = async (
         { loadFile: defaultLoadFile, loadUrl: defaultLoadUrl },
         config,
     );
-    const { observability, markers } = fullConfig;
-
-    observability.debug("load", "debug", "Trying marker resolution", source);
+    const { markers } = fullConfig;
 
     for (const [marker, replacement] of Object.entries(markers)) {
         if (source.startsWith(marker)) {
             const resolvedSource = `${replacement}${source.slice(marker.length)}`;
-            observability.debug("load", "debug", "Resolved marker", {
-                source,
-                marker,
-                resolvedSource,
-            });
             return loadText(resolvedSource, fullConfig);
         }
     }
@@ -170,9 +167,7 @@ export const loadText = async (
         { loadFile: defaultLoadFile, loadUrl: defaultLoadUrl },
         config,
     );
-    const { observability, loadFile, loadUrl } = fullConfig;
-
-    observability.debug("load", "debug", "Loading text source", source);
+    const { loadFile, loadUrl } = fullConfig;
 
     if (isHttpUrl(source)) return loadUrl(source, fullConfig);
     if (source.startsWith("@")) return loadFromMarker(source, fullConfig);

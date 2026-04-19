@@ -22,6 +22,8 @@
     "@laoban/merge": "2.0.0",
     "@laoban/observability": "2.0.0",
     "@laoban/safe": "2.0.0",
+    "@laoban/scripts": "2.0.0",
+    "@laoban/validation": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {

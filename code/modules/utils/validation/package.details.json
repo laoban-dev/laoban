@@ -1,0 +1,25 @@
+{
+  "template": "typescript",
+  "name": "@laoban/validation",
+  "description": "Submodule for validating data",
+  "links": [
+    "@laoban/errors",
+    "@laoban/observability",
+    "@laoban/records",
+    "@laoban/safe"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}
