@@ -32,7 +32,7 @@ type AnyCliNode<C extends BasicCliContext = BasicCliContext> =
 
 const validateDescription = chainValidators(mustBeString, nonBlank);
 const validateName = chainValidators(mustBeString, nonBlank);
-const validateVersionIfPresent = ifPresent(combineValidators(mustBeStringIfPresent, nonBlank));
+const validateVersionIfPresent = ifPresent(combineValidators(mustBeString, nonBlank));
 
 const validateShortNameIfPresent = chainValidators(
     mustBeStringIfPresent,

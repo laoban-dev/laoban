@@ -1,6 +1,6 @@
 import {laobanConfigCommands, loadConfig, type LaobanConfigCliContext} from "./config.cli";
 import {loadLaobanConfig} from "@laoban/laoban_config";
-import {isCliCommand, isCliGroup} from "@laoban/clidsl";
+import {isCliCommand, isCliGroup, isCliRoot} from "@laoban/clidsl";
 
 jest.mock("@laoban/laoban_config", () => ({
     loadLaobanConfig: jest.fn()
@@ -63,7 +63,7 @@ describe("laoban config commands", () => {
             loadedFiles: ["/workspace/project/laoban.json"]
         } as any));
 
-        if (!isCliGroup(laobanConfigCommands)) throw new Error("Expected root to be a group");
+        if (!isCliRoot(laobanConfigCommands)) throw new Error("Expected root to be a root");
 
         const configGroup = laobanConfigCommands.children.config;
         if (!isCliGroup(configGroup)) throw new Error("Expected config to be a group");
@@ -88,6 +88,8 @@ describe("laoban config commands", () => {
                 "/workspace/shared/laoban.json"
             ]
         } as any));
+
+        if (!isCliRoot(laobanConfigCommands)) throw new Error("Expected root to be a root");
 
         const configGroup = laobanConfigCommands.children.config;
         if (!isCliGroup(configGroup)) throw new Error("Expected config group");
@@ -117,6 +119,8 @@ describe("laoban config commands", () => {
         const context = makeContext();
         const failure = err({message: "boom"});
         mockedLoadLaobanConfig.mockResolvedValue(failure as any);
+
+        if (!isCliRoot(laobanConfigCommands)) throw new Error("Expected root to be a root");
 
         const configGroup = laobanConfigCommands.children.config;
         if (!isCliGroup(configGroup)) throw new Error("Expected config group");
