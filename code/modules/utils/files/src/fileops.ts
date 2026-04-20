@@ -6,7 +6,6 @@ export type DirectoryName = string;
 export type FileOrUrl = string;
 export type LoadTextSource = string;
 
-export type FileDebugContext = "load" | "findContainingDirectory";
 
 export type FileOpIssueKind =
     | "notFound"
@@ -18,7 +17,7 @@ export type FileOpIssueKind =
     | "unexpected";
 
 export type FileOpIssueContext = Readonly<{
-    operation: FileDebugContext;
+    operation: string;
     filename?: FileOrUrl;
     resolvedFilename?: string;
     marker?: string;
@@ -67,13 +66,13 @@ export interface FindContainingDirectoryInfrastructure {
 }
 
 export type LoadTextConfig = Readonly<{
-    observability?: Observability<FileDebugContext>;
+    observability?: Observability;
     markers?: Readonly<Record<string, string>>;
     infrastructure?: LoadTextInfrastructure;
 }>;
 
 export type RequiredLoadTextConfig = Readonly<{
-    observability: Observability<FileDebugContext>;
+    observability: Observability;
     markers: Readonly<Record<string, string>>;
     infrastructure: LoadTextInfrastructure;
 }>;
@@ -86,18 +85,18 @@ export const defaultLoadTextConfig = (
     defaults: LoadTextDefaults,
     config: LoadTextConfig = {}
 ): RequiredLoadTextConfig => ({
-    observability: config.observability ?? nullObservability<FileDebugContext>(),
+    observability: config.observability ?? nullObservability(),
     markers: config.markers ?? {},
     infrastructure: config.infrastructure ?? defaults.infrastructure,
 });
 
 export type FindContainingDirectoryConfig = Readonly<{
-    observability?: Observability<FileDebugContext>;
+    observability?: Observability;
     infrastructure?: FindContainingDirectoryInfrastructure;
 }>;
 
 export type RequiredFindContainingDirectoryConfig = Readonly<{
-    observability: Observability<FileDebugContext>;
+    observability: Observability;
     infrastructure: FindContainingDirectoryInfrastructure;
 }>;
 
@@ -109,7 +108,7 @@ export const defaultFindContainingDirectoryConfig = (
     defaults: FindContainingDirectoryDefaults,
     config: FindContainingDirectoryConfig = {}
 ): RequiredFindContainingDirectoryConfig => ({
-    observability: config.observability ?? nullObservability<FileDebugContext>(),
+    observability: config.observability ?? nullObservability(),
     infrastructure: config.infrastructure ?? defaults.infrastructure,
 });
 

@@ -1,11 +1,7 @@
-import { isValue } from "@laoban/errors";
-import { nullObservability } from "@laoban/observability";
-import { defaultTemplateFns } from "./template.functions";
-import {
-    dollarsBracesVarDefn,
-    type TemplateConfig,
-    type TemplateDebugContext,
-} from "./template.types";
+import {isValue} from "@laoban/errors";
+import {nullObservability} from "@laoban/observability";
+import {defaultTemplateFns} from "./template.functions";
+import {dollarsBracesVarDefn, type TemplateConfig,} from "./template.types";
 
 type Dictionary = Record<string, unknown>;
 
@@ -27,7 +23,7 @@ const makeConfig = (
     variableDefn: dollarsBracesVarDefn,
     onMissing: "error",
     functions,
-    observability: nullObservability<TemplateDebugContext>(),
+    observability: nullObservability(),
 });
 
 function invokeFunction(

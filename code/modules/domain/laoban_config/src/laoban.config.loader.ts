@@ -1,23 +1,16 @@
 import {mergeAll} from "@laoban/merge";
-import {errors, isErrors, type ErrorsOr, type BaseIssue} from "@laoban/errors";
-import {
-    type DirectoryName,
-    type Filename,
-} from "@laoban/files";
+import {type BaseIssue, errors, type ErrorsOr, isErrors} from "@laoban/errors";
+import {type DirectoryName, type Filename,} from "@laoban/files";
 import {normaliseRawLaobanScripts} from "@laoban/scripts";
 
 import type {
     LaobanConfig,
-    LaobanConfigFile,
-    LoadedLaobanConfig,
-    LaobanConfigLoadArea,
-    LaobanConfigLoadConfig,
     LaobanConfigDiagnosticContext,
+    LaobanConfigFile,
+    LaobanConfigLoadConfig,
+    LoadedLaobanConfig,
 } from "./laoban.config";
-import {
-    validateConfigFileContents,
-    validateLaobanConfig,
-} from "./laoban.config.validator";
+import {validateConfigFileContents, validateLaobanConfig,} from "./laoban.config.validator";
 
 type LoaderIssue = BaseIssue & {
     diagnosticContext?: LaobanConfigDiagnosticContext;
@@ -34,9 +27,9 @@ const defaultLaobanConfig = (): LaobanConfig => ({
     skipDirectories: [".git", "node_modules"],
 });
 
-function debug<Area extends string>(
-    config: LaobanConfigLoadConfig<Area>,
-    area: Area,
+function debug(
+    config: LaobanConfigLoadConfig,
+    area: string,
     diagnosticContext: LaobanConfigDiagnosticContext,
     ...msg: unknown[]
 ): void {
@@ -114,14 +107,12 @@ function addDiagnosticContextToErrors<T, E extends BaseIssue>(
     return errors(first, rest, warnings, result.reference);
 }
 
-async function findConfigFile<
-    Area extends string = LaobanConfigLoadArea
->(
-    config: LaobanConfigLoadConfig<Area>,
+async function findConfigFile(
+    config: LaobanConfigLoadConfig,
     start: Filename | DirectoryName
 ): Promise<ErrorsOr<{ configDirectory: DirectoryName; configFile: Filename }, LoaderIssue>> {
     const diagnosticContext = initialDiagnosticContext();
-    debug(config, "find" as Area, diagnosticContext, "finding config from", start);
+    debug(config, "find", diagnosticContext, "finding config from", start);
 
     const containingDirectory = await config.fileOps.findContainingDirectory(
         start,
@@ -142,28 +133,26 @@ async function findConfigFile<
     };
 }
 
-export async function loadAndValidateOneConfigFile<
-    Area extends string = LaobanConfigLoadArea
->(
-    config: LaobanConfigLoadConfig<Area>,
+export async function loadAndValidateOneConfigFile(
+    config: LaobanConfigLoadConfig,
     file: Filename,
     diagnosticContext: LaobanConfigDiagnosticContext
 ): Promise<ErrorsOr<LaobanConfigFile, LoaderIssue>> {
-    debug(config, "load" as Area, diagnosticContext, "loading config file");
+    debug(config, "load", diagnosticContext, "loading config file");
 
     const textResult = await config.fileOps.loadText(file, config.loadTextConfig);
     if (isErrors(textResult)) {
         return addDiagnosticContextToErrors(textResult, diagnosticContext);
     }
 
-    debug(config, "parse" as Area, diagnosticContext, "parsing config file");
+    debug(config, "parse", diagnosticContext, "parsing config file");
 
     const parsed = parseJson(textResult.value);
     if (isErrors(parsed)) {
         return addDiagnosticContextToErrors(parsed, diagnosticContext);
     }
 
-    debug(config, "validate" as Area, diagnosticContext, "validating config file contents");
+    debug(config, "validate", diagnosticContext, "validating config file contents");
 
     const contentsValidation = validateConfigFileContents([], config.observability as any)(parsed.value as any);
     if (isErrors(contentsValidation)) {
@@ -173,10 +162,8 @@ export async function loadAndValidateOneConfigFile<
     return {value: contentsValidation.value};
 }
 
-export async function loadConfigTreeFromFile<
-    Area extends string = LaobanConfigLoadArea
->(
-    config: LaobanConfigLoadConfig<Area>,
+export async function loadConfigTreeFromFile(
+    config: LaobanConfigLoadConfig,
     file: Filename,
     diagnosticContext: LaobanConfigDiagnosticContext = initialDiagnosticContext()
 ): Promise<ErrorsOr<{ rawConfig: LaobanConfigFile; loadedFiles: Filename[] }, LoaderIssue>> {
@@ -188,7 +175,7 @@ export async function loadConfigTreeFromFile<
     const raw = oneFile.value;
     const parentFiles = raw.parents ?? [];
 
-    debug(config, "parents" as Area, currentDiagnosticContext, "loading parents for", parentFiles);
+    debug(config, "parents", currentDiagnosticContext, "loading parents for", parentFiles);
 
     const mergedConfigs: LaobanConfigFile[] = [];
     const loadedFiles: Filename[] = [];
@@ -205,7 +192,7 @@ export async function loadConfigTreeFromFile<
         loadedFiles.push(...parentResult.value.loadedFiles);
     }
 
-    debug(config, "merge" as Area, currentDiagnosticContext, "merging config chain");
+    debug(config, "merge", currentDiagnosticContext, "merging config chain");
 
     const rawConfig = mergeAll(
         [...mergedConfigs, raw],
@@ -220,10 +207,8 @@ export async function loadConfigTreeFromFile<
     };
 }
 
-export async function loadLaobanConfig<
-    Area extends string = LaobanConfigLoadArea
->(
-    config: LaobanConfigLoadConfig<Area>,
+export async function loadLaobanConfig(
+    config: LaobanConfigLoadConfig,
     start: Filename | DirectoryName
 ): Promise<ErrorsOr<LoadedLaobanConfig, LoaderIssue>> {
     const found = await findConfigFile(config, start);
@@ -244,7 +229,7 @@ export async function loadLaobanConfig<
         loadPath: loadedTree.value.loadedFiles,
     };
 
-    debug(config, "validate" as Area, finalDiagnosticContext, "validating merged config");
+    debug(config, "validate", finalDiagnosticContext, "validating merged config");
 
     const validated = validateLaobanConfig([], config.observability as any)(normalised as any);
     if (isErrors(validated)) {

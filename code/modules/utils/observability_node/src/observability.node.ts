@@ -9,12 +9,13 @@ import {
     nullCountMetric,
     nullDurationMetric,
     nullObservability,
-    type Observability, realTimeService,
+    type Observability,
+    realTimeService,
     shouldDebug,
 } from "@laoban/observability";
 import {safeString} from "@laoban/safe";
 import {renderTemplate} from "@laoban/template";
-import {combineLogSinks, consoleLogSink, fileLogSink, type NodeLogSink} from "./log.sinks";
+import {fileLogSink, type NodeLogSink} from "./log.sinks";
 
 export type SinkFactory = (fileName: string) => NodeLogSink;
 
@@ -23,9 +24,9 @@ export type NodeObservabilityTemplates = Readonly<{
     debug: string;
 }>;
 
-export type NodeObservabilityConfig<Context extends string> = Readonly<{
+export type NodeObservabilityConfig = Readonly<{
     correlationId: CorrelationId;
-    debugLevels?: DebugLevels<Context>;
+    debugLevels?: DebugLevels;
     sinks?: (NodeLogSink | string)[];
     sinkFactory?: SinkFactory;
     dictionary?: Record<string, unknown>;
@@ -79,17 +80,17 @@ const writeToSinks = (
     for (const sink of sinks) sink(line);
 };
 
-export function createNodeObservability<Context extends string>(): Observability<Context>;
+export function createNodeObservability<Context extends string>(): Observability;
 export function createNodeObservability<Context extends string>(
-    config: NodeObservabilityConfig<Context>
-): Observability<Context>;
+    config: NodeObservabilityConfig
+): Observability;
 export function createNodeObservability<Context extends string>(
-    config?: NodeObservabilityConfig<Context>
-): Observability<Context> {
+    config?: NodeObservabilityConfig
+): Observability {
     const {
         correlationId = "NoCorrelationId",
         debugLevels = {},
-        sinks = config.sinks ?? [],
+        sinks = config?.sinks ?? [],
         sinkFactory = fileLogSink,
         dictionary = {},
         now = defaultNow,

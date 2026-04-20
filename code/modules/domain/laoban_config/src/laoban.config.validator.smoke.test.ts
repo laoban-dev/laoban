@@ -1,14 +1,10 @@
-import { isErrors } from "@laoban/errors";
-import { nullObservability } from "@laoban/observability";
-import { type ValidatorDebugContext } from "@laoban/validation";
-import {
-    validateConfigFileContents,
-    validateLaobanConfig,
-} from "./laoban.config.validator";
-import type { LaobanConfig } from "./laoban.config";
+import {isErrors} from "@laoban/errors";
+import {nullObservability} from "@laoban/observability";
+import {validateConfigFileContents, validateLaobanConfig,} from "./laoban.config.validator";
+import type {LaobanConfig} from "./laoban.config";
 
 describe("laoban config validators", () => {
-    const observability = nullObservability<ValidatorDebugContext>();
+    const observability = nullObservability();
 
     describe("validateConfigFileContents", () => {
         it("accepts an empty object", () => {
@@ -69,9 +65,9 @@ describe("laoban config validators", () => {
                 packageManager: "yarn",
                 versionFile: "version.txt",
                 parents: ["./base.laoban.json"],
-                properties: { react: "19.0.0" },
-                templates: { typescript: "./templates/typescript" },
-                defaultEnv: { NODE_ENV: "test" },
+                properties: {react: "19.0.0"},
+                templates: {typescript: "./templates/typescript"},
+                defaultEnv: {NODE_ENV: "test"},
                 scripts: {
                     build: {
                         description: "build the project",

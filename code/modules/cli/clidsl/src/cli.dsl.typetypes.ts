@@ -48,7 +48,7 @@ type InitValues = {
 
 type EmptyValues = {};
 
-type CustomContext = BasicCliContext<"cli" | "cli:adapter"> & {
+type CustomContext = BasicCliContext & {
     cwd: string;
 };
 

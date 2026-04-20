@@ -39,7 +39,7 @@ import {ErrorsOr, isErrors, value} from "@laoban/errors";
 
 type TestDebugContext = "validation" | "validation:shape" | "validation:field" | "validation:union";
 
-function makeObservability(): Observability<TestDebugContext> {
+function makeObservability(): Observability {
     return {
         correlationId: "test-correlation-id",
         logger: jest.fn(),
@@ -141,7 +141,7 @@ describe("combineValidators", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["ctx"],
-                message: "ctx must be a string",
+                message: "ctx must be a string but was a number",
                 code: "wrong.type",
             },
             {
@@ -199,7 +199,7 @@ describe("composeOr", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["x"],
-                message: "x must be a string",
+                message: "x must be a string but was a number",
                 code: "wrong.type",
             },
             {
@@ -371,7 +371,7 @@ describe("mustBeType (required)", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["b"],
-                message: "b must be a boolean",
+                message: "b must be a boolean but was a string",
                 code: "wrong.type",
             },
         ]);
@@ -398,7 +398,7 @@ describe("mustBeTypeIfPresent (optional)", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["s"],
-                message: "s must be a string",
+                message: "s must be a string but was a number",
                 code: "wrong.type",
             },
         ]);
@@ -420,7 +420,7 @@ describe("Array validators", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["arr", "1"],
-                message: "arr.1 must be a number",
+                message: "arr.1 must be a number but was a string",
                 code: "wrong.type",
             },
         ]);
@@ -454,7 +454,7 @@ describe("Array validators", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["arr", "1"],
-                message: "arr.1 must be a number",
+                message: "arr.1 must be a number but was a string",
                 code: "wrong.type",
             },
         ]);
@@ -511,7 +511,7 @@ describe("mustBeObjectWithFields", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["d", "b"],
-                message: "d.b must be a number",
+                message: "d.b must be a number but was a string",
                 code: "wrong.type",
             },
         ]);
@@ -548,7 +548,7 @@ describe("mustBeNameAnd", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["context", "key2"],
-                message: "context.key2 must be a string",
+                message: "context.key2 must be a string but was a number",
                 code: "wrong.type",
             },
         ]);
@@ -639,7 +639,7 @@ describe("mustBeNameAnd", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["ctx", "b"],
-                message: "ctx.b must be a number",
+                message: "ctx.b must be a number but was a string",
                 code: "wrong.type",
             },
             {
@@ -653,7 +653,7 @@ describe("mustBeNameAnd", () => {
     });
 });
 describe("mustBeNameAndIfPresent", () => {
-    const observability = nullObservability<ValidatorDebugContext>();
+    const observability = nullObservability();
 
     it("accepts undefined", () => {
         const validator = mustBeNameAndIfPresent(mustBeString);
@@ -1357,7 +1357,7 @@ describe("nullableValidator", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["ctx"],
-                message: "ctx must be a string",
+                message: "ctx must be a string but was a number",
                 code: "wrong.type",
             },
         ]);
@@ -1398,7 +1398,7 @@ describe("nullableValidator", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["cas", "value"],
-                message: "cas.value must be a string",
+                message: "cas.value must be a string but was a number",
                 code: "wrong.type",
             },
         ]);
@@ -1459,7 +1459,7 @@ describe("warnings", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["config", "field"],
-                message: "config.field must be a number",
+                message: "config.field must be a number but was a string",
                 code: "wrong.type",
             },
         ]);

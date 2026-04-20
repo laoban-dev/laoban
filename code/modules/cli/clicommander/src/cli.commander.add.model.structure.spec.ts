@@ -1,5 +1,5 @@
 import type {Observability} from "@laoban/observability";
-import type {CliGroup, CliWalkerDebugContext} from "@laoban/clidsl";
+import type {CliGroup} from "@laoban/clidsl";
 import {addCliModelToCommander, type CommanderAdapterConfig,} from "./cli.commander.add.model";
 
 type FakeCommand = {
@@ -35,7 +35,7 @@ function makeFakeCommand(name?: string): FakeCommand {
     return fake as FakeCommand;
 }
 
-function makeObservability(): Observability<CliWalkerDebugContext> {
+function makeObservability(): Observability {
     return {
         correlationId: "test-correlation-id",
         logger: jest.fn(),

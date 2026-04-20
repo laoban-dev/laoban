@@ -1,10 +1,6 @@
-import type { Observability } from "@laoban/observability";
-import { exampleCli } from "./cli.dsl.example";
-import {
-    type CliWalkerConfig,
-    type CliWalkerDebugContext,
-    walkCliModel
-} from "./cli.dsl.walker";
+import type {Observability} from "@laoban/observability";
+import {exampleCli} from "./cli.dsl.example";
+import {type CliWalkerConfig, walkCliModel} from "./cli.dsl.walker";
 
 type FakeAcc = {
     commands: string[];
@@ -18,7 +14,7 @@ function makeAcc(): FakeAcc {
     };
 }
 
-function makeObservability(): Observability<CliWalkerDebugContext> {
+function makeObservability(): Observability {
     return {
         correlationId: "test-correlation-id",
         logger: jest.fn(),
@@ -26,12 +22,12 @@ function makeObservability(): Observability<CliWalkerDebugContext> {
         countMetric: jest.fn(),
         durationMetric: jest.fn(),
         debugLevels: {},
-        timeService: { now: () => 0 }
+        timeService: {now: () => 0}
     };
 }
 
 function makeConfig(
-    observability: Observability<CliWalkerDebugContext>
+    observability: Observability
 ): CliWalkerConfig<FakeAcc> {
     return {
         observability,

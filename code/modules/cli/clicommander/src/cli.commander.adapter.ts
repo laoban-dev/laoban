@@ -1,10 +1,5 @@
 import {Command as CommanderCommand} from "commander";
-import type {
-    AnyCliCommand,
-    BasicCliContext,
-    CliPositionalParameterDef
-} from "@laoban/clidsl";
-import type {CliWalkerDebugContext} from "@laoban/clidsl";
+import type {AnyCliCommand, BasicCliContext, CliPositionalParameterDef} from "@laoban/clidsl";
 import type {Observability} from "@laoban/observability";
 import type {CommanderAdapterConfig} from "./cli.commander.add.model";
 import {Errors, isErrors} from "@laoban/errors";
@@ -12,9 +7,9 @@ import {Errors, isErrors} from "@laoban/errors";
 export interface MakeCommanderCliAdapterConfig<
     C extends BasicCliContext = BasicCliContext
 > {
-    observability: Observability<CliWalkerDebugContext>;
+    observability: Observability;
     makeContext: () => C;
-    onError?: (observability: Observability<CliWalkerDebugContext>, e: Errors) => Promise<void>;
+    onError?: (observability: Observability, e: Errors) => Promise<void>;
 }
 
 type RuntimePositionalDef = CliPositionalParameterDef<string | number | string[]>;

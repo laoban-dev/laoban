@@ -5,7 +5,6 @@ import {
 } from "@laoban/observability";
 
 import {
-    FileDebugContext,
     FindContainingDirectoryConfig,
     FindContainingDirectoryDefaults,
 } from "./fileops";
@@ -22,14 +21,14 @@ describe("findContainingDirectory", () => {
         dir === "/" ? `/${file}` : `${dir}/${file}`,
     );
 
-    let recorded: ReturnType<typeof recordingObservability<FileDebugContext>>;
+    let recorded: ReturnType<typeof recordingObservability>;
     let defaults: FindContainingDirectoryDefaults;
     let config: FindContainingDirectoryConfig;
     let finder: ReturnType<typeof findContainingDirectory>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        recorded = recordingObservability<FileDebugContext>(
+        recorded = recordingObservability(
             {},
             "test-correlation-id",
             steppingTimeService(1000, 5),

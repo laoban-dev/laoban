@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 import {Command} from "commander";
-import {addCliModelToCommander, type CliModel, exampleCli, makeValidateCliModel} from "@laoban/clidsl";
+import {addCliModelToCommander, exampleCli, ExampleContext, makeValidateCliModel} from "@laoban/clidsl";
 import {createNodeObservability} from "@laoban/observability_node";
 import {isErrors} from "@laoban/errors";
 import {makeCommanderCliAdapter} from "@laoban/commander";
 
 const observability = createNodeObservability();
-const cliDsl: CliModel = exampleCli;
+const cliDsl = exampleCli;
 
-const validationErrors = makeValidateCliModel()([], observability)(cliDsl);
+const validationErrors = makeValidateCliModel<ExampleContext>()([], observability)(cliDsl);
 if (isErrors(validationErrors)) {
     console.error("CLI model validation failed with the following errors:");
     for (const error of validationErrors.errors) {
@@ -25,7 +25,7 @@ addCliModelToCommander(
     cliDsl,
     makeCommanderCliAdapter({
         observability,
-        makeContext: () => ({observability})
+        makeContext: () => ({cwd: process.cwd(), observability})
     })
 );
 

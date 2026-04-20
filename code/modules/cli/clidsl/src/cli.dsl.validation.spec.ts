@@ -12,7 +12,7 @@ import {
 import type {CliGroup, CliModel} from "./cli.dsl";
 import {exampleCli} from "./cli.dsl.example";
 
-function makeObservability(): Observability<any> {
+function makeObservability(): Observability {
     return {
         correlationId: "test-correlation-id",
         logger: jest.fn(),
@@ -181,7 +181,7 @@ describe("validateCliOptionParameterDef", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["param", "defaultValue"],
-                message: "param.defaultValue must be a number",
+                message: "param.defaultValue must be a number but was a string",
                 code: "wrong.type"
             }
         ]);
@@ -199,7 +199,7 @@ describe("validateCliOptionParameterDef", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["param", "defaultValue", "1"],
-                message: "param.defaultValue.1 must be a string",
+                message: "param.defaultValue.1 must be a string but was a number",
                 code: "wrong.type"
             }
         ]);
@@ -284,7 +284,7 @@ describe("makeValidateCliCommandDef", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["command", "execute"],
-                message: "command.execute must be a function",
+                message: "command.execute must be a function but was a number",
                 code: "wrong.type"
             }
         ]);

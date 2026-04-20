@@ -1,4 +1,4 @@
-import { value } from "@laoban/errors";
+import {value} from "@laoban/errors";
 import {
     chainValidators,
     composeTypedOr,
@@ -10,7 +10,7 @@ import {
     mustBeNumberIfPresent,
     mustBeObjectWithFields,
     mustBeString,
-    mustBeStringIfPresent,
+    mustBeStringIfPresent, mustBeType,
     nonBlank,
     oneValidationError,
     renderContext,
@@ -44,19 +44,10 @@ const validateNoDefaultWhenRequired = <T extends { required?: boolean; defaultVa
             ? oneValidationError(
                 context,
                 `${renderContext(context)} cannot have both required=true and defaultValue`,
-                { code: "illegal.combination" }
+                {code: "illegal.combination"}
             )
             : value(input);
 
-const validateExecute: Validator<AnyCliCommand["execute"]> =
-    (context) => (input) =>
-        typeof input === "function"
-            ? value(input)
-            : oneValidationError(
-                context,
-                `${renderContext(context)} must be a function`,
-                { code: "wrong.type" }
-            );
 
 const validateNoOverlappingKeys = <C extends BasicCliContext = BasicCliContext>(): Validator<AnyCliCommand<C>> =>
     (context) => (input) => {
@@ -67,7 +58,7 @@ const validateNoOverlappingKeys = <C extends BasicCliContext = BasicCliContext>(
             : oneValidationError(
                 context,
                 `${renderContext(context)} has keys present in both positionals and options: ${overlaps.sort().join(", ")}`,
-                { code: "duplicate.key" }
+                {code: "duplicate.key"}
             );
     };
 
@@ -88,7 +79,7 @@ const validateUniqueShortNames = <C extends BasicCliContext = BasicCliContext>()
             : oneValidationError(
                 context,
                 `${renderContext(context)} has duplicate shortName values: ${[...duplicates].sort().join(", ")}`,
-                { code: "duplicate.shortName" }
+                {code: "duplicate.shortName"}
             );
     };
 
@@ -187,7 +178,7 @@ function makeValidateCliCommand<C extends BasicCliContext = BasicCliContext>(): 
             description: validateDescription,
             positionals: mustBeNameAnd(validateCliPositionalParameterDef, true),
             options: mustBeNameAnd(validateCliOptionParameterDef, true),
-            execute: validateExecute
+            execute: mustBeType(x => typeof x === "function", "function") as any
         }, true),
         validateNoOverlappingKeys<C>(),
         validateUniqueShortNames<C>()

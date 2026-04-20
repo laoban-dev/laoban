@@ -1,6 +1,6 @@
-import { Command as CommanderCommand } from "commander";
-import { mapEntries } from "@laoban/records";
-import type { Observability } from "@laoban/observability";
+import {Command as CommanderCommand} from "commander";
+import {mapEntries} from "@laoban/records";
+import type {Observability} from "@laoban/observability";
 import type {
     AnyCliCommand,
     BasicCliContext,
@@ -10,14 +10,10 @@ import type {
     CliPositionalValue,
     CliValue
 } from "./cli.dsl";
-import {
-    type CliWalkerConfig,
-    type CliWalkerDebugContext,
-    walkCliModel
-} from "./cli.dsl.walker";
+import {type CliWalkerConfig, walkCliModel} from "./cli.dsl.walker";
 
 export interface CommanderAdapterConfig<C extends BasicCliContext = BasicCliContext> {
-    observability: Observability<CliWalkerDebugContext>;
+    observability: Observability;
     addAction: (
         commanderCommand: CommanderCommand,
         cliCommand: AnyCliCommand<C>

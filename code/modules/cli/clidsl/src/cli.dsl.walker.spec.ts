@@ -1,10 +1,9 @@
-import type { Observability } from "@laoban/observability";
+import type {Observability} from "@laoban/observability";
 import {
     type AnyCliCommand,
     type CliGroup
 } from "./cli.dsl";
 import {
-    type CliWalkerDebugContext,
     type CliWalkerConfig,
     walkCliGroupChildren,
     walkCliModel,
@@ -25,7 +24,7 @@ function makeAcc(): FakeAcc {
     };
 }
 
-function makeObservability(): Observability<CliWalkerDebugContext> {
+function makeObservability(): Observability {
     return {
         correlationId: "test-correlation-id",
         logger: jest.fn(),
@@ -33,23 +32,23 @@ function makeObservability(): Observability<CliWalkerDebugContext> {
         countMetric: jest.fn(),
         durationMetric: jest.fn(),
         debugLevels: {},
-        timeService: { now: () => 0 }
+        timeService: {now: () => 0}
     };
 }
 
 function makeConfig(
-    observability: Observability<CliWalkerDebugContext>
+    observability: Observability
 ): CliWalkerConfig<FakeAcc> {
     return {
         observability,
         addGroup: (parent, name, group) => {
-            parent.groups.push({ name, description: group.description });
+            parent.groups.push({name, description: group.description});
             const child = makeAcc();
             parent.childrenByGroupName[name] = child;
             return child;
         },
         addLeafCommand: (parent, name, command) => {
-            parent.commands.push({ name, description: command.description });
+            parent.commands.push({name, description: command.description});
         }
     };
 }
@@ -65,14 +64,15 @@ describe("walkCliNode", () => {
             description: "Build project",
             positionals: {},
             options: {},
-            execute: async () => {}
+            execute: async () => {
+            }
         };
 
         const result = walkCliNode(acc, "build", command, config);
 
         expect(result).toBe(acc);
         expect(acc.commands).toEqual([
-            { name: "build", description: "Build project" }
+            {name: "build", description: "Build project"}
         ]);
         expect(acc.groups).toEqual([]);
         expect(observability.debug).toHaveBeenCalledWith(
@@ -96,7 +96,8 @@ describe("walkCliNode", () => {
                     description: "Reset state",
                     positionals: {},
                     options: {},
-                    execute: async () => {}
+                    execute: async () => {
+                    }
                 }
             }
         };
@@ -105,11 +106,11 @@ describe("walkCliNode", () => {
 
         expect(result).toBe(acc);
         expect(acc.groups).toEqual([
-            { name: "admin", description: "Admin commands" }
+            {name: "admin", description: "Admin commands"}
         ]);
         expect(acc.commands).toEqual([]);
         expect(acc.childrenByGroupName.admin.commands).toEqual([
-            { name: "reset", description: "Reset state" }
+            {name: "reset", description: "Reset state"}
         ]);
         expect(observability.debug).toHaveBeenCalledWith(
             "cli:adapter",
@@ -154,7 +155,8 @@ describe("walkCliGroupChildren", () => {
                     description: "Build workspace",
                     positionals: {},
                     options: {},
-                    execute: async () => {}
+                    execute: async () => {
+                    }
                 },
                 admin: {
                     nodeType: "group",
@@ -165,7 +167,8 @@ describe("walkCliGroupChildren", () => {
                             description: "Reset state",
                             positionals: {},
                             options: {},
-                            execute: async () => {}
+                            execute: async () => {
+                            }
                         }
                     }
                 }
@@ -176,13 +179,13 @@ describe("walkCliGroupChildren", () => {
 
         expect(result).toBe(acc);
         expect(acc.commands).toEqual([
-            { name: "build", description: "Build workspace" }
+            {name: "build", description: "Build workspace"}
         ]);
         expect(acc.groups).toEqual([
-            { name: "admin", description: "Admin commands" }
+            {name: "admin", description: "Admin commands"}
         ]);
         expect(acc.childrenByGroupName.admin.commands).toEqual([
-            { name: "reset", description: "Reset state" }
+            {name: "reset", description: "Reset state"}
         ]);
     });
 });
@@ -202,7 +205,8 @@ describe("walkCliModel", () => {
                     description: "Update workspace",
                     positionals: {},
                     options: {},
-                    execute: async () => {}
+                    execute: async () => {
+                    }
                 },
                 admin: {
                     nodeType: "group",
@@ -213,7 +217,8 @@ describe("walkCliModel", () => {
                             description: "Repair state",
                             positionals: {},
                             options: {},
-                            execute: async () => {}
+                            execute: async () => {
+                            }
                         }
                     }
                 }
@@ -224,13 +229,13 @@ describe("walkCliModel", () => {
 
         expect(result).toBe(acc);
         expect(acc.commands).toEqual([
-            { name: "update", description: "Update workspace" }
+            {name: "update", description: "Update workspace"}
         ]);
         expect(acc.groups).toEqual([
-            { name: "admin", description: "Admin commands" }
+            {name: "admin", description: "Admin commands"}
         ]);
         expect(acc.childrenByGroupName.admin.commands).toEqual([
-            { name: "repair", description: "Repair state" }
+            {name: "repair", description: "Repair state"}
         ]);
         expect(observability.debug).toHaveBeenCalledWith(
             "cli:adapter",

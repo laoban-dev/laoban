@@ -3,7 +3,7 @@ import {recordingObservability} from "./observability.recorded";
 
 describe("recordingObservability", () => {
     it("starts empty", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">();
+        const recorded = recordingObservability();
 
         expect(recorded.logs).toEqual([]);
         expect(recorded.debug).toEqual([]);
@@ -12,7 +12,7 @@ describe("recordingObservability", () => {
     });
 
     it("records log messages", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">();
+        const recorded = recordingObservability();
 
         recorded.observability.logger("info", "hello", 1, { a: true });
         recorded.observability.logger("error", "bad news");
@@ -24,7 +24,7 @@ describe("recordingObservability", () => {
     });
 
     it("records debug messages with context and level", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">();
+        const recorded = recordingObservability();
 
         recorded.observability.debug("load", "debug", "loading file", "a.txt");
         recorded.observability.debug("findContainingDirectory", "info", "checking", "/tmp/laoban.json");
@@ -40,7 +40,7 @@ describe("recordingObservability", () => {
     });
 
     it("records count metrics", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">();
+        const recorded = recordingObservability();
 
         recorded.observability.countMetric("fileops.load.file.success");
         recorded.observability.countMetric("fileops.load.file.success");
@@ -54,7 +54,7 @@ describe("recordingObservability", () => {
     });
 
     it("records duration metrics", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">();
+        const recorded = recordingObservability();
 
         recorded.observability.durationMetric("fileops.load.file.ms", 12);
         recorded.observability.durationMetric("fileops.load.url.ms", 7);
@@ -66,7 +66,7 @@ describe("recordingObservability", () => {
     });
 
     it("preserves the supplied correlation id", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">(
+        const recorded = recordingObservability(
             {},
             "corr-123",
         );
@@ -75,7 +75,7 @@ describe("recordingObservability", () => {
     });
 
     it("preserves the supplied debug levels", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">({
+        const recorded = recordingObservability({
             load: ["debug"],
             findContainingDirectory: ["info", "debug"],
         });
@@ -88,7 +88,7 @@ describe("recordingObservability", () => {
 
     it("preserves the supplied time service", () => {
         const timeService = steppingTimeService(100, 5);
-        const recorded = recordingObservability<"load" | "findContainingDirectory">(
+        const recorded = recordingObservability(
             {},
             "corr-123",
             timeService,
@@ -98,7 +98,7 @@ describe("recordingObservability", () => {
     });
 
     it("uses the supplied time service for deterministic time", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">(
+        const recorded = recordingObservability(
             {},
             "corr-123",
             steppingTimeService(100, 5),
@@ -110,7 +110,7 @@ describe("recordingObservability", () => {
     });
 
     it("uses one shared recording surface for all observability methods", () => {
-        const recorded = recordingObservability<"load" | "findContainingDirectory">();
+        const recorded = recordingObservability();
 
         recorded.observability.logger("warn", "warning");
         recorded.observability.debug("load", "debug", "loading");

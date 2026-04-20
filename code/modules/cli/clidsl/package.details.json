@@ -5,6 +5,7 @@
   "links": [
     "@laoban/errors",
     "@laoban/observability",
+    "@laoban/records",
     "@laoban/safe",
     "@laoban/validation"
   ],

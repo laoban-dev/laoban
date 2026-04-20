@@ -1,9 +1,8 @@
-import { Command } from "commander";
-import type { Observability } from "@laoban/observability";
-import { addCliModelToCommander } from "./cli.commander.add.model";
-import type { CliWalkerDebugContext } from "@laoban/clidsl";
+import {Command} from "commander";
+import type {Observability} from "@laoban/observability";
+import {addCliModelToCommander} from "./cli.commander.add.model";
 
-function makeObservability(): Observability<CliWalkerDebugContext> {
+function makeObservability(): Observability {
     return {
         correlationId: "test-correlation-id",
         logger: jest.fn(),

@@ -10,23 +10,22 @@ import {
     type Observability,
 } from './observability'
 
-type TestContext = 'exec' | 'config' | 'fs'
 
 describe('shouldDebug', () => {
     it('returns false when the context is not configured', () => {
-        const debugLevels: DebugLevels<TestContext> = {}
+        const debugLevels: DebugLevels = {}
 
         expect(shouldDebug(debugLevels, 'exec', 'debug')).toBe(false)
     })
 
     it('returns false when the context has an empty list', () => {
-        const debugLevels: DebugLevels<TestContext> = { exec: [] }
+        const debugLevels: DebugLevels = { exec: [] }
 
         expect(shouldDebug(debugLevels, 'exec', 'debug')).toBe(false)
     })
 
     it('returns true when the level is enabled for the context', () => {
-        const debugLevels: DebugLevels<TestContext> = {
+        const debugLevels: DebugLevels = {
             exec: ['debug', 'info'],
         }
 
@@ -35,7 +34,7 @@ describe('shouldDebug', () => {
     })
 
     it('returns false when the level is not enabled for the context', () => {
-        const debugLevels: DebugLevels<TestContext> = {
+        const debugLevels: DebugLevels = {
             exec: ['info'],
         }
 
@@ -44,7 +43,7 @@ describe('shouldDebug', () => {
     })
 
     it('uses the levels for the requested context only', () => {
-        const debugLevels: DebugLevels<TestContext> = {
+        const debugLevels: DebugLevels = {
             exec: ['debug'],
             config: ['warn'],
         }
@@ -56,7 +55,7 @@ describe('shouldDebug', () => {
 
     it('works for all log levels', () => {
         const levels: LogLevel[] = ['error', 'warn', 'info', 'debug']
-        const debugLevels: DebugLevels<TestContext> = { exec: levels }
+        const debugLevels: DebugLevels = { exec: levels }
 
         expect(shouldDebug(debugLevels, 'exec', 'error')).toBe(true)
         expect(shouldDebug(debugLevels, 'exec', 'warn')).toBe(true)
@@ -103,37 +102,37 @@ describe('realTimeService', () => {
 
 describe('nullObservability', () => {
     it('uses the supplied correlation id', () => {
-        const obs = nullObservability<TestContext>('corr-123')
+        const obs = nullObservability('corr-123')
 
         expect(obs.correlationId).toBe('corr-123')
     })
 
     it('defaults the correlation id to none', () => {
-        const obs = nullObservability<TestContext>()
+        const obs = nullObservability()
 
         expect(obs.correlationId).toBe('none')
     })
 
     it('has empty debug levels', () => {
-        const obs = nullObservability<TestContext>('corr-123')
+        const obs = nullObservability('corr-123')
 
         expect(obs.debugLevels).toEqual({})
     })
 
     it('uses the real time service', () => {
-        const obs = nullObservability<TestContext>('corr-123')
+        const obs = nullObservability('corr-123')
 
         expect(obs.timeService).toBe(realTimeService)
     })
 
     it('provides a callable time service', () => {
-        const obs = nullObservability<TestContext>('corr-123')
+        const obs = nullObservability('corr-123')
 
         expect(typeof obs.timeService.now()).toBe('number')
     })
 
     it('provides callable no-op functions', () => {
-        const obs = nullObservability<TestContext>('corr-123')
+        const obs = nullObservability('corr-123')
 
         expect(() => obs.logger('info', 'hello')).not.toThrow()
         expect(() => obs.debug('exec', 'debug', 'hello')).not.toThrow()
@@ -142,7 +141,7 @@ describe('nullObservability', () => {
     })
 
     it('returns an object matching the Observability shape', () => {
-        const obs: Observability<TestContext> = nullObservability<TestContext>('corr-123')
+        const obs: Observability = nullObservability('corr-123')
 
         expect(obs.correlationId).toBe('corr-123')
         expect(typeof obs.logger).toBe('function')
@@ -154,8 +153,8 @@ describe('nullObservability', () => {
     })
 
     it('creates independent instances', () => {
-        const obs1 = nullObservability<TestContext>('corr-1')
-        const obs2 = nullObservability<TestContext>('corr-2')
+        const obs1 = nullObservability('corr-1')
+        const obs2 = nullObservability('corr-2')
 
         expect(obs1).not.toBe(obs2)
         expect(obs1.correlationId).toBe('corr-1')

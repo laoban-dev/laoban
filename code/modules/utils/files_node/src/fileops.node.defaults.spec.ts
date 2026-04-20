@@ -1,14 +1,10 @@
 import * as path from "path";
-import { access, readFile } from "fs/promises";
+import {access, readFile} from "fs/promises";
 
-import { errors, value } from "@laoban/errors";
-import {
-    recordingObservability,
-    steppingTimeService,
-} from "@laoban/observability";
+import {errors, value} from "@laoban/errors";
+import {recordingObservability, steppingTimeService,} from "@laoban/observability";
 
-import { nodeFileOpsDefaults } from "./fileops.node.defaults";
-import {FileDebugContext} from "@laoban/files";
+import {nodeFileOpsDefaults} from "./fileops.node.defaults";
 
 jest.mock("fs/promises", () => ({
     access: jest.fn(),
@@ -16,11 +12,11 @@ jest.mock("fs/promises", () => ({
 }));
 
 describe("nodeFileOpsDefaults", () => {
-    let recorded: ReturnType<typeof recordingObservability<FileDebugContext>>;
+    let recorded: ReturnType<typeof recordingObservability>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        recorded = recordingObservability<FileDebugContext>(
+        recorded = recordingObservability(
             {},
             "test-correlation-id",
             steppingTimeService(1000, 5),

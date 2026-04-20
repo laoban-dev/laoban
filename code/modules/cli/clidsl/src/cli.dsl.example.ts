@@ -9,10 +9,10 @@
  * These examples are useful for readers because they show the "happy path"
  * shapes of the DSL without the noise of negative type tests.
  */
-import { BasicCliContext, CliModel, defineCommand, group } from "./cli.dsl";
-import { safeJson } from "@laoban/safe";
+import {BasicCliContext, CliModel, defineCommand, group} from "./cli.dsl";
+import {safeJson} from "@laoban/safe";
 
-type ExampleContext = BasicCliContext<"cli" | "adapter"> & {
+export type ExampleContext = BasicCliContext & {
     cwd: string;
 };
 
@@ -44,12 +44,12 @@ type VersionValues = {
 const buildCommand = defineCommand<BuildValues, ExampleContext>()({
     description: "Build one or more targets",
     positionals: {
-        target: { type: "string", description: "Build target", required: true },
-        files: { type: "string[]", description: "Files to include" }
+        target: {type: "string", description: "Build target", required: true},
+        files: {type: "string[]", description: "Files to include"}
     },
     options: {
-        verbose: { type: "boolean", description: "Enable verbose logging", shortName: "v", defaultValue: false },
-        retries: { type: "number", description: "Retry count", shortName: "r", defaultValue: 3 }
+        verbose: {type: "boolean", description: "Enable verbose logging", shortName: "v", defaultValue: false},
+        retries: {type: "number", description: "Retry count", shortName: "r", defaultValue: 3}
     },
     execute: async (values, context) => {
         const target: string = values.target;
@@ -57,37 +57,43 @@ const buildCommand = defineCommand<BuildValues, ExampleContext>()({
         const verbose: boolean = values.verbose;
         const retries: number = values.retries;
         const cwd: string = context.cwd;
-        console.log(safeJson({ values, cwd }));
+        context.observability.logger('info', safeJson({values, cwd}));
     }
 });
 
 const initCommand = defineCommand<InitValues, ExampleContext>()({
     description: "Initialise a project",
     positionals: {
-        name: { type: "string", description: "Project name", required: true },
-        template: { type: "string", description: "Template to use" }
+        name: {type: "string", description: "Project name", required: true},
+        template: {type: "string", description: "Template to use"}
     },
     options: {
-        force: { type: "boolean", description: "Overwrite existing files", shortName: "f", defaultValue: false }
+        force: {type: "boolean", description: "Overwrite existing files", shortName: "f", defaultValue: false}
     },
     execute: async (values, context) => {
         const name: string = values.name;
         const template: string = values.template;
         const force: boolean = values.force;
         const cwd: string = context.cwd;
-        console.log(safeJson({ values, cwd }));
+
+        context.observability.logger('info', safeJson({values, cwd}));
     }
 });
 
 const publishCommand = defineCommand<PublishValues, ExampleContext>()({
     description: "Publish a package",
     positionals: {
-        packageName: { type: "string", description: "Package name", required: true }
+        packageName: {type: "string", description: "Package name", required: true}
     },
     options: {
-        registry: { type: "string", description: "Registry URL", defaultValue: "https://registry.npmjs.org" },
-        dryRun: { type: "boolean", description: "Do everything except the final publish", shortName: "d", defaultValue: false },
-        tag: { type: "string[]", description: "Tags to apply" }
+        registry: {type: "string", description: "Registry URL", defaultValue: "https://registry.npmjs.org"},
+        dryRun: {
+            type: "boolean",
+            description: "Do everything except the final publish",
+            shortName: "d",
+            defaultValue: false
+        },
+        tag: {type: "string[]", description: "Tags to apply"}
     },
     execute: async (values, context) => {
         const packageName: string = values.packageName;
@@ -95,23 +101,23 @@ const publishCommand = defineCommand<PublishValues, ExampleContext>()({
         const dryRun: boolean = values.dryRun;
         const tag: string[] = values.tag;
         const cwd: string = context.cwd;
-        console.log(safeJson({ values, cwd }));
+        context.observability.logger('info', safeJson({values, cwd}));
     }
 });
 
 const versionCommand = defineCommand<VersionValues, ExampleContext>()({
     description: "Change package version",
     positionals: {
-        bump: { type: "string", description: "Version bump type", required: true }
+        bump: {type: "string", description: "Version bump type", required: true}
     },
     options: {
-        yes: { type: "boolean", description: "Skip confirmation", shortName: "y", defaultValue: false }
+        yes: {type: "boolean", description: "Skip confirmation", shortName: "y", defaultValue: false}
     },
     execute: async (values, context) => {
         const bump: string = values.bump;
         const yes: boolean = values.yes;
         const cwd: string = context.cwd;
-        console.log(safeJson({ values, cwd }));
+        context.observability.logger('info', safeJson({values, cwd}));
     }
 });
 

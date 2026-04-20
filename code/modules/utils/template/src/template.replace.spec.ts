@@ -1,5 +1,5 @@
-import { replaceTemplateToken} from "./template.replace";
-import {dollarsBracesVarDefn, type TemplateConfig, type TemplateDebugContext} from "./template.types";
+import {replaceTemplateToken} from "./template.replace";
+import {dollarsBracesVarDefn, type TemplateConfig} from "./template.types";
 import {isErrors, isValue} from "@laoban/errors";
 import {nullObservability} from "@laoban/observability";
 import {defaultTemplateFns} from "./template.functions";
@@ -12,7 +12,7 @@ const makeConfig = (
     variableDefn: dollarsBracesVarDefn,
     onMissing: "error",
     functions: defaultTemplateFns<Dictionary>(),
-    observability: nullObservability<TemplateDebugContext>(),
+    observability: nullObservability(),
     ...overrides,
 });
 

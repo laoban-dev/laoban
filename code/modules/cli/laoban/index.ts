@@ -15,9 +15,9 @@ const observability = createNodeObservability({
     correlationId: 'laoban cli',
     sinks: [consoleLogSink]
 });
-const cliDsl: CliModel = laobanConfigCommands;
+const cliDsl: CliModel<LaobanConfigCliContext> = laobanConfigCommands;
 
-const validationErrors = makeValidateCliModel()([], observability)(cliDsl);
+const validationErrors = makeValidateCliModel<LaobanConfigCliContext>()([], observability)(cliDsl);
 if (isErrors(validationErrors)) {
     console.error("CLI model validation failed with the following errors:");
     for (const error of validationErrors.errors) {

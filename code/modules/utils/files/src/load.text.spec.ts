@@ -5,7 +5,6 @@ import {
 } from "@laoban/observability";
 
 import {
-    FileDebugContext,
     FileOpIssue,
     LoadTextConfig,
     LoadTextDefaults,
@@ -16,7 +15,7 @@ describe("loadText", () => {
     const loadFile = jest.fn();
     const loadUrl = jest.fn();
 
-    let recorded: ReturnType<typeof recordingObservability<FileDebugContext>>;
+    let recorded: ReturnType<typeof recordingObservability>;
     let defaults: LoadTextDefaults;
     let config: LoadTextConfig;
     let loader: ReturnType<typeof loadText>;
@@ -24,7 +23,7 @@ describe("loadText", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        recorded = recordingObservability<FileDebugContext>(
+        recorded = recordingObservability(
             {},
             "test-correlation-id",
             steppingTimeService(1000, 5),

@@ -1,11 +1,12 @@
-import { Observability } from "@laoban/observability";
+import {Observability} from "@laoban/observability";
+import {NameAnd} from "@laoban/records";
 
 export type CliValue = string | number | boolean | string[];
 export type CliRecord = Record<string, CliValue>;
 export type CliPositionalValue = Exclude<CliValue, boolean>;
 
-export interface BasicCliContext<DebugContext extends string = string> {
-    observability: Observability<DebugContext>;
+export interface BasicCliContext {
+    observability: Observability;
 }
 
 export type CliValueTypeName<T> =
@@ -76,8 +77,24 @@ export interface CliCommand<
     execute: CliExecute<T, C>;
 }
 
-export type AnyCliCommand<C extends BasicCliContext = BasicCliContext> =
-    CliCommand<CliRecord, never, never, C>;
+export type AnyCliPositionalParameterDef =
+    | CliPositionalParameterDef<string>
+    | CliPositionalParameterDef<string[]>
+    | CliPositionalParameterDef<number>;
+
+export type AnyCliOptionParameterDef =
+    | CliOptionParameterDef<string>
+    | CliOptionParameterDef<string[]>
+    | CliOptionParameterDef<number>
+    | CliOptionParameterDef<boolean>;
+
+export interface AnyCliCommand<C extends BasicCliContext = BasicCliContext> {
+    nodeType: "command";
+    description: string;
+    positionals: NameAnd<AnyCliPositionalParameterDef>;
+    options: NameAnd<AnyCliOptionParameterDef>;
+    execute: CliExecute<any, C>;
+}
 
 export interface CliGroup<C extends BasicCliContext = BasicCliContext> {
     nodeType: "group";

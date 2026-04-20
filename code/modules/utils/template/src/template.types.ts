@@ -1,11 +1,6 @@
 import {type BaseIssue, type ErrorsOr} from "@laoban/errors";
 import {type Observability} from "@laoban/observability";
 
-export type TemplateDebugContext =
-    | "template"
-    | "template.parse"
-    | "template.resolve"
-    | "template.function";
 
 export type VariableDefn = {
     regex: RegExp;
@@ -48,6 +43,7 @@ export type TemplateIssue = BaseIssue<
         functionName?: string;
     }
 >;
+
 export function makeTemplateIssue(
     kind: TemplateIssueKind,
     message: string,
@@ -71,6 +67,7 @@ export function makeTemplateIssue(
         }
     };
 }
+
 export type TemplateFn<T> = (args: {
     value: unknown;
     dictionary: T;
@@ -83,7 +80,7 @@ export type TemplateFn<T> = (args: {
 export type TemplateFns<T> = Record<string, TemplateFn<T>>;
 
 export type TemplateConfig<T> = {
-    observability: Observability<TemplateDebugContext>;
+    observability: Observability;
     variableDefn: VariableDefn;
     onMissing: MissingValueMode;
     functions: TemplateFns<T>;

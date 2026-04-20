@@ -7,10 +7,10 @@ import type {
     CliOptionParameterDef,
     CliPositionalParameterDef
 } from "@laoban/clidsl";
-import { type CliWalkerConfig, type CliWalkerDebugContext, walkCliModel } from "@laoban/clidsl";
+import { type CliWalkerConfig, walkCliModel } from "@laoban/clidsl";
 
 export interface CommanderAdapterConfig<C extends BasicCliContext = BasicCliContext> {
-    observability: Observability<CliWalkerDebugContext>;
+    observability: Observability;
     addAction: (
         commanderCommand: CommanderCommand,
         cliCommand: AnyCliCommand<C>

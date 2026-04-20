@@ -1,12 +1,9 @@
-import type { MergeOptions } from "@laoban/merge";
+import type {MergeOptions} from "@laoban/merge";
 import type {DirectoryName, Filename, FileOps, LoadTextConfig} from "@laoban/files";
-import type { ErrorsOr } from "@laoban/errors";
-import type { Observability } from "@laoban/observability";
+import type {ErrorsOr} from "@laoban/errors";
+import type {Observability} from "@laoban/observability";
 
-import type {
-    LaobanScripts,
-    RawLaobanScripts,
-} from "@laoban/scripts";
+import type {LaobanScripts, RawLaobanScripts,} from "@laoban/scripts";
 
 export type PackageManagerName = string;
 export type FileOrUrl = string;
@@ -33,25 +30,16 @@ export interface LaobanConfigFile {
     skipDirectories?: string[];
 }
 
-export type LaobanConfigLoadArea =
-    | "find"
-    | "load"
-    | "parse"
-    | "parents"
-    | "merge"
-    | "validate";
 
 export type LaobanConfigDiagnosticContext = Readonly<{
     currentFile?: Filename;
     loadPath: Filename[];
 }>;
 
-export interface LaobanConfigLoadConfig<
-    Area extends string = LaobanConfigLoadArea
-> {
+export interface LaobanConfigLoadConfig {
     fileOps: FileOps;
     loadTextConfig: LoadTextConfig
-    observability: Observability<Area>;
+    observability: Observability;
     markerFileName: Filename;
     mergeOptions?: MergeOptions;
 }
@@ -63,9 +51,7 @@ export interface LoadedLaobanConfig {
     loadedFiles: Filename[];
 }
 
-export type LaobanConfigLoader<
-    Area extends string = LaobanConfigLoadArea
-> = (
-    config: LaobanConfigLoadConfig<Area>,
+export type LaobanConfigLoader = (
+    config: LaobanConfigLoadConfig,
     start: Filename | DirectoryName
 ) => Promise<ErrorsOr<LoadedLaobanConfig>>;

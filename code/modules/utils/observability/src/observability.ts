@@ -7,8 +7,8 @@ export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
 
 export type Logger = (level: LogLevel, ...msg: unknown[]) => void
 
-export type Debug<Context extends string> = (
-    context: Context,
+export type Debug = (
+    context: string,
     level: LogLevel,
     ...msg: unknown[]
 ) => void
@@ -21,21 +21,21 @@ export type TimeService = {
     now: () => number
 }
 
-export type DebugLevels<Context extends string> = Partial<Record<Context, LogLevel[]>>
+export type DebugLevels = Record<string, LogLevel[]>
 
-export type Observability<Context extends string> = Readonly<{
+export type Observability = Readonly<{
     correlationId: CorrelationId
     logger: Logger
-    debug: Debug<Context>
+    debug: Debug
     countMetric: CountMetric
     durationMetric: DurationMetric
-    debugLevels: DebugLevels<Context>
+    debugLevels: DebugLevels
     timeService: TimeService
 }>
 
-export const shouldDebug = <Context extends string>(
-    debugLevels: DebugLevels<Context>,
-    context: Context,
+export const shouldDebug = (
+    debugLevels: DebugLevels,
+    context: string,
     level: LogLevel
 ): boolean => (debugLevels[context] ?? []).includes(level)
 
@@ -64,9 +64,9 @@ export const steppingTimeService = (
     }
 }
 
-export const nullObservability = <Context extends string>(
+export const nullObservability = (
     correlationId: CorrelationId = 'none'
-): Observability<Context> => ({
+): Observability => ({
     correlationId,
     logger: nullLogger,
     debug: () => {
@@ -77,7 +77,7 @@ export const nullObservability = <Context extends string>(
     timeService: realTimeService,
 })
 
-export function dumpErrors<Context extends string>(o: Observability<Context>, e: Errors, level: LogLevel = 'error'): void {
+export function dumpErrors<Context extends string>(o: Observability, e: Errors, level: LogLevel = 'error'): void {
     function dumpOne<T>(title: string, array?: T[]) {
         if (array && array.length) {
             o.logger(level, title)

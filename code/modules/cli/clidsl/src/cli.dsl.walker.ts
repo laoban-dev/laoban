@@ -8,10 +8,9 @@ import {
     isCliGroup
 } from "./cli.dsl";
 
-export type CliWalkerDebugContext = "cli:adapter";
 
 export interface CliWalkerConfig<Acc, C extends BasicCliContext = BasicCliContext> {
-    observability: Observability<CliWalkerDebugContext>;
+    observability: Observability;
     addGroup: (
         parent: Acc,
         name: string,

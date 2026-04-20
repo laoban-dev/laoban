@@ -5,7 +5,7 @@ import {FileOps, LoadTextConfig} from "@laoban/files";
 
 export type LaobanDebugContext = "cli";
 
-export interface LaobanConfigCliContext extends BasicCliContext<LaobanDebugContext> {
+export interface LaobanConfigCliContext extends BasicCliContext {
     cwd: string;
     fileOps: FileOps
     loadLaobanFileConfig: LoadTextConfig

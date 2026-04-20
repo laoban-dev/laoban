@@ -1,15 +1,11 @@
-import {
-    errorsOrThrow,
-    valueOrThrow,
-} from "@laoban/errors";
-import { nullObservability } from "@laoban/observability";
-import type { LaobanConfigLoadArea } from "./laoban.config";
-import type { DirectoryName, Filename, FileOps } from "@laoban/files";
+import {errorsOrThrow, valueOrThrow,} from "@laoban/errors";
+import {nullObservability} from "@laoban/observability";
+import type {DirectoryName, Filename, FileOps} from "@laoban/files";
 
-import { loadLaobanConfig } from "./laoban.config.loader";
+import {loadLaobanConfig} from "./laoban.config.loader";
 
 describe("loadLaobanConfig", () => {
-    const observability = nullObservability<LaobanConfigLoadArea>();
+    const observability = nullObservability();
 
     function makeFileOps(
         foundDirectory: DirectoryName,
@@ -22,8 +18,8 @@ describe("loadLaobanConfig", () => {
             loadText: async (filename: Filename) => {
                 const text = files[filename];
                 return text === undefined
-                    ? { errors: [{ kind: "loadText", message: `File not found: ${filename}` }] }
-                    : { value: text };
+                    ? {errors: [{kind: "loadText", message: `File not found: ${filename}`}]}
+                    : {value: text};
             },
         } as FileOps;
     }
@@ -45,6 +41,7 @@ describe("loadLaobanConfig", () => {
             {
                 fileOps,
                 observability,
+                loadTextConfig:{},
                 markerFileName: "laoban.json",
             },
             "/workspace/src"
@@ -90,6 +87,7 @@ describe("loadLaobanConfig", () => {
             {
                 fileOps,
                 observability,
+                loadTextConfig:{},
                 markerFileName: "laoban.json",
             },
             "/workspace"
@@ -116,6 +114,7 @@ describe("loadLaobanConfig", () => {
             {
                 fileOps,
                 observability,
+                loadTextConfig:{},
                 markerFileName: "laoban.json",
             },
             "/workspace"
@@ -148,6 +147,7 @@ describe("loadLaobanConfig", () => {
             {
                 fileOps,
                 observability,
+                loadTextConfig:{},
                 markerFileName: "laoban.json",
             },
             "/workspace"
@@ -164,7 +164,7 @@ describe("loadLaobanConfig", () => {
         const fileOps = makeFileOps("/workspace", {
             "/workspace/laoban.json": JSON.stringify({
                 parents: ["/shared/base.laoban.json"],
-                properties: { app: "laoban" },
+                properties: {app: "laoban"},
                 scripts: {
                     build: {
                         description: "builds the project",
@@ -174,8 +174,8 @@ describe("loadLaobanConfig", () => {
             }),
             "/shared/base.laoban.json": JSON.stringify({
                 packageManager: "yarn",
-                properties: { shared: "yes" },
-                templates: { typescript: "./templates/typescript" },
+                properties: {shared: "yes"},
+                templates: {typescript: "./templates/typescript"},
                 skipDirectories: ["dist"],
             }),
         });
@@ -183,6 +183,7 @@ describe("loadLaobanConfig", () => {
         const result = await loadLaobanConfig(
             {
                 fileOps,
+                loadTextConfig:{},
                 observability,
                 markerFileName: "laoban.json",
             },
