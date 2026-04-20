@@ -1,11 +1,11 @@
-import {isValue} from "@laoban/errors";
+import {ErrorsOr, isErrors, isValue, valueOrThrow} from "@laoban/errors";
 import {
     type CorrelationId,
     countMetricFor,
     type CountMetrics,
     type DebugLevels,
     durationMetricFor,
-    type DurationMetrics,
+    type DurationMetrics, LogLevel,
     nullCountMetric,
     nullDurationMetric,
     nullObservability,
@@ -13,7 +13,7 @@ import {
     realTimeService,
     shouldDebug,
 } from "@laoban/observability";
-import {safeString} from "@laoban/safe";
+import {safePrettyJson, safeString} from "@laoban/safe";
 import {renderTemplate} from "@laoban/template";
 import {fileLogSink, type NodeLogSink} from "./log.sinks";
 
@@ -144,4 +144,27 @@ export function createNodeObservability<Context extends string>(
             writeToSinks(effectiveSinks, line);
         },
     };
+}
+
+
+export function dumpAndExitIfErrors<T>(o: Observability, e: ErrorsOr<T>, level: LogLevel = 'error'): T {
+    function dumpOne<T>(title: string, array?: T[]) {
+        if (array && array.length) {
+            o.logger(level, title)
+            array.forEach((item, index) => {
+                o.logger(level, `  ${index + 1}.`, safePrettyJson(item))
+            })
+        }
+    }
+
+    if (isErrors(e)) {
+        if (e.reference)
+            o.logger(level, "Reference:", e.reference)
+        dumpOne("Errors:", e.errors)
+        dumpOne("Warnings:", e.warnings)
+        process.exit(1);
+    } else {
+        if (e.warnings) dumpOne("Warnings:", e.warnings)
+        return e.value
+    }
 }

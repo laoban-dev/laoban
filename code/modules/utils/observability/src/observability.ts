@@ -1,4 +1,4 @@
-import {Errors} from "@laoban/errors/src/error.monad";
+import {Errors, ErrorsOr, isErrors} from "@laoban/errors/src/error.monad";
 import {safePrettyJson} from "@laoban/safe";
 
 export type CorrelationId = string
@@ -77,7 +77,7 @@ export const nullObservability = (
     timeService: realTimeService,
 })
 
-export function dumpErrors<Context extends string>(o: Observability, e: Errors, level: LogLevel = 'error'): void {
+export function dumpErrors(o: Observability, e: Errors, level: LogLevel = 'error'): void {
     function dumpOne<T>(title: string, array?: T[]) {
         if (array && array.length) {
             o.logger(level, title)
