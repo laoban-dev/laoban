@@ -1,8 +1,8 @@
 import {value} from "@laoban/errors";
 import {
-    chainValidators,
+    chainValidators, combineValidators,
     composeTypedOr,
-    exactLength,
+    exactLength, ifPresent,
     mustBeArrayOfIfPresent,
     mustBeBooleanIfPresent,
     mustBeLiteral,
@@ -10,7 +10,8 @@ import {
     mustBeNumberIfPresent,
     mustBeObjectWithFields,
     mustBeString,
-    mustBeStringIfPresent, mustBeType,
+    mustBeStringIfPresent,
+    mustBeType,
     nonBlank,
     oneValidationError,
     renderContext,
@@ -22,13 +23,16 @@ import type {
     CliGroup,
     CliModel,
     CliOptionParameterDef,
-    CliPositionalParameterDef
+    CliPositionalParameterDef,
+    CliRoot
 } from "./cli.dsl";
 
 type AnyCliNode<C extends BasicCliContext = BasicCliContext> =
     CliGroup<C> | AnyCliCommand<C>;
 
 const validateDescription = chainValidators(mustBeString, nonBlank);
+const validateName = chainValidators(mustBeString, nonBlank);
+const validateVersionIfPresent = ifPresent(combineValidators(mustBeStringIfPresent, nonBlank));
 
 const validateShortNameIfPresent = chainValidators(
     mustBeStringIfPresent,
@@ -47,7 +51,6 @@ const validateNoDefaultWhenRequired = <T extends { required?: boolean; defaultVa
                 {code: "illegal.combination"}
             )
             : value(input);
-
 
 const validateNoOverlappingKeys = <C extends BasicCliContext = BasicCliContext>(): Validator<AnyCliCommand<C>> =>
     (context) => (input) => {
@@ -195,6 +198,18 @@ function makeValidateCliGroup<C extends BasicCliContext = BasicCliContext>(
     }, true);
 }
 
+function makeValidateCliRoot<C extends BasicCliContext = BasicCliContext>(
+    validateNode: Validator<AnyCliNode<C>>
+): Validator<CliRoot<C>> {
+    return mustBeObjectWithFields<CliRoot<C>>({
+        nodeType: mustBeLiteral("root"),
+        name: validateName,
+        description: validateDescription,
+        version: validateVersionIfPresent,
+        children: mustBeNameAnd(validateNode, true)
+    }, true);
+}
+
 export function makeValidateCliNode<C extends BasicCliContext = BasicCliContext>(): Validator<AnyCliNode<C>> {
     let validateNode!: Validator<AnyCliNode<C>>;
 
@@ -223,6 +238,10 @@ export function makeValidateCliGroupDef<C extends BasicCliContext = BasicCliCont
     return makeValidateCliGroup<C>(makeValidateCliNode<C>());
 }
 
+export function makeValidateCliRootDef<C extends BasicCliContext = BasicCliContext>(): Validator<CliRoot<C>> {
+    return makeValidateCliRoot<C>(makeValidateCliNode<C>());
+}
+
 export function makeValidateCliModel<C extends BasicCliContext = BasicCliContext>(): Validator<CliModel<C>> {
-    return makeValidateCliGroupDef<C>() as Validator<CliModel<C>>;
+    return makeValidateCliRootDef<C>() as Validator<CliModel<C>>;
 }

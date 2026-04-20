@@ -1,23 +1,45 @@
-import {Command as CommanderCommand} from "commander";
 import {mapEntries} from "@laoban/records";
-import type {Observability} from "@laoban/observability";
 import type {
     AnyCliCommand,
     BasicCliContext,
-    CliGroup,
     CliOptionParameterDef,
     CliPositionalParameterDef,
     CliPositionalValue,
+    CliRoot,
     CliValue
 } from "./cli.dsl";
 import {type CliWalkerConfig, walkCliModel} from "./cli.dsl.walker";
+import {Observability} from "@laoban/observability";
 
-export interface CommanderAdapterConfig<C extends BasicCliContext = BasicCliContext> {
-    observability: Observability;
+export interface CommandBuilderApi<Cmd> {
+    setRootName(cmd: Cmd, name: string): Cmd;
+
+    setRootDescription(cmd: Cmd, description: string): Cmd;
+
+    setRootVersion(cmd: Cmd, version: string): Cmd;
+
+    addGroup(parent: Cmd, name: string, description: string): Cmd;
+
+    addCommand(parent: Cmd, commandSpec: string, description: string): Cmd;
+
+    addOption(
+        cmd: Cmd,
+        flags: string,
+        description: string,
+        required: boolean,
+        defaultValue?: unknown
+    ): Cmd;
+}
+
+export interface CliModelInterpreterConfig<
+    Cmd,
+    C extends BasicCliContext = BasicCliContext
+> {
+    api: CommandBuilderApi<Cmd>;
     addAction: (
-        commanderCommand: CommanderCommand,
+        cmd: Cmd,
         cliCommand: AnyCliCommand<C>
-    ) => CommanderCommand;
+    ) => Cmd;
 }
 
 function asPositionals(
@@ -63,68 +85,66 @@ function optionFlags(
     }
 }
 
-export function createLeafCommand<C extends BasicCliContext = BasicCliContext>(
-    parent: CommanderCommand,
+export function createLeafCommandSpec<C extends BasicCliContext = BasicCliContext>(
     name: string,
     cliCommand: AnyCliCommand<C>
-): CommanderCommand {
+): string {
     const positionalSignature = mapEntries(
         asPositionals(cliCommand.positionals),
         (field, paramName) => positionalToken(paramName, field)
     ).join(" ");
 
-    const commandSpec = positionalSignature.length === 0
+    return positionalSignature.length === 0
         ? name
         : `${name} ${positionalSignature}`;
-
-    return parent
-        .command(commandSpec)
-        .description(cliCommand.description);
 }
 
-export function addOptions<C extends BasicCliContext = BasicCliContext>(
-    commanderCommand: CommanderCommand,
-    cliCommand: AnyCliCommand<C>
-): CommanderCommand {
+export function addOptionsToCommand<Cmd, C extends BasicCliContext = BasicCliContext>(
+    cmd: Cmd,
+    cliCommand: AnyCliCommand<C>,
+    api: CommandBuilderApi<Cmd>
+): Cmd {
+    let result = cmd;
+
     mapEntries(asOptions(cliCommand.options), (field, name) => {
-        const flags = optionFlags(name, field);
-
-        if (field.required) {
-            if (field.defaultValue !== undefined) {
-                commanderCommand.requiredOption(flags, field.description, field.defaultValue as any);
-            } else {
-                commanderCommand.requiredOption(flags, field.description);
-            }
-        } else {
-            if (field.defaultValue !== undefined) {
-                commanderCommand.option(flags, field.description, field.defaultValue as any);
-            } else {
-                commanderCommand.option(flags, field.description);
-            }
-        }
-
+        result = api.addOption(
+            result,
+            optionFlags(name, field),
+            field.description,
+            field.required === true,
+            field.defaultValue
+        );
         return undefined;
     });
 
-    return commanderCommand;
+    return result;
 }
 
-export function addCliModelToCommander<C extends BasicCliContext = BasicCliContext>(
-    program: CommanderCommand,
-    model: CliGroup<C>,
-    config: CommanderAdapterConfig<C>
-): CommanderCommand {
-    const walkerConfig: CliWalkerConfig<CommanderCommand, C> = {
-        observability: config.observability,
+export function interpretCliModel<Cmd, C extends BasicCliContext = BasicCliContext>(
+    rootCmd: Cmd,
+    model: CliRoot<C>,
+    config: CliModelInterpreterConfig<Cmd, C>,
+    observability: Observability
+): Cmd {
+    const walkerConfig: CliWalkerConfig<Cmd, C> = {
+        observability,
+        addRoot: (acc, root) => {
+            let result = config.api.setRootName(acc, root.name);
+            result = config.api.setRootDescription(result, root.description);
+            if (root.version !== undefined) {
+                result = config.api.setRootVersion(result, root.version);
+            }
+            return result;
+        },
         addGroup: (parent, name, group) =>
-            parent.command(name).description(group.description),
+            config.api.addGroup(parent, name, group.description),
         addLeafCommand: (parent, name, cliCommand) => {
-            const commanderCommand = createLeafCommand(parent, name, cliCommand);
-            addOptions(commanderCommand, cliCommand);
-            config.addAction(commanderCommand, cliCommand);
-            return commanderCommand;
+            const commandSpec = createLeafCommandSpec(name, cliCommand);
+            let child = config.api.addCommand(parent, commandSpec, cliCommand.description);
+            child = addOptionsToCommand(child, cliCommand, config.api);
+            return config.addAction(child, cliCommand);
         }
     };
 
-    return walkCliModel(program, model, walkerConfig);
+    return walkCliModel(rootCmd, model, walkerConfig);
 }

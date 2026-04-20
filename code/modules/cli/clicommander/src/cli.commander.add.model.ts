@@ -1,13 +1,15 @@
-import { Command as CommanderCommand } from "commander";
-import type { Observability } from "@laoban/observability";
+import {Command as CommanderCommand} from "commander";
+import type {Observability} from "@laoban/observability";
 import type {
     AnyCliCommand,
     BasicCliContext,
-    CliGroup,
-    CliOptionParameterDef,
-    CliPositionalParameterDef
+    CliRoot
 } from "@laoban/clidsl";
-import { type CliWalkerConfig, walkCliModel } from "@laoban/clidsl";
+import {
+    interpretCliModel,
+    type CliModelInterpreterConfig,
+    type CommandBuilderApi
+} from "@laoban/clidsl";
 
 export interface CommanderAdapterConfig<C extends BasicCliContext = BasicCliContext> {
     observability: Observability;
@@ -17,97 +19,46 @@ export interface CommanderAdapterConfig<C extends BasicCliContext = BasicCliCont
     ) => CommanderCommand;
 }
 
-type RuntimePositionalDef = CliPositionalParameterDef<string | number | string[]>;
-type RuntimeOptionDef = CliOptionParameterDef<string | number | boolean | string[]>;
+export const commanderBuilderApi: CommandBuilderApi<CommanderCommand> = {
+    setRootName: (cmd, name) => cmd.name(name),
 
-function positionalToken(name: string, field: RuntimePositionalDef): string {
-    switch (field.type) {
-        case "string":
-        case "number":
-            return field.required ? `<${name}>` : `[${name}]`;
-        case "string[]":
-            return field.required ? `<${name}...>` : `[${name}...]`;
-    }
-}
+    setRootDescription: (cmd, description) => cmd.description(description),
 
-function optionFlags(name: string, field: RuntimeOptionDef): string {
-    const longName = `--${name}`;
-    const shortPrefix = field.shortName ? `-${field.shortName}, ` : "";
+    setRootVersion: (cmd, version) => cmd.version(version),
 
-    switch (field.type) {
-        case "boolean":
-            return `${shortPrefix}${longName}`;
-        case "string":
-        case "number":
-            return `${shortPrefix}${longName} <${name}>`;
-        case "string[]":
-            return `${shortPrefix}${longName} <${name}...>`;
-    }
-}
+    addGroup: (parent, name, description) =>
+        parent.command(name).description(description),
 
-export function createLeafCommand<C extends BasicCliContext = BasicCliContext>(
-    parent: CommanderCommand,
-    name: string,
-    cliCommand: AnyCliCommand<C>
-): CommanderCommand {
-    const positionals = cliCommand.positionals as Record<string, RuntimePositionalDef>;
+    addCommand: (parent, commandSpec, description) =>
+        parent.command(commandSpec).description(description),
 
-    const positionalSignature = Object.entries(positionals)
-        .map(([paramName, field]) => positionalToken(paramName, field))
-        .join(" ");
-
-    const spec = positionalSignature.length === 0
-        ? name
-        : `${name} ${positionalSignature}`;
-
-    return parent
-        .command(spec)
-        .description(cliCommand.description);
-}
-
-export function addOptions<C extends BasicCliContext = BasicCliContext>(
-    commanderCommand: CommanderCommand,
-    cliCommand: AnyCliCommand<C>
-): CommanderCommand {
-    const options = cliCommand.options as Record<string, RuntimeOptionDef>;
-
-    for (const [name, field] of Object.entries(options)) {
-        const flags = optionFlags(name, field);
-
-        if (field.required) {
-            if (field.defaultValue !== undefined) {
-                commanderCommand.requiredOption(flags, field.description, field.defaultValue as any);
-            } else {
-                commanderCommand.requiredOption(flags, field.description);
-            }
-        } else {
-            if (field.defaultValue !== undefined) {
-                commanderCommand.option(flags, field.description, field.defaultValue as any);
-            } else {
-                commanderCommand.option(flags, field.description);
-            }
+    addOption: (cmd, flags, description, required, defaultValue) => {
+        if (required) {
+            return defaultValue !== undefined
+                ? cmd.requiredOption(flags, description, defaultValue as any)
+                : cmd.requiredOption(flags, description);
         }
-    }
 
-    return commanderCommand;
-}
+        return defaultValue !== undefined
+            ? cmd.option(flags, description, defaultValue as any)
+            : cmd.option(flags, description);
+    }
+};
 
 export function addCliModelToCommander<C extends BasicCliContext = BasicCliContext>(
     program: CommanderCommand,
-    model: CliGroup<C>,
+    model: CliRoot<C>,
     config: CommanderAdapterConfig<C>
 ): CommanderCommand {
-    const walkerConfig: CliWalkerConfig<CommanderCommand, C> = {
-        observability: config.observability,
-        addGroup: (parent, name, group) =>
-            parent.command(name).description(group.description),
-        addLeafCommand: (parent, name, cliCommand) => {
-            const commanderCommand = createLeafCommand(parent, name, cliCommand);
-            addOptions(commanderCommand, cliCommand);
-            config.addAction(commanderCommand, cliCommand);
-            return commanderCommand;
-        }
+    const interpreterConfig: CliModelInterpreterConfig<CommanderCommand, C> = {
+        api: commanderBuilderApi,
+        addAction: config.addAction
     };
 
-    return walkCliModel(program, model, walkerConfig);
+    return interpretCliModel(
+        program,
+        model,
+        interpreterConfig,
+        config.observability
+    );
 }

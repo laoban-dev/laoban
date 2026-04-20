@@ -9,7 +9,7 @@
  * These examples are useful for readers because they show the "happy path"
  * shapes of the DSL without the noise of negative type tests.
  */
-import {BasicCliContext, CliModel, defineCommand, group} from "./cli.dsl";
+import {BasicCliContext, CliModel, defineCommand, group, root} from "./cli.dsl";
 import {safeJson} from "@laoban/safe";
 
 export type ExampleContext = BasicCliContext & {
@@ -120,14 +120,18 @@ const versionCommand = defineCommand<VersionValues, ExampleContext>()({
         context.observability.logger('info', safeJson({values, cwd}));
     }
 });
-
-export const exampleCli: CliModel<ExampleContext> = group("Laoban example CLI", {
-    build: buildCommand,
-    project: group("Project commands", {
-        init: initCommand
-    }),
-    package: group("Package commands", {
-        publish: publishCommand,
-        version: versionCommand
-    })
-});
+export const exampleCli: CliModel<ExampleContext> = root(
+    "laoban",
+    "Laoban example CLI",
+    {
+        build: buildCommand,
+        project: group("Project commands", {
+            init: initCommand
+        }),
+        package: group("Package commands", {
+            publish: publishCommand,
+            version: versionCommand
+        })
+    },
+    "1.0.0"
+);

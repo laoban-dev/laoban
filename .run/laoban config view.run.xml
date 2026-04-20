@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="laoban config view" type="NodeJSConfigurationType" application-parameters="config view" path-to-js-file="index.ts" typescript-loader="bundled" working-dir="$PROJECT_DIR$/code/modules/cli/laoban">
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import {Command} from "commander";
-import {addCliModelToCommander, type CliModel, makeValidateCliModel} from "@laoban/clidsl";
+import {type CliModel, makeValidateCliModel} from "@laoban/clidsl";
 import {consoleLogSink, createNodeObservability} from "@laoban/observability_node";
 import {isErrors} from "@laoban/errors";
-import {makeCommanderCliAdapter} from "@laoban/commander";
+import {addCliModelToCommander, makeCommanderCliAdapter} from "@laoban/commander";
 import {LaobanConfigCliContext, laobanConfigCommands} from "@laoban/config_cli";
 import {nodeFileOps, nodeFileOpsDefaults} from "@laoban/files_node";
 import {defaultLoadTextConfig} from "@laoban/files";
@@ -12,7 +12,7 @@ import {nodeLoadTextInfrastructure} from "@laoban/files_node/src/load.text.node"
 import {dumpErrors} from "@laoban/observability";
 
 const observability = createNodeObservability({
-    correlationId: 'laoban cli',
+    correlationId: "laoban cli",
     sinks: [consoleLogSink]
 });
 const cliDsl: CliModel<LaobanConfigCliContext> = laobanConfigCommands;
@@ -39,13 +39,13 @@ addCliModelToCommander(
             loadLaobanFileConfig: defaultLoadTextConfig({
                 infrastructure: nodeLoadTextInfrastructure
             }, {
-                markers: {'@laoban@': 'https://raw.githubusercontent.com/phil-rice/laoban/master/common'},
-                observability: observability
+                markers: {"@laoban@": "https://raw.githubusercontent.com/phil-rice/laoban/master/common"},
+                observability
             }),
             cwd: process.cwd()
         }),
         onError: async (observability, e) => {
-            dumpErrors(observability, e)
+            dumpErrors(observability, e);
         }
     })
 );

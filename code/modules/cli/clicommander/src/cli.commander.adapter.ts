@@ -68,7 +68,7 @@ export function makeCommanderCliAdapter<
                 const context = config.makeContext();
 
                 const result = await cliCommand.execute(values as any, context);
-                if (isErrors(result)) config.onError?.(config.observability, result)
+                if (isErrors(result)) await config.onError?.(config.observability, result)
             })
     };
 }

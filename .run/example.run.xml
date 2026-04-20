@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="example" type="NodeJSConfigurationType" application-parameters="project init projectName" path-to-js-file="index.ts" typescript-loader="bundled" working-dir="$PROJECT_DIR$/code/modules/cli/example">
+    <method v="2" />
+  </configuration>
+</component>

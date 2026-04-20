@@ -1,6 +1,6 @@
 import {mapErrorsOr} from "@laoban/errors";
 import {loadLaobanConfig} from "@laoban/laoban_config";
-import {type BasicCliContext, type CliModel, defineCommand, group} from "@laoban/clidsl";
+import {type BasicCliContext, type CliModel, defineCommand, group, root} from "@laoban/clidsl";
 import {FileOps, LoadTextConfig} from "@laoban/files";
 
 export type LaobanDebugContext = "cli";
@@ -50,12 +50,13 @@ const configListCommand = defineCommand<{}, LaobanConfigCliContext>()({
     },
 });
 
-export const laobanConfigCommands: CliModel<LaobanConfigCliContext> = group(
-    "Configuration commands",
-    {
-        config: group("Configuration commands", {
-            view: configViewCommand,
-            list: configListCommand,
-        }),
-    }
-);
+export const laobanConfigCommands: CliModel<LaobanConfigCliContext> =
+    root(
+        "laoban", "Mono repo management tool",
+        {
+            config: group("Configuration commands", {
+                view: configViewCommand,
+                list: configListCommand,
+            }),
+        }
+    );

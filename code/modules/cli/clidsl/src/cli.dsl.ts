@@ -24,10 +24,12 @@ export interface CliParameterBase {
 export type CliValueShape<T> = {
     type: CliValueTypeName<T>;
 };
+
 export type CliOptionRequirement<T> = {
     required?: boolean;
     defaultValue?: T;
 };
+
 export type CliPositionalParameterDef<T extends CliPositionalValue> =
     CliParameterBase & CliValueShape<T>;
 
@@ -96,24 +98,58 @@ export interface AnyCliCommand<C extends BasicCliContext = BasicCliContext> {
     execute: CliExecute<any, C>;
 }
 
+export interface CliRoot<C extends BasicCliContext = BasicCliContext> {
+    nodeType: "root";
+    name: string;
+    description: string;
+    version?: string;
+    children: Record<string, CliGroup<C> | AnyCliCommand<C>>;
+}
+
 export interface CliGroup<C extends BasicCliContext = BasicCliContext> {
     nodeType: "group";
     description: string;
     children: Record<string, CliGroup<C> | AnyCliCommand<C>>;
 }
 
-export type CliModel<C extends BasicCliContext = BasicCliContext> = CliGroup<C>;
+export type CliNode<C extends BasicCliContext = BasicCliContext> =
+    | CliRoot<C>
+    | CliGroup<C>
+    | AnyCliCommand<C>;
+
+export type CliModel<C extends BasicCliContext = BasicCliContext> = CliRoot<C>;
+
+export function isCliRoot<C extends BasicCliContext = BasicCliContext>(
+    node: CliNode<C>
+): node is CliRoot<C> {
+    return node.nodeType === "root";
+}
 
 export function isCliGroup<C extends BasicCliContext = BasicCliContext>(
-    node: CliGroup<C> | AnyCliCommand<C>
+    node: CliNode<C> | CliGroup<C> | AnyCliCommand<C>
 ): node is CliGroup<C> {
     return node.nodeType === "group";
 }
 
 export function isCliCommand<C extends BasicCliContext = BasicCliContext>(
-    node: CliGroup<C> | AnyCliCommand<C>
+    node: CliNode<C> | CliGroup<C> | AnyCliCommand<C>
 ): node is AnyCliCommand<C> {
     return node.nodeType === "command";
+}
+
+export function root<C extends BasicCliContext = BasicCliContext>(
+    name: string,
+    description: string,
+    children: Record<string, CliGroup<C> | AnyCliCommand<C>>,
+    version?: string
+): CliRoot<C> {
+    return {
+        nodeType: "root",
+        name,
+        description,
+        version,
+        children
+    };
 }
 
 export function group<C extends BasicCliContext = BasicCliContext>(

@@ -3,12 +3,18 @@ import {exampleCli} from "./cli.dsl.example";
 import {type CliWalkerConfig, walkCliModel} from "./cli.dsl.walker";
 
 type FakeAcc = {
+    root?: {
+        name: string;
+        description: string;
+        version?: string;
+    };
     commands: string[];
     groups: Record<string, FakeAcc>;
 };
 
 function makeAcc(): FakeAcc {
     return {
+        root: undefined,
         commands: [],
         groups: {}
     };
@@ -31,6 +37,14 @@ function makeConfig(
 ): CliWalkerConfig<FakeAcc> {
     return {
         observability,
+        addRoot: (acc, root) => {
+            acc.root = {
+                name: root.name,
+                description: root.description,
+                version: root.version
+            };
+            return acc;
+        },
         addGroup: (parent, name) => {
             const child = makeAcc();
             parent.groups[name] = child;
@@ -52,13 +66,20 @@ describe("walkCliModel smoke test using exampleCli", () => {
 
         expect(result).toBe(acc);
         expect(acc).toEqual({
+            root: {
+                name: "laoban",
+                description: "Laoban example CLI",
+                version: "1.0.0"
+            },
             commands: ["build"],
             groups: {
                 project: {
+                    root: undefined,
                     commands: ["init"],
                     groups: {}
                 },
                 package: {
+                    root: undefined,
                     commands: ["publish", "version"],
                     groups: {}
                 }

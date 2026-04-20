@@ -2,7 +2,7 @@ import {Command} from "commander";
 import type {Observability} from "@laoban/observability";
 import {addCliModelToCommander} from "./cli.commander.add.model";
 
-function makeObservability(): Observability {
+export function makeObservability(): Observability {
     return {
         correlationId: "test-correlation-id",
         logger: jest.fn(),
@@ -14,7 +14,7 @@ function makeObservability(): Observability {
     };
 }
 
-function buildProgram(model: any) {
+export function buildProgram(model: any) {
     const program = new Command();
     addCliModelToCommander(program, model, {
         observability: makeObservability(),
@@ -23,7 +23,7 @@ function buildProgram(model: any) {
     return program;
 }
 
-function findCommand(root: Command, ...path: string[]): Command | undefined {
+export function findCommand(root: Command, ...path: string[]): Command | undefined {
     let current: Command | undefined = root;
     for (const segment of path) {
         current = current.commands.find(c => c.name() === segment);
@@ -32,6 +32,6 @@ function findCommand(root: Command, ...path: string[]): Command | undefined {
     return current;
 }
 
-function optionFlags(command: Command): string[] {
+export function optionFlags(command: Command): string[] {
     return command.options.map(o => o.flags);
 }

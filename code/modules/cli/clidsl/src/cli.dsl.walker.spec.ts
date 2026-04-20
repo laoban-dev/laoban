@@ -1,7 +1,8 @@
 import type {Observability} from "@laoban/observability";
 import {
     type AnyCliCommand,
-    type CliGroup
+    type CliGroup,
+    type CliRoot
 } from "./cli.dsl";
 import {
     type CliWalkerConfig,
@@ -11,6 +12,7 @@ import {
 } from "./cli.dsl.walker";
 
 type FakeAcc = {
+    root?: { name: string; description: string; version?: string };
     groups: Array<{ name: string; description: string }>;
     commands: Array<{ name: string; description: string }>;
     childrenByGroupName: Record<string, FakeAcc>;
@@ -18,6 +20,7 @@ type FakeAcc = {
 
 function makeAcc(): FakeAcc {
     return {
+        root: undefined,
         groups: [],
         commands: [],
         childrenByGroupName: {}
@@ -41,6 +44,14 @@ function makeConfig(
 ): CliWalkerConfig<FakeAcc> {
     return {
         observability,
+        addRoot: (acc, root) => {
+            acc.root = {
+                name: root.name,
+                description: root.description,
+                version: root.version
+            };
+            return acc;
+        },
         addGroup: (parent, name, group) => {
             parent.groups.push({name, description: group.description});
             const child = makeAcc();
@@ -191,14 +202,16 @@ describe("walkCliGroupChildren", () => {
 });
 
 describe("walkCliModel", () => {
-    test("walks a full model and returns the original accumulator", () => {
+    test("walks a full model, calls addRoot, and returns the original accumulator", () => {
         const observability = makeObservability();
         const config = makeConfig(observability);
         const acc = makeAcc();
 
-        const model: CliGroup = {
-            nodeType: "group",
-            description: "Laoban",
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
+            version: "1.2.3",
             children: {
                 update: {
                     nodeType: "command",
@@ -228,6 +241,11 @@ describe("walkCliModel", () => {
         const result = walkCliModel(acc, model, config);
 
         expect(result).toBe(acc);
+        expect(acc.root).toEqual({
+            name: "laoban",
+            description: "Laoban CLI",
+            version: "1.2.3"
+        });
         expect(acc.commands).toEqual([
             {name: "update", description: "Update workspace"}
         ]);
@@ -240,7 +258,28 @@ describe("walkCliModel", () => {
         expect(observability.debug).toHaveBeenCalledWith(
             "cli:adapter",
             "debug",
-            "Walking CLI model"
+            "Walking CLI model laoban"
         );
+    });
+
+    test("walks a model without version and still calls addRoot", () => {
+        const observability = makeObservability();
+        const config = makeConfig(observability);
+        const acc = makeAcc();
+
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
+            children: {}
+        };
+
+        walkCliModel(acc, model, config);
+
+        expect(acc.root).toEqual({
+            name: "laoban",
+            description: "Laoban CLI",
+            version: undefined
+        });
     });
 });

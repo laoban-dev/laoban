@@ -1,38 +1,69 @@
 import type {Observability} from "@laoban/observability";
-import type {CliGroup} from "./cli.dsl";
-import {addCliModelToCommander, type CommanderAdapterConfig} from "./cli.dsl.command.adapter.config";
+import type {AnyCliCommand, CliRoot} from "./cli.dsl";
+import {
+    addOptionsToCommand,
+    createLeafCommandSpec,
+    interpretCliModel,
+    type CliModelInterpreterConfig,
+    type CommandBuilderApi
+} from "./cli.dsl.command.adapter.config";
 
-type FakeCommand = {
-    name?: string;
-    descriptionText?: string;
-    children: FakeCommand[];
-    command: jest.MockedFunction<(name: string) => FakeCommand>;
-    description: jest.MockedFunction<(description: string) => FakeCommand>;
-    option: jest.MockedFunction<(...args: any[]) => FakeCommand>;
-    requiredOption: jest.MockedFunction<(...args: any[]) => FakeCommand>;
+type FakeCmd = {
+    id: string;
+    rootName?: string;
+    rootDescription?: string;
+    rootVersion?: string;
+    groups: Array<{ name: string; description: string; child: FakeCmd }>;
+    commands: Array<{ spec: string; description: string; child: FakeCmd }>;
+    options: Array<{
+        flags: string;
+        description: string;
+        required: boolean;
+        defaultValue?: unknown;
+    }>;
+    actionFor?: AnyCliCommand;
 };
 
-function makeFakeCommand(name?: string): FakeCommand {
-    const fake: Partial<FakeCommand> = {
-        name,
-        children: []
+let nextId = 0;
+
+function makeCmd(id?: string): FakeCmd {
+    return {
+        id: id ?? `cmd-${++nextId}`,
+        groups: [],
+        commands: [],
+        options: []
     };
+}
 
-    fake.command = jest.fn((childName: string) => {
-        const child = makeFakeCommand(childName);
-        fake.children!.push(child);
-        return child;
-    });
-
-    fake.description = jest.fn((description: string) => {
-        fake.descriptionText = description;
-        return fake as FakeCommand;
-    });
-
-    fake.option = jest.fn(() => fake as FakeCommand);
-    fake.requiredOption = jest.fn(() => fake as FakeCommand);
-
-    return fake as FakeCommand;
+function makeApi(): CommandBuilderApi<FakeCmd> {
+    return {
+        setRootName: (cmd, name) => {
+            cmd.rootName = name;
+            return cmd;
+        },
+        setRootDescription: (cmd, description) => {
+            cmd.rootDescription = description;
+            return cmd;
+        },
+        setRootVersion: (cmd, version) => {
+            cmd.rootVersion = version;
+            return cmd;
+        },
+        addGroup: (parent, name, description) => {
+            const child = makeCmd(`group:${name}`);
+            parent.groups.push({name, description, child});
+            return child;
+        },
+        addCommand: (parent, commandSpec, description) => {
+            const child = makeCmd(`command:${commandSpec}`);
+            parent.commands.push({spec: commandSpec, description, child});
+            return child;
+        },
+        addOption: (cmd, flags, description, required, defaultValue) => {
+            cmd.options.push({flags, description, required, defaultValue});
+            return cmd;
+        }
+    };
 }
 
 function makeObservability(): Observability {
@@ -43,38 +74,203 @@ function makeObservability(): Observability {
         countMetric: jest.fn(),
         durationMetric: jest.fn(),
         debugLevels: {},
-        timeService: { now: () => 0 }
+        timeService: {now: () => 0}
     };
 }
 
-describe("addCliModelToCommander", () => {
-    test("returns the original program", () => {
-        const program = makeFakeCommand("root");
+describe("createLeafCommandSpec", () => {
+    test("returns just the command name when there are no positionals", () => {
+        const cliCommand: AnyCliCommand = {
+            nodeType: "command",
+            description: "Build workspace",
+            positionals: {},
+            options: {},
+            execute: async () => {
+            }
+        };
+
+        expect(createLeafCommandSpec("build", cliCommand)).toBe("build");
+    });
+
+    test("renders string, number and string[] positional tokens correctly", () => {
+        const cliCommand: AnyCliCommand = {
+            nodeType: "command",
+            description: "Run command",
+            positionals: {
+                requiredTarget: {type: "string", description: "Target", required: true},
+                optionalRetryCount: {type: "number", description: "Retries"},
+                files: {type: "string[]", description: "Files", required: true},
+                extras: {type: "string[]", description: "Extras"}
+            },
+            options: {},
+            execute: async () => {
+            }
+        };
+
+        expect(createLeafCommandSpec("run", cliCommand))
+            .toBe("run <requiredTarget> [optionalRetryCount] <files...> [extras...]");
+    });
+});
+
+describe("addOptionsToCommand", () => {
+    test("adds boolean, string, number and string[] options", () => {
+        const cmd = makeCmd("leaf");
+        const api = makeApi();
+
+        const cliCommand: AnyCliCommand = {
+            nodeType: "command",
+            description: "Publish package",
+            positionals: {},
+            options: {
+                verbose: {type: "boolean", description: "Verbose", shortName: "v"},
+                registry: {type: "string", description: "Registry"},
+                retries: {type: "number", description: "Retries", defaultValue: 3},
+                tags: {type: "string[]", description: "Tags"}
+            },
+            execute: async () => {
+            }
+        };
+
+        const result = addOptionsToCommand(cmd, cliCommand, api);
+
+        expect(result).toBe(cmd);
+        expect(cmd.options).toEqual([
+            {
+                flags: "-v, --verbose",
+                description: "Verbose",
+                required: false,
+                defaultValue: undefined
+            },
+            {
+                flags: "--registry <registry>",
+                description: "Registry",
+                required: false,
+                defaultValue: undefined
+            },
+            {
+                flags: "--retries <retries>",
+                description: "Retries",
+                required: false,
+                defaultValue: 3
+            },
+            {
+                flags: "--tags <tags...>",
+                description: "Tags",
+                required: false,
+                defaultValue: undefined
+            }
+        ]);
+    });
+
+    test("marks required options as required", () => {
+        const cmd = makeCmd("leaf");
+        const api = makeApi();
+
+        const cliCommand: AnyCliCommand = {
+            nodeType: "command",
+            description: "Publish package",
+            positionals: {},
+            options: {
+                token: {type: "string", description: "Token", required: true}
+            },
+            execute: async () => {
+            }
+        };
+
+        addOptionsToCommand(cmd, cliCommand, api);
+
+        expect(cmd.options).toEqual([
+            {
+                flags: "--token <token>",
+                description: "Token",
+                required: true,
+                defaultValue: undefined
+            }
+        ]);
+    });
+});
+
+describe("interpretCliModel", () => {
+    test("returns the original root command accumulator", () => {
+        const rootCmd = makeCmd("root");
+        const api = makeApi();
         const observability = makeObservability();
 
-        const model: CliGroup = {
-            nodeType: "group",
-            description: "Root CLI",
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
             children: {}
         };
 
-        const config: CommanderAdapterConfig = {
-            observability,
-            addAction: jest.fn(cmd => cmd as any)
+        const config: CliModelInterpreterConfig<FakeCmd> = {
+            api,
+            addAction: jest.fn((cmd) => cmd)
         };
 
-        const result = addCliModelToCommander(program as any, model, config);
+        const result = interpretCliModel(rootCmd, model, config, observability);
 
-        expect(result).toBe(program);
+        expect(result).toBe(rootCmd);
     });
 
-    test("creates a group using parent.command(name).description(group.description)", () => {
-        const program = makeFakeCommand("root");
+    test("sets root metadata including version when present", () => {
+        const rootCmd = makeCmd("root");
+        const api = makeApi();
         const observability = makeObservability();
 
-        const model: CliGroup = {
-            nodeType: "group",
-            description: "Root CLI",
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
+            version: "1.2.3",
+            children: {}
+        };
+
+        const config: CliModelInterpreterConfig<FakeCmd> = {
+            api,
+            addAction: jest.fn((cmd) => cmd)
+        };
+
+        interpretCliModel(rootCmd, model, config, observability);
+
+        expect(rootCmd.rootName).toBe("laoban");
+        expect(rootCmd.rootDescription).toBe("Laoban CLI");
+        expect(rootCmd.rootVersion).toBe("1.2.3");
+    });
+
+    test("does not set root version when absent", () => {
+        const rootCmd = makeCmd("root");
+        const api = makeApi();
+        const observability = makeObservability();
+
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
+            children: {}
+        };
+
+        const config: CliModelInterpreterConfig<FakeCmd> = {
+            api,
+            addAction: jest.fn((cmd) => cmd)
+        };
+
+        interpretCliModel(rootCmd, model, config, observability);
+
+        expect(rootCmd.rootName).toBe("laoban");
+        expect(rootCmd.rootDescription).toBe("Laoban CLI");
+        expect(rootCmd.rootVersion).toBeUndefined();
+    });
+
+    test("adds a top-level group", () => {
+        const rootCmd = makeCmd("root");
+        const api = makeApi();
+        const observability = makeObservability();
+
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
             children: {
                 admin: {
                     nodeType: "group",
@@ -84,174 +280,143 @@ describe("addCliModelToCommander", () => {
             }
         };
 
-        const config: CommanderAdapterConfig = {
-            observability,
-            addAction: jest.fn(cmd => cmd as any)
+        const config: CliModelInterpreterConfig<FakeCmd> = {
+            api,
+            addAction: jest.fn((cmd) => cmd)
         };
 
-        addCliModelToCommander(program as any, model, config);
+        interpretCliModel(rootCmd, model, config, observability);
 
-        expect(program.command).toHaveBeenCalledWith("admin");
-        expect(program.children).toHaveLength(1);
-        expect(program.children[0].name).toBe("admin");
-        expect(program.children[0].description).toHaveBeenCalledWith("Admin commands");
-        expect(config.addAction).not.toHaveBeenCalled();
+        expect(rootCmd.groups).toHaveLength(1);
+        expect(rootCmd.groups[0].name).toBe("admin");
+        expect(rootCmd.groups[0].description).toBe("Admin commands");
     });
 
-    test("creates a leaf command with positional signature, then adds options and action", () => {
-        const program = makeFakeCommand("root");
+    test("adds a leaf command with spec, options, and action", () => {
+        const rootCmd = makeCmd("root");
+        const api = makeApi();
         const observability = makeObservability();
 
-        const model: CliGroup = {
-            nodeType: "group",
-            description: "Root CLI",
-            children: {
-                build: {
-                    nodeType: "command",
-                    description: "Build workspace",
-                    positionals: {
-                        target: { type: "string", description: "Target", required: true },
-                        files: { type: "string[]", description: "Files" }
-                    },
-                    options: {
-                        verbose: { type: "boolean", description: "Verbose", shortName: "v" }
-                    },
-                    execute: async () => {}
-                }
+        const buildCommand: AnyCliCommand = {
+            nodeType: "command",
+            description: "Build workspace",
+            positionals: {
+                target: {type: "string", description: "Target", required: true},
+                files: {type: "string[]", description: "Files"}
+            },
+            options: {
+                verbose: {type: "boolean", description: "Verbose", shortName: "v"}
+            },
+            execute: async () => {
             }
         };
 
-        const config: CommanderAdapterConfig = {
-            observability,
-            addAction: jest.fn(cmd => cmd as any)
-        };
+        const addAction = jest.fn((cmd: FakeCmd, cliCommand: AnyCliCommand) => {
+            cmd.actionFor = cliCommand;
+            return cmd;
+        });
 
-        addCliModelToCommander(program as any, model, config);
-
-        expect(program.command).toHaveBeenCalledWith("build <target> [files...]");
-        expect(program.children).toHaveLength(1);
-        expect(program.children[0].name).toBe("build <target> [files...]");
-        expect(program.children[0].description).toHaveBeenCalledWith("Build workspace");
-        expect(program.children[0].option).toHaveBeenCalledWith("-v, --verbose", "Verbose");
-        expect(config.addAction).toHaveBeenCalledTimes(1);
-        expect(config.addAction).toHaveBeenCalledWith(program.children[0], model.children.build);
-    });
-
-    test("adds optional and required options with default values", () => {
-        const program = makeFakeCommand("root");
-        const observability = makeObservability();
-
-        const model: CliGroup = {
-            nodeType: "group",
-            description: "Root CLI",
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
             children: {
-                publish: {
-                    nodeType: "command",
-                    description: "Publish package",
-                    positionals: {},
-                    options: {
-                        registry: { type: "string", description: "Registry", defaultValue: "https://registry.npmjs.org" },
-                        retries: { type: "number", description: "Retries", defaultValue: 3 },
-                        token: { type: "string", description: "Token", required: true },
-                        tag: { type: "string[]", description: "Tags" }
-                    },
-                    execute: async () => {}
-                }
+                build: buildCommand
             }
         };
 
-        const config: CommanderAdapterConfig = {
-            observability,
-            addAction: jest.fn(cmd => cmd as any)
+        const config: CliModelInterpreterConfig<FakeCmd> = {
+            api,
+            addAction
         };
 
-        addCliModelToCommander(program as any, model, config);
+        interpretCliModel(rootCmd, model, config, observability);
 
-        const publish = program.children[0];
-
-        expect(publish.option).toHaveBeenCalledWith(
-            "--registry <registry>",
-            "Registry",
-            "https://registry.npmjs.org"
-        );
-        expect(publish.option).toHaveBeenCalledWith(
-            "--retries <retries>",
-            "Retries",
-            3
-        );
-        expect(publish.requiredOption).toHaveBeenCalledWith(
-            "--token <token>",
-            "Token"
-        );
-        expect(publish.option).toHaveBeenCalledWith(
-            "--tag <tag...>",
-            "Tags"
-        );
+        expect(rootCmd.commands).toHaveLength(1);
+        expect(rootCmd.commands[0].spec).toBe("build <target> [files...]");
+        expect(rootCmd.commands[0].description).toBe("Build workspace");
+        expect(rootCmd.commands[0].child.options).toEqual([
+            {
+                flags: "-v, --verbose",
+                description: "Verbose",
+                required: false,
+                defaultValue: undefined
+            }
+        ]);
+        expect(addAction).toHaveBeenCalledTimes(1);
+        expect(addAction).toHaveBeenCalledWith(rootCmd.commands[0].child, buildCommand);
+        expect(rootCmd.commands[0].child.actionFor).toBe(buildCommand);
     });
 
-    test("walks nested groups and leaf commands", () => {
-        const program = makeFakeCommand("root");
+    test("walks nested groups and commands", () => {
+        const rootCmd = makeCmd("root");
+        const api = makeApi();
         const observability = makeObservability();
 
-        const model: CliGroup = {
-            nodeType: "group",
-            description: "Root CLI",
+        const initCommand: AnyCliCommand = {
+            nodeType: "command",
+            description: "Initialise project",
+            positionals: {},
+            options: {},
+            execute: async () => {
+            }
+        };
+
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
             children: {
                 build: {
                     nodeType: "command",
                     description: "Build workspace",
                     positionals: {},
                     options: {},
-                    execute: async () => {}
+                    execute: async () => {
+                    }
                 },
                 project: {
                     nodeType: "group",
                     description: "Project commands",
                     children: {
-                        init: {
-                            nodeType: "command",
-                            description: "Initialise project",
-                            positionals: {},
-                            options: {},
-                            execute: async () => {}
-                        }
+                        init: initCommand
                     }
                 }
             }
         };
 
-        const config: CommanderAdapterConfig = {
-            observability,
-            addAction: jest.fn(cmd => cmd as any)
+        const config: CliModelInterpreterConfig<FakeCmd> = {
+            api,
+            addAction: jest.fn((cmd) => cmd)
         };
 
-        addCliModelToCommander(program as any, model, config);
+        interpretCliModel(rootCmd, model, config, observability);
 
-        expect(program.children.map(c => c.name)).toEqual(["build", "project"]);
+        expect(rootCmd.commands.map(c => c.spec)).toEqual(["build"]);
+        expect(rootCmd.groups.map(g => g.name)).toEqual(["project"]);
 
-        const build = program.children[0];
-        const project = program.children[1];
-
-        expect(build.descriptionText).toBe("Build workspace");
-        expect(project.descriptionText).toBe("Project commands");
-        expect(project.children.map(c => c.name)).toEqual(["init"]);
-        expect(project.children[0].descriptionText).toBe("Initialise project");
+        const projectGroup = rootCmd.groups[0].child;
+        expect(projectGroup.commands.map(c => c.spec)).toEqual(["init"]);
+        expect(projectGroup.commands[0].description).toBe("Initialise project");
     });
 
     test("emits debug logging through observability", () => {
-        const program = makeFakeCommand("root");
+        const rootCmd = makeCmd("root");
+        const api = makeApi();
         const observability = makeObservability();
 
-        const model: CliGroup = {
-            nodeType: "group",
-            description: "Root CLI",
+        const model: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban CLI",
             children: {
                 build: {
                     nodeType: "command",
                     description: "Build workspace",
                     positionals: {},
                     options: {},
-                    execute: async () => {}
+                    execute: async () => {
+                    }
                 },
                 admin: {
                     nodeType: "group",
@@ -261,17 +426,17 @@ describe("addCliModelToCommander", () => {
             }
         };
 
-        const config: CommanderAdapterConfig = {
-            observability,
-            addAction: jest.fn(cmd => cmd as any)
+        const config: CliModelInterpreterConfig<FakeCmd> = {
+            api,
+            addAction: jest.fn((cmd) => cmd)
         };
 
-        addCliModelToCommander(program as any, model, config);
+        interpretCliModel(rootCmd, model, config, observability);
 
         expect(observability.debug).toHaveBeenCalledWith(
             "cli:adapter",
             "debug",
-            "Walking CLI model"
+            "Walking CLI model laoban"
         );
         expect(observability.debug).toHaveBeenCalledWith(
             "cli:adapter",

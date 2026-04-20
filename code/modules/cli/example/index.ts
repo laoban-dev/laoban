@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 
 import {Command} from "commander";
-import {addCliModelToCommander, exampleCli, ExampleContext, makeValidateCliModel} from "@laoban/clidsl";
-import {createNodeObservability} from "@laoban/observability_node";
+import {exampleCli, ExampleContext, makeValidateCliModel} from "@laoban/clidsl";
+import {consoleLogSink, createNodeObservability} from "@laoban/observability_node";
 import {isErrors} from "@laoban/errors";
-import {makeCommanderCliAdapter} from "@laoban/commander";
+import {addCliModelToCommander, makeCommanderCliAdapter} from "@laoban/commander";
 
-const observability = createNodeObservability();
+const observability = createNodeObservability({
+    correlationId: 'example',
+    sinks: [consoleLogSink]
+});
 const cliDsl = exampleCli;
 
 const validationErrors = makeValidateCliModel<ExampleContext>()([], observability)(cliDsl);

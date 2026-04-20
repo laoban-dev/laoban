@@ -1,16 +1,20 @@
-import type { Observability } from "@laoban/observability";
-import { safeJson } from "@laoban/safe";
+import type {Observability} from "@laoban/observability";
+import {safeJson} from "@laoban/safe";
 import {
     type AnyCliCommand,
     type BasicCliContext,
     type CliGroup,
+    type CliRoot,
     isCliCommand,
     isCliGroup
 } from "./cli.dsl";
 
-
 export interface CliWalkerConfig<Acc, C extends BasicCliContext = BasicCliContext> {
     observability: Observability;
+    addRoot: (
+        acc: Acc,
+        root: CliRoot<C>
+    ) => Acc;
     addGroup: (
         parent: Acc,
         name: string,
@@ -25,11 +29,23 @@ export interface CliWalkerConfig<Acc, C extends BasicCliContext = BasicCliContex
 
 export function walkCliModel<Acc, C extends BasicCliContext = BasicCliContext>(
     acc: Acc,
-    model: CliGroup<C>,
+    model: CliRoot<C>,
     config: CliWalkerConfig<Acc, C>
 ): Acc {
-    config.observability.debug("cli:adapter", "debug", "Walking CLI model");
-    return walkCliGroupChildren(acc, model, config);
+    config.observability.debug("cli:adapter", "debug", `Walking CLI model ${model.name}`);
+    const rootAcc = config.addRoot(acc, model);
+    return walkCliRootChildren(rootAcc, model, config);
+}
+
+export function walkCliRootChildren<Acc, C extends BasicCliContext = BasicCliContext>(
+    acc: Acc,
+    root: CliRoot<C>,
+    config: CliWalkerConfig<Acc, C>
+): Acc {
+    for (const [name, node] of Object.entries(root.children))
+        walkCliNode(acc, name, node, config);
+
+    return acc;
 }
 
 export function walkCliGroupChildren<Acc, C extends BasicCliContext = BasicCliContext>(

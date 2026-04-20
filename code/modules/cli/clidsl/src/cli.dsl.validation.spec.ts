@@ -6,10 +6,11 @@ import {
     makeValidateCliGroupDef,
     makeValidateCliModel,
     makeValidateCliNode,
+    makeValidateCliRootDef,
     validateCliOptionParameterDef,
     validateCliPositionalParameterDef
 } from "./cli.dsl.validation";
-import type {CliGroup, CliModel} from "./cli.dsl";
+import type {CliGroup, CliModel, CliRoot} from "./cli.dsl";
 import {exampleCli} from "./cli.dsl.example";
 
 function makeObservability(): Observability {
@@ -489,6 +490,141 @@ describe("makeValidateCliGroupDef", () => {
     });
 });
 
+describe("makeValidateCliRootDef", () => {
+    const execute = async () => {
+    };
+
+    test("accepts valid root", () => {
+        const root: CliRoot = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban command line",
+            version: "1.0.0",
+            children: {
+                build: {
+                    nodeType: "command",
+                    description: "Build",
+                    positionals: {},
+                    options: {},
+                    execute
+                },
+                admin: {
+                    nodeType: "group",
+                    description: "Admin commands",
+                    children: {
+                        reset: {
+                            nodeType: "command",
+                            description: "Reset",
+                            positionals: {},
+                            options: {},
+                            execute
+                        }
+                    }
+                }
+            }
+        };
+
+        expect(makeValidateCliRootDef()(["root"], makeObservability())(root)).toEqual(value(root));
+    });
+
+    test("rejects blank root name", () => {
+        const root = {
+            nodeType: "root",
+            name: "   ",
+            description: "Laoban command line",
+            children: {}
+        } as any;
+
+        expect(issuesOf(makeValidateCliRootDef()(["root"], makeObservability())(root))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["root", "name"],
+                message: "root.name must not be blank",
+                code: "blank"
+            }
+        ]);
+    });
+
+    test("rejects blank root description", () => {
+        const root = {
+            nodeType: "root",
+            name: "laoban",
+            description: "",
+            children: {}
+        } as any;
+
+        expect(issuesOf(makeValidateCliRootDef()(["root"], makeObservability())(root))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["root", "description"],
+                message: "root.description must not be blank",
+                code: "blank"
+            }
+        ]);
+    });
+
+    test("rejects blank version when present", () => {
+        const root = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban command line",
+            version: "   ",
+            children: {}
+        } as any;
+
+        expect(issuesOf(makeValidateCliRootDef()(["root"], makeObservability())(root))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["root", "version"],
+                message: "root.version must not be blank",
+                code: "blank"
+            }
+        ]);
+    });
+
+    test("propagates nested child errors", () => {
+        const root = {
+            nodeType: "root",
+            name: "laoban",
+            description: "Laoban command line",
+            children: {
+                admin: {
+                    nodeType: "group",
+                    description: "Admin commands",
+                    children: {
+                        reset: {
+                            nodeType: "command",
+                            description: "Reset state",
+                            positionals: {},
+                            options: {
+                                force: {
+                                    type: "string",
+                                    description: "Force",
+                                    shortName: "xx"
+                                }
+                            },
+                            execute
+                        }
+                    }
+                }
+            }
+        } as any;
+
+        expect(issuesOf(makeValidateCliRootDef()(["root"], makeObservability())(root))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["root", "children", "admin", "children", "reset", "options", "force", "shortName"],
+                message: "root.children.admin.children.reset.options.force.shortName must have length = 1",
+                code: "exact.length"
+            }
+        ]);
+    });
+});
+
 describe("makeValidateCliNode", () => {
     const execute = async () => {
     };
@@ -539,8 +675,10 @@ describe("makeValidateCliModel", () => {
 
     test("accepts full model", () => {
         const model: CliModel = {
-            nodeType: "group",
+            nodeType: "root",
+            name: "laoban",
             description: "Laoban",
+            version: "1.0.0",
             children: {
                 build: {
                     nodeType: "command",
@@ -581,7 +719,8 @@ describe("makeValidateCliModel", () => {
 
     test("propagates nested command option errors", () => {
         const model = {
-            nodeType: "group",
+            nodeType: "root",
+            name: "laoban",
             description: "Laoban",
             children: {
                 admin: {
@@ -619,9 +758,9 @@ describe("makeValidateCliModel", () => {
 });
 
 describe("check example validates", () => {
-    it('should validate the example CLI model without errors', () => {
+    it("should validate the example CLI model without errors", () => {
         const example = exampleCli;
         const result = makeValidateCliModel()(["example"], makeObservability())(example);
         valueOrThrow(result);
-    })
-})
+    });
+});
