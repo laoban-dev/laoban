@@ -1,0 +1,30 @@
+{
+  "template": "typescript",
+  "name": "@laoban/config_cli",
+  "description": "Cli commands around the config",
+  "links": [
+    "@laoban/clidsl",
+    "@laoban/commander",
+    "@laoban/errors",
+    "@laoban/laoban_config",
+    "@laoban/observability",
+    "@laoban/safe",
+    "@laoban/strings",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "dependencies": {
+      "commander": "^14.0.0"
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

@@ -2,12 +2,43 @@ import {
     normaliseRawLaobanCommand,
     normaliseRawLaobanScript,
     normaliseRawLaobanScripts,
+    normaliseRawScriptGuard,
 } from "./scripts.normalise";
 import {
-    LaobanCommand,
-    LaobanScript,
-    RawLaobanScript,
+    type LaobanCommand,
+    type LaobanScript,
+    type RawLaobanScript,
 } from "./scripts.domain";
+
+describe("normaliseRawScriptGuard", () => {
+    it("returns undefined when guard is undefined", () => {
+        expect(normaliseRawScriptGuard(undefined)).toBeUndefined();
+    });
+
+    it("normalises a boolean guard to an object guard", () => {
+        expect(normaliseRawScriptGuard(true)).toEqual({
+            value: true,
+        });
+    });
+
+    it("normalises a string guard to an object guard", () => {
+        expect(normaliseRawScriptGuard("${packageDetails.guards.test}")).toEqual({
+            value: "${packageDetails.guards.test}",
+        });
+    });
+
+    it("preserves an object guard", () => {
+        expect(
+            normaliseRawScriptGuard({
+                value: "${packageDetails.guards.test}",
+                default: true,
+            })
+        ).toEqual({
+            value: "${packageDetails.guards.test}",
+            default: true,
+        });
+    });
+});
 
 describe("normaliseRawLaobanCommand", () => {
     it("normalises a string command to an object command with default status", () => {
@@ -30,6 +61,40 @@ describe("normaliseRawLaobanCommand", () => {
         });
     });
 
+    it("normalises a string guard on an object command", () => {
+        expect(
+            normaliseRawLaobanCommand({
+                command: "yarn test",
+                guard: "${packageDetails.guards.test}",
+            })
+        ).toEqual({
+            command: "yarn test",
+            guard: {
+                value: "${packageDetails.guards.test}",
+            },
+            status: false,
+        });
+    });
+
+    it("normalises an object guard on an object command", () => {
+        expect(
+            normaliseRawLaobanCommand({
+                command: "yarn test",
+                guard: {
+                    value: "${packageDetails.guards.test}",
+                    default: true,
+                },
+            })
+        ).toEqual({
+            command: "yarn test",
+            guard: {
+                value: "${packageDetails.guards.test}",
+                default: true,
+            },
+            status: false,
+        });
+    });
+
     it("preserves explicit object command fields", () => {
         expect(
             normaliseRawLaobanCommand({
@@ -42,7 +107,9 @@ describe("normaliseRawLaobanCommand", () => {
         ).toEqual({
             name: "test",
             command: "yarn test",
-            guard: "${packageDetails.guards.test}",
+            guard: {
+                value: "${packageDetails.guards.test}",
+            },
             directory: "dist",
             status: true,
         });
@@ -73,6 +140,67 @@ describe("normaliseRawLaobanScript", () => {
         expect(normaliseRawLaobanScript(input)).toEqual(expected);
     });
 
+    it("normalises a string script guard", () => {
+        const input: RawLaobanScript = {
+            description: "Calls mvn with the arguments",
+            guard: "${packageDetails.guards.mvn}",
+            commands: ["mvn ${passThruArgs}"],
+        };
+
+        expect(normaliseRawLaobanScript(input)).toEqual({
+            description: "Calls mvn with the arguments",
+            guard: {
+                value: "${packageDetails.guards.mvn}",
+            },
+            commands: [
+                {
+                    command: "mvn ${passThruArgs}",
+                    status: false,
+                },
+            ],
+            inLinksOrder: false,
+            showShell: false,
+            commandArgs: {},
+            env: {},
+        });
+    });
+
+    it("normalises an object script guard", () => {
+        const input: RawLaobanScript = {
+            description: "runs tests",
+            guard: {
+                value: "${packageDetails.guards.test}",
+                default: true,
+            },
+            commands: [
+                {
+                    name: "test",
+                    command: "${packageManager} test",
+                    status: true,
+                },
+            ],
+        };
+
+        expect(normaliseRawLaobanScript(input)).toEqual({
+            description: "runs tests",
+            guard: {
+                value: "${packageDetails.guards.test}",
+                default: true,
+            },
+            commands: [
+                {
+                    name: "test",
+                    command: "${packageManager} test",
+                    status: true,
+                },
+            ],
+            inLinksOrder: false,
+            showShell: false,
+            commandArgs: {},
+            env: {},
+        });
+    });
+
     it("preserves provided script fields", () => {
         const input: RawLaobanScript = {
             description: "Calls mvn with the arguments",
@@ -99,7 +227,9 @@ describe("normaliseRawLaobanScript", () => {
 
         const expected: LaobanScript = {
             description: "Calls mvn with the arguments",
-            guard: "${packageDetails.guards.mvn}",
+            guard: {
+                value: "${packageDetails.guards.mvn}",
+            },
             osGuard: "Windows_NT",
             inLinksOrder: true,
             showShell: true,
@@ -113,7 +243,9 @@ describe("normaliseRawLaobanScript", () => {
                 {
                     name: "mvn",
                     command: "mvn ${passThruArgs}",
-                    guard: "${packageDetails.guards.mvn}",
+                    guard: {
+                        value: "${packageDetails.guards.mvn}",
+                    },
                     directory: "dist",
                     status: true,
                 },
@@ -159,6 +291,10 @@ describe("normaliseRawLaobanScripts", () => {
         const result = normaliseRawLaobanScripts({
             test: {
                 description: "runs tests",
+                guard: {
+                    value: "${packageDetails.guards.test}",
+                    default: true,
+                },
                 commands: ["yarn test"],
             },
             lsDist: {
@@ -175,6 +311,10 @@ describe("normaliseRawLaobanScripts", () => {
         expect(result).toEqual({
             test: {
                 description: "runs tests",
+                guard: {
+                    value: "${packageDetails.guards.test}",
+                    default: true,
+                },
                 commands: [
                     {
                         command: "yarn test",

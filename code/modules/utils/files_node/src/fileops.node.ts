@@ -11,7 +11,7 @@ export type FileOpsDefaults = Readonly<{
     loadText: LoadTextDefaults;
 }>;
 
-export const fileOps = (defaults: FileOpsDefaults): FileOps => ({
+export const nodeFileOps = (defaults: FileOpsDefaults): FileOps => ({
     findContainingDirectory: (start, markerFileName, config) =>
         findContainingDirectory(defaults.findContainingDirectory)(start, markerFileName, config),
 

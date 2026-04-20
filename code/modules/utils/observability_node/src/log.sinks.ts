@@ -1,5 +1,5 @@
-import { appendFileSync, mkdirSync } from "fs";
-import { dirname } from "path";
+import {appendFileSync, mkdirSync} from "fs";
+import {dirname} from "path";
 
 export type NodeLogSink = (line: string) => void;
 
@@ -18,9 +18,13 @@ export const memoryLogSink = (lines: string[]): NodeLogSink =>
  */
 export const fileLogSink = (filePath: string): NodeLogSink =>
     (line: string) => {
-        mkdirSync(dirname(filePath), { recursive: true });
+        mkdirSync(dirname(filePath), {recursive: true});
         appendFileSync(filePath, `${line}\n`, "utf8");
     };
+
+export const consoleLogSink: NodeLogSink = (line: string) => {
+    console.log(line);
+}
 
 /**
  * Combines multiple sinks into one.

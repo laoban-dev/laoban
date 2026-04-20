@@ -21,12 +21,20 @@ export function safeObject<T>(value: Record<string, T> | null | undefined): Reco
 
 export function freezeObject<T>(value: Record<string, T> | null | undefined): Readonly<Record<string, T>> {
     if (value == null) return frozenEmptyObject as Readonly<Record<string, T>>;
-    return Object.freeze({ ...value });
+    return Object.freeze({...value});
 }
 
 export function safeJson(value: unknown): string {
     try {
         return JSON.stringify(value);
+    } catch {
+        return "<unstringifiable>";
+    }
+}
+
+export function safePrettyJson(value: unknown): string {
+    try {
+        return JSON.stringify(value, null, 2);
     } catch {
         return "<unstringifiable>";
     }

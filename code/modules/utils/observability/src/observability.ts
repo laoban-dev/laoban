@@ -1,3 +1,6 @@
+import {Errors} from "@laoban/errors/src/error.monad";
+import {safePrettyJson} from "@laoban/safe";
+
 export type CorrelationId = string
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
@@ -36,10 +39,13 @@ export const shouldDebug = <Context extends string>(
     level: LogLevel
 ): boolean => (debugLevels[context] ?? []).includes(level)
 
-export const nullLogger: Logger = () => {}
-export const nullCountMetric: CountMetric = () => {}
-export const nullDurationMetric: DurationMetric = () => {}
-export const realTimeService: TimeService = { now: () => Date.now() }
+export const nullLogger: Logger = () => {
+}
+export const nullCountMetric: CountMetric = () => {
+}
+export const nullDurationMetric: DurationMetric = () => {
+}
+export const realTimeService: TimeService = {now: () => Date.now()}
 export const fixedTimeService = (now: number): TimeService => ({
     now: () => now,
 })
@@ -63,9 +69,26 @@ export const nullObservability = <Context extends string>(
 ): Observability<Context> => ({
     correlationId,
     logger: nullLogger,
-    debug: () => {},
+    debug: () => {
+    },
     countMetric: nullCountMetric,
     durationMetric: nullDurationMetric,
     debugLevels: {},
     timeService: realTimeService,
 })
+
+export function dumpErrors<Context extends string>(o: Observability<Context>, e: Errors, level: LogLevel = 'error'): void {
+    function dumpOne<T>(title: string, array?: T[]) {
+        if (array && array.length) {
+            o.logger(level, title)
+            array.forEach((item, index) => {
+                o.logger(level, `  ${index + 1}.`, safePrettyJson(item))
+            })
+        }
+    }
+
+    if (e.reference)
+        o.logger(level, "Reference:", e.reference)
+    dumpOne("Errors:", e.errors)
+    dumpOne("Warnings:", e.warnings)
+}

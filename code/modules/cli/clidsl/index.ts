@@ -1,2 +1,5 @@
 export * from './src/cli.dsl'
+export * from './src/cli.dsl.command.adapter.config'
 export * from './src/cli.dsl.validation'
+export * from './src/cli.dsl.walker'
+export * from './src/cli.dsl.example'

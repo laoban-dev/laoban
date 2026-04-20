@@ -1,0 +1,30 @@
+{
+  "template": "node",
+  "name": "laoban",
+  "description": "The cli for laoban, which is used to run commands defined in the various modules.",
+  "links": [
+    "@laoban/clidsl",
+    "@laoban/commander",
+    "@laoban/errors",
+    "@laoban/observability",
+    "@laoban/observability_node",
+    "@laoban/safe",
+    "@laoban/strings",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "dependencies": {
+      "commander": "^14.0.0"
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

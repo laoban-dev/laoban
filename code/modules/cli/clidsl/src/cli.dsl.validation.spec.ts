@@ -1,22 +1,18 @@
-import {
-    validateCliCommand,
-    validateCliFieldDef,
-    validateCliFields,
-    validateCliGroup,
-    validateCliModel,
-    type CliValidationDebugContext,
-} from "./cli.dsl.validation";
-import {
-    type CliCommand,
-    type CliFieldDef,
-    type CliGroup,
-    type CliModel,
-} from "./cli.dsl";
-import {isErrors, value, type ErrorsOr} from "@laoban/errors";
+import {isErrors, value, type ErrorsOr, valueOrThrow} from "@laoban/errors";
 import {type ValidationIssue} from "@laoban/validation";
 import {type Observability} from "@laoban/observability";
+import {
+    makeValidateCliCommandDef,
+    makeValidateCliGroupDef,
+    makeValidateCliModel,
+    makeValidateCliNode,
+    validateCliOptionParameterDef,
+    validateCliPositionalParameterDef
+} from "./cli.dsl.validation";
+import type {CliGroup, CliModel} from "./cli.dsl";
+import {exampleCli} from "./cli.dsl.example";
 
-function makeObservability(): Observability<CliValidationDebugContext> {
+function makeObservability(): Observability<any> {
     return {
         correlationId: "test-correlation-id",
         logger: jest.fn(),
@@ -24,7 +20,7 @@ function makeObservability(): Observability<CliValidationDebugContext> {
         countMetric: jest.fn(),
         durationMetric: jest.fn(),
         debugLevels: {},
-        timeService: {now: () => 0},
+        timeService: {now: () => 0}
     };
 }
 
@@ -32,452 +28,600 @@ function issuesOf<T>(result: ErrorsOr<T, ValidationIssue>): ValidationIssue[] {
     return isErrors(result) ? result.errors : [];
 }
 
-describe("validateCliFieldDef", () => {
-    test("accepts positionalString", () => {
-        const field: CliFieldDef = {
-            kind: "positionalString",
-            description: "A positional string",
-            required: true,
+describe("validateCliPositionalParameterDef", () => {
+    test("accepts string positional parameter", () => {
+        const param = {
+            type: "string" as const,
+            description: "Input file",
+            required: true
         };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
+
+        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
     });
 
-    test("accepts optionBoolean with shortName", () => {
-        const field: CliFieldDef = {
-            kind: "optionBoolean",
-            description: "A boolean option",
-            shortName: "d",
+    test("accepts number positional parameter", () => {
+        const param = {
+            type: "number" as const,
+            description: "Retry count"
         };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
-    });
-    test("accepts optionBoolean without shortName", () => {
-        const field: CliFieldDef = {
-            kind: "optionBoolean",
-            description: "Force mode",
-        };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
+
+        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
     });
 
-    test("accepts optionNumber without shortName", () => {
-        const field: CliFieldDef = {
-            kind: "optionNumber",
-            description: "Timeout",
+    test("accepts string[] positional parameter", () => {
+        const param = {
+            type: "string[]" as const,
+            description: "Files"
         };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
+
+        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
     });
+
     test("rejects blank description", () => {
-        const field = {
-            kind: "optionString",
-            description: "   ",
-            shortName: "x",
+        const param = {
+            type: "string",
+            description: "   "
         } as any;
-        expect(issuesOf(validateCliFieldDef(["field"], makeObservability())(field))).toEqual([
+
+        expect(issuesOf(validateCliPositionalParameterDef(["param"], makeObservability())(param))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
-                context: ["field", "description"],
-                message: "field.description must not be blank",
-                code: "blank",
-            },
+                context: ["param", "description"],
+                message: "param.description must not be blank",
+                code: "blank"
+            }
         ]);
     });
 
-    test("rejects option shortName longer than one character", () => {
-        const field = {
-            kind: "optionString",
-            description: "desc",
-            shortName: "xx",
+    test("rejects illegal type", () => {
+        const param = {
+            type: "boolean",
+            description: "Nope"
         } as any;
-        expect(issuesOf(validateCliFieldDef(["field"], makeObservability())(field))).toEqual([
+
+        expect(issuesOf(validateCliPositionalParameterDef(["param"], makeObservability())(param))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
-                context: ["field", "shortName"],
-                message: "field.shortName must have length = 1",
-                code: "exact.length",
-            },
+                context: ["param"],
+                message: "param has illegal type boolean. Legal values are: number, string, string[]",
+                code: "illegal.type"
+            }
         ]);
     });
 
-    test("rejects illegal kind", () => {
-        const field = {
-            kind: "banana",
-            description: "desc",
+    test("rejects missing type", () => {
+        const param = {
+            description: "Input"
         } as any;
-        expect(issuesOf(validateCliFieldDef(["field"], makeObservability())(field))).toEqual([
+
+        expect(issuesOf(validateCliPositionalParameterDef(["param"], makeObservability())(param))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
-                context: ["field"],
-                message: "field has illegal type banana. Legal values are: optionBoolean, optionNumber, optionString, optionStrings, positionalNumber, positionalString, positionalStrings",
-                code: "illegal.type",
-            },
+                context: ["param"],
+                message: "param has no valid type",
+                code: "missing.type"
+            }
         ]);
     });
 });
 
-describe("validateCliFields", () => {
-    test("accepts valid fields", () => {
-        const fields = {
-            input: {
-                kind: "positionalString",
-                description: "Input file",
-                required: true,
-            },
-            dryRun: {
-                kind: "optionBoolean",
-                description: "Dry run",
-                shortName: "d",
-            },
-        } satisfies Record<string, CliFieldDef>;
+describe("validateCliOptionParameterDef", () => {
+    test("accepts string option parameter", () => {
+        const param = {
+            type: "string" as const,
+            description: "Output",
+            shortName: "o",
+            defaultValue: "dist"
+        };
 
-        expect(validateCliFields(["fields"], makeObservability())(fields)).toEqual(value(fields));
+        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
     });
 
-    test("rejects duplicate option short names", () => {
-        const fields = {
-            one: {
-                kind: "optionString",
-                description: "One",
-                shortName: "x",
-            },
-            two: {
-                kind: "optionBoolean",
-                description: "Two",
-                shortName: "x",
-            },
-        } as const;
+    test("accepts number option parameter", () => {
+        const param = {
+            type: "number" as const,
+            description: "Retries",
+            defaultValue: 3
+        };
 
-        expect(issuesOf(validateCliFields(["fields"], makeObservability())(fields as any))).toEqual([
+        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
+    });
+
+    test("accepts boolean option parameter", () => {
+        const param = {
+            type: "boolean" as const,
+            description: "Verbose",
+            shortName: "v"
+        };
+
+        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
+    });
+
+    test("accepts string[] option parameter", () => {
+        const param = {
+            type: "string[]" as const,
+            description: "Tags",
+            shortName: "t",
+            defaultValue: ["alpha", "beta"] as string[]
+        };
+
+        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
+    });
+
+    test("rejects shortName longer than one character", () => {
+        const param = {
+            type: "string",
+            description: "Output",
+            shortName: "xx"
+        } as any;
+
+        expect(issuesOf(validateCliOptionParameterDef(["param"], makeObservability())(param))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
-                context: ["fields", "two", "shortName"],
-                message: "fields.two.shortName duplicates shortName 'x' already used by 'one'",
-                code: "duplicate.shortName",
-            },
+                context: ["param", "shortName"],
+                message: "param.shortName must have length = 1",
+                code: "exact.length"
+            }
         ]);
     });
 
-    test("rejects required positional after optional positional", () => {
-        const fields = {
-            first: {
-                kind: "positionalString",
-                description: "First",
-                required: false,
-            },
-            second: {
-                kind: "positionalNumber",
-                description: "Second",
-                required: true,
-            },
-        } as const;
+    test("rejects wrong defaultValue type for number", () => {
+        const param = {
+            type: "number",
+            description: "Retries",
+            defaultValue: "3"
+        } as any;
 
-        expect(issuesOf(validateCliFields(["fields"], makeObservability())(fields as any))).toEqual([
+        expect(issuesOf(validateCliOptionParameterDef(["param"], makeObservability())(param))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
-                context: ["fields", "second", "required"],
-                message: "fields.second.required required positional fields cannot appear after optional positional fields",
-                code: "illegal.order",
-            },
+                context: ["param", "defaultValue"],
+                message: "param.defaultValue must be a number",
+                code: "wrong.type"
+            }
         ]);
     });
 
-    test("rejects positional field after variadic positional strings", () => {
-        const fields = {
-            files: {
-                kind: "positionalStrings",
-                description: "Files",
-                variadic: true,
-            },
-            mode: {
-                kind: "positionalString",
-                description: "Mode",
-            },
-        } as const;
+    test("rejects wrong defaultValue type for string[]", () => {
+        const param = {
+            type: "string[]",
+            description: "Tags",
+            defaultValue: ["ok", 2]
+        } as any;
 
-        expect(issuesOf(validateCliFields(["fields"], makeObservability())(fields as any))).toEqual([
+        expect(issuesOf(validateCliOptionParameterDef(["param"], makeObservability())(param))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
-                context: ["fields", "mode"],
-                message: "fields.mode appears after a variadic positional field",
-                code: "illegal.order",
-            },
+                context: ["param", "defaultValue", "1"],
+                message: "param.defaultValue.1 must be a string",
+                code: "wrong.type"
+            }
+        ]);
+    });
+
+    test("rejects illegal type", () => {
+        const param = {
+            type: "banana",
+            description: "Nope"
+        } as any;
+
+        expect(issuesOf(validateCliOptionParameterDef(["param"], makeObservability())(param))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["param"],
+                message: "param has illegal type banana. Legal values are: boolean, number, string, string[]",
+                code: "illegal.type"
+            }
         ]);
     });
 });
 
-describe("validateCliCommand", () => {
+describe("makeValidateCliCommandDef", () => {
     const execute = async () => {
     };
 
     test("accepts valid command", () => {
-        const command: CliCommand<any> = {
-            description: "Run something",
-            fields: {
-                input: {
-                    kind: "positionalString",
-                    description: "Input",
-                },
-                dryRun: {
-                    kind: "optionBoolean",
-                    description: "Dry run",
-                    shortName: "d",
-                },
+        const command = {
+            nodeType: "command" as const,
+            description: "Build project",
+            positionals: {
+                target: {
+                    type: "string" as const,
+                    description: "Target"
+                }
             },
-            execute,
+            options: {
+                verbose: {
+                    type: "boolean" as const,
+                    description: "Verbose",
+                    shortName: "v"
+                }
+            },
+            execute
         };
 
-        expect(validateCliCommand(["command"], makeObservability())(command)).toEqual(value(command));
+        expect(makeValidateCliCommandDef()(["command"], makeObservability())(command)).toEqual(value(command));
     });
 
     test("rejects blank description", () => {
         const command = {
-            description: "  ",
-            fields: {},
-            execute,
+            nodeType: "command",
+            description: "   ",
+            positionals: {},
+            options: {},
+            execute
         } as any;
 
-        expect(issuesOf(validateCliCommand(["command"], makeObservability())(command))).toEqual([
+        expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
                 context: ["command", "description"],
                 message: "command.description must not be blank",
-                code: "blank",
-            },
+                code: "blank"
+            }
         ]);
     });
 
     test("rejects non-function execute", () => {
         const command = {
-            description: "desc",
-            fields: {},
-            execute: 123,
+            nodeType: "command",
+            description: "Build project",
+            positionals: {},
+            options: {},
+            execute: 123
         } as any;
 
-        expect(issuesOf(validateCliCommand(["command"], makeObservability())(command))).toEqual([
+        expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
                 context: ["command", "execute"],
                 message: "command.execute must be a function",
-                code: "wrong.type",
+                code: "wrong.type"
+            }
+        ]);
+    });
+
+    test("rejects overlapping positional and option keys", () => {
+        const command = {
+            nodeType: "command",
+            description: "Build project",
+            positionals: {
+                target: {
+                    type: "string",
+                    description: "Target"
+                }
             },
+            options: {
+                target: {
+                    type: "string",
+                    description: "Target again"
+                }
+            },
+            execute
+        } as any;
+
+        expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["command"],
+                message: "command has keys present in both positionals and options: target",
+                code: "duplicate.key"
+            }
+        ]);
+    });
+
+    test("rejects duplicate shortName values", () => {
+        const command = {
+            nodeType: "command",
+            description: "Build project",
+            positionals: {},
+            options: {
+                verbose: {
+                    type: "boolean",
+                    description: "Verbose",
+                    shortName: "v"
+                },
+                version: {
+                    type: "boolean",
+                    description: "Version",
+                    shortName: "v"
+                }
+            },
+            execute
+        } as any;
+
+        expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["command"],
+                message: "command has duplicate shortName values: v",
+                code: "duplicate.shortName"
+            }
+        ]);
+    });
+
+    test("propagates nested positional parameter errors", () => {
+        const command = {
+            nodeType: "command",
+            description: "Build project",
+            positionals: {
+                target: {
+                    type: "boolean",
+                    description: "Nope"
+                }
+            },
+            options: {},
+            execute
+        } as any;
+
+        expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["command", "positionals", "target"],
+                message: "command.positionals.target has illegal type boolean. Legal values are: number, string, string[]",
+                code: "illegal.type"
+            }
+        ]);
+    });
+
+    test("propagates nested option parameter errors", () => {
+        const command = {
+            nodeType: "command",
+            description: "Build project",
+            positionals: {},
+            options: {
+                verbose: {
+                    type: "boolean",
+                    description: "Verbose",
+                    shortName: "xx"
+                }
+            },
+            execute
+        } as any;
+
+        expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["command", "options", "verbose", "shortName"],
+                message: "command.options.verbose.shortName must have length = 1",
+                code: "exact.length"
+            }
         ]);
     });
 });
 
-describe("validateCliGroup", () => {
+describe("makeValidateCliGroupDef", () => {
     const execute = async () => {
     };
 
     test("accepts valid group", () => {
         const group: CliGroup = {
+            nodeType: "group",
             description: "Root group",
-            commands: {
-                update: {
-                    description: "Update",
-                    fields: {},
-                    execute,
+            children: {
+                build: {
+                    nodeType: "command",
+                    description: "Build",
+                    positionals: {},
+                    options: {},
+                    execute
                 },
-            },
-            groups: {
                 admin: {
+                    nodeType: "group",
                     description: "Admin commands",
-                    commands: {
-                        clean: {
-                            description: "Clean",
-                            fields: {},
-                            execute,
-                        },
-                    },
-                },
-            },
+                    children: {
+                        reset: {
+                            nodeType: "command",
+                            description: "Reset",
+                            positionals: {},
+                            options: {},
+                            execute
+                        }
+                    }
+                }
+            }
         };
 
-        expect(validateCliGroup(["group"], makeObservability())(group)).toEqual(value(group));
-    });
-
-    test("rejects overlapping command and group names", () => {
-        const group: CliGroup = {
-            description: "Root group",
-            commands: {
-                admin: {
-                    description: "A command called admin",
-                    fields: {},
-                    execute,
-                },
-            },
-            groups: {
-                admin: {
-                    description: "A group also called admin",
-                },
-            },
-        };
-
-        expect(issuesOf(validateCliGroup(["group"], makeObservability())(group))).toEqual([
-            {
-                kind: "validation",
-                severity: "error",
-                context: ["group"],
-                message: "group contains both a command and a group named 'admin'",
-                code: "duplicate.name",
-            },
-        ]);
+        expect(makeValidateCliGroupDef()(["group"], makeObservability())(group)).toEqual(value(group));
     });
 
     test("rejects blank group description", () => {
         const group = {
+            nodeType: "group",
             description: "",
+            children: {}
         } as any;
 
-        expect(issuesOf(validateCliGroup(["group"], makeObservability())(group))).toEqual([
+        expect(issuesOf(makeValidateCliGroupDef()(["group"], makeObservability())(group))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
                 context: ["group", "description"],
                 message: "group.description must not be blank",
-                code: "blank",
-            },
+                code: "blank"
+            }
+        ]);
+    });
+
+    test("propagates nested child errors", () => {
+        const group = {
+            nodeType: "group",
+            description: "Root",
+            children: {
+                build: {
+                    nodeType: "command",
+                    description: "Build",
+                    positionals: {},
+                    options: {
+                        verbose: {
+                            type: "boolean",
+                            description: "Verbose",
+                            shortName: "xx"
+                        }
+                    },
+                    execute
+                }
+            }
+        } as any;
+
+        expect(issuesOf(makeValidateCliGroupDef()(["group"], makeObservability())(group))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["group", "children", "build", "options", "verbose", "shortName"],
+                message: "group.children.build.options.verbose.shortName must have length = 1",
+                code: "exact.length"
+            }
         ]);
     });
 });
 
-describe("validateCliModel", () => {
+describe("makeValidateCliNode", () => {
+    const execute = async () => {
+    };
+
+    test("accepts command node", () => {
+        const node = {
+            nodeType: "command" as const,
+            description: "Build",
+            positionals: {},
+            options: {},
+            execute
+        };
+
+        expect(makeValidateCliNode()(["node"], makeObservability())(node)).toEqual(value(node));
+    });
+
+    test("accepts group node", () => {
+        const node = {
+            nodeType: "group" as const,
+            description: "Admin",
+            children: {}
+        };
+
+        expect(makeValidateCliNode()(["node"], makeObservability())(node)).toEqual(value(node));
+    });
+
+    test("rejects illegal nodeType", () => {
+        const node = {
+            nodeType: "banana",
+            description: "Nope"
+        } as any;
+
+        expect(issuesOf(makeValidateCliNode()(["node"], makeObservability())(node))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["node"],
+                message: "node has illegal type banana. Legal values are: command, group",
+                code: "illegal.type"
+            }
+        ]);
+    });
+});
+
+describe("makeValidateCliModel", () => {
     const execute = async () => {
     };
 
     test("accepts full model", () => {
         const model: CliModel = {
+            nodeType: "group",
             description: "Laoban",
-            commands: {
-                update: {
-                    description: "Update workspace",
-                    fields: {
+            children: {
+                build: {
+                    nodeType: "command",
+                    description: "Build workspace",
+                    positionals: {
+                        target: {
+                            type: "string",
+                            description: "Target"
+                        }
+                    },
+                    options: {
                         dryRun: {
-                            kind: "optionBoolean",
+                            type: "boolean",
                             description: "Dry run",
-                            shortName: "d",
-                        },
+                            shortName: "d"
+                        }
                     },
-                    execute,
+                    execute
                 },
-            },
-            groups: {
                 admin: {
+                    nodeType: "group",
                     description: "Admin commands",
-                    commands: {
+                    children: {
                         reset: {
+                            nodeType: "command",
                             description: "Reset state",
-                            fields: {},
-                            execute,
-                        },
-                    },
-                },
-            },
+                            positionals: {},
+                            options: {},
+                            execute
+                        }
+                    }
+                }
+            }
         };
 
-        expect(validateCliModel(["model"], makeObservability())(model)).toEqual(value(model));
+        expect(makeValidateCliModel()(["model"], makeObservability())(model)).toEqual(value(model));
     });
 
-    test("propagates nested command field errors", () => {
+    test("propagates nested command option errors", () => {
         const model = {
+            nodeType: "group",
             description: "Laoban",
-            groups: {
+            children: {
                 admin: {
+                    nodeType: "group",
                     description: "Admin commands",
-                    commands: {
+                    children: {
                         reset: {
+                            nodeType: "command",
                             description: "Reset state",
-                            fields: {
+                            positionals: {},
+                            options: {
                                 force: {
-                                    kind: "optionString",
+                                    type: "string",
                                     description: "Force",
-                                    shortName: "xx",
-                                },
+                                    shortName: "xx"
+                                }
                             },
-                            execute,
-                        },
-                    },
-                },
-            },
+                            execute
+                        }
+                    }
+                }
+            }
         } as any;
 
-        expect(issuesOf(validateCliModel(["model"], makeObservability())(model))).toEqual([
+        expect(issuesOf(makeValidateCliModel()(["model"], makeObservability())(model))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
-                context: ["model", "groups", "admin", "commands", "reset", "fields", "force", "shortName"],
-                message: "model.groups.admin.commands.reset.fields.force.shortName must have length = 1",
-                code: "exact.length",
-            },
+                context: ["model", "children", "admin", "children", "reset", "options", "force", "shortName"],
+                message: "model.children.admin.children.reset.options.force.shortName must have length = 1",
+                code: "exact.length"
+            }
         ]);
     });
 });
 
-describe('validateCliFieldDef specific field kinds', () => {
-    test("accepts positionalStrings with variadic", () => {
-        const field: CliFieldDef = {
-            kind: "positionalStrings",
-            description: "Input files",
-            variadic: true,
-        };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
-    });
-
-    test("accepts positionalNumber", () => {
-        const field: CliFieldDef = {
-            kind: "positionalNumber",
-            description: "Retry count",
-            required: true,
-        };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
-    });
-
-    test("accepts optionString without shortName", () => {
-        const field: CliFieldDef = {
-            kind: "optionString",
-            description: "Output file",
-        };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
-    });
-
-    test("accepts optionStrings", () => {
-        const field: CliFieldDef = {
-            kind: "optionStrings",
-            description: "Tags",
-            shortName: "t",
-        };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
-    });
-
-    test("accepts optionNumber", () => {
-        const field: CliFieldDef = {
-            kind: "optionNumber",
-            description: "Timeout",
-            shortName: "n",
-        };
-        expect(validateCliFieldDef(["field"], makeObservability())(field)).toEqual(value(field));
-    });
-
-});
-describe('missing kinds', () => {
-    test("rejects missing kind", () => {
-        const field = {
-            description: "desc",
-        } as any;
-
-        expect(issuesOf(validateCliFieldDef(["field"], makeObservability())(field))).toEqual([
-            {
-                kind: "validation",
-                severity: "error",
-                context: ["field"],
-                message: "field has no valid type",
-                code: "missing.type",
-            },
-        ]);
-    });
-});
+describe("check example validates", () => {
+    it('should validate the example CLI model without errors', () => {
+        const example = exampleCli;
+        const result = makeValidateCliModel()(["example"], makeObservability())(example);
+        valueOrThrow(result);
+    })
+})

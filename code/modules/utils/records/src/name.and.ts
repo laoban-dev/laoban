@@ -27,3 +27,16 @@ export function mapObject<T, R>(
     }
     return result;
 }
+
+export function mapEntries<T, R>(
+    obj: Record<string, T>,
+    fn: (value: T, name: string, index: number) => R
+): R[] {
+    const result: R[] = [];
+    let index = 0;
+    for (const [name, value] of Object.entries(obj)) {
+        result.push(fn(value as T, name, index));
+        index++;
+    }
+    return result;
+}

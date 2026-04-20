@@ -4,7 +4,7 @@ import * as path from "path";
 
 import { value } from "@laoban/errors";
 import { nodeFileOpsDefaults } from "./fileops.node.defaults";
-import { fileOps } from "./fileops.node";
+import { nodeFileOps } from "./fileops.node";
 
 describe("node file ops smoke tests", () => {
     let tempDir: string;
@@ -42,7 +42,7 @@ describe("node file ops smoke tests", () => {
     });
 
     it("assembled fileOps loadText reads a real file", async () => {
-        const ops = fileOps(nodeFileOpsDefaults);
+        const ops = nodeFileOps(nodeFileOpsDefaults);
         const filename = path.join(tempDir, "readme.txt");
         await fs.writeFile(filename, "smoke test", "utf8");
 
@@ -52,7 +52,7 @@ describe("node file ops smoke tests", () => {
     });
 
     it("assembled fileOps findContainingDirectory finds the workspace root", async () => {
-        const ops = fileOps(nodeFileOpsDefaults);
+        const ops = nodeFileOps(nodeFileOpsDefaults);
         const workspaceDir = path.join(tempDir, "workspace");
         const nestedDir = path.join(workspaceDir, "packages", "project");
 

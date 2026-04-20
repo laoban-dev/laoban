@@ -1,5 +1,4 @@
 export type ScriptName = string;
-export type ScriptGuard = boolean | string;
 export type CommandString = string;
 export type CommandArgName = string;
 export type CommandArgHelp = string;
@@ -7,6 +6,41 @@ export type EnvName = string;
 export type EnvValue = string;
 export type DirectoryName = string;
 export type OsGuard = string;
+
+/**
+ * A raw guard value as written in laoban.json.
+ *
+ * This allows the simple shorthand forms:
+ * - true
+ * - false
+ * - "${some.template.value}"
+ *
+ * and the richer form:
+ * - { value: "${some.template.value}", default: true }
+ */
+export type RawScriptGuard = boolean | string | RawScriptGuardObject;
+
+/**
+ * A raw guard object as written in laoban.json.
+ *
+ * The value is typically a templated string that will later be resolved.
+ * default provides the fallback if the value cannot be resolved.
+ */
+export interface RawScriptGuardObject {
+    value: string;
+    default?: boolean;
+}
+
+/**
+ * A normalized guard value used after script normalization.
+ *
+ * Normalization removes the primitive shorthand forms and always uses an
+ * explicit object shape. This makes downstream execution code simpler.
+ */
+export interface ScriptGuard {
+    value: boolean | string;
+    default?: boolean;
+}
 
 /**
  * Command arguments exposed by a script through the CLI.
@@ -28,7 +62,8 @@ export type CommandArgs = Record<CommandArgName, CommandArgHelp>;
  * A named script as written in raw laoban.json.
  *
  * This is the user-authored configuration shape and stays close to the JSON.
- * In particular, commands may use the shorthand string form.
+ * In particular, commands may use the shorthand string form and guards may use
+ * either primitive or object form.
  */
 export interface RawLaobanScript {
     /**
@@ -42,7 +77,7 @@ export interface RawLaobanScript {
     commands: RawLaobanCommand[];
 
     /** Optional script-level guard controlling whether the script applies. */
-    guard?: ScriptGuard;
+    guard?: RawScriptGuard;
 
     /**
      * Optional operating-system guard.
@@ -87,7 +122,7 @@ export interface RawLaobanCommandObject {
     command: CommandString;
 
     /** Optional command-level guard. */
-    guard?: ScriptGuard;
+    guard?: RawScriptGuard;
 
     /** Optional working directory for this command. */
     directory?: DirectoryName;
@@ -101,6 +136,7 @@ export interface RawLaobanCommandObject {
  *
  * This is the execution-friendly form:
  * - commands are always objects
+ * - guards are always explicit objects
  * - optional collections are defaulted
  * - execution flags are always explicit
  */
@@ -134,7 +170,7 @@ export interface LaobanScript {
     /** CLI command arguments for this script, defaulted to an empty object. */
     commandArgs: CommandArgs;
 
-    /** Environment variables for the script, defaulted to an empty object. */
+    /** Environment variables for this script, defaulted to an empty object. */
     env: Record<EnvName, EnvValue>;
 }
 

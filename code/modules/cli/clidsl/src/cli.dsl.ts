@@ -1,136 +1,179 @@
-export type CliValue = string | string[] | boolean | number;
+import { Observability } from "@laoban/observability";
+
+export type CliValue = string | number | boolean | string[];
 export type CliRecord = Record<string, CliValue>;
+export type CliPositionalValue = Exclude<CliValue, boolean>;
 
-export type CliTypeName = 'string' | 'strings' | 'boolean' | 'number';
+export interface BasicCliContext<DebugContext extends string = string> {
+    observability: Observability<DebugContext>;
+}
 
-export type CliTypeFor<T> =
-    T extends string ? 'string' :
-        T extends string[] ? 'strings' :
-            T extends boolean ? 'boolean' :
-                T extends number ? 'number' :
+export type CliValueTypeName<T> =
+    T extends string ? "string" :
+        T extends number ? "number" :
+            T extends boolean ? "boolean" :
+                T extends string[] ? "string[]" :
                     never;
 
-export interface CliFieldBase {
+export interface CliParameterBase {
     description: string;
     required?: boolean;
 }
 
-export interface CliPositionalStringFieldDef extends CliFieldBase {
-    kind: 'positionalString';
-}
+export type CliValueShape<T> = {
+    type: CliValueTypeName<T>;
+};
+export type CliOptionRequirement<T> = {
+    required?: boolean;
+    defaultValue?: T;
+};
+export type CliPositionalParameterDef<T extends CliPositionalValue> =
+    CliParameterBase & CliValueShape<T>;
 
-export interface CliPositionalStringsFieldDef extends CliFieldBase {
-    kind: 'positionalStrings';
-    variadic?: boolean;
-}
+export type CliOptionParameterDef<T extends CliValue> =
+    {
+        description: string;
+        shortName?: string;
+    }
+    & CliValueShape<T>
+    & CliOptionRequirement<T>;
 
-export interface CliPositionalNumberFieldDef extends CliFieldBase {
-    kind: 'positionalNumber';
-}
+export type CliPositionalKey<T extends CliRecord> = {
+    [K in keyof T]: T[K] extends CliPositionalValue ? K : never
+}[keyof T];
 
-export interface CliOptionStringFieldDef extends CliFieldBase {
-    kind: 'optionString';
-    shortName?: string;
-}
+export type CliOptionKey<T extends CliRecord> = keyof T;
 
-export interface CliOptionStringsFieldDef extends CliFieldBase {
-    kind: 'optionStrings';
-    shortName?: string;
-}
-
-export interface CliOptionBooleanFieldDef extends CliFieldBase {
-    kind: 'optionBoolean';
-    shortName?: string;
-}
-
-export interface CliOptionNumberFieldDef extends CliFieldBase {
-    kind: 'optionNumber';
-    shortName?: string;
-}
-
-export type CliPositionalFieldDef =
-    | CliPositionalStringFieldDef
-    | CliPositionalStringsFieldDef
-    | CliPositionalNumberFieldDef;
-
-export type CliOptionFieldDef =
-    | CliOptionStringFieldDef
-    | CliOptionStringsFieldDef
-    | CliOptionBooleanFieldDef
-    | CliOptionNumberFieldDef;
-
-export type CliFieldDef =
-    | CliPositionalFieldDef
-    | CliOptionFieldDef;
-
-export type CliFieldDefFor<T extends CliValue> =
-    T extends string ? CliPositionalStringFieldDef | CliOptionStringFieldDef :
-        T extends string[] ? CliPositionalStringsFieldDef | CliOptionStringsFieldDef :
-            T extends boolean ? CliOptionBooleanFieldDef :
-                T extends number ? CliPositionalNumberFieldDef | CliOptionNumberFieldDef :
-                    never;
-
-export type CliFields<T extends CliRecord> = {
-    [K in keyof T]: CliFieldDefFor<T[K]>;
+export type CliPositionalParameters<
+    T extends CliRecord,
+    K extends keyof T = never
+> = {
+    [P in K]: CliPositionalParameterDef<Extract<T[P], CliPositionalValue>>;
 };
 
-export type CliExecute<T extends CliRecord, Ctx = void> = (values: T, context: Ctx) => Promise<void>;
+export type CliOptionParameters<
+    T extends CliRecord,
+    K extends keyof T = never
+> = {
+    [P in K]: CliOptionParameterDef<T[P]>;
+};
 
-export interface CliCommand<T extends CliRecord, Ctx = void> {
+export type CliExecute<
+    T extends CliRecord,
+    C extends BasicCliContext = BasicCliContext
+> = (values: T, context: C) => Promise<any>;
+
+export interface CliCommand<
+    T extends CliRecord,
+    TPositionalKeys extends CliPositionalKey<T> = never,
+    TOptionKeys extends Exclude<CliOptionKey<T>, TPositionalKeys> = never,
+    C extends BasicCliContext = BasicCliContext
+> {
+    nodeType: "command";
     description: string;
-    fields: CliFields<T>;
-    execute: CliExecute<T, Ctx>;
+    positionals: CliPositionalParameters<T, TPositionalKeys>;
+    options: CliOptionParameters<T, TOptionKeys>;
+    execute: CliExecute<T, C>;
 }
 
-export type SomeCliCommand<Ctx = void> = CliCommand<CliRecord, Ctx>;
-export type CliCommandMap<Ctx = void> = Record<string, SomeCliCommand<Ctx>>;
-export type CliGroupMap<Ctx = void> = Record<string, CliGroup<Ctx>>;
+export type AnyCliCommand<C extends BasicCliContext = BasicCliContext> =
+    CliCommand<CliRecord, never, never, C>;
 
-export interface CliGroup<Ctx = void> {
+export interface CliGroup<C extends BasicCliContext = BasicCliContext> {
+    nodeType: "group";
     description: string;
-    commands?: CliCommandMap<Ctx>;
-    groups?: CliGroupMap<Ctx>;
+    children: Record<string, CliGroup<C> | AnyCliCommand<C>>;
 }
 
-export type CliModel<Ctx = void> = CliGroup<Ctx>;
+export type CliModel<C extends BasicCliContext = BasicCliContext> = CliGroup<C>;
 
-export function isCliPositionalStringFieldDef(field: CliFieldDef): field is CliPositionalStringFieldDef {
-    return field.kind === 'positionalString';
+export function isCliGroup<C extends BasicCliContext = BasicCliContext>(
+    node: CliGroup<C> | AnyCliCommand<C>
+): node is CliGroup<C> {
+    return node.nodeType === "group";
 }
 
-export function isCliPositionalStringsFieldDef(field: CliFieldDef): field is CliPositionalStringsFieldDef {
-    return field.kind === 'positionalStrings';
+export function isCliCommand<C extends BasicCliContext = BasicCliContext>(
+    node: CliGroup<C> | AnyCliCommand<C>
+): node is AnyCliCommand<C> {
+    return node.nodeType === "command";
 }
 
-export function isCliPositionalNumberFieldDef(field: CliFieldDef): field is CliPositionalNumberFieldDef {
-    return field.kind === 'positionalNumber';
+export function group<C extends BasicCliContext = BasicCliContext>(
+    description: string,
+    children: Record<string, CliGroup<C> | AnyCliCommand<C>>
+): CliGroup<C> {
+    return {
+        nodeType: "group",
+        description,
+        children
+    };
 }
 
-export function isCliPositionalFieldDef(field: CliFieldDef): field is CliPositionalFieldDef {
-    return isCliPositionalStringFieldDef(field)
-        || isCliPositionalStringsFieldDef(field)
-        || isCliPositionalNumberFieldDef(field);
+/**
+ * Low-level constructor when you want to state the positional and option key
+ * unions explicitly.
+ */
+export function command<
+    T extends CliRecord,
+    TPositionalKeys extends CliPositionalKey<T> = never,
+    TOptionKeys extends Exclude<CliOptionKey<T>, TPositionalKeys> = never,
+    C extends BasicCliContext = BasicCliContext
+>(
+    description: string,
+    positionals: CliPositionalParameters<T, TPositionalKeys>,
+    options: CliOptionParameters<T, TOptionKeys>,
+    execute: CliExecute<T, C>
+): CliCommand<T, TPositionalKeys, TOptionKeys, C> {
+    return {
+        nodeType: "command",
+        description,
+        positionals,
+        options,
+        execute
+    };
 }
 
-export function isCliOptionStringFieldDef(field: CliFieldDef): field is CliOptionStringFieldDef {
-    return field.kind === 'optionString';
+export interface CliCommandSpec<
+    T extends CliRecord,
+    P extends CliPositionalKey<T>,
+    O extends Exclude<CliOptionKey<T>, P>,
+    C extends BasicCliContext = BasicCliContext
+> {
+    description: string;
+    positionals: CliPositionalParameters<T, P>;
+    options: CliOptionParameters<T, O>;
+    execute: CliExecute<T, C>;
 }
 
-export function isCliOptionStringsFieldDef(field: CliFieldDef): field is CliOptionStringsFieldDef {
-    return field.kind === 'optionStrings';
-}
-
-export function isCliOptionBooleanFieldDef(field: CliFieldDef): field is CliOptionBooleanFieldDef {
-    return field.kind === 'optionBoolean';
-}
-
-export function isCliOptionNumberFieldDef(field: CliFieldDef): field is CliOptionNumberFieldDef {
-    return field.kind === 'optionNumber';
-}
-
-export function isCliOptionFieldDef(field: CliFieldDef): field is CliOptionFieldDef {
-    return isCliOptionStringFieldDef(field)
-        || isCliOptionStringsFieldDef(field)
-        || isCliOptionBooleanFieldDef(field)
-        || isCliOptionNumberFieldDef(field);
+/**
+ * Preferred constructor for authoring commands.
+ *
+ * Usage:
+ *   const cmd = defineCommand<MyValues, MyContext>()({
+ *     description: "...",
+ *     positionals: { ... },
+ *     options: { ... },
+ *     execute: async (values, context) => { ... }
+ *   });
+ *
+ * The full values type T is stated once. The positional and option key unions
+ * are inferred from the keys present in the supplied objects.
+ */
+export function defineCommand<
+    T extends CliRecord,
+    C extends BasicCliContext = BasicCliContext
+>() {
+    return function <
+        P extends CliPositionalKey<T>,
+        O extends Exclude<CliOptionKey<T>, P>
+    >(spec: CliCommandSpec<T, P, O, C>): CliCommand<T, P, O, C> {
+        return {
+            nodeType: "command",
+            description: spec.description,
+            positionals: spec.positionals,
+            options: spec.options,
+            execute: spec.execute
+        };
+    };
 }

@@ -244,7 +244,7 @@ export function mustBeType<T, DebugContext extends string = ValidatorDebugContex
             ? value(input)
             : oneValidationError(
                 context,
-                `${renderContext(context)} must be a ${typeName}`,
+                `${renderContext(context)} must be a ${typeName} but was ${typeof input}`,
                 {code: "wrong.type"}
             );
     };

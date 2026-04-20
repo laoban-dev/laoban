@@ -1,5 +1,5 @@
 import type { MergeOptions } from "@laoban/merge";
-import type { DirectoryName, Filename, FileOps } from "@laoban/files";
+import type {DirectoryName, Filename, FileOps, LoadTextConfig} from "@laoban/files";
 import type { ErrorsOr } from "@laoban/errors";
 import type { Observability } from "@laoban/observability";
 
@@ -50,6 +50,7 @@ export interface LaobanConfigLoadConfig<
     Area extends string = LaobanConfigLoadArea
 > {
     fileOps: FileOps;
+    loadTextConfig: LoadTextConfig
     observability: Observability<Area>;
     markerFileName: Filename;
     mergeOptions?: MergeOptions;

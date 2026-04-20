@@ -1,10 +1,10 @@
-import { mergeAll } from "@laoban/merge";
-import { errors, isErrors, type ErrorsOr, type BaseIssue } from "@laoban/errors";
+import {mergeAll} from "@laoban/merge";
+import {errors, isErrors, type ErrorsOr, type BaseIssue} from "@laoban/errors";
 import {
     type DirectoryName,
     type Filename,
 } from "@laoban/files";
-import { normaliseRawLaobanScripts } from "@laoban/scripts";
+import {normaliseRawLaobanScripts} from "@laoban/scripts";
 
 import type {
     LaobanConfig,
@@ -77,7 +77,7 @@ function normaliseLaobanConfig(
 
 function parseJson(text: string): ErrorsOr<unknown, LoaderIssue> {
     try {
-        return { value: JSON.parse(text) };
+        return {value: JSON.parse(text)};
     } catch (e) {
         return errors<LoaderIssue>({
             kind: "parseJson",
@@ -151,7 +151,7 @@ export async function loadAndValidateOneConfigFile<
 ): Promise<ErrorsOr<LaobanConfigFile, LoaderIssue>> {
     debug(config, "load" as Area, diagnosticContext, "loading config file");
 
-    const textResult = await config.fileOps.loadText(file);
+    const textResult = await config.fileOps.loadText(file, config.loadTextConfig);
     if (isErrors(textResult)) {
         return addDiagnosticContextToErrors(textResult, diagnosticContext);
     }
@@ -170,7 +170,7 @@ export async function loadAndValidateOneConfigFile<
         return addDiagnosticContextToErrors(contentsValidation, diagnosticContext);
     }
 
-    return { value: contentsValidation.value };
+    return {value: contentsValidation.value};
 }
 
 export async function loadConfigTreeFromFile<
@@ -229,7 +229,7 @@ export async function loadLaobanConfig<
     const found = await findConfigFile(config, start);
     if (isErrors(found)) return found;
 
-    const { configDirectory, configFile } = found.value;
+    const {configDirectory, configFile} = found.value;
 
     const loadedTree = await loadConfigTreeFromFile(config, configFile);
     if (isErrors(loadedTree)) return loadedTree;

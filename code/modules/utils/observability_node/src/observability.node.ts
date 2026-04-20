@@ -14,7 +14,7 @@ import {
 } from "@laoban/observability";
 import {safeString} from "@laoban/safe";
 import {renderTemplate} from "@laoban/template";
-import {fileLogSink, type NodeLogSink} from "./log.sinks";
+import {combineLogSinks, consoleLogSink, fileLogSink, type NodeLogSink} from "./log.sinks";
 
 export type SinkFactory = (fileName: string) => NodeLogSink;
 
@@ -89,7 +89,7 @@ export function createNodeObservability<Context extends string>(
     const {
         correlationId = "NoCorrelationId",
         debugLevels = {},
-        sinks = [],
+        sinks = config.sinks ?? [],
         sinkFactory = fileLogSink,
         dictionary = {},
         now = defaultNow,

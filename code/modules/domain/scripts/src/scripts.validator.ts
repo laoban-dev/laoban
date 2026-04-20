@@ -1,5 +1,6 @@
 import {
-    composeOr, ifPresent,
+    composeOr,
+    ifPresent,
     mustBeArrayOf,
     mustBeBoolean,
     mustBeBooleanIfPresent,
@@ -8,32 +9,67 @@ import {
     mustBeObjectWithFields,
     mustBeString,
     mustBeStringIfPresent,
-    nullableValidator,
-    Validator,
+    type Validator,
 } from "@laoban/validation";
 import {
-    CommandArgs,
-    EnvName,
-    EnvValue,
-    LaobanCommand,
-    LaobanScript,
-    RawLaobanCommand,
-    RawLaobanCommandObject,
-    RawLaobanScript,
-    ScriptGuard,
+    type CommandArgs,
+    type EnvName,
+    type EnvValue,
+    type LaobanCommand,
+    type LaobanScript,
+    type RawLaobanCommand,
+    type RawLaobanCommandObject,
+    type RawLaobanScript,
+    type RawScriptGuard,
+    type RawScriptGuardObject,
+    type ScriptGuard,
 } from "./scripts.domain";
 
 /**
- * Validates a script guard.
+ * Validates a raw guard object.
  *
- * Guards may currently be:
+ * Raw object guards are written as:
+ * { value: "${...}", default?: boolean }
+ */
+export const validateRawScriptGuardObject: Validator<RawScriptGuardObject> =
+    mustBeObjectWithFields<RawScriptGuardObject>(
+        {
+            value: mustBeString,
+            default: mustBeBooleanIfPresent,
+        },
+        true
+    );
+
+/**
+ * Validates a raw script guard.
+ *
+ * Raw guards may be:
  * - a literal boolean
  * - a string, typically containing interpolation such as `${packageDetails.guards.test}`
+ * - an object with value/default
  */
-export const validateScriptGuard: Validator<ScriptGuard> = composeOr({
+export const validateRawScriptGuard: Validator<RawScriptGuard> = composeOr({
     boolean: mustBeBoolean,
     string: mustBeString,
+    object: validateRawScriptGuardObject as Validator<RawScriptGuard>,
 });
+
+/**
+ * Validates a normalized script guard.
+ *
+ * Normalized guards are always objects.
+ */
+export const validateScriptGuard: Validator<ScriptGuard> =
+    mustBeObjectWithFields<ScriptGuard>(
+        {
+            value: composeOr({
+                boolean: mustBeBoolean,
+                string: mustBeString,
+            }),
+            default: mustBeBooleanIfPresent,
+        },
+        true
+    );
 
 /**
  * Validates command arguments.
@@ -59,7 +95,7 @@ export const validateRawLaobanCommandObject: Validator<RawLaobanCommandObject> =
         {
             name: mustBeStringIfPresent,
             command: mustBeString,
-            guard: ifPresent(validateScriptGuard),
+            guard: ifPresent(validateRawScriptGuard),
             directory: mustBeStringIfPresent,
             status: mustBeBooleanIfPresent,
         },
@@ -89,7 +125,7 @@ export const validateRawLaobanScript: Validator<RawLaobanScript> =
         {
             description: mustBeString,
             commands: mustBeArrayOf(validateRawLaobanCommand),
-            guard: ifPresent(validateScriptGuard),
+            guard: ifPresent(validateRawScriptGuard),
             osGuard: mustBeStringIfPresent,
             inLinksOrder: mustBeBooleanIfPresent,
             showShell: mustBeBooleanIfPresent,
@@ -105,6 +141,7 @@ export const validateRawLaobanScript: Validator<RawLaobanScript> =
  * In normalized form:
  * - commands are always objects
  * - status is always present
+ * - guards are always objects
  */
 export const validateLaobanCommand: Validator<LaobanCommand> =
     mustBeObjectWithFields<LaobanCommand>(
@@ -123,6 +160,7 @@ export const validateLaobanCommand: Validator<LaobanCommand> =
  *
  * In normalized form:
  * - commands are always objects
+ * - guards are always objects
  * - inLinksOrder is always present
  * - showShell is always present
  * - commandArgs is always present

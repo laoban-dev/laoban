@@ -3,6 +3,7 @@
   "name": "@laoban/observability",
   "description": "Types and utilities for working with logs, metrics, debug and traces",
   "links": [
+    "@laoban/errors"
   ],
   "packageJson": {
     "dependencies": {

@@ -1,0 +1,62 @@
+{
+  "name": "@laoban/observability_node",
+  "description": "node implementation of types and utilities for working with logs, metrics, debug and traces defined in @laoban/observability",
+  "version": "2.0.0",
+  "main": "dist/index",
+  "types": "dist/index",
+  "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ],
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ]
+  },
+  "dependencies": {
+    "@laoban/observability": "2.0.0",
+    "@laoban/safe": "2.0.0",
+    "debug": "^4.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^5.2.2",
+    "@testing-library/jest-dom": "^6.1.4",
+    "@types/jest": "^29.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "**/*.stories.*"
+        ],
+        "rules": {
+          "import/no-anonymous-default-export": "off"
+        }
+      }
+    ]
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/src/"
+  ],
+  "keywords": [
+    "indexing"
+  ],
+  "license": "MIT",
+  "repository": "git@github.com:phil-rice/laoban.git",
+  "scripts": {
+    "test": "jest --config jest.config.json --env node",
+    "test:watch": "npm run test -- --watch"
+  }
+}

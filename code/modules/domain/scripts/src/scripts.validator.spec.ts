@@ -2,8 +2,8 @@ import {
     errorsOrThrow,
     valueOrThrow,
 } from "@laoban/errors";
-import {recordingObservability} from "@laoban/observability";
-import type {ValidationContext, ValidatorDebugContext} from "@laoban/validation";
+import { recordingObservability } from "@laoban/observability";
+import type { ValidationContext, ValidatorDebugContext } from "@laoban/validation";
 import {
     validateCommandArgs,
     validateEnv,
@@ -12,35 +12,121 @@ import {
     validateRawLaobanCommand,
     validateRawLaobanCommandObject,
     validateRawLaobanScript,
+    validateRawScriptGuard,
+    validateRawScriptGuardObject,
     validateScriptGuard,
 } from "./scripts.validator";
 import {
-    LaobanCommand,
-    LaobanScript,
-    RawLaobanCommandObject,
-    RawLaobanScript,
+    type LaobanCommand,
+    type LaobanScript,
+    type RawLaobanCommandObject,
+    type RawLaobanScript,
+    type RawScriptGuardObject,
+    type ScriptGuard,
 } from "./scripts.domain";
 
-const {observability: testObservability} =
+const { observability: testObservability } =
     recordingObservability<ValidatorDebugContext>();
 
 const ctx = (...parts: string[]): ValidationContext => parts;
 
-describe("validateScriptGuard", () => {
-    it("accepts a boolean guard", () => {
-        const result = validateScriptGuard(ctx("guard"), testObservability)(true);
+describe("validateRawScriptGuardObject", () => {
+    it("accepts a raw guard object with value only", () => {
+        const input: RawScriptGuardObject = {
+            value: "${packageDetails.guards.test}",
+        };
+
+        const result = validateRawScriptGuardObject(ctx("guard"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
+    });
+
+    it("accepts a raw guard object with default", () => {
+        const input: RawScriptGuardObject = {
+            value: "${packageDetails.guards.test}",
+            default: true,
+        };
+
+        const result = validateRawScriptGuardObject(ctx("guard"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
+    });
+
+    it("rejects a raw guard object without value", () => {
+        const result = validateRawScriptGuardObject(ctx("guard"), testObservability)({
+            default: true,
+        } as any);
+
+        expect(errorsOrThrow(result).length).toBeGreaterThan(0);
+    });
+
+    it("rejects a raw guard object with non-boolean default", () => {
+        const result = validateRawScriptGuardObject(ctx("guard"), testObservability)({
+            value: "${packageDetails.guards.test}",
+            default: "yes",
+        } as any);
+
+        expect(errorsOrThrow(result).length).toBeGreaterThan(0);
+    });
+});
+
+describe("validateRawScriptGuard", () => {
+    it("accepts a boolean raw guard", () => {
+        const result = validateRawScriptGuard(ctx("guard"), testObservability)(true);
         expect(valueOrThrow(result)).toBe(true);
     });
 
-    it("accepts a string guard", () => {
-        const result = validateScriptGuard(ctx("guard"), testObservability)(
+    it("accepts a string raw guard", () => {
+        const result = validateRawScriptGuard(ctx("guard"), testObservability)(
             "${packageDetails.guards.test}"
         );
         expect(valueOrThrow(result)).toBe("${packageDetails.guards.test}");
     });
 
-    it("rejects a number guard", () => {
-        const result = validateScriptGuard(ctx("guard"), testObservability)(42 as any);
+    it("accepts an object raw guard", () => {
+        const input = {
+            value: "${packageDetails.guards.test}",
+            default: true,
+        };
+
+        const result = validateRawScriptGuard(ctx("guard"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
+    });
+
+    it("rejects a number raw guard", () => {
+        const result = validateRawScriptGuard(ctx("guard"), testObservability)(42 as any);
+        expect(errorsOrThrow(result).length).toBeGreaterThan(0);
+    });
+});
+
+describe("validateScriptGuard", () => {
+    it("accepts a normalized guard with string value", () => {
+        const input: ScriptGuard = {
+            value: "${packageDetails.guards.test}",
+        };
+
+        const result = validateScriptGuard(ctx("guard"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
+    });
+
+    it("accepts a normalized guard with boolean value", () => {
+        const input: ScriptGuard = {
+            value: true,
+            default: false,
+        };
+
+        const result = validateScriptGuard(ctx("guard"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
+    });
+
+    it("rejects a primitive normalized guard", () => {
+        const result = validateScriptGuard(ctx("guard"), testObservability)(true as any);
+        expect(errorsOrThrow(result).length).toBeGreaterThan(0);
+    });
+
+    it("rejects a normalized guard without value", () => {
+        const result = validateScriptGuard(ctx("guard"), testObservability)({
+            default: true,
+        } as any);
+
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
 });
@@ -111,7 +197,20 @@ describe("validateRawLaobanCommandObject", () => {
     });
 
     it("accepts a minimal raw command object", () => {
-        const input = {command: "js:process.cwd()"};
+        const input = { command: "js:process.cwd()" };
+        const result = validateRawLaobanCommandObject(ctx("command"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
+    });
+
+    it("accepts a raw command object with object guard", () => {
+        const input: RawLaobanCommandObject = {
+            command: "yarn test",
+            guard: {
+                value: "${packageDetails.guards.test}",
+                default: true,
+            },
+        };
+
         const result = validateRawLaobanCommandObject(ctx("command"), testObservability)(input);
         expect(valueOrThrow(result)).toEqual(input);
     });
@@ -178,6 +277,26 @@ describe("validateRawLaobanScript", () => {
     it("accepts a valid raw script", () => {
         const result = validateRawLaobanScript(ctx("scripts", "mvn"), testObservability)(validRawScript);
         expect(valueOrThrow(result)).toEqual(validRawScript);
+    });
+
+    it("accepts a raw script with object guard", () => {
+        const input: RawLaobanScript = {
+            description: "runs tests",
+            guard: {
+                value: "${packageDetails.guards.test}",
+                default: true,
+            },
+            commands: [
+                {
+                    name: "test",
+                    command: "${packageManager} test",
+                    status: true,
+                },
+            ],
+        };
+
+        const result = validateRawLaobanScript(ctx("scripts", "test"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
     });
 
     it("accepts a raw script with shorthand commands", () => {
@@ -269,13 +388,24 @@ describe("validateLaobanCommand", () => {
         command: "yarn test",
         status: true,
         name: "test",
-        guard: "${packageDetails.guards.test}",
+        guard: { value: "${packageDetails.guards.test}" },
         directory: "dist",
     };
 
     it("accepts a valid normalized command", () => {
         const result = validateLaobanCommand(ctx("command"), testObservability)(validCommand);
         expect(valueOrThrow(result)).toEqual(validCommand);
+    });
+
+    it("accepts a normalized command with boolean guard value", () => {
+        const input: LaobanCommand = {
+            command: "yarn test",
+            status: true,
+            guard: { value: true, default: false },
+        };
+
+        const result = validateLaobanCommand(ctx("command"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
     });
 
     it("rejects a normalized command without status", () => {
@@ -289,6 +419,16 @@ describe("validateLaobanCommand", () => {
         const result = validateLaobanCommand(ctx("command"), testObservability)({
             status: true,
         } as any);
+        expect(errorsOrThrow(result).length).toBeGreaterThan(0);
+    });
+
+    it("rejects a primitive normalized guard", () => {
+        const result = validateLaobanCommand(ctx("command"), testObservability)({
+            command: "yarn test",
+            status: true,
+            guard: "${packageDetails.guards.test}",
+        } as any);
+
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
 });
@@ -305,7 +445,7 @@ describe("validateLaobanScript", () => {
         commands: [
             {
                 command: "mvn ${passThruArgs}",
-                guard: "${packageDetails.guards.mvn}",
+                guard: { value: "${packageDetails.guards.mvn}" },
                 status: true,
             },
         ],
@@ -316,13 +456,33 @@ describe("validateLaobanScript", () => {
         expect(valueOrThrow(result)).toEqual(validScript);
     });
 
+    it("accepts a normalized script with object guard including default", () => {
+        const input: LaobanScript = {
+            description: "runs tests",
+            guard: { value: "${packageDetails.guards.test}", default: true },
+            inLinksOrder: true,
+            showShell: true,
+            commandArgs: {},
+            env: {},
+            commands: [
+                {
+                    command: "${packageManager} test",
+                    status: true,
+                },
+            ],
+        };
+
+        const result = validateLaobanScript(ctx("scripts", "test"), testObservability)(input);
+        expect(valueOrThrow(result)).toEqual(input);
+    });
+
     it("rejects a normalized script without inLinksOrder", () => {
         const result = validateLaobanScript(ctx("scripts", "bad"), testObservability)({
             description: "bad script",
             showShell: false,
             commandArgs: {},
             env: {},
-            commands: [{command: "echo hi", status: true}],
+            commands: [{ command: "echo hi", status: true }],
         } as any);
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
@@ -333,7 +493,7 @@ describe("validateLaobanScript", () => {
             inLinksOrder: false,
             commandArgs: {},
             env: {},
-            commands: [{command: "echo hi", status: true}],
+            commands: [{ command: "echo hi", status: true }],
         } as any);
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
@@ -344,7 +504,7 @@ describe("validateLaobanScript", () => {
             inLinksOrder: false,
             showShell: false,
             env: {},
-            commands: [{command: "echo hi", status: true}],
+            commands: [{ command: "echo hi", status: true }],
         } as any);
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
@@ -355,7 +515,7 @@ describe("validateLaobanScript", () => {
             inLinksOrder: false,
             showShell: false,
             commandArgs: {},
-            commands: [{command: "echo hi", status: true}],
+            commands: [{ command: "echo hi", status: true }],
         } as any);
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
