@@ -1,0 +1,25 @@
+{
+  "template": "typescript",
+  "name": "@laoban/package_details",
+  "description": "The types, normalisation and validation for the package.details.json file, which is used to define the details of a package, such as its name, description, links to other packages and managed file enrichments",
+  "links": [
+    "@laoban/errors",
+    "@laoban/observability",
+    "@laoban/safe",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

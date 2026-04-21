@@ -24,6 +24,7 @@ export function normaliseRawLaobanCommand(command: RawLaobanCommand): LaobanComm
         return {
             command,
             status: false,
+            executionScope: "eachPackage",
         };
     }
 
@@ -33,6 +34,7 @@ export function normaliseRawLaobanCommand(command: RawLaobanCommand): LaobanComm
         guard: normaliseRawScriptGuard(command.guard),
         directory: command.directory,
         status: command.status ?? false,
+        executionScope: command.executionScope ?? "eachPackage",
     };
 }
 

@@ -1,48 +1,50 @@
-import {laobanConfigCommands, loadConfig, type LaobanConfigCliContext} from "./config.cli";
-import {loadLaobanConfig} from "@laoban/laoban_config";
+import {value, errors} from "@laoban/errors";
+import {laobanConfigCommands, type LaobanConfigCliContext, loadConfig,} from "./config.cli";
 import {isCliCommand, isCliGroup, isCliRoot} from "@laoban/clidsl";
+import {LoadConfigFn, loadLaobanConfig} from "@laoban/laoban_config";
 
-jest.mock("@laoban/laoban_config", () => ({
-    loadLaobanConfig: jest.fn()
-}));
-
-jest.mock("@laoban/errors", () => ({
-    mapErrorsOr: (value: any, fn: (x: any) => any) => value?.ok ? {ok: true, value: fn(value.value)} : value
-}));
-
-const mockedLoadLaobanConfig = loadLaobanConfig as jest.MockedFunction<typeof loadLaobanConfig>;
-
-function makeContext(): LaobanConfigCliContext {
+function makeContext(loadConfig: LoadConfigFn): LaobanConfigCliContext {
     return {
         cwd: "/workspace/project",
         fileOps: {} as any,
         loadLaobanFileConfig: {} as any,
+        loadLaobanConfig: loadConfig,
         observability: {
             logger: jest.fn()
         } as any
     };
 }
 
-function ok<T>(value: T) {
-    return {ok: true, value};
+function getConfigGroup() {
+    if (!isCliGroup(laobanConfigCommands)) throw new Error("Expected config commands to be a group");
+    return laobanConfigCommands;
 }
 
-function err<T = never>(error: any) {
-    return {ok: false, error} as any as T;
+function getViewCommand() {
+    const view = getConfigGroup().children.view;
+    if (!isCliCommand(view)) throw new Error("Expected view command");
+    return view;
+}
+
+function getListCommand() {
+    const list = getConfigGroup().children.list;
+    if (!isCliCommand(list)) throw new Error("Expected list command");
+    return list;
 }
 
 describe("laoban config commands", () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
+    it("loadConfig delegates to context.loadLaobanConfig with the expected arguments", async () => {
+        const result = value({anything: "goes"} as any);
+        const loadLaobanConfig = jest.fn<ReturnType<LoadConfigFn>, Parameters<LoadConfigFn>>(
+            async () => result
+        );
 
-    it("loadConfig wires loadLaobanConfig correctly", async () => {
-        const context = makeContext();
-        mockedLoadLaobanConfig.mockResolvedValue(ok({anything: "goes"} as any));
+        const context = makeContext(loadLaobanConfig);
 
-        await loadConfig(context);
+        const actual = await loadConfig(context);
 
-        expect(mockedLoadLaobanConfig).toHaveBeenCalledWith(
+        expect(actual).toBe(result);
+        expect(loadLaobanConfig).toHaveBeenCalledWith(
             {
                 fileOps: context.fileOps,
                 observability: context.observability,
@@ -54,50 +56,38 @@ describe("laoban config commands", () => {
     });
 
     it("config view returns the effective config", async () => {
-        const context = makeContext();
         const config = {name: "demo"};
-        mockedLoadLaobanConfig.mockResolvedValue(ok({
-            config,
-            configDirectory: "/workspace/project",
-            configFile: "/workspace/project/laoban.json",
-            loadedFiles: ["/workspace/project/laoban.json"]
-        } as any));
+        const loadLaobanConfig: LoadConfigFn = async (_params, _cwd) =>
+            value({
+                config,
+                configDirectory: "/workspace/project",
+                configFile: "/workspace/project/laoban.json",
+                loadedFiles: ["/workspace/project/laoban.json"]
+            } as any);
 
-        if (!isCliRoot(laobanConfigCommands)) throw new Error("Expected root to be a root");
+        const context = makeContext(loadLaobanConfig);
 
-        const configGroup = laobanConfigCommands.children.config;
-        if (!isCliGroup(configGroup)) throw new Error("Expected config to be a group");
+        const result = await getViewCommand().execute({}, context);
 
-        const view = configGroup.children.view;
-        if (!isCliCommand(view)) throw new Error("Expected view to be a command");
-
-        const result = await view.execute({}, context);
-
-        expect(result).toEqual(ok(config));
+        expect(result).toEqual(value(config));
         expect(context.observability.logger).not.toHaveBeenCalled();
     });
 
     it("config list returns source details and logs them", async () => {
-        const context = makeContext();
-        mockedLoadLaobanConfig.mockResolvedValue(ok({
-            config: {name: "demo"},
-            configDirectory: "/workspace/project",
-            configFile: "/workspace/project/laoban.json",
-            loadedFiles: [
-                "/workspace/project/laoban.json",
-                "/workspace/shared/laoban.json"
-            ]
-        } as any));
+        const loadLaobanConfig: LoadConfigFn = async (_params, _cwd) =>
+            value({
+                config: {name: "demo"},
+                configDirectory: "/workspace/project",
+                configFile: "/workspace/project/laoban.json",
+                loadedFiles: [
+                    "/workspace/project/laoban.json",
+                    "/workspace/shared/laoban.json"
+                ]
+            } as any);
 
-        if (!isCliRoot(laobanConfigCommands)) throw new Error("Expected root to be a root");
+        const context = makeContext(loadLaobanConfig);
 
-        const configGroup = laobanConfigCommands.children.config;
-        if (!isCliGroup(configGroup)) throw new Error("Expected config group");
-
-        const list = configGroup.children.list;
-        if (!isCliCommand(list)) throw new Error("Expected list command");
-
-        const result = await list.execute({}, context);
+        const result = await getListCommand().execute({}, context);
 
         const expected = {
             directory: "/workspace/project",
@@ -108,7 +98,7 @@ describe("laoban config commands", () => {
             ]
         };
 
-        expect(result).toEqual(ok(expected));
+        expect(result).toEqual(value(expected));
         expect(context.observability.logger).toHaveBeenCalledWith(
             "info",
             JSON.stringify(expected, null, 2)
@@ -116,20 +106,42 @@ describe("laoban config commands", () => {
     });
 
     it("config view propagates errors unchanged", async () => {
-        const context = makeContext();
-        const failure = err({message: "boom"});
-        mockedLoadLaobanConfig.mockResolvedValue(failure as any);
+        const failure = errors({
+            kind: "loader",
+            severity: "error",
+            context: ["config"],
+            message: "boom"
+        } as any);
 
-        if (!isCliRoot(laobanConfigCommands)) throw new Error("Expected root to be a root");
+        const loadLaobanConfig: LoadConfigFn = async (_params, _cwd) => failure;
+        const context = makeContext(loadLaobanConfig);
 
-        const configGroup = laobanConfigCommands.children.config;
-        if (!isCliGroup(configGroup)) throw new Error("Expected config group");
-
-        const view = configGroup.children.view;
-        if (!isCliCommand(view)) throw new Error("Expected view command");
-
-        const result = await view.execute({}, context);
+        const result = await getViewCommand().execute({}, context);
 
         expect(result).toBe(failure);
+    });
+
+    it("config list propagates errors unchanged and does not log", async () => {
+        const failure = errors({
+            kind: "loader",
+            severity: "error",
+            context: ["config"],
+            message: "boom"
+        } as any);
+
+        const loadLaobanConfig: LoadConfigFn = async (_params, _cwd) => failure;
+        const context = makeContext(loadLaobanConfig);
+
+        const result = await getListCommand().execute({}, context);
+
+        expect(result).toBe(failure);
+        expect(context.observability.logger).not.toHaveBeenCalled();
+    });
+
+    it("has view and list commands", () => {
+        const configGroup = getConfigGroup();
+
+        expect(isCliCommand(configGroup.children.view)).toBe(true);
+        expect(isCliCommand(configGroup.children.list)).toBe(true);
     });
 });

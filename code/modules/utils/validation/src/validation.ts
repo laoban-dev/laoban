@@ -287,7 +287,32 @@ export const mustBeNumberIfPresent: Validator<number | undefined> =
 
 export const mustBeBooleanIfPresent: Validator<boolean | undefined> =
     mustBeTypeIfPresent((v): v is boolean => typeof v === "boolean", "boolean");
-
+export function mustBeOneOf<const T extends readonly unknown[]>(...values: T): Validator<T[number]> {
+    return (context, _observability) => (input) => {
+        if (input === undefined) {
+            return oneValidationError(
+                context,
+                `${renderContext(context)} is required but was undefined`,
+                {code: "required"}
+            );
+        }
+        if (input === null) {
+            return oneValidationError(
+                context,
+                `${renderContext(context)} is required but was null`,
+                {code: "required"}
+            );
+        }
+        if (values.some(v => Object.is(v, input))) {
+            return value(input as T[number]);
+        }
+        return oneValidationError(
+            context,
+            `${renderContext(context)} must be one of ${values.map(v => JSON.stringify(v)).join(", ")} but was ${JSON.stringify(input)}`,
+            {code: "wrong.literal"}
+        );
+    };
+}
 export function mustBeLiteral<T extends LiteralValue>(
     expected: T
 ): Validator<T> {

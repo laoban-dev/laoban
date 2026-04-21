@@ -1,18 +1,17 @@
 {
-  "template": "node",
-  "name": "laoban",
-  "description": "The cli for laoban, which is used to run commands defined in the various modules.",
+  "template": "typescript",
+  "name": "@laoban/package_cli",
+  "description": "Cli commands around the packages. Such as listing all packages, showing the details of a package and showing dependencies between them",
   "links": [
     "@laoban/clidsl",
     "@laoban/commander",
+    "@laoban/config_cli",
     "@laoban/errors",
+    "@laoban/laoban_config",
     "@laoban/observability",
-    "@laoban/observability_node",
     "@laoban/safe",
     "@laoban/strings",
-    "@laoban/validation",
-    "@laoban/config_cli",
-    "@laoban/package_cli"
+    "@laoban/validation"
   ],
   "packageJson": {
     "dependencies": {
@@ -26,7 +25,7 @@
   "guards": {
     "compile": true,
     "publish": true,
-    "test": false,
+    "test": true,
     "react": false
   }
 }

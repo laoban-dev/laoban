@@ -3,10 +3,10 @@ import {
     ifPresent,
     mustBeArrayOf,
     mustBeBoolean,
-    mustBeBooleanIfPresent,
+    mustBeBooleanIfPresent, mustBeLiteral,
     mustBeNameAnd,
     mustBeNameAndIfPresent,
-    mustBeObjectWithFields,
+    mustBeObjectWithFields, mustBeOneOf,
     mustBeString,
     mustBeStringIfPresent,
     type Validator,
@@ -15,6 +15,7 @@ import {
     type CommandArgs,
     type EnvName,
     type EnvValue,
+    type ExecutionScope,
     type LaobanCommand,
     type LaobanScript,
     type RawLaobanCommand,
@@ -88,6 +89,11 @@ export const validateEnv: Validator<Record<EnvName, EnvValue> | undefined> =
     mustBeNameAndIfPresent(mustBeString);
 
 /**
+ * Validates execution scope.
+ */
+export const validateExecutionScope: Validator<ExecutionScope> = mustBeOneOf("eachPackage", "oncePerWorkSpace")
+
+/**
  * Validates a raw command in object form.
  */
 export const validateRawLaobanCommandObject: Validator<RawLaobanCommandObject> =
@@ -98,6 +104,7 @@ export const validateRawLaobanCommandObject: Validator<RawLaobanCommandObject> =
             guard: ifPresent(validateRawScriptGuard),
             directory: mustBeStringIfPresent,
             status: mustBeBooleanIfPresent,
+            executionScope: ifPresent(validateExecutionScope),
         },
         true
     );
@@ -142,6 +149,7 @@ export const validateRawLaobanScript: Validator<RawLaobanScript> =
  * - commands are always objects
  * - status is always present
  * - guards are always objects
+ * - executionScope is always present
  */
 export const validateLaobanCommand: Validator<LaobanCommand> =
     mustBeObjectWithFields<LaobanCommand>(
@@ -151,6 +159,7 @@ export const validateLaobanCommand: Validator<LaobanCommand> =
             guard: ifPresent(validateScriptGuard),
             directory: mustBeStringIfPresent,
             status: mustBeBoolean,
+            executionScope: validateExecutionScope,
         },
         true
     );

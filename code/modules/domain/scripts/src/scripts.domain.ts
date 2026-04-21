@@ -6,6 +6,7 @@ export type EnvName = string;
 export type EnvValue = string;
 export type DirectoryName = string;
 export type OsGuard = string;
+export type ExecutionScope = 'eachPackage' | 'oncePerWorkSpace';
 
 /**
  * A raw guard value as written in laoban.json.
@@ -129,6 +130,13 @@ export interface RawLaobanCommandObject {
 
     /** Optional flag controlling whether this command emits status information. */
     status?: boolean;
+
+    /**
+     * Optional execution scope for this command.
+     *
+     * If omitted, normalization defaults this to `eachPackage`.
+     */
+    executionScope?: ExecutionScope;
 }
 
 /**
@@ -195,6 +203,13 @@ export interface LaobanCommand {
 
     /** Whether this command emits status information. */
     status: boolean;
+
+    /**
+     * Execution scope for this command.
+     *
+     * Raw configuration may omit this, but normalized commands always have it.
+     */
+    executionScope: ExecutionScope;
 }
 
 /** Raw scripts keyed by script name. */

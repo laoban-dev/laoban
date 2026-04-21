@@ -6,7 +6,6 @@ export type DirectoryName = string;
 export type FileOrUrl = string;
 export type LoadTextSource = string;
 
-
 export type FileOpIssueKind =
     | "notFound"
     | "notReadable"
@@ -23,6 +22,9 @@ export type FileOpIssueContext = Readonly<{
     marker?: string;
     start?: DirectoryName;
     markerFileName?: Filename;
+    directory?: DirectoryName;
+    targetFileName?: Filename;
+    ignoreDirectories?: Filename[];
     cause?: unknown;
 }>;
 
@@ -46,8 +48,13 @@ export type LoadUrlFn = (
 
 export type FileExistsFn = (
     filename: FileOrUrl,
-    config?: FindContainingDirectoryConfig
+    config?: FindContainingDirectoryConfig | FileOpsHelperConfig
 ) => Promise<ErrorsOr<boolean, FileOpIssue>>;
+
+export type ListDirectoryFn = (
+    directory: DirectoryName,
+    config?: FileOpsHelperConfig
+) => Promise<ErrorsOr<Filename[], FileOpIssue>>;
 
 export interface PathOps {
     dirname(directory: DirectoryName): DirectoryName;
@@ -62,6 +69,12 @@ export interface LoadTextInfrastructure {
 
 export interface FindContainingDirectoryInfrastructure {
     fileExists: FileExistsFn;
+    pathOps: PathOps;
+}
+
+export interface FileOpsHelperInfrastructure {
+    fileExists: FileExistsFn;
+    listDirectory: ListDirectoryFn;
     pathOps: PathOps;
 }
 
@@ -112,6 +125,34 @@ export const defaultFindContainingDirectoryConfig = (
     infrastructure: config.infrastructure ?? defaults.infrastructure,
 });
 
+export const defaultIgnoreDirectories: Filename[] = [".git", "node_modules"];
+
+export type FileOpsHelperConfig = Readonly<{
+    observability?: Observability;
+    infrastructure?: FileOpsHelperInfrastructure;
+    ignoreDirectories?: Filename[];
+}>;
+
+export type RequiredFileOpsHelperConfig = Readonly<{
+    observability: Observability;
+    infrastructure: FileOpsHelperInfrastructure;
+    ignoreDirectories: Filename[];
+}>;
+
+export type FileOpsHelperDefaults = Readonly<{
+    infrastructure: FileOpsHelperInfrastructure;
+    ignoreDirectories?: Filename[];
+}>;
+
+export const defaultFileOpsHelperConfig = (
+    defaults: FileOpsHelperDefaults,
+    config: FileOpsHelperConfig = {}
+): RequiredFileOpsHelperConfig => ({
+    observability: config.observability ?? nullObservability(),
+    infrastructure: config.infrastructure ?? defaults.infrastructure,
+    ignoreDirectories: config.ignoreDirectories ?? defaults.ignoreDirectories ?? defaultIgnoreDirectories,
+});
+
 /**
  * Port for reading text resources and discovering workspace marker directories.
  *
@@ -130,6 +171,18 @@ export interface FileOps {
         markerFileName: Filename,
         config?: FindContainingDirectoryConfig
     ): Promise<ErrorsOr<DirectoryName, FileOpIssue>>;
+
+    /**
+     * Recursively find all files with the given filename under the supplied directory.
+     *
+     * Directories whose names are in ignoreDirectories are skipped.
+     * Returns full paths in deterministic order.
+     */
+    findAllByNameUnder(
+        directory: DirectoryName,
+        targetFileName: Filename,
+        config?: FileOpsHelperConfig
+    ): Promise<ErrorsOr<Filename[], FileOpIssue>>;
 
     /**
      * Load a UTF-8 text resource from a local file, a URL, or a marker-prefixed source.

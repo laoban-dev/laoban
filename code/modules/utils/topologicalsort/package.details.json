@@ -1,0 +1,24 @@
+{
+  "template": "typescript",
+  "name": "@laoban/topologicalsort",
+  "description": "A utility to perform topological sort on a directed acyclic graph (DAG) using type classes.",
+  "links": [
+    "@laoban/errors",
+    "@laoban/observability",
+    "@laoban/safe"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

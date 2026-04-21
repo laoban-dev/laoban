@@ -12,7 +12,7 @@ import type {
 } from "./laoban.config";
 import {validateConfigFileContents, validateLaobanConfig,} from "./laoban.config.validator";
 
-type LoaderIssue = BaseIssue & {
+export type LoaderIssue = BaseIssue & {
     diagnosticContext?: LaobanConfigDiagnosticContext;
 };
 
@@ -207,6 +207,7 @@ export async function loadConfigTreeFromFile(
     };
 }
 
+export type LoadConfigFn = typeof loadLaobanConfig;
 export async function loadLaobanConfig(
     config: LaobanConfigLoadConfig,
     start: Filename | DirectoryName

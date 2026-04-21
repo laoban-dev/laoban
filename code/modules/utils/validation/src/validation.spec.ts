@@ -24,7 +24,7 @@ import {
     mustBeNameAndIfPresent,
     mustBeNumber,
     mustBeNumberIfPresent,
-    mustBeObjectWithFields,
+    mustBeObjectWithFields, mustBeOneOf,
     mustBeString,
     mustBeStringIfPresent,
     nonBlank,
@@ -698,6 +698,64 @@ describe("mustBeNameAndIfPresent", () => {
         const result = validator([], observability)(input as any); //deliberately bypassing type system to test runtime validation
 
         expect(isErrors(result)).toBe(true);
+    });
+});
+describe("mustBeOneOf", () => {
+    test("ok + wrong value", () => {
+        const v = mustBeOneOf("yes" as const, "no" as const);
+        expect(v(["ctx"], makeObservability())("yes")).toEqual({value: "yes"});
+        expect(v(["ctx"], makeObservability())("no")).toEqual({value: "no"});
+
+        const result = v(["ctx"], makeObservability())("maybe" as any);
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["ctx"],
+                message: 'ctx must be one of "yes", "no" but was "maybe"',
+                code: "wrong.literal",
+            },
+        ]);
+    });
+
+    test("wrong runtime type", () => {
+        const v = mustBeOneOf("x" as const, "y" as const);
+        const result = v(["ctx"], makeObservability())(123 as any);
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["ctx"],
+                message: "ctx must be a string",
+                code: "wrong.type",
+            },
+        ]);
+    });
+
+    test("rejects undefined", () => {
+        const v = mustBeOneOf("x" as const, "y" as const);
+        expect(issuesOf(v(["ctx"], makeObservability())(undefined as any))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["ctx"],
+                message: "ctx is required but was undefined",
+                code: "required",
+            },
+        ]);
+    });
+
+    test("rejects null", () => {
+        const v = mustBeOneOf("x" as const, "y" as const);
+        expect(issuesOf(v(["ctx"], makeObservability())(null as any))).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["ctx"],
+                message: "ctx is required but was null",
+                code: "required",
+            },
+        ]);
     });
 });
 describe("mustBeLiteral", () => {

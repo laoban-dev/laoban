@@ -1,19 +1,21 @@
 import path from "path";
-import {access, readFile} from "fs/promises";
+import { access, readFile, readdir } from "fs/promises";
 
-import {errors, value} from "@laoban/errors";
+import { errors, value } from "@laoban/errors";
 import {
     FileExistsFn,
+    FileOpsHelperConfig,
     FileOpIssue,
     FileOpIssueKind,
     FileOrUrl,
     FindContainingDirectoryConfig,
+    ListDirectoryFn,
     LoadFileFn,
     LoadTextConfig,
     LoadUrlFn,
     makeFileOpIssue,
 } from "@laoban/files";
-import {FileOpsDefaults} from "./fileops.node";
+import { FileOpsDefaults } from "./fileops.node";
 
 const makeIssue = (
     kind: FileOpIssueKind,
@@ -31,12 +33,15 @@ const extractCode = (cause: unknown): string | undefined =>
         ? (cause as { code: string }).code
         : undefined;
 
+const now = (observability?: { timeService?: { now: () => number } }): number =>
+    observability?.timeService.now() ?? Date.now();
+
 const nodeFileExists: FileExistsFn = async (
     filename: FileOrUrl,
-    config?: FindContainingDirectoryConfig,
+    config?: FindContainingDirectoryConfig | FileOpsHelperConfig,
 ) => {
     const observability = config?.observability;
-    const start = observability?.timeService.now() ?? Date.now();
+    const start = now(observability);
 
     try {
         await access(filename);
@@ -44,7 +49,7 @@ const nodeFileExists: FileExistsFn = async (
         observability?.countMetric("fileops.findContainingDirectory.fileExists.success");
         observability?.durationMetric(
             "fileops.findContainingDirectory.fileExists.ms",
-            (observability?.timeService.now() ?? Date.now()) - start,
+            now(observability) - start,
         );
 
         return value(true);
@@ -53,7 +58,7 @@ const nodeFileExists: FileExistsFn = async (
 
         observability?.durationMetric(
             "fileops.findContainingDirectory.fileExists.ms",
-            (observability?.timeService.now() ?? Date.now()) - start,
+            now(observability) - start,
         );
 
         if (code === "ENOENT") {
@@ -78,12 +83,59 @@ const nodeFileExists: FileExistsFn = async (
     }
 };
 
+const nodeListDirectory: ListDirectoryFn = async (
+    directory,
+    config,
+) => {
+    const observability = config?.observability;
+    const start = now(observability);
+
+    try {
+        const entries = await readdir(directory);
+
+        observability?.countMetric("fileops.findAllByNameUnder.listDirectory.success");
+        observability?.durationMetric(
+            "fileops.findAllByNameUnder.listDirectory.ms",
+            now(observability) - start,
+        );
+
+        return value(entries);
+    } catch (cause) {
+        const code = extractCode(cause);
+        const kind: FileOpIssueKind =
+            code === "ENOENT"
+                ? "notFound"
+                : code === "EACCES" || code === "EPERM"
+                    ? "notReadable"
+                    : "io";
+
+        observability?.countMetric("fileops.findAllByNameUnder.listDirectory.failure");
+        observability?.durationMetric(
+            "fileops.findAllByNameUnder.listDirectory.ms",
+            now(observability) - start,
+        );
+
+        return errors<FileOpIssue>(
+            makeIssue(
+                kind,
+                `Failed listing directory [${directory}]`,
+                {
+                    operation: "findContainingDirectory",
+                    filename: directory,
+                },
+                cause,
+                code,
+            ),
+        );
+    }
+};
+
 const nodeLoadFile: LoadFileFn = async (
     filename: FileOrUrl,
     config?: LoadTextConfig,
 ) => {
     const observability = config?.observability;
-    const start = observability?.timeService.now() ?? Date.now();
+    const start = now(observability);
 
     try {
         const text = await readFile(filename, "utf8");
@@ -91,7 +143,7 @@ const nodeLoadFile: LoadFileFn = async (
         observability?.countMetric("fileops.load.file.success");
         observability?.durationMetric(
             "fileops.load.file.ms",
-            (observability?.timeService.now() ?? Date.now()) - start,
+            now(observability) - start,
         );
 
         return value(text);
@@ -107,7 +159,7 @@ const nodeLoadFile: LoadFileFn = async (
         observability?.countMetric("fileops.load.file.failure");
         observability?.durationMetric(
             "fileops.load.file.ms",
-            (observability?.timeService.now() ?? Date.now()) - start,
+            now(observability) - start,
         );
 
         return errors<FileOpIssue>(
@@ -130,7 +182,7 @@ const nodeLoadUrl: LoadUrlFn = async (
     config?: LoadTextConfig,
 ) => {
     const observability = config?.observability;
-    const start = observability?.timeService.now() ?? Date.now();
+    const start = now(observability);
 
     try {
         const response = await fetch(url);
@@ -139,7 +191,7 @@ const nodeLoadUrl: LoadUrlFn = async (
             observability?.countMetric("fileops.load.url.failure");
             observability?.durationMetric(
                 "fileops.load.url.ms",
-                (observability?.timeService.now() ?? Date.now()) - start,
+                now(observability) - start,
             );
 
             return errors<FileOpIssue>(
@@ -159,7 +211,7 @@ const nodeLoadUrl: LoadUrlFn = async (
         observability?.countMetric("fileops.load.url.success");
         observability?.durationMetric(
             "fileops.load.url.ms",
-            (observability?.timeService.now() ?? Date.now()) - start,
+            now(observability) - start,
         );
 
         return value(text);
@@ -167,7 +219,7 @@ const nodeLoadUrl: LoadUrlFn = async (
         observability?.countMetric("fileops.load.url.failure");
         observability?.durationMetric(
             "fileops.load.url.ms",
-            (observability?.timeService.now() ?? Date.now()) - start,
+            now(observability) - start,
         );
 
         return errors<FileOpIssue>(
@@ -189,8 +241,8 @@ export const nodeFileOpsDefaults: FileOpsDefaults = {
         infrastructure: {
             fileExists: nodeFileExists,
             pathOps: {
-                dirname: (directory) => path.dirname(directory),
-                resolvePath: (somePath) => path.resolve(somePath),
+                dirname: directory => path.dirname(directory),
+                resolvePath: somePath => path.resolve(somePath),
                 joinPath: (directory, filename) => path.join(directory, filename),
             },
         },
@@ -199,7 +251,17 @@ export const nodeFileOpsDefaults: FileOpsDefaults = {
         infrastructure: {
             loadFile: nodeLoadFile,
             loadUrl: nodeLoadUrl,
-
+        },
+    },
+    findAllByNameUnder: {
+        infrastructure: {
+            fileExists: nodeFileExists,
+            listDirectory: nodeListDirectory,
+            pathOps: {
+                dirname:  path.dirname,
+                resolvePath: path.resolve,
+                joinPath: (directory, filename) => path.join(directory, filename),
+            },
         },
     },
 };

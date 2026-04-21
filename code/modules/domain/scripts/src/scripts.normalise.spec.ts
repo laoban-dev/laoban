@@ -5,7 +5,6 @@ import {
     normaliseRawScriptGuard,
 } from "./scripts.normalise";
 import {
-    type LaobanCommand,
     type LaobanScript,
     type RawLaobanScript,
 } from "./scripts.domain";
@@ -41,14 +40,15 @@ describe("normaliseRawScriptGuard", () => {
 });
 
 describe("normaliseRawLaobanCommand", () => {
-    it("normalises a string command to an object command with default status", () => {
+    it("normalises a string command to an object command with default status and executionScope", () => {
         expect(normaliseRawLaobanCommand("js:process.cwd()")).toEqual({
             command: "js:process.cwd()",
             status: false,
+            executionScope: "eachPackage",
         });
     });
 
-    it("normalises an object command and defaults missing status", () => {
+    it("normalises an object command and defaults missing status and executionScope", () => {
         expect(
             normaliseRawLaobanCommand({
                 command: "yarn test",
@@ -58,6 +58,7 @@ describe("normaliseRawLaobanCommand", () => {
             command: "yarn test",
             directory: "dist",
             status: false,
+            executionScope: "eachPackage",
         });
     });
 
@@ -73,6 +74,7 @@ describe("normaliseRawLaobanCommand", () => {
                 value: "${packageDetails.guards.test}",
             },
             status: false,
+            executionScope: "eachPackage",
         });
     });
 
@@ -92,6 +94,7 @@ describe("normaliseRawLaobanCommand", () => {
                 default: true,
             },
             status: false,
+            executionScope: "eachPackage",
         });
     });
 
@@ -103,6 +106,7 @@ describe("normaliseRawLaobanCommand", () => {
                 guard: "${packageDetails.guards.test}",
                 directory: "dist",
                 status: true,
+                executionScope: "oncePerWorkSpace",
             })
         ).toEqual({
             name: "test",
@@ -112,7 +116,25 @@ describe("normaliseRawLaobanCommand", () => {
             },
             directory: "dist",
             status: true,
+            executionScope: "oncePerWorkSpace",
         });
+    });
+
+    it("defaults executionScope to eachPackage when omitted", () => {
+        expect(
+            normaliseRawLaobanCommand({
+                command: "echo hello",
+            }).executionScope
+        ).toBe("eachPackage");
+    });
+
+    it("preserves executionScope when oncePerWorkSpace is provided", () => {
+        expect(
+            normaliseRawLaobanCommand({
+                command: "echo hello",
+                executionScope: "oncePerWorkSpace",
+            }).executionScope
+        ).toBe("oncePerWorkSpace");
     });
 });
 
@@ -129,6 +151,7 @@ describe("normaliseRawLaobanScript", () => {
                 {
                     command: "js:process.cwd()",
                     status: false,
+                    executionScope: "eachPackage",
                 },
             ],
             inLinksOrder: false,
@@ -156,6 +179,7 @@ describe("normaliseRawLaobanScript", () => {
                 {
                     command: "mvn ${passThruArgs}",
                     status: false,
+                    executionScope: "eachPackage",
                 },
             ],
             inLinksOrder: false,
@@ -192,6 +216,7 @@ describe("normaliseRawLaobanScript", () => {
                     name: "test",
                     command: "${packageManager} test",
                     status: true,
+                    executionScope: "eachPackage",
                 },
             ],
             inLinksOrder: false,
@@ -221,6 +246,7 @@ describe("normaliseRawLaobanScript", () => {
                     guard: "${packageDetails.guards.mvn}",
                     directory: "dist",
                     status: true,
+                    executionScope: "oncePerWorkSpace",
                 },
             ],
         };
@@ -248,6 +274,7 @@ describe("normaliseRawLaobanScript", () => {
                     },
                     directory: "dist",
                     status: true,
+                    executionScope: "oncePerWorkSpace",
                 },
             ],
         };
@@ -272,10 +299,12 @@ describe("normaliseRawLaobanScript", () => {
                 {
                     command: "js:process.cwd()",
                     status: false,
+                    executionScope: "eachPackage",
                 },
                 {
                     command: "yarn test",
                     status: false,
+                    executionScope: "eachPackage",
                 },
             ],
             inLinksOrder: false,
@@ -303,6 +332,7 @@ describe("normaliseRawLaobanScripts", () => {
                     {
                         command: "js:process.cwd()",
                         directory: "dist",
+                        executionScope: "oncePerWorkSpace",
                     },
                 ],
             },
@@ -319,6 +349,7 @@ describe("normaliseRawLaobanScripts", () => {
                     {
                         command: "yarn test",
                         status: false,
+                        executionScope: "eachPackage",
                     },
                 ],
                 inLinksOrder: false,
@@ -333,6 +364,7 @@ describe("normaliseRawLaobanScripts", () => {
                         command: "js:process.cwd()",
                         directory: "dist",
                         status: false,
+                        executionScope: "oncePerWorkSpace",
                     },
                 ],
                 inLinksOrder: false,

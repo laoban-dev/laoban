@@ -1,14 +1,15 @@
 import * as path from "path";
-import {access, readFile} from "fs/promises";
+import { access, readFile, readdir } from "fs/promises";
 
-import {errors, value} from "@laoban/errors";
-import {recordingObservability, steppingTimeService,} from "@laoban/observability";
+import { errors, value } from "@laoban/errors";
+import { recordingObservability, steppingTimeService } from "@laoban/observability";
 
-import {nodeFileOpsDefaults} from "./fileops.node.defaults";
+import { nodeFileOpsDefaults } from "./fileops.node.defaults";
 
 jest.mock("fs/promises", () => ({
     access: jest.fn(),
     readFile: jest.fn(),
+    readdir: jest.fn(),
 }));
 
 describe("nodeFileOpsDefaults", () => {
@@ -143,6 +144,143 @@ describe("nodeFileOpsDefaults", () => {
             const result = await fileExists("/tmp/file.txt");
 
             expect(result).toEqual(value(true));
+        });
+    });
+
+    describe("findAllByNameUnder.infrastructure", () => {
+        const { fileExists, listDirectory, pathOps } =
+            nodeFileOpsDefaults.findAllByNameUnder.infrastructure;
+
+        it("reuses node fileExists", async () => {
+            (access as jest.Mock).mockResolvedValue(undefined);
+
+            const result = await fileExists("/tmp/file.txt", {
+                observability: recorded.observability,
+            });
+
+            expect(access).toHaveBeenCalledWith("/tmp/file.txt");
+            expect(result).toEqual(value(true));
+            expect(recorded.counts).toEqual([
+                "fileops.findContainingDirectory.fileExists.success",
+            ]);
+            expect(recorded.durations).toEqual([
+                {
+                    name: "fileops.findContainingDirectory.fileExists.ms",
+                    durationMs: 5,
+                },
+            ]);
+        });
+
+        it("lists a directory successfully", async () => {
+            (readdir as jest.Mock).mockResolvedValue(["a.txt", "b.txt", "subdir"]);
+
+            const result = await listDirectory("/tmp", {
+                observability: recorded.observability,
+            });
+
+            expect(readdir).toHaveBeenCalledWith("/tmp");
+            expect(result).toEqual(value(["a.txt", "b.txt", "subdir"]));
+            expect(recorded.counts).toEqual([
+                "fileops.findAllByNameUnder.listDirectory.success",
+            ]);
+            expect(recorded.durations).toEqual([
+                {
+                    name: "fileops.findAllByNameUnder.listDirectory.ms",
+                    durationMs: 5,
+                },
+            ]);
+        });
+
+        it("returns notFound when readdir throws ENOENT", async () => {
+            const cause = Object.assign(new Error("missing"), { code: "ENOENT" });
+            (readdir as jest.Mock).mockRejectedValue(cause);
+
+            const result = await listDirectory("/tmp/missing", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "notFound",
+                    message: "Failed listing directory [/tmp/missing]",
+                    severity: "error",
+                    code: "ENOENT",
+                    context: {
+                        operation: "findContainingDirectory",
+                        filename: "/tmp/missing",
+                        cause,
+                    },
+                }),
+            );
+            expect(recorded.counts).toEqual([
+                "fileops.findAllByNameUnder.listDirectory.failure",
+            ]);
+            expect(recorded.durations).toEqual([
+                {
+                    name: "fileops.findAllByNameUnder.listDirectory.ms",
+                    durationMs: 5,
+                },
+            ]);
+        });
+
+        it("returns notReadable when readdir throws EACCES", async () => {
+            const cause = Object.assign(new Error("denied"), { code: "EACCES" });
+            (readdir as jest.Mock).mockRejectedValue(cause);
+
+            const result = await listDirectory("/tmp/secret", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "notReadable",
+                    message: "Failed listing directory [/tmp/secret]",
+                    severity: "error",
+                    code: "EACCES",
+                    context: {
+                        operation: "findContainingDirectory",
+                        filename: "/tmp/secret",
+                        cause,
+                    },
+                }),
+            );
+        });
+
+        it("returns io when readdir throws unknown code", async () => {
+            const cause = Object.assign(new Error("disk"), { code: "EIO" });
+            (readdir as jest.Mock).mockRejectedValue(cause);
+
+            const result = await listDirectory("/tmp/bad", {
+                observability: recorded.observability,
+            });
+
+            expect(result).toEqual(
+                errors({
+                    kind: "io",
+                    message: "Failed listing directory [/tmp/bad]",
+                    severity: "error",
+                    code: "EIO",
+                    context: {
+                        operation: "findContainingDirectory",
+                        filename: "/tmp/bad",
+                        cause,
+                    },
+                }),
+            );
+        });
+
+        it("works without observability", async () => {
+            (readdir as jest.Mock).mockResolvedValue(["a.txt"]);
+
+            const result = await listDirectory("/tmp");
+
+            expect(result).toEqual(value(["a.txt"]));
+        });
+
+        it("uses the same pathOps as node path", () => {
+            expect(pathOps.dirname("/a/b/c")).toEqual(path.dirname("/a/b/c"));
+            expect(pathOps.resolvePath("./a/b")).toEqual(path.resolve("./a/b"));
+            expect(pathOps.joinPath("/a/b", "file.txt")).toEqual(path.join("/a/b", "file.txt"));
         });
     });
 

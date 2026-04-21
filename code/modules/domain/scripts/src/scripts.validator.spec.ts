@@ -2,8 +2,8 @@ import {
     errorsOrThrow,
     valueOrThrow,
 } from "@laoban/errors";
-import { recordingObservability } from "@laoban/observability";
-import type { ValidationContext, ValidatorDebugContext } from "@laoban/validation";
+import {recordingObservability} from "@laoban/observability";
+import type {ValidationContext} from "@laoban/validation";
 import {
     validateCommandArgs,
     validateEnv,
@@ -25,8 +25,8 @@ import {
     type ScriptGuard,
 } from "./scripts.domain";
 
-const { observability: testObservability } =
-    recordingObservability<ValidatorDebugContext>();
+const {observability: testObservability} =
+    recordingObservability();
 
 const ctx = (...parts: string[]): ValidationContext => parts;
 
@@ -197,7 +197,7 @@ describe("validateRawLaobanCommandObject", () => {
     });
 
     it("accepts a minimal raw command object", () => {
-        const input = { command: "js:process.cwd()" };
+        const input = {command: "js:process.cwd()"};
         const result = validateRawLaobanCommandObject(ctx("command"), testObservability)(input);
         expect(valueOrThrow(result)).toEqual(input);
     });
@@ -388,7 +388,8 @@ describe("validateLaobanCommand", () => {
         command: "yarn test",
         status: true,
         name: "test",
-        guard: { value: "${packageDetails.guards.test}" },
+        executionScope: 'eachPackage',
+        guard: {value: "${packageDetails.guards.test}"},
         directory: "dist",
     };
 
@@ -401,7 +402,8 @@ describe("validateLaobanCommand", () => {
         const input: LaobanCommand = {
             command: "yarn test",
             status: true,
-            guard: { value: true, default: false },
+            executionScope:'eachPackage',
+            guard: {value: true, default: false},
         };
 
         const result = validateLaobanCommand(ctx("command"), testObservability)(input);
@@ -445,8 +447,9 @@ describe("validateLaobanScript", () => {
         commands: [
             {
                 command: "mvn ${passThruArgs}",
-                guard: { value: "${packageDetails.guards.mvn}" },
+                guard: {value: "${packageDetails.guards.mvn}"},
                 status: true,
+                executionScope: 'eachPackage'
             },
         ],
     };
@@ -459,7 +462,7 @@ describe("validateLaobanScript", () => {
     it("accepts a normalized script with object guard including default", () => {
         const input: LaobanScript = {
             description: "runs tests",
-            guard: { value: "${packageDetails.guards.test}", default: true },
+            guard: {value: "${packageDetails.guards.test}", default: true},
             inLinksOrder: true,
             showShell: true,
             commandArgs: {},
@@ -468,6 +471,7 @@ describe("validateLaobanScript", () => {
                 {
                     command: "${packageManager} test",
                     status: true,
+                    executionScope: 'eachPackage'
                 },
             ],
         };
@@ -482,7 +486,7 @@ describe("validateLaobanScript", () => {
             showShell: false,
             commandArgs: {},
             env: {},
-            commands: [{ command: "echo hi", status: true }],
+            commands: [{command: "echo hi", status: true}],
         } as any);
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
@@ -493,7 +497,7 @@ describe("validateLaobanScript", () => {
             inLinksOrder: false,
             commandArgs: {},
             env: {},
-            commands: [{ command: "echo hi", status: true }],
+            commands: [{command: "echo hi", status: true}],
         } as any);
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
@@ -504,7 +508,7 @@ describe("validateLaobanScript", () => {
             inLinksOrder: false,
             showShell: false,
             env: {},
-            commands: [{ command: "echo hi", status: true }],
+            commands: [{command: "echo hi", status: true}],
         } as any);
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
@@ -515,7 +519,7 @@ describe("validateLaobanScript", () => {
             inLinksOrder: false,
             showShell: false,
             commandArgs: {},
-            commands: [{ command: "echo hi", status: true }],
+            commands: [{command: "echo hi", status: true}],
         } as any);
         expect(errorsOrThrow(result).length).toBeGreaterThan(0);
     });
