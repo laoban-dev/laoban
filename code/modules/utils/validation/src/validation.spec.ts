@@ -726,8 +726,8 @@ describe("mustBeOneOf", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["ctx"],
-                message: "ctx must be a string",
-                code: "wrong.type",
+                "message": "ctx must be one of \"x\", \"y\" but was 123",
+                "code": "wrong.literal",
             },
         ]);
     });

@@ -1,13 +1,15 @@
-import {errors, value, type ErrorsOr} from "@laoban/errors";
+import { errors, value, type ErrorsOr } from "@laoban/errors";
 import {
     type DirectoryName,
     type Filename,
+    type FileExistsFn,
     type FileOpIssue,
     type FileOpsHelperConfig,
     type FileOpsHelperDefaults,
+    type ListDirectoryFn,
     makeFileOpIssue
 } from "@laoban/files";
-import {findAllByNameUnder as makeFindAllByNameUnder} from "@laoban/files";
+import { findAllByNameUnder as makeFindAllByNameUnder } from "@laoban/files";
 import * as fs from "fs/promises";
 import * as path from "path";
 
@@ -17,9 +19,13 @@ const pathOps = {
     joinPath: (directory: DirectoryName, filename: Filename): string => path.join(directory, filename)
 };
 
-export const nodeFileExists = async (
-    filename: string,
-    _config?: FileOpsHelperConfig
+type HasObservability = Readonly<{
+    observability?: FileOpsHelperConfig["observability"];
+}>;
+
+export const nodeFileExists: FileExistsFn = async (
+    filename,
+    _config?: HasObservability
 ): Promise<ErrorsOr<boolean, FileOpIssue>> => {
     try {
         await fs.access(filename);
@@ -29,8 +35,8 @@ export const nodeFileExists = async (
     }
 };
 
-export const nodeListDirectory = async (
-    directory: DirectoryName,
+export const nodeListDirectory: ListDirectoryFn = async (
+    directory,
     _config?: FileOpsHelperConfig
 ): Promise<ErrorsOr<Filename[], FileOpIssue>> => {
     try {

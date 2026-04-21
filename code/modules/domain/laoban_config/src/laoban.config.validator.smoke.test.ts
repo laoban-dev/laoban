@@ -75,6 +75,7 @@ describe("laoban config validators", () => {
                             {
                                 command: "yarn build",
                                 status: false,
+                                executionScope: 'eachPackage'
                             },
                         ],
                         inLinksOrder: false,

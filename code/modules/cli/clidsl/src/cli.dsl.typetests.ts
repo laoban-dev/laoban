@@ -23,7 +23,7 @@ import {
     CliPositionalParameters,
     CliValueTypeName,
     command,
-    group
+    group, root
 } from "./cli.dsl";
 
 type Equal<A, B> =
@@ -123,16 +123,20 @@ const initCommand = command<InitValues, "name" | "template", "force">(
         void c;
     }
 );
-
 // ----- group / model authoring -----
-const cli: CliModel = group("Root", {
+const cli: CliModel = root("laoban", "Root", {
     build: buildCommand,
     project: group("Project commands", {
         init: initCommand
     })
 });
 
-const _groupCheck: CliGroup = cli;
+const _modelCheck: CliModel = cli;
+const _groupCheck: CliGroup = {
+    nodeType: 'group',
+    description: cli.description,
+    children: cli.children
+};
 
 // ----- readable assignment checks -----
 declare const buildPositionalDefs: CliPositionalParameters<BuildValues, "target" | "files">;

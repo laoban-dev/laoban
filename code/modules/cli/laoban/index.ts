@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import {Command} from "commander";
-import {type CliModel, makeValidateCliModel, root} from "@laoban/clidsl";
+import {type CliModel, CliRoot, makeValidateCliModel, root} from "@laoban/clidsl";
 import {consoleLogSink, createNodeObservability, dumpAndExitIfErrors} from "@laoban/observability_node";
 import {addCliModelToCommander, makeCommanderCliAdapter} from "@laoban/commander";
 import {LaobanConfigCliContext, laobanConfigCommands} from "@laoban/config_cli";
@@ -10,13 +10,13 @@ import {defaultLoadTextConfig} from "@laoban/files";
 import {nodeLoadTextInfrastructure} from "@laoban/files_node";
 import {dumpErrors} from "@laoban/observability";
 import {loadLaobanConfig} from "@laoban/laoban_config";
-import {laobanPackageCommands} from "@laoban/package_cli";
+import {LaobanPackageCliContext, laobanPackageCommands, loadConfigAndPackages} from "@laoban/package_cli";
 
 const observability = createNodeObservability({
     correlationId: "laoban cli",
     sinks: [consoleLogSink]
 });
-const cliDsl: CliModel<LaobanConfigCliContext> = root(
+const cliDsl: CliRoot<LaobanPackageCliContext> = root(
     'laoban',
     'a monorepo management tool',
     {
@@ -25,16 +25,16 @@ const cliDsl: CliModel<LaobanConfigCliContext> = root(
     },
     '1.0.0');
 
-dumpAndExitIfErrors(observability, makeValidateCliModel<LaobanConfigCliContext>()([], observability)(cliDsl));
+dumpAndExitIfErrors(observability, makeValidateCliModel<LaobanPackageCliContext>()([], observability)(cliDsl));
 
 const command = new Command();
 
 addCliModelToCommander(
     command,
     cliDsl,
-    makeCommanderCliAdapter<LaobanConfigCliContext>({
+    makeCommanderCliAdapter<LaobanPackageCliContext>({
         observability,
-        makeContext: (): LaobanConfigCliContext => ({
+        makeContext: (): LaobanPackageCliContext => ({
             observability,
             fileOps: nodeFileOps(nodeFileOpsDefaults),
             loadLaobanFileConfig: defaultLoadTextConfig({
@@ -44,7 +44,8 @@ addCliModelToCommander(
                 observability
             }),
             cwd: process.cwd(),
-            loadLaobanConfig
+            loadLaobanConfig,
+            loadConfigAndPackagesFn: loadConfigAndPackages
         }),
         onError: async (observability, e) => {
             dumpErrors(observability, e);

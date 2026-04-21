@@ -33,12 +33,16 @@ const extractCode = (cause: unknown): string | undefined =>
         ? (cause as { code: string }).code
         : undefined;
 
+type HasObservability = Readonly<{
+    observability?: FileOpsHelperConfig["observability"];
+}>;
+
 const now = (observability?: { timeService?: { now: () => number } }): number =>
-    observability?.timeService.now() ?? Date.now();
+    observability?.timeService?.now() ?? Date.now();
 
 const nodeFileExists: FileExistsFn = async (
     filename: FileOrUrl,
-    config?: FindContainingDirectoryConfig | FileOpsHelperConfig,
+    config?: HasObservability,
 ) => {
     const observability = config?.observability;
     const start = now(observability);
@@ -258,7 +262,7 @@ export const nodeFileOpsDefaults: FileOpsDefaults = {
             fileExists: nodeFileExists,
             listDirectory: nodeListDirectory,
             pathOps: {
-                dirname:  path.dirname,
+                dirname: path.dirname,
                 resolvePath: path.resolve,
                 joinPath: (directory, filename) => path.join(directory, filename),
             },

@@ -63,6 +63,7 @@ describe("loadLaobanConfig", () => {
                         {
                             command: "pnpm build",
                             status: false,
+                            "executionScope": "eachPackage",
                         },
                     ],
                     inLinksOrder: false,
@@ -207,6 +208,7 @@ describe("loadLaobanConfig", () => {
                     {
                         command: "yarn build",
                         status: false,
+                        "executionScope": "eachPackage",
                     },
                 ],
                 inLinksOrder: false,

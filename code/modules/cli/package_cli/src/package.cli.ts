@@ -8,11 +8,7 @@ import {
 } from "@laoban/package_details";
 import {LaobanConfigCliContext, loadConfig} from "@laoban/config_cli";
 import {mapObject, prettyRecordJson} from "@laoban/records";
-import {
-    packageDetailsGraph,
-    topologicallySortPackageDetails
-} from "@laoban/package_details/src/package.details.sort";
-import {safePrettyJson} from "@laoban/safe";
+import {packageDetailsGraph, topologicallySortPackageDetails} from "@laoban/package_details/src/package.details.sort";
 import {prettyPrintGenerationsSwimlanes, prettyPrintGenerationsVertical} from "@laoban/topologicalsort";
 
 export type LaobanDebugContext = "cli";
@@ -37,7 +33,7 @@ export function makeNameToNormalisedPackageDetails(inp: Record<string, LoadedPac
     return mapObject(inp, detail => detail.contents)
 }
 
-export async function loadSortedLaobanProject(context: LaobanConfigCliContext): Promise<ErrorsOr<SortedLaobanProject>> {
+export async function loadSortedLaobanProject(context: LaobanPackageCliContext): Promise<ErrorsOr<SortedLaobanProject>> {
     return flatMapErrorsOr(await loadConfigAndPackages(context), loaded =>
         mapErrorsOr(topologicallySortPackageDetails(
                 makeNameToNormalisedPackageDetails(loaded.loadedPackageDetails),
@@ -67,7 +63,7 @@ const packageViewCommand = defineCommand<{ name: string }, LaobanPackageCliConte
     },
     options: {},
     execute: async (values, _context) => {
-        console.log("package view", values.name);
+        _context.observability.logger('info', "package view", values.name);
         return {};
     },
 });
