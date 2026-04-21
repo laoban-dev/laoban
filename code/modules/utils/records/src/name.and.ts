@@ -27,6 +27,14 @@ export function mapObject<T, R>(
     }
     return result;
 }
+export function sortObjectByName<T>(obj: NameAnd<T>): NameAnd<T> {
+    const keys = Object.keys(obj).sort();
+    const sorted: NameAnd<T> = {};
+    for (const key of keys) {
+        sorted[key] = obj[key];
+    }
+    return sorted;
+}
 
 export function mapEntries<T, R>(
     obj: Record<string, T>,

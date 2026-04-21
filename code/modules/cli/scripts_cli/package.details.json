@@ -1,0 +1,33 @@
+{
+  "template": "typescript",
+  "name": "@laoban/scripts_cli",
+  "description": "Turns the scripts in the laoban.json into cli commands. ",
+  "links": [
+    "@laoban/clidsl",
+    "@laoban/commander",
+    "@laoban/config_cli",
+    "@laoban/errors",
+    "@laoban/laoban_config",
+    "@laoban/observability",
+    "@laoban/package_cli",
+    "@laoban/safe",
+    "@laoban/scripts",
+    "@laoban/strings",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "dependencies": {
+      "commander": "^14.0.0"
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

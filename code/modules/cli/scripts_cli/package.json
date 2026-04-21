@@ -1,6 +1,6 @@
 {
-  "name": "@laoban/strings",
-  "description": "simple string utilities for path lookup, transforms, and structured errors/warnings",
+  "name": "@laoban/scripts_cli",
+  "description": "Turns the scripts in the laoban.json into cli commands. ",
   "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
@@ -17,6 +17,18 @@
     ]
   },
   "dependencies": {
+    "commander": "^14.0.0",
+    "@laoban/clidsl": "2.0.0",
+    "@laoban/commander": "2.0.0",
+    "@laoban/config_cli": "2.0.0",
+    "@laoban/errors": "2.0.0",
+    "@laoban/laoban_config": "2.0.0",
+    "@laoban/observability": "2.0.0",
+    "@laoban/package_cli": "2.0.0",
+    "@laoban/safe": "2.0.0",
+    "@laoban/scripts": "2.0.0",
+    "@laoban/strings": "2.0.0",
+    "@laoban/validation": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {
@@ -45,8 +57,7 @@
   "files": [
     "dist/index.js",
     "dist/index.d.ts",
-    "dist/src/",
-    "build/"
+    "dist/src/"
   ],
   "keywords": [
     "indexing"
@@ -55,7 +66,6 @@
   "repository": "git@github.com:phil-rice/laoban.git",
   "scripts": {
     "test": "jest --config jest.config.json --env node",
-    "test:watch": "npm run test -- --watch",
-    "start": "react-scripts start"
+    "test:watch": "npm run test -- --watch"
   }
 }

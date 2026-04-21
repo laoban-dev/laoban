@@ -2,7 +2,6 @@ import {Observability} from "@laoban/observability";
 import {NameAnd} from "@laoban/records";
 
 export type CliValue = string | number | boolean | string[];
-export type CliRecord = Record<string, CliValue>;
 export type CliPositionalValue = Exclude<CliValue, boolean>;
 
 export interface BasicCliContext {
@@ -16,16 +15,21 @@ export type CliValueTypeName<T> =
                 T extends string[] ? "string[]" :
                     never;
 
+/** Validates that every property in T is a legal CliValue without requiring an index signature */
+export type CliShape<T extends object> = {
+    [K in keyof T]: T[K] extends CliValue ? T[K] : never
+};
+
 export interface CliParameterBase {
     description: string;
     required?: boolean;
 }
 
-export type CliValueShape<T> = {
+export type CliValueShape<T extends CliValue> = {
     type: CliValueTypeName<T>;
 };
 
-export type CliOptionRequirement<T> = {
+export type CliOptionRequirement<T extends CliValue> = {
     required?: boolean;
     defaultValue?: T;
 };
@@ -41,36 +45,38 @@ export type CliOptionParameterDef<T extends CliValue> =
     & CliValueShape<T>
     & CliOptionRequirement<T>;
 
-export type CliPositionalKey<T extends CliRecord> = {
+export type CliPositionalKey<T extends object> = {
     [K in keyof T]: T[K] extends CliPositionalValue ? K : never
 }[keyof T];
 
-export type CliOptionKey<T extends CliRecord> = keyof T;
+export type CliOptionKey<T extends object> = {
+    [K in keyof T]: T[K] extends CliValue ? K : never
+}[keyof T];
 
 export type CliPositionalParameters<
-    T extends CliRecord,
+    T extends object,
     K extends keyof T = never
 > = {
     [P in K]: CliPositionalParameterDef<Extract<T[P], CliPositionalValue>>;
 };
 
 export type CliOptionParameters<
-    T extends CliRecord,
+    T extends object,
     K extends keyof T = never
 > = {
-    [P in K]: CliOptionParameterDef<T[P]>;
+    [P in K]: CliOptionParameterDef<Extract<T[P], CliValue>>;
 };
 
 export type CliExecute<
-    T extends CliRecord,
+    T extends object,
     C extends BasicCliContext = BasicCliContext
 > = (values: T, context: C) => Promise<any>;
 
 export interface CliCommand<
-    T extends CliRecord,
+    T extends CliShape<T>,
+    C extends BasicCliContext = BasicCliContext,
     TPositionalKeys extends CliPositionalKey<T> = never,
     TOptionKeys extends Exclude<CliOptionKey<T>, TPositionalKeys> = never,
-    C extends BasicCliContext = BasicCliContext
 > {
     nodeType: "command";
     description: string;
@@ -95,7 +101,7 @@ export interface AnyCliCommand<C extends BasicCliContext = BasicCliContext> {
     description: string;
     positionals: NameAnd<AnyCliPositionalParameterDef>;
     options: NameAnd<AnyCliOptionParameterDef>;
-    execute: CliExecute<any, C>;
+    execute: CliExecute<Record<string, CliValue>, C>;
 }
 
 export interface CliRoot<C extends BasicCliContext = BasicCliContext> {
@@ -163,21 +169,17 @@ export function group<C extends BasicCliContext = BasicCliContext>(
     };
 }
 
-/**
- * Low-level constructor when you want to state the positional and option key
- * unions explicitly.
- */
 export function command<
-    T extends CliRecord,
+    T extends CliShape<T>,
+    C extends BasicCliContext = BasicCliContext,
     TPositionalKeys extends CliPositionalKey<T> = never,
     TOptionKeys extends Exclude<CliOptionKey<T>, TPositionalKeys> = never,
-    C extends BasicCliContext = BasicCliContext
 >(
     description: string,
     positionals: CliPositionalParameters<T, TPositionalKeys>,
     options: CliOptionParameters<T, TOptionKeys>,
     execute: CliExecute<T, C>
-): CliCommand<T, TPositionalKeys, TOptionKeys, C> {
+): CliCommand<T, C, TPositionalKeys, TOptionKeys> {
     return {
         nodeType: "command",
         description,
@@ -188,10 +190,10 @@ export function command<
 }
 
 export interface CliCommandSpec<
-    T extends CliRecord,
+    T extends CliShape<T>,
+    C extends BasicCliContext ,
     P extends CliPositionalKey<T>,
     O extends Exclude<CliOptionKey<T>, P>,
-    C extends BasicCliContext = BasicCliContext
 > {
     description: string;
     positionals: CliPositionalParameters<T, P>;
@@ -199,28 +201,14 @@ export interface CliCommandSpec<
     execute: CliExecute<T, C>;
 }
 
-/**
- * Preferred constructor for authoring commands.
- *
- * Usage:
- *   const cmd = defineCommand<MyValues, MyContext>()({
- *     description: "...",
- *     positionals: { ... },
- *     options: { ... },
- *     execute: async (values, context) => { ... }
- *   });
- *
- * The full values type T is stated once. The positional and option key unions
- * are inferred from the keys present in the supplied objects.
- */
 export function defineCommand<
-    T extends CliRecord,
+    T extends CliShape<T>,
     C extends BasicCliContext = BasicCliContext
 >() {
     return function <
         P extends CliPositionalKey<T>,
         O extends Exclude<CliOptionKey<T>, P>
-    >(spec: CliCommandSpec<T, P, O, C>): CliCommand<T, P, O, C> {
+    >(spec: CliCommandSpec<T, C, P, O>): CliCommand<T, C, P, O> {
         return {
             nodeType: "command",
             description: spec.description,
