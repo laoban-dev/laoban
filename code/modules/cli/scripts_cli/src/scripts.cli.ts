@@ -121,7 +121,7 @@ export function makeScriptCommand<C extends LaobanScriptCliContext>(
     scriptName: ScriptName,
     script: LaobanScript
 ): CliCommand<ScriptCommandValues, C> {
-    return defineCommand()({
+    return defineCommand<ScriptCommandValues, C> ()({
         description: script.description,
         positionals: {},
         options: scriptCommandOptions,

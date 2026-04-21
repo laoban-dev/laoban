@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import {Command} from "commander";
-import {CliGroup, CliRoot, makeValidateCliModel, root} from "@laoban/clidsl";
+import {AnyCliCommand, CliGroup, CliRoot, makeValidateCliModel, root} from "@laoban/clidsl";
 import {addCliModelToCommander, makeCommanderCliAdapter} from "@laoban/commander";
 import {laobanConfigCommands} from "@laoban/config_cli";
 import {defaultLoadTextConfig} from "@laoban/files";
@@ -20,6 +20,9 @@ const observability = createNodeObservability({
 
 type LaobanCliContext =
     LaobanPackageCliContext & LaobanScriptCliContext;
+
+type LaobanCliChild =
+    CliGroup<LaobanCliContext> | AnyCliCommand<LaobanCliContext>;
 
 function makeInfrastructure() {
     return {
@@ -43,17 +46,17 @@ function makeContext(): LaobanCliContext {
         loadLaobanConfig,
         loadConfigAndPackagesFn: loadConfigAndPackages,
         executeLaobanScript: async (scriptName, script, values, context) => {
-            console.log('Executing', scriptName, values)
+            console.log("Executing", scriptName, values);
         }
     };
 }
 
-const staticCli = {
-    config: laobanConfigCommands,
-    packages: laobanPackageCommands
+const staticCli: Record<string, LaobanCliChild> = {
+    config: laobanConfigCommands as CliGroup<LaobanCliContext>,
+    packages: laobanPackageCommands as CliGroup<LaobanCliContext>
 };
 
-function makeCliRoot(commands: Record<string, CliGroup>): CliRoot<LaobanCliContext> {
+function makeCliRoot(commands: Record<string, LaobanCliChild>): CliRoot<LaobanCliContext> {
     return root(
         "laoban",
         "a monorepo management tool",
@@ -68,14 +71,13 @@ function firstCommandToken(argv: string[]): string | undefined {
 }
 
 function isBuiltInTopLevelCommand(
-    commands: Record<string, CliGroup<LaobanCliContext>>,
+    commands: Record<string, LaobanCliChild>,
     argv: string[]
 ): boolean {
     const commandName = firstCommandToken(argv);
     if (!commandName) return false;
     return Object.prototype.hasOwnProperty.call(commands, commandName);
 }
-
 
 async function makeCliDsl(argv: string[]): Promise<CliRoot<LaobanCliContext>> {
     const staticCliDsl = makeCliRoot(staticCli);
@@ -95,9 +97,13 @@ async function makeCliDsl(argv: string[]): Promise<CliRoot<LaobanCliContext>> {
         },
         context.cwd
     );
-    if (isErrors(loadedConfig)) return dumpAndExitIfErrors(observability, loadedConfig)
-    const scripts = makeScriptCommands(loadedConfig.value.config.scripts ?? {});
-    return makeCliRoot({...staticCli, ...scripts})
+
+    if (isErrors(loadedConfig)) return dumpAndExitIfErrors(observability, loadedConfig);
+
+    const scripts: Record<string, LaobanCliChild> =
+        makeScriptCommands(loadedConfig.value.config.scripts ?? {}) as Record<string, AnyCliCommand<LaobanCliContext>>;
+
+    return makeCliRoot({...staticCli, ...scripts});
 }
 
 async function main() {

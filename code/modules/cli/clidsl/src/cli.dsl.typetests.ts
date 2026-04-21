@@ -23,7 +23,8 @@ import {
     CliPositionalParameters,
     CliValueTypeName,
     command,
-    group, root
+    group,
+    root
 } from "./cli.dsl";
 
 type Equal<A, B> =
@@ -81,7 +82,7 @@ type _op1 = Expect<Equal<BuildOptions["verbose"]["type"], "boolean">>;
 type _op2 = Expect<Equal<BuildOptions["retries"]["type"], "number">>;
 
 // ----- positive command authoring -----
-const buildCommand: CliCommand<BuildValues, "target" | "files", "verbose" | "retries"> = {
+const buildCommand: CliCommand<BuildValues, BasicCliContext, "target" | "files", "verbose" | "retries"> = {
     nodeType: "command",
     description: "Build something",
     positionals: {
@@ -105,7 +106,7 @@ const buildCommand: CliCommand<BuildValues, "target" | "files", "verbose" | "ret
 };
 
 // ----- positive builder authoring -----
-const initCommand = command<InitValues, "name" | "template", "force">(
+const initCommand = command<InitValues, BasicCliContext, "name" | "template", "force">(
     "Initialise a project",
     {
         name: {type: "string", description: "Project name", required: true},
@@ -123,6 +124,7 @@ const initCommand = command<InitValues, "name" | "template", "force">(
         void c;
     }
 );
+
 // ----- group / model authoring -----
 const cli: CliModel = root("laoban", "Root", {
     build: buildCommand,
@@ -133,7 +135,7 @@ const cli: CliModel = root("laoban", "Root", {
 
 const _modelCheck: CliModel = cli;
 const _groupCheck: CliGroup = {
-    nodeType: 'group',
+    nodeType: "group",
     description: cli.description,
     children: cli.children
 };
@@ -170,10 +172,9 @@ const badOption2: CliOptionParameters<BuildValues, "retries"> = {
     retries: {type: "number", description: "Retries", defaultValue: "3"}
 };
 
-
 // ----- negatives: overlap between positional and option keys disallowed -----
 // @ts-expect-error target cannot be both positional and option
-const badCommand1: CliCommand<BuildValues, "target", "target"> = {
+const badCommand1: CliCommand<BuildValues, BasicCliContext, "target", "target"> = {
     nodeType: "command",
     description: "Bad",
     positionals: {
@@ -186,7 +187,7 @@ const badCommand1: CliCommand<BuildValues, "target", "target"> = {
 };
 
 // ----- negatives: execute values are strongly typed -----
-const badCommand2: CliCommand<BuildValues, "target", "verbose"> = {
+const badCommand2: CliCommand<BuildValues, BasicCliContext, "target", "verbose"> = {
     nodeType: "command",
     description: "Bad execute typing",
     positionals: {
@@ -196,7 +197,7 @@ const badCommand2: CliCommand<BuildValues, "target", "verbose"> = {
         verbose: {type: "boolean", description: "Verbose"}
     },
     execute: async (values) => {
-// @ts-expect-error verbose is boolean, not string
+        // @ts-expect-error verbose is boolean, not string
         const x: string = values.verbose;
         void x;
     }
@@ -204,7 +205,7 @@ const badCommand2: CliCommand<BuildValues, "target", "verbose"> = {
 
 // ----- negatives: builder rejects bad positional key -----
 // @ts-expect-error verbose cannot be a positional key
-const badCommand3 = command<BuildValues, "verbose", never>(
+const badCommand3 = command<BuildValues, BasicCliContext, "verbose", never>(
     "Bad",
     {
         verbose: {type: "boolean", description: "Nope"}
@@ -215,7 +216,7 @@ const badCommand3 = command<BuildValues, "verbose", never>(
 
 // ----- negatives: builder rejects overlap -----
 // @ts-expect-error target cannot appear in both positionals and options
-const badCommand4 = command<BuildValues, "target", "target">(
+const badCommand4 = command<BuildValues, BasicCliContext, "target", "target">(
     "Bad overlap",
     {
         target: {type: "string", description: "Target"}
@@ -227,7 +228,7 @@ const badCommand4 = command<BuildValues, "target", "target">(
 );
 
 // ----- custom context -----
-const commandWithContext: CliCommand<BuildValues, "target", "verbose", CustomContext> = {
+const commandWithContext: CliCommand<BuildValues, CustomContext, "target", "verbose"> = {
     nodeType: "command",
     description: "With custom context",
     positionals: {

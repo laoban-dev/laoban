@@ -96,13 +96,16 @@ export type AnyCliOptionParameterDef =
     | CliOptionParameterDef<number>
     | CliOptionParameterDef<boolean>;
 
-export interface AnyCliCommand<C extends BasicCliContext = BasicCliContext> {
-    nodeType: "command";
-    description: string;
-    positionals: NameAnd<AnyCliPositionalParameterDef>;
-    options: NameAnd<AnyCliOptionParameterDef>;
-    execute: CliExecute<Record<string, CliValue>, C>;
-}
+export type AnyCliCommand<C extends BasicCliContext = BasicCliContext> =
+    CliCommand<any, C, never, never>;
+//
+// export interface AnyCliCommand<C extends BasicCliContext = BasicCliContext> {
+//     nodeType: "command";
+//     description: string;
+//     positionals: NameAnd<AnyCliPositionalParameterDef>;
+//     options: NameAnd<AnyCliOptionParameterDef>;
+//     execute: CliExecute<Record<string, CliValue>, C>;
+// }
 
 export interface CliRoot<C extends BasicCliContext = BasicCliContext> {
     nodeType: "root";

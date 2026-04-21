@@ -9,7 +9,7 @@
  * These examples are useful for readers because they show the "happy path"
  * shapes of the DSL without the noise of negative type tests.
  */
-import {BasicCliContext, CliModel, defineCommand, group, root} from "./cli.dsl";
+import {AnyCliCommand, BasicCliContext, CliModel, defineCommand, group, root} from "./cli.dsl";
 import {safeJson} from "@laoban/safe";
 
 export type ExampleContext = BasicCliContext & {
@@ -61,7 +61,7 @@ const buildCommand = defineCommand<BuildValues, ExampleContext>()({
     }
 });
 
-const initCommand = defineCommand<InitValues, ExampleContext>()({
+const initCommand= defineCommand<InitValues, ExampleContext>()({
     description: "Initialise a project",
     positionals: {
         name: {type: "string", description: "Project name", required: true},
@@ -70,7 +70,7 @@ const initCommand = defineCommand<InitValues, ExampleContext>()({
     options: {
         force: {type: "boolean", description: "Overwrite existing files", shortName: "f", defaultValue: false}
     },
-    execute: async (values, context) => {
+    execute: async (values: InitValues, context: ExampleContext) => {
         const name: string = values.name;
         const template: string = values.template;
         const force: boolean = values.force;
