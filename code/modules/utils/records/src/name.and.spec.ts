@@ -1,4 +1,12 @@
-import {frozenEmptyObject, invertObject, mapEntries, mapObject, mutableEmptyObject, type NameAnd,} from './name.and'
+import {
+    frozenEmptyObject,
+    invertObject,
+    mapEntries,
+    mapObject,
+    mutableEmptyObject,
+    type NameAnd,
+    prettyRecordJson,
+} from './name.and'
 
 describe('empty object constants', () => {
     it('mutableEmptyObject starts empty', () => {
@@ -187,5 +195,52 @@ describe("mapEntries", () => {
             { key: "build", description: "Build", index: 0 },
             { key: "test", description: "Test", index: 1 }
         ]);
+    });
+});
+
+describe("prettyRecordJson", () => {
+    it("prints an empty record", () => {
+        expect(prettyRecordJson({})).toBe(`{
+}`);
+    });
+
+    it("prints one entry", () => {
+        expect(prettyRecordJson({one: "1"})).toBe(`{
+  "one": "1"
+}`);
+    });
+
+    it("pads keys to the longest key length", () => {
+        expect(
+            prettyRecordJson({
+                a: "1",
+                longer: "2"
+            })
+        ).toBe(`{
+  "a"     : "1"
+  "longer": "2"
+}`);
+    });
+
+    it("preserves insertion order", () => {
+        expect(
+            prettyRecordJson({
+                beta: "2",
+                alpha: "1"
+            })
+        ).toBe(`{
+  "beta" : "2"
+  "alpha": "1"
+}`);
+    });
+
+    it("escapes quotes and backslashes via JSON.stringify", () => {
+        expect(
+            prettyRecordJson({
+                'a"b': "c\\d"
+            })
+        ).toBe(`{
+  "a\\"b": "c\\\\d"
+}`);
     });
 });

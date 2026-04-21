@@ -6,23 +6,24 @@ import {
     cycleMetricName,
     durationMetricName,
     findCyclePath,
+    indexNodesByName,
     makeCycleIssue,
     makeDuplicateGraphNameIssue,
+    makeMissingGraphDependencyIssue,
     NameAndDependsOn,
     newTraversalState,
     runMetricName,
     topologicalGenerations,
     topologicalGenerationsContext,
     topologicalGenerationsVisitContext,
-    validateUniqueNames,
 } from "./topological.sort";
 
 type TestNode = {
     name: string;
-    dependsOn?: TestNode[];
+    dependsOn?: string[];
 };
 
-const node = (name: string, dependsOn: TestNode[] = []): TestNode => ({name, dependsOn});
+const node = (name: string, dependsOn: string[] = []): TestNode => ({name, dependsOn});
 
 const graph: NameAndDependsOn<TestNode> = {
     getName: n => n.name,
@@ -65,10 +66,10 @@ describe("topologicalGenerations", () => {
     it("orders a simple chain by generations", () => {
         const {observability} = recordingObservability();
         const c = node("c");
-        const b = node("b", [c]);
-        const a = node("a", [b]);
+        const b = node("b", ["c"]);
+        const a = node("a", ["b"]);
 
-        const result = topologicalGenerations("package.dependencies", [a], graph, observability);
+        const result = topologicalGenerations("package.dependencies", [a, b, c], graph, observability);
 
         expect(names(valueOrThrow(result))).toEqual([
             ["c"],
@@ -80,11 +81,11 @@ describe("topologicalGenerations", () => {
     it("orders a diamond with shared dependency only once", () => {
         const {observability} = recordingObservability();
         const d = node("d");
-        const b = node("b", [d]);
-        const c = node("c", [d]);
-        const a = node("a", [b, c]);
+        const b = node("b", ["d"]);
+        const c = node("c", ["d"]);
+        const a = node("a", ["b", "c"]);
 
-        const result = topologicalGenerations("package.dependencies", [a], graph, observability);
+        const result = topologicalGenerations("package.dependencies", [a, b, c, d], graph, observability);
 
         expect(names(valueOrThrow(result))).toEqual([
             ["d"],
@@ -97,10 +98,10 @@ describe("topologicalGenerations", () => {
         const {observability} = recordingObservability();
         const z = node("z");
         const a = node("a");
-        const root1 = node("root1", [z]);
-        const root2 = node("root2", [a]);
+        const root1 = node("root1", ["z"]);
+        const root2 = node("root2", ["a"]);
 
-        const result = topologicalGenerations("package.dependencies", [root1, root2], graph, observability);
+        const result = topologicalGenerations("package.dependencies", [root1, root2, z, a], graph, observability);
 
         expect(names(valueOrThrow(result))).toEqual([
             ["a", "z"],
@@ -111,23 +112,22 @@ describe("topologicalGenerations", () => {
     it("detects a cycle and returns the named cycle path", () => {
         const {observability, counts, debug} = recordingObservability();
 
-        const a: TestNode = {name: "a", dependsOn: []};
-        const b: TestNode = {name: "b", dependsOn: []};
-        const c: TestNode = {name: "c", dependsOn: []};
+        const a = node("a", ["b"]);
+        const b = node("b", ["c"]);
+        const c = node("c", ["a"]);
 
-        a.dependsOn = [b];
-        b.dependsOn = [c];
-        c.dependsOn = [a];
+        const result = topologicalGenerations("building.execution.plan", [a, b, c], graph, observability);
 
-        const result = topologicalGenerations("building.execution.plan", [a], graph, observability);
-        const issue = errorsOrThrow(result)[0];
-
-        expect(issue.kind).toBe("graphCycle");
-        expect(issue.message).toBe("Cycle detected in building.execution.plan: a -> b -> c -> a");
-        expect(issue.context).toEqual({
-            purpose: "building.execution.plan",
-            cyclePath: ["a", "b", "c", "a"],
-        });
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "graphCycle",
+                message: "Cycle detected in building.execution.plan: a -> b -> c -> a",
+                context: {
+                    purpose: "building.execution.plan",
+                    cyclePath: ["a", "b", "c", "a"],
+                }
+            }
+        ]);
 
         expect(counts).toContain(runMetricName("building.execution.plan"));
         expect(counts).toContain(cycleMetricName("building.execution.plan"));
@@ -142,42 +142,28 @@ describe("topologicalGenerations", () => {
 
         const sharedName1 = node("dup");
         const sharedName2 = node("dup");
-        const root = node("root", [sharedName1, sharedName2]);
+        const root = node("root", ["dup"]);
 
-        const result = topologicalGenerations("package.dependencies", [root], graph, observability);
-        const issue = errorsOrThrow(result)[0];
+        const result = topologicalGenerations("package.dependencies", [root, sharedName1, sharedName2], graph, observability);
 
-        expect(issue.kind).toBe("duplicateGraphName");
-        expect(issue.message).toBe("Duplicate graph name detected in package.dependencies: dup");
-        expect(issue.context).toEqual({
-            purpose: "package.dependencies",
-            duplicateName: "dup",
-        });
-    });
-
-    it("allows the same node instance to be reached more than once", () => {
-        const {observability} = recordingObservability();
-
-        const shared = node("shared");
-        const left = node("left", [shared]);
-        const right = node("right", [shared]);
-        const root = node("root", [left, right]);
-
-        const result = topologicalGenerations("package.dependencies", [root], graph, observability);
-
-        expect(names(valueOrThrow(result))).toEqual([
-            ["shared"],
-            ["left", "right"],
-            ["root"],
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "duplicateGraphName",
+                message: "Duplicate graph name detected in package.dependencies: dup",
+                context: {
+                    purpose: "package.dependencies",
+                    duplicateName: "dup",
+                }
+            }
         ]);
     });
 
     it("writes visit debug records with the purpose-based visit context", () => {
         const {observability, debug} = recordingObservability();
         const b = node("b");
-        const a = node("a", [b]);
+        const a = node("a", ["b"]);
 
-        const result = topologicalGenerations("package.dependencies", [a], graph, observability);
+        const result = topologicalGenerations("package.dependencies", [a, b], graph, observability);
 
         expect(names(valueOrThrow(result))).toEqual([
             ["b"],
@@ -226,18 +212,38 @@ describe("topologicalGenerations", () => {
             },
         ]);
     });
+
+    it("returns missingGraphDependency when a dependency name is not present", () => {
+        const {observability} = recordingObservability();
+        const a = node("a", ["missing"]);
+
+        const result = topologicalGenerations("package.dependencies", [a], graph, observability);
+
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "missingGraphDependency",
+                message: "Missing graph dependency in package.dependencies: 'a' depends on 'missing' but it is not present",
+                context: {
+                    purpose: "package.dependencies",
+                    nodeName: "a",
+                    missingDependencyName: "missing",
+                }
+            }
+        ]);
+    });
 });
 
-describe("validateUniqueNames", () => {
+describe("indexNodesByName", () => {
     it("returns value when all names are unique", () => {
         const {observability} = recordingObservability();
         const c = node("c");
-        const b = node("b", [c]);
-        const a = node("a", [b]);
+        const b = node("b", ["c"]);
+        const a = node("a", ["b"]);
 
-        const result = validateUniqueNames("package.dependencies", [a], graph, observability);
+        const result = indexNodesByName("package.dependencies", [a, b, c], graph, observability);
 
-        expect(valueOrThrow(result)).toBeUndefined();
+        const nodesByName = valueOrThrow(result);
+        expect(Array.from(nodesByName.keys()).sort()).toEqual(["a", "b", "c"]);
     });
 
     it("returns an error for duplicate names across different node instances", () => {
@@ -245,12 +251,11 @@ describe("validateUniqueNames", () => {
         const x1 = node("x");
         const x2 = node("x");
 
-        const result = validateUniqueNames("package.dependencies", [x1, x2], graph, observability);
-        const issue = errorsOrThrow(result)[0];
+        const result = indexNodesByName("package.dependencies", [x1, x2], graph, observability);
 
-        expect(issue).toEqual(
+        expect(errorsOrThrow(result)).toEqual([
             makeDuplicateGraphNameIssue("package.dependencies", "x")
-        );
+        ]);
     });
 });
 
@@ -264,17 +269,13 @@ describe("small helpers", () => {
     });
 
     it("findCyclePath returns the active loop path ending back at the repeated node", () => {
-        const a = node("a");
-        const b = node("b");
-        const c = node("c");
-
-        const state = newTraversalState<TestNode>();
-        state.activePath.push(a, b, c);
+        const state = newTraversalState<TestNode>(new Map());
+        state.activePath.push("a", "b", "c");
         state.activeIndexByName.set("a", 0);
         state.activeIndexByName.set("b", 1);
         state.activeIndexByName.set("c", 2);
 
-        expect(findCyclePath(b, graph, state)).toEqual(["b", "c", "b"]);
+        expect(findCyclePath("b", state)).toEqual(["b", "c", "b"]);
     });
 
     it("buildGenerations sorts nodes within each generation by name", () => {
@@ -282,14 +283,16 @@ describe("small helpers", () => {
         const a = node("a");
         const root = node("root");
 
-        const state = newTraversalState<TestNode>();
+        const state = newTraversalState<TestNode>(
+            new Map([
+                ["z", z],
+                ["a", a],
+                ["root", root],
+            ])
+        );
         state.generationByName.set("z", 0);
         state.generationByName.set("a", 0);
         state.generationByName.set("root", 1);
-
-        state.nodesByName.set("z", z);
-        state.nodesByName.set("a", a);
-        state.nodesByName.set("root", root);
 
         expect(names(buildGenerations(state, graph))).toEqual([
             ["a", "z"],
@@ -318,48 +321,39 @@ describe("small helpers", () => {
             },
         });
     });
+
+    it("makeMissingGraphDependencyIssue creates the expected structured issue", () => {
+        expect(makeMissingGraphDependencyIssue("package.dependencies", "a", "missing")).toEqual({
+            kind: "missingGraphDependency",
+            message: "Missing graph dependency in package.dependencies: 'a' depends on 'missing' but it is not present",
+            context: {
+                purpose: "package.dependencies",
+                nodeName: "a",
+                missingDependencyName: "missing",
+            },
+        });
+    });
+
     it("reports only the loop segment when a cycle starts mid-stack", () => {
         const {observability} = recordingObservability();
 
-        const a: TestNode = {name: "a", dependsOn: []};
-        const b: TestNode = {name: "b", dependsOn: []};
-        const c: TestNode = {name: "c", dependsOn: []};
-        const d: TestNode = {name: "d", dependsOn: []};
+        const a = node("a", ["b"]);
+        const b = node("b", ["c"]);
+        const c = node("c", ["d"]);
+        const d = node("d", ["b"]);
 
-        a.dependsOn = [b];
-        b.dependsOn = [c];
-        c.dependsOn = [d];
-        d.dependsOn = [b];
+        const result = topologicalGenerations("building.execution.plan", [a, b, c, d], graph, observability);
 
-        const result = topologicalGenerations("building.execution.plan", [a], graph, observability);
-        const issue = errorsOrThrow(result)[0];
-
-        expect(issue.kind).toBe("graphCycle");
-        expect(issue.context).toEqual({
-            purpose: "building.execution.plan",
-            cyclePath: ["b", "c", "d", "b"],
-        });
-        expect(issue.message).toBe("Cycle detected in building.execution.plan: b -> c -> d -> b");
-    });
-
-    it("finds duplicate names deep in nested dependencies", () => {
-        const {observability} = recordingObservability();
-
-        const dup1 = node("dup");
-        const dup2 = node("dup");
-        const left = node("left", [dup1]);
-        const right = node("right", [dup2]);
-        const root = node("root", [left, right]);
-
-        const result = topologicalGenerations("package.dependencies", [root], graph, observability);
-        const issue = errorsOrThrow(result)[0];
-
-        expect(issue.kind).toBe("duplicateGraphName");
-        expect(issue.context).toEqual({
-            purpose: "package.dependencies",
-            duplicateName: "dup",
-        });
-        expect(issue.message).toBe("Duplicate graph name detected in package.dependencies: dup");
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "graphCycle",
+                message: "Cycle detected in building.execution.plan: b -> c -> d -> b",
+                context: {
+                    purpose: "building.execution.plan",
+                    cyclePath: ["b", "c", "d", "b"],
+                }
+            }
+        ]);
     });
 
     it("records duration and cycle metric when traversal fails with a cycle", () => {
@@ -367,16 +361,22 @@ describe("small helpers", () => {
         const timeService = {now: () => now++};
         const {observability, counts, durations, debug} = recordingObservability({}, "test-correlation-id", timeService);
 
-        const a: TestNode = {name: "a", dependsOn: []};
-        const b: TestNode = {name: "b", dependsOn: []};
+        const a = node("a", ["b"]);
+        const b = node("b", ["a"]);
 
-        a.dependsOn = [b];
-        b.dependsOn = [a];
+        const result = topologicalGenerations("building.execution.plan", [a, b], graph, observability);
 
-        const result = topologicalGenerations("building.execution.plan", [a], graph, observability);
-        const issue = errorsOrThrow(result)[0];
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "graphCycle",
+                message: "Cycle detected in building.execution.plan: a -> b -> a",
+                context: {
+                    purpose: "building.execution.plan",
+                    cyclePath: ["a", "b", "a"],
+                }
+            }
+        ]);
 
-        expect(issue.kind).toBe("graphCycle");
         expect(counts).toEqual(
             expect.arrayContaining([
                 runMetricName("building.execution.plan"),
@@ -401,13 +401,15 @@ describe("small helpers", () => {
 
         const c = node("c");
         const b = node("b");
-        const left = node("left", [c]);
-        const right = node("right", [b]);
-        const rootA = node("rootA", [left]);
-        const rootB = node("rootB", [right]);
+        const left = node("left", ["c"]);
+        const right = node("right", ["b"]);
+        const rootA = node("rootA", ["left"]);
+        const rootB = node("rootB", ["right"]);
 
-        const result1 = topologicalGenerations("package.dependencies", [rootA, rootB], graph, observability1);
-        const result2 = topologicalGenerations("package.dependencies", [rootB, rootA], graph, observability2);
+        const allNodes = [rootA, rootB, left, right, b, c];
+
+        const result1 = topologicalGenerations("package.dependencies", allNodes, graph, observability1);
+        const result2 = topologicalGenerations("package.dependencies", [rootB, rootA, left, right, b, c], graph, observability2);
 
         expect(names(valueOrThrow(result1))).toEqual([
             ["b", "c"],

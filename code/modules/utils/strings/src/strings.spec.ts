@@ -1,4 +1,4 @@
-import {getLastSegment, toKebabCase} from "./strings";
+import {getLastSegment, normalisePath, toKebabCase} from "./strings";
 
 describe("getLastSegment", () => {
     it("returns empty string for undefined", () => {
@@ -88,5 +88,35 @@ describe('toKebabCase', () => {
         [undefined, undefined],
     ])('should map %p to %p', (input, expected) => {
         expect(toKebabCase(input as any)).toBe(expected);
+    });
+});
+
+describe("normalisePath", () => {
+    it("returns undefined when given undefined", () => {
+        expect(normalisePath(undefined)).toBeUndefined();
+    });
+
+    it("returns null when given null", () => {
+        expect(normalisePath(null)).toBeNull();
+    });
+
+    it("returns empty string unchanged", () => {
+        expect(normalisePath("")).toBe("");
+    });
+
+    it("returns a path with forward slashes unchanged", () => {
+        expect(normalisePath("/a/b/c")).toBe("/a/b/c");
+    });
+
+    it("replaces backslashes with forward slashes", () => {
+        expect(normalisePath("\\a\\b\\c")).toBe("/a/b/c");
+    });
+
+    it("replaces mixed slashes with forward slashes", () => {
+        expect(normalisePath("a\\b/c\\d")).toBe("a/b/c/d");
+    });
+
+    it("normalises a windows path", () => {
+        expect(normalisePath("C:\\temp\\folder\\file.txt")).toBe("C:/temp/folder/file.txt");
     });
 });

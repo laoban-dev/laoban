@@ -5,8 +5,8 @@ export interface NameAndDependsOn<A> {
     /** Must return a stable unique identity across the reachable graph. */
     getName(a: A): string;
 
-    /** Returns the direct prerequisites of this node. */
-    dependsOn(a: A): A[];
+    /** Returns the direct prerequisite names of this node. */
+    dependsOn(a: A): string[];
 }
 
 export type TopologicalGenerationIssue =
@@ -15,6 +15,14 @@ export type TopologicalGenerationIssue =
     {
         purpose: string;
         duplicateName: string;
+    }
+>
+    | BaseIssue<
+    "missingGraphDependency",
+    {
+        purpose: string;
+        nodeName: string;
+        missingDependencyName: string;
     }
 >
     | BaseIssue<
@@ -31,7 +39,7 @@ export interface TraversalState<A> {
     statesByName: Map<string, VisitState>;
     generationByName: Map<string, number>;
     nodesByName: Map<string, A>;
-    activePath: A[];
+    activePath: string[];
     activeIndexByName: Map<string, number>;
 }
 
@@ -45,13 +53,13 @@ export function topologicalGenerations<A>(
     observability.countMetric(runMetricName(purpose));
     debugTopologicalGenerationsStart(purpose, roots, graph, observability);
 
-    const uniqueNames = validateUniqueNames(purpose, roots, graph, observability);
-    if (isErrors(uniqueNames)) {
+    const nodesByName = indexNodesByName(purpose, roots, graph, observability);
+    if (isErrors(nodesByName)) {
         observability.durationMetric(durationMetricName(purpose), elapsed(start, observability));
-        return uniqueNames;
+        return nodesByName;
     }
 
-    const state = newTraversalState<A>();
+    const state = newTraversalState<A>(nodesByName.value);
     const visited = visitAllRoots(purpose, roots, graph, state, observability);
     if (isErrors(visited)) {
         observability.durationMetric(durationMetricName(purpose), elapsed(start, observability));
@@ -65,26 +73,17 @@ export function topologicalGenerations<A>(
     return value(generations);
 }
 
-export function validateUniqueNames<A>(
+export function indexNodesByName<A>(
     purpose: string,
     roots: A[],
     graph: NameAndDependsOn<A>,
     observability: Observability
-): ErrorsOr<void, TopologicalGenerationIssue> {
-    const seenNames = new Map<string, A>();
-    return validateUniqueNamesInNodes(purpose, roots, graph, seenNames, observability);
-}
+): ErrorsOr<Map<string, A>, TopologicalGenerationIssue> {
+    const nodesByName = new Map<string, A>();
 
-export function validateUniqueNamesInNodes<A>(
-    purpose: string,
-    nodes: A[],
-    graph: NameAndDependsOn<A>,
-    seenNames: Map<string, A>,
-    observability: Observability
-): ErrorsOr<void, TopologicalGenerationIssue> {
-    for (const node of nodes) {
+    for (const node of roots) {
         const name = graph.getName(node);
-        const existingNode = seenNames.get(name);
+        const existingNode = nodesByName.get(name);
 
         if (existingNode !== undefined && existingNode !== node) {
             const issue = makeDuplicateGraphNameIssue(purpose, name);
@@ -93,27 +92,17 @@ export function validateUniqueNamesInNodes<A>(
         }
 
         if (existingNode !== undefined) continue;
-
-        seenNames.set(name, node);
-
-        const dependsOnResult = validateUniqueNamesInNodes(
-            purpose,
-            graph.dependsOn(node),
-            graph,
-            seenNames,
-            observability
-        );
-        if (isErrors(dependsOnResult)) return dependsOnResult;
+        nodesByName.set(name, node);
     }
 
-    return value(undefined);
+    return value(nodesByName);
 }
 
-export function newTraversalState<A>(): TraversalState<A> {
+export function newTraversalState<A>(nodesByName: Map<string, A>): TraversalState<A> {
     return {
         statesByName: new Map(),
         generationByName: new Map(),
-        nodesByName: new Map(),
+        nodesByName,
         activePath: [],
         activeIndexByName: new Map(),
     };
@@ -141,59 +130,60 @@ export function visitNode<A>(
     observability: Observability
 ): ErrorsOr<number, TopologicalGenerationIssue> {
     const name = graph.getName(node);
-    state.nodesByName.set(name, node);
 
     const existingState = state.statesByName.get(name);
     if (existingState === "visited") return value(state.generationByName.get(name)!);
 
     if (existingState === "visiting") {
-        const cyclePath = findCyclePath(node, graph, state);
+        const cyclePath = findCyclePath(name, state);
         const issue = makeCycleIssue(purpose, cyclePath);
         observability.countMetric(cycleMetricName(purpose));
         debugCycleDetected(purpose, issue, observability);
         return errors(issue);
     }
 
-    enterNode(node, graph, state);
+    enterNode(name, state);
     debugVisitEnter(purpose, name, observability);
 
     const dependencyGenerations: number[] = [];
-    for (const dependency of graph.dependsOn(node)) {
+    for (const dependencyName of graph.dependsOn(node)) {
+        const dependency = state.nodesByName.get(dependencyName);
+        if (dependency === undefined) {
+            const issue = makeMissingGraphDependencyIssue(purpose, name, dependencyName);
+            debugMissingDependencyDetected(purpose, issue, observability);
+            return errors(issue);
+        }
+
         const dependencyResult = visitNode(purpose, dependency, graph, state, observability);
         if (isErrors(dependencyResult)) return dependencyResult;
         dependencyGenerations.push(dependencyResult.value);
     }
 
     const generation = calculateGenerationFromDependencies(dependencyGenerations);
-    leaveNode(node, generation, graph, state);
+    leaveNode(name, generation, state);
     debugVisitLeave(purpose, name, generation, observability);
 
     return value(generation);
 }
 
-export function enterNode<A>(
-    node: A,
-    graph: NameAndDependsOn<A>,
-    state: TraversalState<A>
+export function enterNode(
+    name: string,
+    state: TraversalState<any>
 ): void {
-    const name = graph.getName(node);
     state.statesByName.set(name, "visiting");
     state.activeIndexByName.set(name, state.activePath.length);
-    state.activePath.push(node);
+    state.activePath.push(name);
 }
 
-export function leaveNode<A>(
-    node: A,
+export function leaveNode(
+    name: string,
     generation: number,
-    graph: NameAndDependsOn<A>,
-    state: TraversalState<A>
+    state: TraversalState<any>
 ): void {
-    const name = graph.getName(node);
     state.activePath.pop();
     state.activeIndexByName.delete(name);
     state.statesByName.set(name, "visited");
     state.generationByName.set(name, generation);
-    state.nodesByName.set(name, node);
 }
 
 export function calculateGenerationFromDependencies(
@@ -202,14 +192,12 @@ export function calculateGenerationFromDependencies(
     return dependencyGenerations.length === 0 ? 0 : Math.max(...dependencyGenerations) + 1;
 }
 
-export function findCyclePath<A>(
-    node: A,
-    graph: NameAndDependsOn<A>,
-    state: TraversalState<A>
+export function findCyclePath(
+    name: string,
+    state: TraversalState<any>
 ): string[] {
-    const name = graph.getName(node);
     const startIndex = state.activeIndexByName.get(name) ?? 0;
-    const cycleNames = state.activePath.slice(startIndex).map(graph.getName);
+    const cycleNames = state.activePath.slice(startIndex);
     return [...cycleNames, name];
 }
 
@@ -223,6 +211,22 @@ export function makeDuplicateGraphNameIssue(
         context: {
             purpose,
             duplicateName,
+        },
+    };
+}
+
+export function makeMissingGraphDependencyIssue(
+    purpose: string,
+    nodeName: string,
+    missingDependencyName: string
+): TopologicalGenerationIssue {
+    return {
+        kind: "missingGraphDependency",
+        message: `Missing graph dependency in ${purpose}: '${nodeName}' depends on '${missingDependencyName}' but it is not present`,
+        context: {
+            purpose,
+            nodeName,
+            missingDependencyName,
         },
     };
 }
@@ -340,6 +344,19 @@ export function debugDuplicateGraphNameDetected(
         topologicalGenerationsContext(purpose),
         "debug",
         "duplicateGraphNameDetected",
+        issue
+    );
+}
+
+export function debugMissingDependencyDetected(
+    purpose: string,
+    issue: TopologicalGenerationIssue,
+    observability: Observability
+): void {
+    observability.debug(
+        topologicalGenerationsContext(purpose),
+        "debug",
+        "missingDependencyDetected",
         issue
     );
 }

@@ -4,6 +4,7 @@
   "description": "The types and validation for scripts",
   "links": [
     "@laoban/errors",
+    "@laoban/files",
     "@laoban/observability",
     "@laoban/safe",
     "@laoban/validation"

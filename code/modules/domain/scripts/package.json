@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@laoban/errors": "2.0.0",
+    "@laoban/files": "2.0.0",
     "@laoban/observability": "2.0.0",
     "@laoban/safe": "2.0.0",
     "@laoban/validation": "2.0.0",

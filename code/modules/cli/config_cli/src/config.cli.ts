@@ -13,7 +13,7 @@ export interface LaobanConfigCliContext extends BasicCliContext {
     loadLaobanConfig: LoadConfigFn;
 }
 
-export function loadConfig(context: LaobanConfigCliContext) {
+export function loadConfig(context: LaobanConfigCliContext): Promise<ErrorsOr<LoadedLaobanConfig, LoaderIssue>> {
     return context.loadLaobanConfig(
         {
             fileOps: context.fileOps,

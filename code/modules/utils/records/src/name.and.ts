@@ -40,3 +40,20 @@ export function mapEntries<T, R>(
     }
     return result;
 }
+
+export function prettyRecordJson(record: NameAnd<string>): string {
+    const entries = Object.entries(record);
+    const maxKeyLength = entries.length === 0
+        ? 0
+        : Math.max(...entries.map(([key]) => key.length));
+
+    const lines = entries.map(([key, value]) =>
+        `  ${JSON.stringify(key).padEnd(maxKeyLength + 2)}: ${JSON.stringify(value)}`
+    );
+
+    return [
+        "{",
+        ...lines,
+        "}"
+    ].join("\n");
+}

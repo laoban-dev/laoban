@@ -3,10 +3,7 @@
   "name": "@laoban/strings",
   "description": "simple string utilities for path lookup, transforms, and structured errors/warnings",
   "links": [
-    "@laoban/config_path",
-    "@laoban/errors",
-    "@laoban/observability",
-    "@laoban/records"
+
   ],
   "packageJson": {
     "files": [

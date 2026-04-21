@@ -12,3 +12,7 @@ export function toKebabCase(name: string | null | undefined): string | null | un
         .replace(/_/g, '-')
         .toLowerCase();
 }
+export function normalisePath(name: string|null|undefined): string|null|undefined{
+    if (!name) return name
+    return name.replace(/\\/g, "/");
+}
