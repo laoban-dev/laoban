@@ -38,7 +38,6 @@ function makeValues(): ScriptCommandValues {
         packages: "alpha|beta",
         generationPlan: true,
         throttle: "3",
-        links: true,
         debug: "session scripts",
         sessionId: "session-123",
         ignoreGuards: true

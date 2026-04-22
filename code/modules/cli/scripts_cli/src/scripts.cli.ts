@@ -16,7 +16,6 @@ export interface ScriptCommandValues extends ScriptFilterValues{
     variables: boolean;
     generationPlan: boolean;
     throttle: string;
-    links: boolean;
     debug: string;
     sessionId: string;
     ignoreGuards: boolean;
@@ -93,13 +92,6 @@ export const scriptCommandOptions = {
         type: "string" as const,
         required: false,
         defaultValue: "0"
-    },
-    links: {
-        shortName: "l",
-        description: "the scripts will be put into generations based on links",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
     },
     debug: {
         description: "enables debugging. <debug> is a space separated list. legal values include [session,update,link,guard,templates,files, scripts]",
