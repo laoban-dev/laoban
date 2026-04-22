@@ -1,98 +1,96 @@
-import {errors, ErrorsOr, errorsOrThrow, value, valueOrThrow} from "@laoban/errors";
-import type {FileOpIssue, FileOps} from "@laoban/files";
-import {recordingObservability} from "@laoban/observability";
-import {prettyRecordJson} from "@laoban/records";
+import { errors, errorsOrThrow, value, valueOrThrow } from "@laoban/errors";
+import { recordingObservability } from "@laoban/observability";
+import { prettyRecordJson } from "@laoban/records";
 import {
     laobanPackageCommands,
     loadConfigAndPackages,
     loadSortedLaobanProject,
     makeNameToNormalisedPackageDetails,
-    type LaobanPackageCliContext,
+    type LaobanPackageCliContext
 } from "./package.cli";
-import type {LoadedLaobanProject, LoadedPackageDetail, NormalisedPackageDetails} from "@laoban/package_details";
-import {packageDetailsGraph} from "@laoban/package_details/src/package.details.sort";
-import {prettyPrintGenerationsSwimlanes, prettyPrintGenerationsVertical} from "@laoban/topologicalsort";
+import type {
+    LoadedLaobanProject,
+    LoadedPackageDetail,
+    NormalisedPackageDetails
+} from "@laoban/package_details";
+import { packageDetailsGraph } from "@laoban/package_details/src/package.details.sort";
+import { prettyPrintGenerationsSwimlanes, prettyPrintGenerationsVertical } from "@laoban/topologicalsort";
+import { loadConfig } from "@laoban/config_cli";
+import { loadPackages } from "@laoban/package_details";
 
-function pkg(name: string, links: string[] = [], extra: Record<string, unknown> = {}) {
-    return JSON.stringify({
+jest.mock("@laoban/config_cli", () => ({
+    ...jest.requireActual("@laoban/config_cli"),
+    loadConfig: jest.fn()
+}));
+
+jest.mock("@laoban/package_details", () => ({
+    ...jest.requireActual("@laoban/package_details"),
+    loadPackages: jest.fn()
+}));
+
+const mockedLoadConfig = loadConfig as jest.MockedFunction<typeof loadConfig>;
+const mockedLoadPackages = loadPackages as jest.MockedFunction<typeof loadPackages>;
+
+function loadedPackageDetail(
+    packageFile: string,
+    contents: NormalisedPackageDetails
+): LoadedPackageDetail {
+    return { packageFile, contents } as LoadedPackageDetail;
+}
+
+function normalised(
+    name: string,
+    links: string[] = [],
+    extra: Partial<NormalisedPackageDetails> = {}
+): NormalisedPackageDetails {
+    return {
         template: "default",
         name,
+        description: undefined,
         links,
-        ...extra,
-    });
-}
-
-function fileIssue(message: string): FileOpIssue {
-    return {
-        kind: "unexpected",
-        message,
-        severity: "error",
-        context: {operation: "test"}
+        devLinks: [],
+        peerLinks: [],
+        allLinks: links,
+        guards: {},
+        files: {},
+        meta: {},
+        ...extra
     };
 }
 
-
-function makeFileOps(
-    files: Record<string, string>,
-    options: {
-        findAllError?: FileOpIssue;
-        loadTextErrors?: Record<string, FileOpIssue>;
-    } = {}
-): FileOps {
+function loadedProject(
+    packages: Record<string, LoadedPackageDetail>,
+    configDirectory: string = "/workspace"
+): LoadedLaobanProject {
     return {
-        findContainingDirectory: jest.fn(),
-
-        findAllByNameUnder: jest.fn(
-            async (_directory: string, targetFileName: string): Promise<ErrorsOr<string[], FileOpIssue>> => {
-                if (options.findAllError) return errors<FileOpIssue>(options.findAllError);
-                return value<string[], FileOpIssue>(
-                    Object.keys(files)
-                        .filter(filename => filename.endsWith(targetFileName))
-                        .sort((a, b) => a.localeCompare(b))
-                );
-            }
-        ),
-
-        loadText: jest.fn(
-            async (source: string): Promise<ErrorsOr<string, FileOpIssue>> => {
-                const error = options.loadTextErrors?.[source];
-                if (error) return errors<FileOpIssue>(error);
-
-                const found = files[source];
-                if (found === undefined) return errors<FileOpIssue>(fileIssue(`Missing test file ${source}`));
-
-                return value<string, FileOpIssue>(found);
-            }
-        )
+        loadedLaobanConfig: {
+            config: {
+                packageManager: "pnpm" as any,
+                versionFile: "version.txt",
+                parents: [],
+                properties: {},
+                templates: {},
+                defaultEnv: {},
+                scripts: {},
+                skipDirectories: []
+            },
+            configFile: `${configDirectory}/laoban.json`,
+            configDirectory,
+            loadedFiles: [`${configDirectory}/laoban.json`]
+        },
+        loadedPackageDetails: packages
     };
 }
 
-
-function makeContext(
-    files: Record<string, string>,
-    options: {
-        findAllError?: FileOpIssue;
-        loadTextErrors?: Record<string, FileOpIssue>;
-    } = {}
-): LaobanPackageCliContext & {
+function makeContext(): LaobanPackageCliContext & {
     recording: ReturnType<typeof recordingObservability>;
-    loadLaobanConfig: jest.Mock;
 } {
     const recording = recordingObservability();
-    const fileOps = makeFileOps(files, options);
-
-    const loadLaobanConfig = jest.fn(async () =>
-        value({
-            configDirectory: "/workspace"
-        } as any)
-    );
-
     return {
         cwd: "/workspace",
-        fileOps,
+        fileOps: {} as any,
         observability: recording.observability,
         loadLaobanFileConfig: jest.fn(),
-        loadLaobanConfig,
         loadConfigAndPackagesFn: loadConfigAndPackages,
         recording
     } as any;
@@ -103,40 +101,15 @@ function command(name: "list" | "view" | "sort"): any {
     return group.commands?.[name] ?? group.children?.[name] ?? group[name];
 }
 
-function loadedPackageDetail(
-    packageFile: string,
-    contents: NormalisedPackageDetails
-): LoadedPackageDetail {
-    return {packageFile, contents};
-}
-
 describe("package cli", () => {
+    beforeEach(() => {
+        jest.resetAllMocks();
+    });
+
     describe("makeNameToNormalisedPackageDetails", () => {
         it("maps loaded package details to contents", () => {
-            const alpha: NormalisedPackageDetails = {
-                template: "default",
-                name: "alpha",
-                description: "Alpha",
-                links: [],
-                devLinks: [],
-                peerLinks: [],
-                allLinks: [],
-                guards: {},
-                files: {},
-                meta: {}
-            };
-            const beta: NormalisedPackageDetails = {
-                template: "default",
-                name: "beta",
-                description: undefined,
-                links: ["alpha"],
-                devLinks: [],
-                peerLinks: [],
-                allLinks: ["alpha"],
-                guards: {},
-                files: {},
-                meta: {}
-            };
+            const alpha = normalised("alpha");
+            const beta = normalised("beta", ["alpha"]);
 
             expect(
                 makeNameToNormalisedPackageDetails({
@@ -155,229 +128,71 @@ describe("package cli", () => {
     });
 
     describe("loadConfigAndPackages", () => {
-        it("loads packages from discovered package.details.json files", async () => {
-            const context = makeContext({
-                "/workspace/alpha/package.details.json": pkg("alpha"),
-                "/workspace/beta/package.details.json": pkg("beta", ["alpha"])
+        it("loads config then packages", async () => {
+            const context = makeContext();
+            const loadedConfig = {
+                configDirectory: "/workspace"
+            } as any;
+            const loaded = loadedProject({
+                alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha")),
+                beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"]))
             });
+
+            mockedLoadConfig.mockResolvedValue(value(loadedConfig));
+            mockedLoadPackages.mockResolvedValue(value(loaded));
 
             const result = await loadConfigAndPackages(context);
-            const loaded = valueOrThrow(result);
 
-            expect(loaded).toEqual({
-                loadedLaobanConfig: {
-                    configDirectory: "/workspace"
-                },
-                loadedPackageDetails: {
-                    alpha: {
-                        packageFile: "/workspace/alpha/package.details.json",
-                        contents: {
-                            template: "default",
-                            name: "alpha",
-                            description: undefined,
-                            links: [],
-                            devLinks: [],
-                            peerLinks: [],
-                            allLinks: [],
-                            guards: {},
-                            files: {},
-                            meta: {}
-                        }
-                    },
-                    beta: {
-                        packageFile: "/workspace/beta/package.details.json",
-                        contents: {
-                            template: "default",
-                            name: "beta",
-                            description: undefined,
-                            links: ["alpha"],
-                            devLinks: [],
-                            peerLinks: [],
-                            allLinks: ["alpha"],
-                            guards: {},
-                            files: {},
-                            meta: {}
-                        }
-                    }
-                }
-            });
-
-            expect(context.recording.debug).toContainEqual({
-                context: "loading.package.details",
-                level: "debug",
-                msg: [
-                    {
-                        configDirectory: "/workspace",
-                        packageCount: 2,
-                        packageNames: ["alpha", "beta"]
-                    }
-                ]
-            });
+            expect(valueOrThrow(result)).toEqual(loaded);
+            expect(mockedLoadConfig).toHaveBeenCalledWith(context);
+            expect(mockedLoadPackages).toHaveBeenCalledWith(loadedConfig, context);
         });
 
-        it("returns duplicate package name issues", async () => {
-            const context = makeContext({
-                "/workspace/a/package.details.json": pkg("dup"),
-                "/workspace/b/package.details.json": pkg("dup")
-            });
+        it("returns config load errors", async () => {
+            const context = makeContext();
+            mockedLoadConfig.mockResolvedValue(errors({ kind: "badConfig", message: "cannot load config" } as any));
 
             const result = await loadConfigAndPackages(context);
 
             expect(errorsOrThrow(result)).toEqual([
-                {
-                    kind: "duplicatePackageName",
-                    message: "Duplicate package name 'dup' found in multiple package details files",
-                    context: {
-                        packageName: "dup",
-                        packageFiles: [
-                            "/workspace/a/package.details.json",
-                            "/workspace/b/package.details.json"
-                        ]
-                    }
-                }
+                { kind: "badConfig", message: "cannot load config" }
             ]);
+            expect(mockedLoadPackages).not.toHaveBeenCalled();
         });
 
-        it("returns parse error when package details json is invalid", async () => {
-            const context = makeContext({
-                "/workspace/a/package.details.json": "{ broken json"
-            });
+        it("returns package load errors", async () => {
+            const context = makeContext();
+            const loadedConfig = {
+                configDirectory: "/workspace"
+            } as any;
+
+            mockedLoadConfig.mockResolvedValue(value(loadedConfig));
+            mockedLoadPackages.mockResolvedValue(errors({ kind: "badPackages", message: "cannot load packages" } as any));
 
             const result = await loadConfigAndPackages(context);
 
             expect(errorsOrThrow(result)).toEqual([
-                {
-                    kind: "parsePackageDetailsFailed",
-                    message: "Could not parse package details JSON in /workspace/a/package.details.json",
-                    context: {
-                        packageFile: "/workspace/a/package.details.json",
-                        error: expect.any(String)
-                    }
-                }
-            ]);
-        });
-
-        it("returns findPackageDetailsFailed when discovery fails", async () => {
-            const context = makeContext(
-                {},
-                {findAllError: fileIssue("cannot scan workspace")}
-            );
-
-            const result = await loadConfigAndPackages(context);
-
-            expect(errorsOrThrow(result)).toEqual([
-                {
-                    kind: "findPackageDetailsFailed",
-                    message: "Could not search for package.details.json files under /workspace",
-                    context: {
-                        configDirectory: "/workspace",
-                        markerFileName: "package.details.json",
-                        issues: [
-                            {
-                                kind: "unexpected",
-                                message: "cannot scan workspace",
-                                severity: "error",
-                                context: {operation: "test"}
-                            }
-                        ]
-                    }
-                }
-            ]);
-        });
-
-        it("returns loadPackageDetailsFailed when a package file cannot be loaded", async () => {
-            const context = makeContext(
-                {
-                    "/workspace/a/package.details.json": pkg("alpha")
-                },
-                {
-                    loadTextErrors: {
-                        "/workspace/a/package.details.json": fileIssue("cannot read package file")
-                    }
-                }
-            );
-
-            const result = await loadConfigAndPackages(context);
-
-            expect(errorsOrThrow(result)).toEqual([
-                {
-                    kind: "loadPackageDetailsFailed",
-                    message: "Could not load package details file /workspace/a/package.details.json",
-                    context: {
-                        packageFile: "/workspace/a/package.details.json",
-                        issues: [
-                            {
-                                kind: "unexpected",
-                                message: "cannot read package file",
-                                severity: "error",
-                                context: {operation: "test"}
-                            }
-                        ]
-                    }
-                }
+                { kind: "badPackages", message: "cannot load packages" }
             ]);
         });
     });
 
     describe("loadSortedLaobanProject", () => {
         it("returns topological generations", async () => {
-            const context = makeContext({
-                "/workspace/alpha/package.details.json": pkg("alpha"),
-                "/workspace/beta/package.details.json": pkg("beta", ["alpha"]),
-                "/workspace/gamma/package.details.json": pkg("gamma", ["alpha"])
+            const context = makeContext();
+            const loaded = loadedProject({
+                alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha")),
+                beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"])),
+                gamma: loadedPackageDetail("/workspace/gamma/package.details.json", normalised("gamma", ["alpha"]))
             });
+
+            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            mockedLoadPackages.mockResolvedValue(value(loaded));
 
             const result = await loadSortedLaobanProject(context);
             const sorted = valueOrThrow(result);
 
-            expect(sorted.loaded.loadedPackageDetails).toEqual({
-                alpha: {
-                    packageFile: "/workspace/alpha/package.details.json",
-                    contents: {
-                        template: "default",
-                        name: "alpha",
-                        description: undefined,
-                        links: [],
-                        devLinks: [],
-                        peerLinks: [],
-                        allLinks: [],
-                        guards: {},
-                        files: {},
-                        meta: {}
-                    }
-                },
-                beta: {
-                    packageFile: "/workspace/beta/package.details.json",
-                    contents: {
-                        template: "default",
-                        name: "beta",
-                        description: undefined,
-                        links: ["alpha"],
-                        devLinks: [],
-                        peerLinks: [],
-                        allLinks: ["alpha"],
-                        guards: {},
-                        files: {},
-                        meta: {}
-                    }
-                },
-                gamma: {
-                    packageFile: "/workspace/gamma/package.details.json",
-                    contents: {
-                        template: "default",
-                        name: "gamma",
-                        description: undefined,
-                        links: ["alpha"],
-                        devLinks: [],
-                        peerLinks: [],
-                        allLinks: ["alpha"],
-                        guards: {},
-                        files: {},
-                        meta: {}
-                    }
-                }
-            });
-
+            expect(sorted.loaded).toEqual(loaded);
             expect(sorted.generations.map(g => g.map(p => p.name))).toEqual([
                 ["alpha"],
                 ["beta", "gamma"]
@@ -385,20 +200,56 @@ describe("package cli", () => {
         });
 
         it("returns empty generations when there are no packages", async () => {
-            const context = makeContext({});
+            const context = makeContext();
+            const loaded = loadedProject({});
+
+            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            mockedLoadPackages.mockResolvedValue(value(loaded));
 
             const result = await loadSortedLaobanProject(context);
 
             expect(valueOrThrow(result).generations).toEqual([]);
         });
+
+        it("returns sorting issues", async () => {
+            const context = makeContext();
+            const loaded = loadedProject({
+                alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha", ["beta"])),
+                beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"]))
+            });
+
+            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            mockedLoadPackages.mockResolvedValue(value(loaded));
+
+            const result = await loadSortedLaobanProject(context);
+
+            expect(errorsOrThrow(result)).toEqual([
+                {
+                    "context": {
+                        "cyclePath": [
+                            "alpha",
+                            "beta",
+                            "alpha"
+                        ],
+                        "purpose": "sortLaobanProject"
+                    },
+                    "kind": "graphCycle",
+                    "message": "Cycle detected in sortLaobanProject: alpha -> beta -> alpha"
+                }
+            ]);
+        });
     });
 
     describe("commands", () => {
         it("list logs package name to package file mapping", async () => {
-            const context = makeContext({
-                "/workspace/alpha/package.details.json": pkg("alpha"),
-                "/workspace/beta/package.details.json": pkg("beta", ["alpha"])
+            const context = makeContext();
+            const loaded = loadedProject({
+                alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha")),
+                beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"]))
             });
+
+            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            mockedLoadPackages.mockResolvedValue(value(loaded));
 
             await command("list").execute({}, context);
 
@@ -416,9 +267,9 @@ describe("package cli", () => {
         });
 
         it("view logs the package name requested", async () => {
-            const context = makeContext({});
+            const context = makeContext();
 
-            const result = await command("view").execute({name: "alpha"}, context);
+            const result = await command("view").execute({ name: "alpha" }, context);
 
             expect(result).toEqual({});
             expect(context.recording.logs).toEqual([
@@ -430,18 +281,22 @@ describe("package cli", () => {
         });
 
         it("sort logs vertical output by default", async () => {
-            const context = makeContext({
-                "/workspace/alpha/package.details.json": pkg("alpha"),
-                "/workspace/beta/package.details.json": pkg("beta", ["alpha"]),
-                "/workspace/gamma/package.details.json": pkg("gamma", ["beta"])
+            const context = makeContext();
+            const loaded = loadedProject({
+                alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha")),
+                beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"])),
+                gamma: loadedPackageDetail("/workspace/gamma/package.details.json", normalised("gamma", ["beta"]))
             });
+
+            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            mockedLoadPackages.mockResolvedValue(value(loaded));
 
             const expectedGenerations = valueOrThrow(await loadSortedLaobanProject(context)).generations;
             const expectedOutput = "\n" + prettyPrintGenerationsVertical(expectedGenerations, packageDetailsGraph);
 
             context.recording.logs.length = 0;
 
-            await command("sort").execute({horizontal: false}, context);
+            await command("sort").execute({ horizontal: false }, context);
 
             expect(context.recording.logs).toEqual([
                 {
@@ -452,18 +307,22 @@ describe("package cli", () => {
         });
 
         it("sort logs swimlane output when requested", async () => {
-            const context = makeContext({
-                "/workspace/alpha/package.details.json": pkg("alpha"),
-                "/workspace/beta/package.details.json": pkg("beta", ["alpha"]),
-                "/workspace/gamma/package.details.json": pkg("gamma", ["beta"])
+            const context = makeContext();
+            const loaded = loadedProject({
+                alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha")),
+                beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"])),
+                gamma: loadedPackageDetail("/workspace/gamma/package.details.json", normalised("gamma", ["beta"]))
             });
+
+            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            mockedLoadPackages.mockResolvedValue(value(loaded));
 
             const expectedGenerations = valueOrThrow(await loadSortedLaobanProject(context)).generations;
             const expectedOutput = "\n" + prettyPrintGenerationsSwimlanes(expectedGenerations, packageDetailsGraph);
 
             context.recording.logs.length = 0;
 
-            await command("sort").execute({horizontal: true}, context);
+            await command("sort").execute({ horizontal: true }, context);
 
             expect(context.recording.logs).toEqual([
                 {

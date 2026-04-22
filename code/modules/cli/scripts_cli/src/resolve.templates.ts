@@ -13,7 +13,7 @@ export const makeScriptExecutionItemTemplateDictionary: ScriptExecutionItemTempl
     loadedProject: LoadedLaobanProject
 ): NameAnd<any> => {
     const packageDetails = item.pkg?.contents;
-    const config = {...loadedProject.loadedLaobanConfig.config};
+    const config: any = {...loadedProject.loadedLaobanConfig.config};
     delete config.scripts
     delete config.parents
     delete config.templates

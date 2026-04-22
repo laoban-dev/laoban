@@ -191,6 +191,8 @@ export interface FileOps {
         source: LoadTextSource,
         config?: LoadTextConfig
     ): Promise<ErrorsOr<string, FileOpIssue>>;
+
+    pathOps: PathOps
 }
 
 export const makeFileOpIssue = (

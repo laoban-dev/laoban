@@ -1,9 +1,10 @@
 import {isErrors} from "@laoban/errors";
-import {type FileOps} from "@laoban/files";
+import {type FileOps, PathOps} from "@laoban/files";
 import {type LoadedLaobanConfig} from "@laoban/laoban_config";
 import {recordingObservability} from "@laoban/observability";
 import {type ValidationIssue} from "@laoban/validation";
 import {loadPackages, packageDetailsFileName} from "./package.details.loader";
+import {nodePathOps} from "@laoban/files_node";
 
 function makeLoadedLaobanConfig(configDirectory = "/workspace"): LoadedLaobanConfig {
     return {
@@ -18,6 +19,7 @@ type MockFileOps = {
     findContainingDirectory: jest.MockedFunction<FileOps["findContainingDirectory"]>;
     findAllByNameUnder: jest.MockedFunction<FileOps["findAllByNameUnder"]>;
     loadText: jest.MockedFunction<FileOps["loadText"]>;
+    pathOps: PathOps
 };
 
 function makeFileOps(overrides?: Partial<MockFileOps>): MockFileOps {
@@ -25,7 +27,8 @@ function makeFileOps(overrides?: Partial<MockFileOps>): MockFileOps {
         findContainingDirectory: jest.fn() as jest.MockedFunction<FileOps["findContainingDirectory"]>,
         findAllByNameUnder: jest.fn() as jest.MockedFunction<FileOps["findAllByNameUnder"]>,
         loadText: jest.fn() as jest.MockedFunction<FileOps["loadText"]>,
-        ...overrides
+        ...overrides,
+        pathOps: nodePathOps
     };
 }
 

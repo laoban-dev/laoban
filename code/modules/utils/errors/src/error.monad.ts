@@ -1,10 +1,5 @@
 import {NameAnd} from "@laoban/records";
 import {safeJson} from "@laoban/safe";
-import {ScriptName} from "@laoban/scripts";
-import {ScriptExecutionItem, scriptExecutionPlanPrettyPrintTypeClass} from "@laoban/script_plan";
-import {ExecutionPlanStats, prettyPrintExecutionPlan} from "@laoban/execution_plan";
-import {LoadedPackageDetail} from "@laoban/package_details";
-import {Observability} from "@laoban/observability";
 
 /**
  * Base shape for issues carried by ErrorsOr.

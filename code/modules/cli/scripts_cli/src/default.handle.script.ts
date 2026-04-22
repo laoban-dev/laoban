@@ -24,6 +24,7 @@ import {
 } from "./resolve.templates";
 import {sortObjectByName} from "@laoban/records";
 import {safePrettyJson} from "@laoban/safe";
+import {filterExecutionPlan} from "./filter.packages";
 
 function logPlan(
     scriptName: ScriptName,
@@ -63,12 +64,15 @@ function prettyPrintPlanWithRhs<G>(
         ),
         0
     );
-
     return plan
-        .flatMap(generation =>
-            generation.map(item =>
-                `${linePrefix}${nameOf(item).padEnd(maxNameWidth)} ${rhsOf(item)}`
-            )
+        .reduce(
+            (acc: string[], generation: G[]) =>
+                acc.concat(
+                    generation.map((item: G) =>
+                        `${linePrefix}${nameOf(item).padEnd(maxNameWidth)} ${rhsOf(item)}`
+                    )
+                ),
+            []
         )
         .join("\n");
 }
@@ -77,7 +81,7 @@ function logDryRunPlan(
     fullPlan: ScriptExecutionItem[][],
     {logger}: Observability
 ): void {
-    logger("info", prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => item.command.command));
+    logger("info", '\n'+prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => item.command.command));
 }
 
 function logVariables<TContext extends LaobanScriptCliContext>(loadedProject: LoadedLaobanProject, fullPlan: ScriptExecutionItem[][], context: TContext) {
@@ -91,7 +95,7 @@ function logVariables<TContext extends LaobanScriptCliContext>(loadedProject: Lo
 export async function defaultHandleLaobanScript<TContext extends LaobanScriptCliContext>(
     scriptName: ScriptName,
     script: LaobanScript,
-    values: ScriptCommandValues,
+    options: ScriptCommandValues,
     context: TContext
 ): Promise<ErrorsOr<void, BaseIssue>> {
     return flatMapBaseIssue(
@@ -104,23 +108,24 @@ export async function defaultHandleLaobanScript<TContext extends LaobanScriptCli
                     script,
                     context.observability
                 ),
-                executionPlan =>
-                    mapBaseIssue(
+                executionPlan => {
+                    const filtered = filterExecutionPlan(loadedProject, executionPlan.plan, options, context)
+                    return mapBaseIssue(
                         detemplateScriptExecutionPlan(
-                            executionPlan.plan,
+                            filtered,
                             loadedProject,
                             context.observability
                         ),
                         fullPlan => {
-                            if (values.generationPlan) {
+                            if (options.generationPlan) {
                                 logPlan(
                                     scriptName,
                                     fullPlan,
                                     executionPlan.stats,
                                     context.observability
                                 );
-                            } else if (values.dryrun) logDryRunPlan(fullPlan, context.observability);
-                            else if (values.variables) logVariables(loadedProject, fullPlan, context);
+                            } else if (options.dryrun) logDryRunPlan(fullPlan, context.observability);
+                            else if (options.variables) logVariables(loadedProject, fullPlan, context);
                             else {
                                 context.observability.logger(
                                     "info",
@@ -128,7 +133,8 @@ export async function defaultHandleLaobanScript<TContext extends LaobanScriptCli
                                 );
                             }
                         }
-                    )
+                    );
+                }
             )
     );
 }

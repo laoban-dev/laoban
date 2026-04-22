@@ -1,12 +1,12 @@
-import { type BaseIssue, errors, isErrors, mapErrorsOr, type ErrorsOr, value } from "@laoban/errors";
-import { type Filename, type FileOps } from "@laoban/files";
-import { type LoadedLaobanConfig } from "@laoban/laoban_config";
-import { type Observability } from "@laoban/observability";
-import { type ValidationIssue } from "@laoban/validation";
-import { type NormalisedPackageDetails, type PackageDetails } from "./package.details";
-import { normalisePackageDetails } from "./package.details.normalise";
-import { validatePackageDetails } from "./package.details.validator";
-import { normalisePath } from "@laoban/strings";
+import {type BaseIssue, errors, isErrors, mapErrorsOr, type ErrorsOr, value} from "@laoban/errors";
+import {DirectoryName, type Filename, type FileOps} from "@laoban/files";
+import {type LoadedLaobanConfig} from "@laoban/laoban_config";
+import {type Observability} from "@laoban/observability";
+import {type ValidationIssue} from "@laoban/validation";
+import {type NormalisedPackageDetails, type PackageDetails} from "./package.details";
+import {normalisePackageDetails} from "./package.details.normalise";
+import {validatePackageDetails} from "./package.details.validator";
+import {normalisePath} from "@laoban/strings";
 
 export const packageDetailsFileName = "package.details.json" as const;
 
@@ -17,6 +17,7 @@ export interface LoadPackagesContext {
 
 export interface LoadedPackageDetail {
     packageFile: Filename;
+    dir: DirectoryName
     contents: NormalisedPackageDetails;
 }
 
@@ -62,7 +63,7 @@ export function makeLoadPackagesIssue(
     return {
         kind,
         message,
-        ...(context === undefined ? {} : { context })
+        ...(context === undefined ? {} : {context})
     };
 }
 
@@ -172,8 +173,8 @@ export async function loadPackages(
     loadedLaobanConfig: LoadedLaobanConfig,
     context: LoadPackagesContext
 ): Promise<ErrorsOr<LoadedLaobanProject, LoadPackagesAllIssue>> {
-    const { fileOps, observability } = context;
-    const { configDirectory } = loadedLaobanConfig;
+    const {fileOps, observability} = context;
+    const {configDirectory} = loadedLaobanConfig;
 
     const foundE = await fileOps.findAllByNameUnder(
         configDirectory,
@@ -241,6 +242,7 @@ export async function loadPackages(
             packageName: loaded.normalised.name,
             loadedPackageDetail: {
                 packageFile: loaded.packageFile,
+                dir: context.fileOps.pathOps.dirname(loaded.packageFile),
                 contents: loaded.normalised
             }
         }))

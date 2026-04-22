@@ -1,7 +1,7 @@
 import path from "path";
-import { access, readFile, readdir } from "fs/promises";
+import {access, readFile, readdir} from "fs/promises";
 
-import { errors, value } from "@laoban/errors";
+import {errors, value} from "@laoban/errors";
 import {
     FileExistsFn,
     FileOpsHelperConfig,
@@ -13,9 +13,9 @@ import {
     LoadFileFn,
     LoadTextConfig,
     LoadUrlFn,
-    makeFileOpIssue,
+    makeFileOpIssue, PathOps,
 } from "@laoban/files";
-import { FileOpsDefaults } from "./fileops.node";
+import {FileOpsDefaults} from "./fileops.node";
 
 const makeIssue = (
     kind: FileOpIssueKind,
@@ -240,15 +240,16 @@ const nodeLoadUrl: LoadUrlFn = async (
     }
 };
 
+export const nodePathOps: PathOps = {
+    dirname: directory => path.dirname(directory),
+    resolvePath: somePath => path.resolve(somePath),
+    joinPath: (directory, filename) => path.join(directory, filename),
+};
 export const nodeFileOpsDefaults: FileOpsDefaults = {
     findContainingDirectory: {
         infrastructure: {
             fileExists: nodeFileExists,
-            pathOps: {
-                dirname: directory => path.dirname(directory),
-                resolvePath: somePath => path.resolve(somePath),
-                joinPath: (directory, filename) => path.join(directory, filename),
-            },
+            pathOps: nodePathOps,
         },
     },
     loadText: {
@@ -268,4 +269,5 @@ export const nodeFileOpsDefaults: FileOpsDefaults = {
             },
         },
     },
+    pathOps: nodePathOps
 };

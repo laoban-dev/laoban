@@ -15,6 +15,7 @@ import {
 function pkg(name: string): LoadedPackageDetail {
     return {
         packageFile: `/repo/${name}/package.details.json`,
+        dir: `/repo/${name}`,
         contents: normalisePackageDetails({
             template: "default",
             name
@@ -83,20 +84,30 @@ describe("makeScriptExecutionItemTemplateDictionary", () => {
         const project = loadedProject(alpha);
         const item = eachPackageItem(1, alpha, "${packageManager} publish ${packageDetails.name}");
 
-        expect(makeScriptExecutionItemTemplateDictionary(item, project)).toEqual({
+        const expected = {
             ...project.loadedLaobanConfig.config,
             packageDetails: alpha.contents
-        });
+        };
+        delete expected.defaultEnv
+        delete expected.parents
+        delete expected.scripts
+        delete expected.templates
+        expect(makeScriptExecutionItemTemplateDictionary(item, project)).toEqual(expected);
     });
 
     it("uses undefined packageDetails for workspace items", () => {
         const project = loadedProject();
         const item = workspaceItem(1, "${packageManager} publish");
 
-        expect(makeScriptExecutionItemTemplateDictionary(item, project)).toEqual({
+        const expected = {
             ...project.loadedLaobanConfig.config,
             packageDetails: undefined
-        });
+        };
+        delete expected.defaultEnv
+        delete expected.parents
+        delete expected.scripts
+        delete expected.templates
+        expect(makeScriptExecutionItemTemplateDictionary(item, project)).toEqual(expected);
     });
 });
 

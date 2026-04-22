@@ -4,15 +4,16 @@ import { mapObject, sortObjectByName } from "@laoban/records";
 import {LaobanPackageCliContext} from "@laoban/package_cli/src/package.cli";
 import {ErrorsOr} from "@laoban/errors";
 import {ScriptExecutionItemTemplateDictionaryFn} from "./resolve.templates";
+import {ScriptFilterValues} from "./filter.packages";
 
-export interface ScriptCommandValues {
+export interface ScriptCommandValues extends ScriptFilterValues{
+    // one: boolean; from ScriptFilterValues
+    // all: boolean;
+    // packages: string;
     dryrun: boolean;
     shellDebug: boolean;
     quiet: boolean;
     variables: boolean;
-    one: boolean;
-    all: boolean;
-    packages: string;
     generationPlan: boolean;
     throttle: string;
     links: boolean;

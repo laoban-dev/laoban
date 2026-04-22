@@ -5,13 +5,15 @@ import {
     FileOpsHelperDefaults,
     FindContainingDirectoryDefaults,
     loadText,
-    LoadTextDefaults
+    LoadTextDefaults, PathOps
 } from "@laoban/files";
 
 export type FileOpsDefaults = Readonly<{
     findContainingDirectory: FindContainingDirectoryDefaults;
     findAllByNameUnder: FileOpsHelperDefaults;
     loadText: LoadTextDefaults;
+    pathOps: PathOps
+
 }>;
 
 export const nodeFileOps = (defaults: FileOpsDefaults): FileOps => ({
@@ -23,4 +25,6 @@ export const nodeFileOps = (defaults: FileOpsDefaults): FileOps => ({
 
     loadText: (source, config) =>
         loadText(defaults.loadText)(source, config),
+
+    pathOps: defaults.pathOps
 });
