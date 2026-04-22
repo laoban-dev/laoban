@@ -5,7 +5,9 @@ import {
     type CountMetrics,
     type DebugLevels,
     durationMetricFor,
-    type DurationMetrics, LogLevel,
+    type DurationMetrics,
+    LogLevel,
+    type ModuleName,
     nullCountMetric,
     nullDurationMetric,
     nullObservability,
@@ -75,9 +77,10 @@ const normaliseSinks = (
 
 const writeToSinks = (
     sinks: NodeLogSink[],
+    module: ModuleName,
     line: string
 ): void => {
-    for (const sink of sinks) sink(line);
+    for (const sink of sinks) sink(module, line);
 };
 
 export function createNodeObservability<Context extends string>(): Observability;
@@ -106,44 +109,53 @@ export function createNodeObservability<Context extends string>(
 
     const effectiveSinks = normaliseSinks(sinks, sinkFactory);
 
-    const baseDictionary: Record<string, unknown> = {
-        correlationId,
-        ...dictionary,
+    const build = (module: ModuleName): Observability => {
+        const baseDictionary: Record<string, unknown> = {
+            correlationId,
+            module,
+            ...dictionary,
+        };
+
+        return {
+            correlationId,
+            module,
+            debugLevels,
+            countMetric: countMetrics ? countMetricFor(countMetrics) : nullCountMetric,
+            durationMetric: durationMetrics ? durationMetricFor(durationMetrics) : nullDurationMetric,
+            timeService: realTimeService,
+
+            logger: (level, ...msg) => {
+                const timestamp = now().toISOString();
+                const message = renderMessages(msg, baseDictionary);
+                const line = renderTemplateSafely(effectiveTemplates.log, {
+                    ...baseDictionary,
+                    timestamp,
+                    level: level.toUpperCase(),
+                    message,
+                });
+                writeToSinks(effectiveSinks, module, line);
+            },
+
+            debug: (context, level, ...msg) => {
+                if (!shouldDebug(debugLevels, context, level)) return;
+
+                const timestamp = now().toISOString();
+                const message = renderMessages(msg, baseDictionary);
+                const line = renderTemplateSafely(effectiveTemplates.debug, {
+                    ...baseDictionary,
+                    timestamp,
+                    context,
+                    level: level.toUpperCase(),
+                    message,
+                });
+                writeToSinks(effectiveSinks, module, line);
+            },
+
+            withModule: build,
+        };
     };
 
-    return {
-        correlationId,
-        debugLevels,
-        countMetric: countMetrics ? countMetricFor(countMetrics) : nullCountMetric,
-        durationMetric: durationMetrics ? durationMetricFor(durationMetrics) : nullDurationMetric,
-        timeService: realTimeService,
-        logger: (level, ...msg) => {
-            const timestamp = now().toISOString();
-            const message = renderMessages(msg, baseDictionary);
-            const line = renderTemplateSafely(effectiveTemplates.log, {
-                ...baseDictionary,
-                timestamp,
-                level: level.toUpperCase(),
-                message,
-            });
-            writeToSinks(effectiveSinks, line);
-        },
-
-        debug: (context, level, ...msg) => {
-            if (!shouldDebug(debugLevels, context, level)) return;
-
-            const timestamp = now().toISOString();
-            const message = renderMessages(msg, baseDictionary);
-            const line = renderTemplateSafely(effectiveTemplates.debug, {
-                ...baseDictionary,
-                timestamp,
-                context,
-                level: level.toUpperCase(),
-                message,
-            });
-            writeToSinks(effectiveSinks, line);
-        },
-    };
+    return build(undefined);
 }
 
 

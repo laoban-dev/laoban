@@ -1,11 +1,13 @@
-import {CorrelationId, DebugLevels, LogLevel, Observability, realTimeService,} from "./observability";
+import {CorrelationId, DebugLevels, LogLevel, ModuleName, Observability, realTimeService,} from "./observability";
 
 export type RecordedLog = Readonly<{
+    module: ModuleName;
     level: LogLevel;
     msg: unknown[];
 }>;
 
 export type RecordedDebug = Readonly<{
+    module: ModuleName;
     context: string,
     level: LogLevel;
     msg: unknown[];
@@ -35,20 +37,23 @@ export const recordingObservability = (
     const counts: string[] = [];
     const durations: RecordedDuration[] = [];
 
+    const build = (module: ModuleName): Observability => ({
+        correlationId,
+        module,
+        logger: (level, ...msg) => logs.push({module, level, msg}),
+        debug: (context, level, ...msg) => debug.push({module, context, level, msg}),
+        countMetric: name => counts.push(name),
+        durationMetric: (name, durationMs) => durations.push({name, durationMs}),
+        debugLevels,
+        timeService,
+        withModule: build
+    });
+
     return {
-        observability: {
-            correlationId,
-            logger: (level, ...msg) => logs.push({level, msg}),
-            debug: (context, level, ...msg) => debug.push({context, level, msg}),
-            countMetric: name => counts.push(name),
-            durationMetric: (name, durationMs) => durations.push({name, durationMs}),
-            debugLevels,
-            timeService
-        },
+        observability: build(undefined),
         logs,
         debug,
         counts,
         durations,
-
     };
 };

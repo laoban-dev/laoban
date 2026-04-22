@@ -12,6 +12,7 @@ describe('createNodeObservability', () => {
         const obs = createNodeObservability<TestContext>();
 
         expect(obs.correlationId).toBe('NoCorrelationId');
+        expect(obs.module).toBeUndefined();
         expect(obs.debugLevels).toEqual({});
         expect(() => obs.logger('info', 'hello')).not.toThrow();
         expect(() => obs.debug('exec', 'debug', 'hello')).not.toThrow();
@@ -26,6 +27,7 @@ describe('createNodeObservability', () => {
         });
 
         expect(obs.correlationId).toBe('corr-123');
+        expect(obs.module).toBeUndefined();
     });
 
     it('defaults debugLevels to an empty object', () => {
@@ -38,8 +40,8 @@ describe('createNodeObservability', () => {
     });
 
     it('writes logger output to all direct sinks', () => {
-        const sink1 = jest.fn<void, [string]>();
-        const sink2 = jest.fn<void, [string]>();
+        const sink1 = jest.fn<void, [string | null | undefined, string]>();
+        const sink2 = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -50,12 +52,12 @@ describe('createNodeObservability', () => {
         obs.logger('info', 'hello');
 
         const expected = '2026-04-18T12:34:56.789Z INFO [corr-123] hello';
-        expect(sink1).toHaveBeenCalledWith(expected);
-        expect(sink2).toHaveBeenCalledWith(expected);
+        expect(sink1).toHaveBeenCalledWith(undefined, expected);
+        expect(sink2).toHaveBeenCalledWith(undefined, expected);
     });
 
     it('uses the sink factory for string sinks', () => {
-        const producedSink = jest.fn<void, [string]>();
+        const producedSink = jest.fn<void, [string | null | undefined, string]>();
         const sinkFactory = jest.fn<NodeLogSink, [string]>() as jest.MockedFunction<SinkFactory>;
         sinkFactory.mockReturnValue(producedSink);
 
@@ -72,12 +74,12 @@ describe('createNodeObservability', () => {
         expect(sinkFactory).toHaveBeenNthCalledWith(1, 'one.log');
         expect(sinkFactory).toHaveBeenNthCalledWith(2, 'two.log');
         expect(producedSink).toHaveBeenCalledTimes(2);
-        expect(producedSink).toHaveBeenCalledWith('2026-04-18T12:34:56.789Z INFO [corr-123] hello');
+        expect(producedSink).toHaveBeenCalledWith(undefined, '2026-04-18T12:34:56.789Z INFO [corr-123] hello');
     });
 
     it('uses direct sinks unchanged and only applies the sink factory to string sinks', () => {
-        const directSink = jest.fn<void, [string]>();
-        const producedSink = jest.fn<void, [string]>();
+        const directSink = jest.fn<void, [string | null | undefined, string]>();
+        const producedSink = jest.fn<void, [string | null | undefined, string]>();
         const sinkFactory = jest.fn<NodeLogSink, [string]>() as jest.MockedFunction<SinkFactory>;
         sinkFactory.mockReturnValue(producedSink);
 
@@ -92,8 +94,8 @@ describe('createNodeObservability', () => {
 
         expect(sinkFactory).toHaveBeenCalledTimes(1);
         expect(sinkFactory).toHaveBeenCalledWith('one.log');
-        expect(directSink).toHaveBeenCalledWith('2026-04-18T12:34:56.789Z INFO [corr-123] hello');
-        expect(producedSink).toHaveBeenCalledWith('2026-04-18T12:34:56.789Z INFO [corr-123] hello');
+        expect(directSink).toHaveBeenCalledWith(undefined, '2026-04-18T12:34:56.789Z INFO [corr-123] hello');
+        expect(producedSink).toHaveBeenCalledWith(undefined, '2026-04-18T12:34:56.789Z INFO [corr-123] hello');
     });
 
     it('does nothing safely when there are no sinks', () => {
@@ -107,7 +109,7 @@ describe('createNodeObservability', () => {
     });
 
     it('renders string messages using the dictionary', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -119,12 +121,13 @@ describe('createNodeObservability', () => {
         obs.logger('info', 'compiling ${moduleName}');
 
         expect(sink).toHaveBeenCalledWith(
+            undefined,
             '2026-04-18T12:34:56.789Z INFO [corr-123] compiling package-a'
         );
     });
 
     it('makes correlationId available in message templating', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -135,12 +138,13 @@ describe('createNodeObservability', () => {
         obs.logger('info', 'correlation=${correlationId}');
 
         expect(sink).toHaveBeenCalledWith(
+            undefined,
             '2026-04-18T12:34:56.789Z INFO [corr-123] correlation=corr-123'
         );
     });
 
     it('safe-strings non-string message parts and joins them with spaces', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -151,12 +155,13 @@ describe('createNodeObservability', () => {
         obs.logger('warn', 'value', 42, false, { a: 1 });
 
         expect(sink).toHaveBeenCalledWith(
+            undefined,
             '2026-04-18T12:34:56.789Z WARN [corr-123] value 42 false {"a":1}'
         );
     });
 
     it('uses the default log template when no custom template is supplied', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -167,12 +172,13 @@ describe('createNodeObservability', () => {
         obs.logger('error', 'boom');
 
         expect(sink).toHaveBeenCalledWith(
+            undefined,
             '2026-04-18T12:34:56.789Z ERROR [corr-123] boom'
         );
     });
 
     it('uses a custom log template when supplied', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -186,12 +192,13 @@ describe('createNodeObservability', () => {
         obs.logger('info', 'hello');
 
         expect(sink).toHaveBeenCalledWith(
+            undefined,
             '[INFO] hello (corr-123) @ 2026-04-18T12:34:56.789Z'
         );
     });
 
     it('does not emit debug output when the level is not enabled for the context', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -208,7 +215,7 @@ describe('createNodeObservability', () => {
     });
 
     it('emits debug output when the level is enabled for the context', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -222,12 +229,13 @@ describe('createNodeObservability', () => {
         obs.debug('exec', 'debug', 'visible');
 
         expect(sink).toHaveBeenCalledWith(
+            undefined,
             '2026-04-18T12:34:56.789Z DEBUG [corr-123] [exec] visible'
         );
     });
 
     it('uses a custom debug template when supplied', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -244,6 +252,7 @@ describe('createNodeObservability', () => {
         obs.debug('exec', 'debug', 'hello');
 
         expect(sink).toHaveBeenCalledWith(
+            undefined,
             'ctx=exec level=DEBUG msg=hello'
         );
     });
@@ -311,7 +320,7 @@ describe('createNodeObservability', () => {
     });
 
     it('keeps logger and debug separate while sharing the same sinks and base dictionary', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
 
         const obs = createNodeObservability<TestContext>({
             correlationId: 'corr-123',
@@ -327,13 +336,13 @@ describe('createNodeObservability', () => {
         obs.debug('exec', 'debug', 'running ${moduleName}');
 
         expect(sink.mock.calls).toEqual([
-            ['2026-04-18T12:34:56.789Z INFO [corr-123] compile package-a'],
-            ['2026-04-18T12:34:56.789Z DEBUG [corr-123] [exec] running package-a'],
+            [undefined, '2026-04-18T12:34:56.789Z INFO [corr-123] compile package-a'],
+            [undefined, '2026-04-18T12:34:56.789Z DEBUG [corr-123] [exec] running package-a'],
         ]);
     });
 
     it('uses NoCorrelationId in output when created with no config and a sink is provided later via explicit config path', () => {
-        const sink = jest.fn<void, [string]>();
+        const sink = jest.fn<void, [string | null | undefined, string]>();
         const obs = createNodeObservability<TestContext>({
             correlationId: 'NoCorrelationId',
             sinks: [sink],
@@ -343,7 +352,31 @@ describe('createNodeObservability', () => {
         obs.logger('info', 'hello');
 
         expect(sink).toHaveBeenCalledWith(
+            undefined,
             '2026-04-18T12:34:56.789Z INFO [NoCorrelationId] hello'
+        );
+    });
+
+    it('withModule returns a new observability for that module', () => {
+        const sink = jest.fn<void, [string | null | undefined, string]>();
+        const obs = createNodeObservability<TestContext>({
+            correlationId: 'corr-123',
+            sinks: [sink],
+            now
+        });
+
+        const moduleObs = obs.withModule('alpha');
+
+        expect(moduleObs).not.toBe(obs);
+        expect(moduleObs.correlationId).toBe('corr-123');
+        expect(moduleObs.module).toBe('alpha');
+        expect(obs.module).toBeUndefined();
+
+        moduleObs.logger('info', 'hello');
+
+        expect(sink).toHaveBeenCalledWith(
+            'alpha',
+            '2026-04-18T12:34:56.789Z INFO [corr-123] hello'
         );
     });
 });

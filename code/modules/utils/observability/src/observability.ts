@@ -2,6 +2,7 @@ import {Errors, ErrorsOr, isErrors} from "@laoban/errors/src/error.monad";
 import {safePrettyJson} from "@laoban/safe";
 
 export type CorrelationId = string
+export type ModuleName = string | null | undefined
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
 
@@ -25,12 +26,14 @@ export type DebugLevels = Record<string, LogLevel[]>
 
 export type Observability = Readonly<{
     correlationId: CorrelationId
+    module: ModuleName
     logger: Logger
     debug: Debug
     countMetric: CountMetric
     durationMetric: DurationMetric
     debugLevels: DebugLevels
     timeService: TimeService
+    withModule: (module: ModuleName) => Observability
 }>
 
 export const shouldDebug = (
@@ -66,16 +69,21 @@ export const steppingTimeService = (
 
 export const nullObservability = (
     correlationId: CorrelationId = 'none'
-): Observability => ({
-    correlationId,
-    logger: nullLogger,
-    debug: () => {
-    },
-    countMetric: nullCountMetric,
-    durationMetric: nullDurationMetric,
-    debugLevels: {},
-    timeService: realTimeService,
-})
+): Observability => {
+    const build = (module: ModuleName): Observability => ({
+        correlationId,
+        module,
+        logger: nullLogger,
+        debug: () => {
+        },
+        countMetric: nullCountMetric,
+        durationMetric: nullDurationMetric,
+        debugLevels: {},
+        timeService: realTimeService,
+        withModule: build
+    })
+    return build(undefined)
+}
 
 export function dumpErrors(o: Observability, e: Errors, level: LogLevel = 'error'): void {
     function dumpOne<T>(title: string, array?: T[]) {

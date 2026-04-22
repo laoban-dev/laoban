@@ -1,6 +1,6 @@
 import type {CliRoot} from "@laoban/clidsl";
 import {addCliModelToCommander} from "./cli.commander.add.model";
-import {buildProgram, findCommand, optionFlags} from "./cli.commander.fixture";
+import {buildProgram, findCommand, makeObservability, optionFlags} from "./cli.commander.fixture";
 
 describe("addCliModelToCommander structure", () => {
     test("returns the original program", () => {
@@ -13,15 +13,7 @@ describe("addCliModelToCommander structure", () => {
 
         const program = buildProgram(model);
         const result = addCliModelToCommander(program, model, {
-            observability: {
-                correlationId: "test-correlation-id",
-                logger: jest.fn(),
-                debug: jest.fn(),
-                countMetric: jest.fn(),
-                durationMetric: jest.fn(),
-                debugLevels: {},
-                timeService: {now: () => 0}
-            },
+            observability: makeObservability(),
             addAction: cmd => cmd.action(() => {})
         });
 

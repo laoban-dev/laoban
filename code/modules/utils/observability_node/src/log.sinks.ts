@@ -1,14 +1,16 @@
 import {appendFileSync, mkdirSync} from "fs";
 import {dirname} from "path";
+import {ModuleName} from "@laoban/observability";
 
-export type NodeLogSink = (line: string) => void;
+
+export type NodeLogSink = (module: ModuleName, line: string) => void;
 
 /**
  * Writes log lines into the provided array.
  * Useful for tests or in-memory inspection.
  */
 export const memoryLogSink = (lines: string[]): NodeLogSink =>
-    (line: string) => {
+    (_module: ModuleName, line: string) => {
         lines.push(line);
     };
 
@@ -17,12 +19,12 @@ export const memoryLogSink = (lines: string[]): NodeLogSink =>
  * Ensures the directory exists.
  */
 export const fileLogSink = (filePath: string): NodeLogSink =>
-    (line: string) => {
+    (_module: ModuleName, line: string) => {
         mkdirSync(dirname(filePath), {recursive: true});
         appendFileSync(filePath, `${line}\n`, "utf8");
     };
 
-export const consoleLogSink: NodeLogSink = (line: string) => {
+export const consoleLogSink: NodeLogSink = (_module: ModuleName, line: string) => {
     console.log(line);
 }
 
@@ -31,6 +33,6 @@ export const consoleLogSink: NodeLogSink = (line: string) => {
  * Useful if you want to treat multiple outputs as a single sink.
  */
 export const combineLogSinks = (...sinks: NodeLogSink[]): NodeLogSink =>
-    (line: string) => {
-        for (const sink of sinks) sink(line);
+    (module: ModuleName, line: string) => {
+        for (const sink of sinks) sink(module, line);
     };

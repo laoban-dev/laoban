@@ -8,7 +8,7 @@ describe('memoryLogSink', () => {
         const lines: string[] = [];
         const sink = memoryLogSink(lines);
 
-        sink('hello');
+        sink(undefined, 'hello');
 
         expect(lines).toEqual(['hello']);
     });
@@ -17,8 +17,8 @@ describe('memoryLogSink', () => {
         const lines: string[] = [];
         const sink = memoryLogSink(lines);
 
-        sink('one');
-        sink('two');
+        sink(undefined, 'one');
+        sink(undefined, 'two');
 
         expect(lines).toEqual(['one', 'two']);
     });
@@ -27,7 +27,7 @@ describe('memoryLogSink', () => {
         const lines: string[] = ['existing'];
         const sink = memoryLogSink(lines);
 
-        sink('next');
+        sink(undefined, 'next');
 
         expect(lines).toBe(lines);
         expect(lines).toEqual(['existing', 'next']);
@@ -36,32 +36,43 @@ describe('memoryLogSink', () => {
 
 describe('combineLogSinks', () => {
     it('writes to all sinks', () => {
-        const sink1 = jest.fn<void, [string]>();
-        const sink2 = jest.fn<void, [string]>();
+        const sink1 = jest.fn<void, [string | null | undefined, string]>();
+        const sink2 = jest.fn<void, [string | null | undefined, string]>();
         const sink = combineLogSinks(sink1, sink2);
 
-        sink('hello');
+        sink(undefined, 'hello');
 
-        expect(sink1).toHaveBeenCalledWith('hello');
-        expect(sink2).toHaveBeenCalledWith('hello');
+        expect(sink1).toHaveBeenCalledWith(undefined, 'hello');
+        expect(sink2).toHaveBeenCalledWith(undefined, 'hello');
     });
 
     it('preserves sink call order', () => {
         const calls: string[] = [];
         const sink = combineLogSinks(
-            line => calls.push(`first:${line}`),
-            line => calls.push(`second:${line}`)
+            (_module, line) => calls.push(`first:${line}`),
+            (_module, line) => calls.push(`second:${line}`)
         );
 
-        sink('hello');
+        sink(undefined, 'hello');
 
         expect(calls).toEqual(['first:hello', 'second:hello']);
+    });
+
+    it('passes the module to all sinks', () => {
+        const sink1 = jest.fn<void, [string | null | undefined, string]>();
+        const sink2 = jest.fn<void, [string | null | undefined, string]>();
+        const sink = combineLogSinks(sink1, sink2);
+
+        sink('alpha', 'hello');
+
+        expect(sink1).toHaveBeenCalledWith('alpha', 'hello');
+        expect(sink2).toHaveBeenCalledWith('alpha', 'hello');
     });
 
     it('does not throw when there are no sinks', () => {
         const sink = combineLogSinks();
 
-        expect(() => sink('hello')).not.toThrow();
+        expect(() => sink(undefined, 'hello')).not.toThrow();
     });
 });
 
@@ -71,7 +82,7 @@ describe('fileLogSink', () => {
         const filePath = join(dir, 'nested', 'app.log');
 
         const sink = fileLogSink(filePath);
-        sink('hello');
+        sink(undefined, 'hello');
 
         expect(existsSync(filePath)).toBe(true);
         expect(readFileSync(filePath, 'utf8')).toBe('hello\n');
@@ -82,8 +93,8 @@ describe('fileLogSink', () => {
         const filePath = join(dir, 'nested', 'app.log');
 
         const sink = fileLogSink(filePath);
-        sink('one');
-        sink('two');
+        sink(undefined, 'one');
+        sink(undefined, 'two');
 
         expect(readFileSync(filePath, 'utf8')).toBe('one\ntwo\n');
     });
