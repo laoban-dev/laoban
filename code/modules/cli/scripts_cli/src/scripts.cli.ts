@@ -2,6 +2,8 @@ import { BasicCliContext, CliCommand, defineCommand } from "@laoban/clidsl";
 import { LaobanScript, LaobanScripts, ScriptName } from "@laoban/scripts";
 import { mapObject, sortObjectByName } from "@laoban/records";
 import {LaobanPackageCliContext} from "@laoban/package_cli/src/package.cli";
+import {ErrorsOr} from "@laoban/errors";
+import {ScriptExecutionItemTemplateDictionaryFn} from "./resolve.templates";
 
 export interface ScriptCommandValues {
     dryrun: boolean;
@@ -20,10 +22,11 @@ export interface ScriptCommandValues {
 }
 
 export type HandleLaobanScriptFn<TContext extends LaobanPackageCliContext> =
-    (scriptName: ScriptName, script: LaobanScript, values: ScriptCommandValues, context: TContext) => Promise<any>;
+    (scriptName: ScriptName, script: LaobanScript, values: ScriptCommandValues, context: TContext) => Promise<ErrorsOr<any>>;
 
 export interface LaobanScriptCliContext extends LaobanPackageCliContext {
     handleLaobanScript: HandleLaobanScriptFn<LaobanScriptCliContext>;
+    makeDictionary: ScriptExecutionItemTemplateDictionaryFn
 }
 
 export const scriptCommandOptions = {

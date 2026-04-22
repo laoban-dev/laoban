@@ -2,18 +2,18 @@ import {
     AsyncErrorCall,
     AsyncErrorCall2,
     BaseIssue,
-    ErrorsException,
-    ErrorsOr,
     errorObjectOrThrow,
     errors,
+    ErrorsException,
     errorsOrThrow,
+    flatmapArrayOfArrayOfErrorsOr, flatMapBaseIssue,
     flatMapErrorsOr,
     flatMapErrorsOrK,
     flattenArrayOfErrorsOr,
     flattenRecordOfErrorsOr,
     isErrors,
     isValue,
-    makeErrorFromException,
+    makeErrorFromException, mapBaseIssue,
     mapErrorsOr,
     mapErrorsOrK,
     partitionNameAndErrorsOr,
@@ -29,14 +29,14 @@ type TestIssue = BaseIssue<string, unknown>;
 const err = (message: string, context?: unknown): TestIssue => ({
     kind: "test",
     message,
-    ...(context !== undefined ? { context } : {}),
+    ...(context !== undefined ? {context} : {}),
 });
 
 describe("error.monad", () => {
     describe("constructors and guards", () => {
         it("value creates a value without warnings when not provided", () => {
             const result = value(42);
-            expect(result).toEqual({ value: 42 });
+            expect(result).toEqual({value: 42});
             expect(isValue(result)).toBe(true);
             expect(isErrors(result)).toBe(false);
             expect(warnings(result)).toEqual([]);
@@ -45,21 +45,21 @@ describe("error.monad", () => {
         it("value creates a value with warnings when provided", () => {
             const w1 = err("deprecated");
             const result = value(42, [w1]);
-            expect(result).toEqual({ value: 42, warnings: [w1] });
+            expect(result).toEqual({value: 42, warnings: [w1]});
             expect(isValue(result)).toBe(true);
             expect(warnings(result)).toEqual([w1]);
         });
 
         it("value omits warnings when given empty warning array", () => {
             const result = value(42, []);
-            expect(result).toEqual({ value: 42 });
+            expect(result).toEqual({value: 42});
             expect(warnings(result)).toEqual([]);
         });
 
         it("errors creates an errors object without warnings when not provided", () => {
             const e1 = err("bad");
             const result = errors(e1);
-            expect(result).toEqual({ errors: [e1] });
+            expect(result).toEqual({errors: [e1]});
             expect(isErrors(result)).toBe(true);
             expect(isValue(result)).toBe(false);
             expect(warnings(result)).toEqual([]);
@@ -82,7 +82,7 @@ describe("error.monad", () => {
         it("errors omits warnings when given empty warning array", () => {
             const e1 = err("bad");
             const result = errors(e1, [], []);
-            expect(result).toEqual({ errors: [e1] });
+            expect(result).toEqual({errors: [e1]});
             expect(warnings(result)).toEqual([]);
         });
     });
@@ -211,12 +211,12 @@ describe("error.monad", () => {
         });
 
         it("puts extras into context when provided", () => {
-            const result = makeErrorFromException<TestIssue>("loading config", "boom", { file: "x" });
+            const result = makeErrorFromException<TestIssue>("loading config", "boom", {file: "x"});
             expect(result).toEqual({
                 errors: [
                     {
                         message: "loading config error boom",
-                        context: { file: "x" },
+                        context: {file: "x"},
                     },
                 ],
             });
@@ -226,13 +226,13 @@ describe("error.monad", () => {
     describe("mapErrorsOr", () => {
         it("maps the value when success", () => {
             const result = mapErrorsOr(value(2), (n) => n * 3);
-            expect(result).toEqual({ value: 6 });
+            expect(result).toEqual({value: 6});
         });
 
         it("preserves warnings when mapping a value", () => {
             const w1 = err("warn");
             const result = mapErrorsOr(value(2, [w1]), (n) => n * 3);
-            expect(result).toEqual({ value: 6, warnings: [w1] });
+            expect(result).toEqual({value: 6, warnings: [w1]});
         });
 
         it("identity mapping preserves value and warnings", () => {
@@ -245,7 +245,7 @@ describe("error.monad", () => {
             const e1 = err("bad");
             const w1 = err("warn");
             const result = mapErrorsOr(errors(e1, undefined, [w1], "ref-1"), (n: number) => n * 3);
-            expect(result).toEqual({ errors: [e1], warnings: [w1], reference: "ref-1" });
+            expect(result).toEqual({errors: [e1], warnings: [w1], reference: "ref-1"});
         });
     });
 
@@ -260,20 +260,20 @@ describe("error.monad", () => {
 
         it("maps value to value", () => {
             const result = flatMapErrorsOr(value(2), (n) => value(n * 4));
-            expect(result).toEqual({ value: 8 });
+            expect(result).toEqual({value: 8});
         });
 
         it("accumulates warnings when value maps to value with warnings", () => {
             const w1 = err("warn-1");
             const w2 = err("warn-2");
             const result = flatMapErrorsOr(value(2, [w1]), (n) => value(n * 4, [w2]));
-            expect(result).toEqual({ value: 8, warnings: [w1, w2] });
+            expect(result).toEqual({value: 8, warnings: [w1, w2]});
         });
 
         it("preserves warnings when value maps to value without warnings", () => {
             const w1 = err("warn-1");
             const result = flatMapErrorsOr(value(2, [w1]), (n) => value(n * 4));
-            expect(result).toEqual({ value: 8, warnings: [w1] });
+            expect(result).toEqual({value: 8, warnings: [w1]});
         });
 
         it("accumulates warnings when value maps to errors", () => {
@@ -302,13 +302,13 @@ describe("error.monad", () => {
     describe("mapErrorsOrK", () => {
         it("maps async value", async () => {
             const result = await mapErrorsOrK(value(2), async (n) => n * 5);
-            expect(result).toEqual({ value: 10 });
+            expect(result).toEqual({value: 10});
         });
 
         it("preserves warnings when mapping async value", async () => {
             const w1 = err("warn");
             const result = await mapErrorsOrK(value(2, [w1]), async (n) => n * 5);
-            expect(result).toEqual({ value: 10, warnings: [w1] });
+            expect(result).toEqual({value: 10, warnings: [w1]});
         });
 
         it("passes errors through unchanged", async () => {
@@ -323,14 +323,14 @@ describe("error.monad", () => {
     describe("flatMapErrorsOrK", () => {
         it("maps async value to value", async () => {
             const result = await flatMapErrorsOrK(value(2), async (n) => value(n * 6));
-            expect(result).toEqual({ value: 12 });
+            expect(result).toEqual({value: 12});
         });
 
         it("accumulates warnings async", async () => {
             const w1 = err("warn-1");
             const w2 = err("warn-2");
             const result = await flatMapErrorsOrK(value(2, [w1]), async (n) => value(n * 6, [w2]));
-            expect(result).toEqual({ value: 12, warnings: [w1, w2] });
+            expect(result).toEqual({value: 12, warnings: [w1, w2]});
         });
 
         it("accumulates warnings when async result is errors", async () => {
@@ -368,7 +368,7 @@ describe("error.monad", () => {
 
     describe("flattenArrayOfErrorsOr", () => {
         it("returns empty successful array for empty input", () => {
-            expect(flattenArrayOfErrorsOr([])).toEqual({ value: [] });
+            expect(flattenArrayOfErrorsOr([])).toEqual({value: []});
         });
 
         it("returns values when all entries are values", () => {
@@ -403,13 +403,13 @@ describe("error.monad", () => {
         });
 
         it("returns value without warnings when none exist", () => {
-            expect(flattenArrayOfErrorsOr([value(1), value(2)])).toEqual({ value: [1, 2] });
+            expect(flattenArrayOfErrorsOr([value(1), value(2)])).toEqual({value: [1, 2]});
         });
     });
 
     describe("flattenRecordOfErrorsOr", () => {
         it("returns empty successful record for empty input", () => {
-            expect(flattenRecordOfErrorsOr({})).toEqual({ value: {} });
+            expect(flattenRecordOfErrorsOr({})).toEqual({value: {}});
         });
 
         it("returns record of values when all succeed", () => {
@@ -419,7 +419,7 @@ describe("error.monad", () => {
                 b: value("x"),
             });
             expect(result).toEqual({
-                value: { a: 1, b: "x" },
+                value: {a: 1, b: "x"},
                 warnings: [w1],
             });
         });
@@ -456,7 +456,7 @@ describe("error.monad", () => {
             };
 
             expect(partitionNameAndErrorsOr(input)).toEqual({
-                values: { a: 1, c: 3 },
+                values: {a: 1, c: 3},
                 errors: [e1],
                 warnings: [w1, w2],
             });
@@ -474,12 +474,202 @@ describe("error.monad", () => {
     describe("type aliases compile", () => {
         it("supports AsyncErrorCall type", async () => {
             const fn: AsyncErrorCall<number, string, TestIssue> = async (n) => value(String(n));
-            await expect(fn(12)).resolves.toEqual({ value: "12" });
+            await expect(fn(12)).resolves.toEqual({value: "12"});
         });
 
         it("supports AsyncErrorCall2 type", async () => {
             const fn: AsyncErrorCall2<number, number, string, TestIssue> = async (a, b) => value(String(a + b));
-            await expect(fn(2, 3)).resolves.toEqual({ value: "5" });
+            await expect(fn(2, 3)).resolves.toEqual({value: "5"});
+        });
+    });
+});
+describe("flatmapArrayOfArrayOfErrorsOr", () => {
+    it("returns empty successful array for empty input", () => {
+        const result = flatmapArrayOfArrayOfErrorsOr([], (n: number) => value(n * 2));
+        expect(result).toEqual({value: []});
+    });
+
+    it("maps a 2d array when all entries succeed", () => {
+        const w1 = err("warn-1");
+        const w2 = err("warn-2");
+
+        const result = flatmapArrayOfArrayOfErrorsOr(
+            [
+                [1, 2],
+                [3]
+            ],
+            n => n === 1
+                ? value(n * 10, [w1])
+                : n === 3
+                    ? value(n * 10, [w2])
+                    : value(n * 10)
+        );
+
+        expect(result).toEqual({
+            value: [
+                [10, 20],
+                [30]
+            ],
+            warnings: [w1, w2]
+        });
+    });
+
+    it("returns errors from a single inner array and preserves warnings", () => {
+        const e1 = err("bad-2");
+        const w1 = err("warn-1");
+
+        const result = flatmapArrayOfArrayOfErrorsOr(
+            [
+                [1, 2],
+                [3]
+            ],
+            n => n === 1
+                ? value(n * 10, [w1])
+                : n === 2
+                    ? errors(e1)
+                    : value(n * 10)
+        );
+
+        expect(result).toEqual({
+            errors: [e1],
+            warnings: [w1]
+        });
+    });
+
+    it("collects errors across multiple inner arrays and preserves warnings", () => {
+        const e1 = err("bad-2");
+        const e2 = err("bad-4");
+        const w1 = err("warn-1");
+        const w2 = err("warn-3");
+
+        const result = flatmapArrayOfArrayOfErrorsOr(
+            [
+                [1, 2],
+                [3, 4]
+            ],
+            n => n === 1
+                ? value(n * 10, [w1])
+                : n === 2
+                    ? errors(e1)
+                    : n === 3
+                        ? value(n * 10, [w2])
+                        : errors(e2)
+        );
+
+        expect(result).toEqual({
+            errors: [e1, e2],
+            warnings: [w1, w2]
+        });
+    });
+
+    it("preserves empty inner arrays when all entries succeed", () => {
+        const result = flatmapArrayOfArrayOfErrorsOr(
+            [
+                [],
+                [1],
+                []
+            ],
+            n => value(n * 2)
+        );
+
+        expect(result).toEqual({
+            value: [
+                [],
+                [2],
+                []
+            ]
+        });
+    });
+});
+describe("mapBaseIssue", () => {
+    it("maps a successful value", () => {
+        const actual = mapBaseIssue(
+            value(2),
+            n => n * 10
+        );
+
+        expect(actual).toEqual(value(20));
+    });
+
+    it("preserves warnings when mapping a successful value", () => {
+        const w1 = err("warn-1");
+
+        const actual = mapBaseIssue(
+            value(2, [w1]),
+            n => n * 10
+        );
+
+        expect(actual).toEqual(value(20, [w1]));
+    });
+
+    it("passes errors through unchanged", () => {
+        const e1 = err("bad-1");
+
+        const actual = mapBaseIssue(
+            errors(e1),
+            n => n +'...'
+        );
+
+        expect(actual).toEqual(errors(e1));
+    });
+});
+
+describe("flatMapBaseIssue", () => {
+    it("flat maps a successful value", () => {
+        const actual = flatMapBaseIssue(
+            value(2),
+            n => value(n * 10)
+        );
+
+        expect(actual).toEqual(value(20));
+    });
+
+    it("preserves warnings from both sides when flat mapping a successful value", () => {
+        const w1 = err("warn-1");
+        const w2 = err("warn-2");
+
+        const actual = flatMapBaseIssue(
+            value(2, [w1]),
+            n => value(n * 10, [w2])
+        );
+
+        expect(actual).toEqual(value(20, [w1, w2]));
+    });
+
+    it("passes input errors through unchanged", () => {
+        const e1 = err("bad-1");
+
+        const actual = flatMapBaseIssue(
+            errors(e1),
+            n => value(n +'..')
+        );
+
+        expect(actual).toEqual(errors(e1));
+    });
+
+    it("returns errors from the mapping function", () => {
+        const e1 = err("bad-2");
+
+        const actual = flatMapBaseIssue(
+            value(2),
+            _ => errors(e1)
+        );
+
+        expect(actual).toEqual(errors(e1));
+    });
+
+    it("preserves input warnings when the mapping function returns errors", () => {
+        const w1 = err("warn-1");
+        const e1 = err("bad-2");
+
+        const actual = flatMapBaseIssue(
+            value(2, [w1]),
+            _ => errors(e1)
+        );
+
+        expect(actual).toEqual({
+            errors: [e1],
+            warnings: [w1]
         });
     });
 });

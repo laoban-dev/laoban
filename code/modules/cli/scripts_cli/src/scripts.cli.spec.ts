@@ -1,4 +1,4 @@
-import { LaobanScript, LaobanScripts } from "@laoban/scripts";
+import {LaobanScript, LaobanScripts} from "@laoban/scripts";
 import {
     makeScriptCommand,
     makeScriptCommands,
@@ -49,7 +49,7 @@ function makeContext(): LaobanScriptCliContext {
     return {
         observability: makeObservability(),
         handleLaobanScript: jest.fn(async () => ({}))
-    };
+    } as any;
 }
 
 describe("makeScriptCommand", () => {

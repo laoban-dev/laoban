@@ -10,9 +10,13 @@ import {loadLaobanConfig} from "@laoban/laoban_config";
 import {dumpErrors} from "@laoban/observability";
 import {consoleLogSink, createNodeObservability, dumpAndExitIfErrors} from "@laoban/observability_node";
 import {LaobanPackageCliContext, laobanPackageCommands, loadConfigAndPackages} from "@laoban/package_cli";
-import {LaobanScriptCliContext, makeScriptCommands} from "@laoban/scripts_cli";
+import {
+    LaobanScriptCliContext,
+    makeScriptCommands,
+    makeScriptExecutionItemTemplateDictionary
+} from "@laoban/scripts_cli";
 import {isErrors} from "@laoban/errors";
-import {defaultHandleLaobanScript} from "@laoban/scripts_cli/src/default.handle.script";
+import {defaultHandleLaobanScript} from "@laoban/scripts_cli";
 
 const observability = createNodeObservability({
     correlationId: "laoban cli",
@@ -46,7 +50,8 @@ function makeContext(): LaobanCliContext {
         cwd: process.cwd(),
         loadLaobanConfig,
         loadConfigAndPackagesFn: loadConfigAndPackages,
-        handleLaobanScript: defaultHandleLaobanScript
+        handleLaobanScript: defaultHandleLaobanScript,
+        makeDictionary: makeScriptExecutionItemTemplateDictionary
 
     };
 }

@@ -1,21 +1,29 @@
-import {valueOrThrow} from "@laoban/errors";
-import {ExecutionPlanStats, prettyPrintExecutionPlan} from "@laoban/execution_plan";
+import {
+    BaseIssue,
+    ErrorsOr,
+    flatMapBaseIssue, isValue,
+    mapBaseIssue
+} from "@laoban/errors";
+import {
+    ExecutionPlanStats,
+    prettyPrintExecutionPlan
+} from "@laoban/execution_plan";
 import {Observability} from "@laoban/observability";
-import {LoadedPackageDetail} from "@laoban/package_details";
-
+import {LoadedLaobanProject, LoadedPackageDetail} from "@laoban/package_details";
 import {LaobanScript, ScriptName} from "@laoban/scripts";
 import {LaobanScriptCliContext, ScriptCommandValues} from "./scripts.cli";
 import {
     makeScriptExecutionPlan,
     ScriptExecutionItem,
     scriptExecutionPlanPrettyPrintTypeClass
-} from "@laoban/script_plan/src/script.plan";
-
-function displayItem(item: ScriptExecutionItem): string {
-    return item.kind === "oncePerWorkSpace"
-        ? `    - [${item.stepIndex}] workspace ${item.command.command}`
-        : `    - [${item.stepIndex}] ${item.pkg!.contents.name} ${item.command.command}`;
-}
+} from "@laoban/script_plan";
+import {
+    detemplateOneScriptExecutionItem,
+    detemplateScriptExecutionPlan,
+    makeScriptExecutionItemTemplateDictionary
+} from "./resolve.templates";
+import {sortObjectByName} from "@laoban/records";
+import {safePrettyJson} from "@laoban/safe";
 
 function logPlan(
     scriptName: ScriptName,
@@ -24,10 +32,7 @@ function logPlan(
     {logger}: Observability
 ): void {
     logger("info", `Plan for script: ${scriptName}`);
-    const printedPlan = prettyPrintExecutionPlan(plan, scriptExecutionPlanPrettyPrintTypeClass)
-    logger("info", "\n" + printedPlan);
-
-
+    logger("info", "\n" + prettyPrintExecutionPlan(plan, scriptExecutionPlanPrettyPrintTypeClass));
     logger("info", "Stats");
     logger("info", `  commandCount: ${stats.commandCount}`);
     logger("info", `  distinctPackageDetails: ${stats.distinctPackageDetails.length}`);
@@ -38,30 +43,92 @@ function logPlan(
     logger("info", `  largestGenerationSize: ${stats.largestGenerationSize}`);
 }
 
-export async function defaultHandleLaobanScript(
+function packageNameOf(item: ScriptExecutionItem): string {
+    return item.kind === "oncePerWorkSpace"
+        ? "workspace"
+        : item.pkg!.contents.name;
+}
+
+function prettyPrintPlanWithRhs<G>(
+    plan: G[][],
+    nameOf: (g: G) => string,
+    rhsOf: (g: G) => string,
+    linePrefix: string = "Package: "
+): string {
+    const maxNameWidth = plan.reduce(
+        (max, generation) => Math.max(
+            max,
+            0,
+            ...generation.map(item => nameOf(item).length)
+        ),
+        0
+    );
+
+    return plan
+        .flatMap(generation =>
+            generation.map(item =>
+                `${linePrefix}${nameOf(item).padEnd(maxNameWidth)} ${rhsOf(item)}`
+            )
+        )
+        .join("\n");
+}
+
+function logDryRunPlan(
+    fullPlan: ScriptExecutionItem[][],
+    {logger}: Observability
+): void {
+    logger("info", prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => item.command.command));
+}
+
+function logVariables<TContext extends LaobanScriptCliContext>(loadedProject: LoadedLaobanProject, fullPlan: ScriptExecutionItem[][], context: TContext) {
+    const observability = context.observability;
+    observability.logger("info", prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => {
+        const dictionary = context.makeDictionary(item, loadedProject);
+        return safePrettyJson(dictionary)
+    }));
+}
+
+export async function defaultHandleLaobanScript<TContext extends LaobanScriptCliContext>(
     scriptName: ScriptName,
     script: LaobanScript,
     values: ScriptCommandValues,
-    context: LaobanScriptCliContext
-): Promise<{}> {
-    const loadedProject = valueOrThrow(
-        await context.loadConfigAndPackagesFn(context)
+    context: TContext
+): Promise<ErrorsOr<void, BaseIssue>> {
+    return flatMapBaseIssue(
+        await context.loadConfigAndPackagesFn(context),
+        loadedProject =>
+            flatMapBaseIssue(
+                makeScriptExecutionPlan(
+                    loadedProject,
+                    scriptName,
+                    script,
+                    context.observability
+                ),
+                executionPlan =>
+                    mapBaseIssue(
+                        detemplateScriptExecutionPlan(
+                            executionPlan.plan,
+                            loadedProject,
+                            context.observability
+                        ),
+                        fullPlan => {
+                            if (values.generationPlan) {
+                                logPlan(
+                                    scriptName,
+                                    fullPlan,
+                                    executionPlan.stats,
+                                    context.observability
+                                );
+                            } else if (values.dryrun) logDryRunPlan(fullPlan, context.observability);
+                            else if (values.variables) logVariables(loadedProject, fullPlan, context);
+                            else {
+                                context.observability.logger(
+                                    "info",
+                                    `Script ${scriptName} execution not implemented yet`
+                                );
+                            }
+                        }
+                    )
+            )
     );
-
-    const executionPlan = valueOrThrow(
-        makeScriptExecutionPlan(
-            loadedProject,
-            scriptName,
-            script,
-            context.observability
-        )
-    );
-
-    if (values.generationPlan) {
-        logPlan(scriptName, executionPlan.plan, executionPlan.stats, context.observability);
-        return {};
-    }
-
-    context.observability.logger("info", `Script ${scriptName} execution not implemented yet`);
-    return {};
 }

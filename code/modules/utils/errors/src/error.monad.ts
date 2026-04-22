@@ -1,5 +1,10 @@
-import { NameAnd } from "@laoban/records";
-import { safeJson } from "@laoban/safe";
+import {NameAnd} from "@laoban/records";
+import {safeJson} from "@laoban/safe";
+import {ScriptName} from "@laoban/scripts";
+import {ScriptExecutionItem, scriptExecutionPlanPrettyPrintTypeClass} from "@laoban/script_plan";
+import {ExecutionPlanStats, prettyPrintExecutionPlan} from "@laoban/execution_plan";
+import {LoadedPackageDetail} from "@laoban/package_details";
+import {Observability} from "@laoban/observability";
 
 /**
  * Base shape for issues carried by ErrorsOr.
@@ -45,7 +50,7 @@ export type ErrorsOr<T, E extends BaseIssue = BaseIssue> =
 export const value = <T, E extends BaseIssue = BaseIssue>(
     t: T,
     warnings?: E[],
-): ErrorsOr<T, E> => (warnings && warnings.length > 0 ? { value: t, warnings } : { value: t });
+): ErrorsOr<T, E> => (warnings && warnings.length > 0 ? {value: t, warnings} : {value: t});
 
 /**
  * Wrap one or more errors, optionally carrying warnings and a reference.
@@ -61,8 +66,8 @@ export const errors = <E extends BaseIssue = BaseIssue>(
     const allErrors = [first, ...(rest ?? [])];
     return {
         errors: allErrors,
-        ...(warnings && warnings.length > 0 ? { warnings } : {}),
-        ...(reference !== undefined ? { reference } : {}),
+        ...(warnings && warnings.length > 0 ? {warnings} : {}),
+        ...(reference !== undefined ? {reference} : {}),
     };
 };
 
@@ -172,9 +177,9 @@ export function makeErrorFromException<E extends BaseIssue = BaseIssue>(
     const message = err instanceof Error ? err.message : String(err);
     const issue: BaseIssue = {
         message: `${context} error ${message}`,
-        ...(extras !== undefined ? { context: extras } : {}),
+        ...(extras !== undefined ? {context: extras} : {}),
     };
-    return { errors: [issue as E] };
+    return {errors: [issue as E]};
 }
 
 /**
@@ -187,8 +192,8 @@ export function mapErrorsOr<T, T1, E extends BaseIssue = BaseIssue>(
     if (isValue(e)) {
         const mapped = f(e.value);
         return e.warnings && e.warnings.length > 0
-            ? { value: mapped, warnings: e.warnings }
-            : { value: mapped };
+            ? {value: mapped, warnings: e.warnings}
+            : {value: mapped};
     }
     return e;
 }
@@ -208,13 +213,13 @@ export function flatMapErrorsOr<T, T1, E extends BaseIssue = BaseIssue>(
     const combinedWarnings = append<E>(e.warnings, next.warnings);
 
     if (isValue(next)) {
-        return combinedWarnings ? { value: next.value, warnings: combinedWarnings } : { value: next.value };
+        return combinedWarnings ? {value: next.value, warnings: combinedWarnings} : {value: next.value};
     }
 
     return {
         errors: next.errors,
-        ...(combinedWarnings ? { warnings: combinedWarnings } : {}),
-        ...(next.reference !== undefined ? { reference: next.reference } : {}),
+        ...(combinedWarnings ? {warnings: combinedWarnings} : {}),
+        ...(next.reference !== undefined ? {reference: next.reference} : {}),
     };
 }
 
@@ -227,7 +232,7 @@ export function mapErrorsOrK<T, T1, E extends BaseIssue = BaseIssue>(
 ): Promise<ErrorsOr<T1, E>> {
     if (isErrors(e)) return Promise.resolve(e as ErrorsOr<T1, E>);
     return f(e.value).then((v) =>
-        e.warnings && e.warnings.length > 0 ? { value: v, warnings: e.warnings } : { value: v },
+        e.warnings && e.warnings.length > 0 ? {value: v, warnings: e.warnings} : {value: v},
     );
 }
 
@@ -244,13 +249,13 @@ export function flatMapErrorsOrK<T, T1, E extends BaseIssue = BaseIssue>(
         const combinedWarnings = append<E>(e.warnings, next.warnings);
 
         if (isValue(next)) {
-            return combinedWarnings ? { value: next.value, warnings: combinedWarnings } : { value: next.value };
+            return combinedWarnings ? {value: next.value, warnings: combinedWarnings} : {value: next.value};
         }
 
         return {
             errors: next.errors,
-            ...(combinedWarnings ? { warnings: combinedWarnings } : {}),
-            ...(next.reference !== undefined ? { reference: next.reference } : {}),
+            ...(combinedWarnings ? {warnings: combinedWarnings} : {}),
+            ...(next.reference !== undefined ? {reference: next.reference} : {}),
         };
     });
 }
@@ -310,11 +315,24 @@ export function flattenArrayOfErrorsOr<T, E extends BaseIssue = BaseIssue>(
     if (allErrors.length > 0) {
         return {
             errors: allErrors,
-            ...(allWarnings.length > 0 ? { warnings: allWarnings } : {}),
+            ...(allWarnings.length > 0 ? {warnings: allWarnings} : {}),
         };
     }
 
-    return allWarnings.length > 0 ? { value: values, warnings: allWarnings } : { value: values };
+    return allWarnings.length > 0 ? {value: values, warnings: allWarnings} : {value: values};
+}
+
+export function flatmapArrayOfArrayOfErrorsOr<G, H, E extends BaseIssue>(
+    inp: G[][],
+    fn: (g: G) => ErrorsOr<H, E>
+): ErrorsOr<H[][], E> {
+    return flattenArrayOfErrorsOr(
+        inp.map(inner =>
+            flattenArrayOfErrorsOr(
+                inner.map(fn)
+            )
+        )
+    );
 }
 
 type UnwrapErrorsOr<X> = X extends ErrorsOr<infer T, any> ? T : never;
@@ -359,11 +377,11 @@ export function flattenRecordOfErrorsOr<
     if (allErrors.length > 0) {
         return {
             errors: allErrors,
-            ...(allWarnings.length > 0 ? { warnings: allWarnings } : {}),
+            ...(allWarnings.length > 0 ? {warnings: allWarnings} : {}),
         };
     }
 
-    return allWarnings.length > 0 ? { value: out as Out, warnings: allWarnings } : { value: out as Out };
+    return allWarnings.length > 0 ? {value: out as Out, warnings: allWarnings} : {value: out as Out};
 }
 
 /**
@@ -388,7 +406,7 @@ export function partitionNameAndErrorsOr<T, E extends BaseIssue = BaseIssue>(
         }
     }
 
-    return { values, errors: allErrors, warnings: allWarnings };
+    return {values, errors: allErrors, warnings: allWarnings};
 }
 
 /**
@@ -400,4 +418,24 @@ function append<E>(...items: (E[] | undefined)[]): E[] | undefined {
         if (item && item.length > 0) result.push(...item);
     }
     return result.length > 0 ? result : undefined;
+}
+
+export function flatMapBaseIssue<G, H, E1 extends BaseIssue, E2 extends BaseIssue>(
+    inp: ErrorsOr<G, E1>,
+    fn: (g: G) => ErrorsOr<H, E2>
+): ErrorsOr<H, BaseIssue> {
+    return flatMapErrorsOr(
+        inp as ErrorsOr<G, BaseIssue>,
+        g => fn(g) as ErrorsOr<H, BaseIssue>
+    );
+}
+
+export function mapBaseIssue<G, H, E extends BaseIssue>(
+    inp: ErrorsOr<G, E>,
+    fn: (g: G) => H
+): ErrorsOr<H, BaseIssue> {
+    return mapErrorsOr(
+        inp as ErrorsOr<G, BaseIssue>,
+        fn
+    );
 }
