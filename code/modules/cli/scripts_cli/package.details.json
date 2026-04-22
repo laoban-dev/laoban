@@ -12,6 +12,7 @@
     "@laoban/package_cli",
     "@laoban/safe",
     "@laoban/scripts",
+    "@laoban/script_plan",
     "@laoban/strings",
     "@laoban/validation"
   ],

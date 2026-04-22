@@ -192,6 +192,7 @@ export interface LaobanCommand {
     /** Optional human-readable name for logs, status, or diagnostics. */
     name?: string;
 
+
     /** The command text to execute. */
     command: CommandString;
 

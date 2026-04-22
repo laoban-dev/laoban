@@ -1,0 +1,27 @@
+{
+  "template": "typescript",
+  "name": "@laoban/script_plan",
+  "description": "Builds the execution plan for the scripts",
+  "links": [
+    "@laoban/errors",
+    "@laoban/execution_plan",
+    "@laoban/observability",
+    "@laoban/package_details",
+    "@laoban/topologicalsort",
+    "@laoban/safe"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

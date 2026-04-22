@@ -1,6 +1,7 @@
-import {AnyCliCommand, BasicCliContext, CliCommand, defineCommand} from "@laoban/clidsl";
-import {LaobanScript, LaobanScripts, ScriptName} from "@laoban/scripts";
-import {mapObject, sortObjectByName} from "@laoban/records";
+import { BasicCliContext, CliCommand, defineCommand } from "@laoban/clidsl";
+import { LaobanScript, LaobanScripts, ScriptName } from "@laoban/scripts";
+import { mapObject, sortObjectByName } from "@laoban/records";
+import {LaobanPackageCliContext} from "@laoban/package_cli/src/package.cli";
 
 export interface ScriptCommandValues {
     dryrun: boolean;
@@ -18,11 +19,11 @@ export interface ScriptCommandValues {
     ignoreGuards: boolean;
 }
 
-export type ExecuteLaobanScriptFn<TContext extends BasicCliContext> =
+export type HandleLaobanScriptFn<TContext extends LaobanPackageCliContext> =
     (scriptName: ScriptName, script: LaobanScript, values: ScriptCommandValues, context: TContext) => Promise<any>;
 
-export interface LaobanScriptCliContext extends BasicCliContext {
-    executeLaobanScript: ExecuteLaobanScriptFn<LaobanScriptCliContext>;
+export interface LaobanScriptCliContext extends LaobanPackageCliContext {
+    handleLaobanScript: HandleLaobanScriptFn<LaobanScriptCliContext>;
 }
 
 export const scriptCommandOptions = {
@@ -116,25 +117,26 @@ export const scriptCommandOptions = {
     }
 };
 
-
 export function makeScriptCommand<C extends LaobanScriptCliContext>(
     scriptName: ScriptName,
     script: LaobanScript
 ): CliCommand<ScriptCommandValues, C> {
-    return defineCommand<ScriptCommandValues, C> ()({
+    return defineCommand<ScriptCommandValues, C>()({
         description: script.description,
         positionals: {},
         options: scriptCommandOptions,
         execute: async (values: ScriptCommandValues, context: C) =>
-            context.executeLaobanScript(scriptName, script, values, context)
+            context.handleLaobanScript(scriptName, script, values, context)
     });
 }
 
 export function makeScriptCommands<C extends LaobanScriptCliContext>(
     scripts: LaobanScripts
 ): Record<string, CliCommand<ScriptCommandValues, C>> {
-    return sortObjectByName(mapObject(
-        scripts,
-        ((script, name) => makeScriptCommand<C>(name, script)
-        )));
+    return sortObjectByName(
+        mapObject(
+            scripts,
+            (script, name) => makeScriptCommand<C>(name, script)
+        )
+    );
 }

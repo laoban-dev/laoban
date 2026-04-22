@@ -1,4 +1,3 @@
-import { BasicCliContext } from "@laoban/clidsl";
 import { LaobanScript, LaobanScripts } from "@laoban/scripts";
 import {
     makeScriptCommand,
@@ -49,7 +48,7 @@ function makeValues(): ScriptCommandValues {
 function makeContext(): LaobanScriptCliContext {
     return {
         observability: makeObservability(),
-        executeLaobanScript: jest.fn(async () => ({}))
+        handleLaobanScript: jest.fn(async () => ({}))
     };
 }
 
@@ -65,7 +64,7 @@ describe("makeScriptCommand", () => {
         expect(command.options).toBe(scriptCommandOptions);
     });
 
-    it("forwards execution to executeLaobanScript", async () => {
+    it("forwards execution to handleLaobanScript", async () => {
         const script = makeScript("Build stuff");
         const values = makeValues();
         const context = makeContext();
@@ -74,8 +73,8 @@ describe("makeScriptCommand", () => {
 
         await command.execute(values, context);
 
-        expect(context.executeLaobanScript).toHaveBeenCalledTimes(1);
-        expect(context.executeLaobanScript).toHaveBeenCalledWith("build", script, values, context);
+        expect(context.handleLaobanScript).toHaveBeenCalledTimes(1);
+        expect(context.handleLaobanScript).toHaveBeenCalledWith("build", script, values, context);
     });
 });
 
@@ -112,7 +111,7 @@ describe("makeScriptCommands", () => {
         await commands.build.execute(values, context);
         await commands.test.execute(values, context);
 
-        expect(context.executeLaobanScript).toHaveBeenNthCalledWith(1, "build", build, values, context);
-        expect(context.executeLaobanScript).toHaveBeenNthCalledWith(2, "test", test, values, context);
+        expect(context.handleLaobanScript).toHaveBeenNthCalledWith(1, "build", build, values, context);
+        expect(context.handleLaobanScript).toHaveBeenNthCalledWith(2, "test", test, values, context);
     });
 });

@@ -1,6 +1,6 @@
 {
-  "name": "@laoban/scripts_cli",
-  "description": "Turns the scripts in the laoban.json into cli commands. ",
+  "name": "@laoban/execution_plan",
+  "description": "How we plan the execution of scripts",
   "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
@@ -17,19 +17,10 @@
     ]
   },
   "dependencies": {
-    "commander": "^14.0.0",
-    "@laoban/clidsl": "2.0.0",
-    "@laoban/commander": "2.0.0",
-    "@laoban/config_cli": "2.0.0",
     "@laoban/errors": "2.0.0",
-    "@laoban/laoban_config": "2.0.0",
     "@laoban/observability": "2.0.0",
-    "@laoban/package_cli": "2.0.0",
+    "@laoban/topologicalsort": "2.0.0",
     "@laoban/safe": "2.0.0",
-    "@laoban/scripts": "2.0.0",
-    "@laoban/script_plan": "2.0.0",
-    "@laoban/strings": "2.0.0",
-    "@laoban/validation": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {

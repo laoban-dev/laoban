@@ -12,6 +12,7 @@
     "@laoban/strings",
     "@laoban/validation",
     "@laoban/config_cli",
+    "@laoban/scripts_cli",
     "@laoban/package_cli"
   ],
   "packageJson": {
