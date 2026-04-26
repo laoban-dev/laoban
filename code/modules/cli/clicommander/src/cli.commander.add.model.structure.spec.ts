@@ -1,6 +1,11 @@
 import type {CliRoot} from "@laoban/clidsl";
 import {addCliModelToCommander} from "./cli.commander.add.model";
-import {buildProgram, findCommand, makeObservability, optionFlags} from "./cli.commander.fixture";
+import {
+    buildProgram,
+    findCommand,
+    makeTestObservability,
+    optionFlags
+} from "./cli.commander.fixture";
 
 describe("addCliModelToCommander structure", () => {
     test("returns the original program", () => {
@@ -13,7 +18,7 @@ describe("addCliModelToCommander structure", () => {
 
         const program = buildProgram(model);
         const result = addCliModelToCommander(program, model, {
-            observability: makeObservability(),
+            observability: makeTestObservability(),
             addAction: cmd => cmd.action(() => {})
         });
 

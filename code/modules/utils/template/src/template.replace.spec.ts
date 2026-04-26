@@ -1,7 +1,6 @@
 import {replaceTemplateToken} from "./template.replace";
 import {dollarsBracesVarDefn, type TemplateConfig} from "./template.types";
 import {isErrors, isValue} from "@laoban/errors";
-import {nullObservability} from "@laoban/observability";
 import {defaultTemplateFns} from "./template.functions";
 
 type Dictionary = Record<string, unknown>;
@@ -12,7 +11,6 @@ const makeConfig = (
     variableDefn: dollarsBracesVarDefn,
     onMissing: "error",
     functions: defaultTemplateFns<Dictionary>(),
-    observability: nullObservability(),
     ...overrides,
 });
 

@@ -57,7 +57,7 @@ const buildCommand = defineCommand<BuildValues, ExampleContext>()({
         const verbose: boolean = values.verbose;
         const retries: number = values.retries;
         const cwd: string = context.cwd;
-        context.observability.logger('info', safeJson({values, cwd}));
+        context.observability.log( safeJson({values, cwd}));
     }
 });
 
@@ -76,7 +76,7 @@ const initCommand= defineCommand<InitValues, ExampleContext>()({
         const force: boolean = values.force;
         const cwd: string = context.cwd;
 
-        context.observability.logger('info', safeJson({values, cwd}));
+        context.observability.log( safeJson({values, cwd}));
     }
 });
 
@@ -101,7 +101,7 @@ const publishCommand = defineCommand<PublishValues, ExampleContext>()({
         const dryRun: boolean = values.dryRun;
         const tag: string[] = values.tag;
         const cwd: string = context.cwd;
-        context.observability.logger('info', safeJson({values, cwd}));
+        context.observability.log( safeJson({values, cwd}));
     }
 });
 
@@ -117,7 +117,7 @@ const versionCommand = defineCommand<VersionValues, ExampleContext>()({
         const bump: string = values.bump;
         const yes: boolean = values.yes;
         const cwd: string = context.cwd;
-        context.observability.logger('info', safeJson({values, cwd}));
+        context.observability.log( safeJson({values, cwd}));
     }
 });
 export const exampleCli: CliModel<ExampleContext> = root(

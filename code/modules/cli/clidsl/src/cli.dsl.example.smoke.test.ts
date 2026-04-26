@@ -1,4 +1,9 @@
-import type {Observability} from "@laoban/observability";
+import {
+    defaultObservabilityContext,
+    makeObservability as makeObs,
+    type ModuleName,
+    type Observability
+} from "@laoban/observability";
 import {exampleCli} from "./cli.dsl.example";
 import {type CliWalkerConfig, walkCliModel} from "./cli.dsl.walker";
 
@@ -20,16 +25,18 @@ function makeAcc(): FakeAcc {
     };
 }
 
-function makeObservability(): Observability {
-    return {
-        correlationId: "test-correlation-id",
-        logger: jest.fn(),
-        debug: jest.fn(),
+function makeObservability(module: ModuleName = undefined): Observability {
+    return makeObs({
+        context: {
+            ...defaultObservabilityContext("test-correlation-id", {}, module),
+            timeService: {now: () => 0}
+        },
+        target: {
+            write: jest.fn()
+        },
         countMetric: jest.fn(),
-        durationMetric: jest.fn(),
-        debugLevels: {},
-        timeService: {now: () => 0}
-    };
+        durationMetric: jest.fn()
+    });
 }
 
 function makeConfig(

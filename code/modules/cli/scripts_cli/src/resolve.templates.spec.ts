@@ -123,7 +123,7 @@ describe("detemplateOneScriptExecutionItem", () => {
         );
 
         const actual = valueOrThrow(
-            detemplateOneScriptExecutionItem(item, project, observability)
+            detemplateOneScriptExecutionItem(item, project)
         );
 
         expect(actual).toEqual({
@@ -142,12 +142,7 @@ describe("detemplateOneScriptExecutionItem", () => {
         const item = eachPackageItem(0, alpha, "${x}-${y}");
 
         const actual = valueOrThrow(
-            detemplateOneScriptExecutionItem(
-                item,
-                project,
-                observability,
-                () => ({ x: "hello", y: "world" })
-            )
+            detemplateOneScriptExecutionItem(item, project, () => ({x: "hello", y: "world"}))
         );
 
         expect(actual.command.command).toEqual("hello-world");
@@ -159,7 +154,7 @@ describe("detemplateOneScriptExecutionItem", () => {
         const project = loadedProject(alpha);
         const item = eachPackageItem(0, alpha, "${doesNotExist}");
 
-        const actual = detemplateOneScriptExecutionItem(item, project, observability);
+        const actual = detemplateOneScriptExecutionItem(item, project);
 
         expect("errors" in actual).toBe(true);
     });

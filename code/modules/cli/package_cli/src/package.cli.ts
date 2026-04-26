@@ -47,7 +47,7 @@ const packageListCommand = defineCommand<{}, LaobanPackageCliContext>()({
     options: {},
     execute: async (_values, context) => {
         mapErrorsOr(await loadConfigAndPackages(context), loaded =>
-            context.observability.logger('info', prettyRecordJson(mapObject(loaded.loadedPackageDetails,
+            context.observability.log(prettyRecordJson(mapObject(loaded.loadedPackageDetails,
                 (detail) => detail.packageFile))))
     },
 });
@@ -63,7 +63,7 @@ const packageViewCommand = defineCommand<{ name: string }, LaobanPackageCliConte
     },
     options: {},
     execute: async (values, _context) => {
-        _context.observability.logger('info', "package view", values.name);
+        _context.observability.log("package view", values.name);
         return {};
     },
 });
@@ -84,7 +84,7 @@ const packageSortCommand = defineCommand<{ horizontal: boolean }, LaobanPackageC
         const print = horizontal ? prettyPrintGenerationsSwimlanes : prettyPrintGenerationsVertical
         return mapErrorsOr(await loadSortedLaobanProject(context),
             sorted =>
-                context.observability.logger('info', '\n' + print(sorted.generations, packageDetailsGraph)));
+                context.observability.log('\n' + print(sorted.generations, packageDetailsGraph)));
     }
 });
 

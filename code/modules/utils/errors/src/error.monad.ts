@@ -309,7 +309,7 @@ export function flattenArrayOfErrorsOr<T, E extends BaseIssue = BaseIssue>(
 
     if (allErrors.length > 0) {
         return {
-            errors: allErrors,
+             errors: allErrors,
             ...(allWarnings.length > 0 ? {warnings: allWarnings} : {}),
         };
     }
@@ -433,4 +433,11 @@ export function mapBaseIssue<G, H, E extends BaseIssue>(
         inp as ErrorsOr<G, BaseIssue>,
         fn
     );
+}
+export function mapArrayK<T,T1,E extends BaseIssue>(
+    arr: T[],
+    fn: (t: T) => Promise<ErrorsOr<T1, E>>
+): Promise<ErrorsOr<T1[], E>> {
+    return Promise.all(arr.map(fn)).then(flattenArrayOfErrorsOr);
+
 }

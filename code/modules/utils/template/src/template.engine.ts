@@ -1,7 +1,6 @@
-import { errors, isErrors, value, type ErrorsOr } from "@laoban/errors";
-import { nullObservability } from "@laoban/observability";
-import { defaultTemplateFns } from "./template.functions";
-import { replaceTemplateToken } from "./template.replace";
+import {errors, isErrors, value, type ErrorsOr} from "@laoban/errors";
+import {defaultTemplateFns} from "./template.functions";
+import {replaceTemplateToken} from "./template.replace";
 import {
     dollarsBracesVarDefn,
     type Template,
@@ -24,7 +23,6 @@ function templateRaw(template: Template | string): string {
 
 function fullTemplateConfig<T>(config?: Partial<TemplateConfig<T>>): TemplateConfig<T> {
     return {
-        observability: config?.observability ?? nullObservability(),
         variableDefn: config?.variableDefn ?? dollarsBracesVarDefn,
         onMissing: config?.onMissing ?? "error",
         functions: config?.functions ?? defaultTemplateFns<T>(),
@@ -38,10 +36,6 @@ export const renderTemplate: TemplateEngine = <T>(
 ): ErrorsOr<string, TemplateIssue> => {
     const config = fullTemplateConfig(partialConfig);
     const raw = templateRaw(template);
-
-    config.observability.debug("template", "debug", "Rendering template", raw);
-
-    const start = Date.now();
     const regex = new RegExp(config.variableDefn.regex.source, config.variableDefn.regex.flags);
 
     let match: RegExpExecArray | null;
@@ -57,9 +51,6 @@ export const renderTemplate: TemplateEngine = <T>(
 
         const replaced = replaceTemplateToken(matchedText, dictionary, config);
         if (isErrors(replaced)) {
-            config.observability.countMetric("template.render.failed");
-            config.observability.durationMetric("template.render.durationMs", Date.now() - start);
-
             const [first, ...rest] = replaced.errors;
             return errors(first, rest, appendWarnings(warnings, replaced.warnings));
         }
@@ -70,9 +61,6 @@ export const renderTemplate: TemplateEngine = <T>(
     }
 
     output += raw.slice(lastIndex);
-
-    config.observability.countMetric("template.render.success");
-    config.observability.durationMetric("template.render.durationMs", Date.now() - start);
 
     return value(output, warnings);
 };

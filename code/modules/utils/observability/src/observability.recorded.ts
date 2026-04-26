@@ -1,14 +1,23 @@
-import {CorrelationId, DebugLevels, LogLevel, ModuleName, Observability, realTimeService,} from "./observability";
+import {
+    CorrelationId,
+    DebugLevels,
+    LogLevel,
+    ModuleName,
+    Observability,
+    realTimeService,
+    TimeService,
+    defaultObservabilityContext,
+    makeObservability,
+} from "./observability";
 
 export type RecordedLog = Readonly<{
     module: ModuleName;
-    level: LogLevel;
-    msg: unknown[];
+    msg: string;
 }>;
 
 export type RecordedDebug = Readonly<{
     module: ModuleName;
-    context: string,
+    context: string;
     level: LogLevel;
     msg: unknown[];
 }>;
@@ -26,31 +35,42 @@ export type RecordingObservability = Readonly<{
     durations: RecordedDuration[];
 }>;
 
-
 export const recordingObservability = (
     debugLevels: DebugLevels = {},
     correlationId: CorrelationId = "test-correlation-id",
-    timeService = realTimeService
+    timeService: TimeService = realTimeService,
+    module: ModuleName = undefined,
 ): RecordingObservability => {
     const logs: RecordedLog[] = [];
     const debug: RecordedDebug[] = [];
     const counts: string[] = [];
     const durations: RecordedDuration[] = [];
 
-    const build = (module: ModuleName): Observability => ({
-        correlationId,
-        module,
-        logger: (level, ...msg) => logs.push({module, level, msg}),
-        debug: (context, level, ...msg) => debug.push({module, context, level, msg}),
-        countMetric: name => counts.push(name),
-        durationMetric: (name, durationMs) => durations.push({name, durationMs}),
-        debugLevels,
+    const context = {
+        ...defaultObservabilityContext(correlationId, debugLevels, module),
         timeService,
-        withModule: build
+    };
+
+    const base = makeObservability({
+        context,
+        target: {
+            write: msg => logs.push({module, msg}),
+        },
+        countMetric: name => counts.push(name),
+        durationMetric: (name, durationMs) =>
+            durations.push({name, durationMs}),
     });
 
+    const observability: Observability = {
+        ...base,
+        debug: (debugContext, level, ...msg) => {
+            debug.push({module, context: debugContext, level, msg});
+            return base.debug(debugContext, level, ...msg);
+        },
+    };
+
     return {
-        observability: build(undefined),
+        observability,
         logs,
         debug,
         counts,

@@ -7,8 +7,8 @@ import {laobanConfigCommands} from "@laoban/config_cli";
 import {defaultLoadTextConfig} from "@laoban/files";
 import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure} from "@laoban/files_node";
 import {loadLaobanConfig} from "@laoban/laoban_config";
-import {dumpErrors} from "@laoban/observability";
-import {consoleLogSink, createNodeObservability, dumpAndExitIfErrors} from "@laoban/observability_node";
+import {dumpErrors, Observability} from "@laoban/observability";
+import {createNodeObservability, dumpAndExitIfErrors} from "@laoban/observability_node";
 import {LaobanPackageCliContext, laobanPackageCommands, loadConfigAndPackages} from "@laoban/package_cli";
 import {
     LaobanScriptCliContext,
@@ -17,11 +17,17 @@ import {
 } from "@laoban/scripts_cli";
 import {isErrors} from "@laoban/errors";
 import {defaultHandleLaobanScript} from "@laoban/scripts_cli";
+import * as path from "node:path";
 
-const observability = createNodeObservability({
-    correlationId: "laoban cli",
-    sinks: [consoleLogSink]
-});
+type Purpose = ".log" | ".session"
+
+const {observability} = createNodeObservability<Purpose>({
+    channel: process.stdout,
+    purposes: [".log", ".session"],
+    onError: e => console.error(e),
+    reference: moduleName => purpose =>
+        path.join(".laoban", String(moduleName ?? "root"), purpose),
+})
 
 type LaobanCliContext =
     LaobanPackageCliContext & LaobanScriptCliContext;

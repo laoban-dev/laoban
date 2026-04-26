@@ -1,6 +1,6 @@
-import { errors, errorsOrThrow, value, valueOrThrow } from "@laoban/errors";
-import { recordingObservability } from "@laoban/observability";
-import { prettyRecordJson } from "@laoban/records";
+import {errors, errorsOrThrow, value, valueOrThrow} from "@laoban/errors";
+import {fixedTimeService, recordingObservability} from "@laoban/observability";
+import {prettyRecordJson} from "@laoban/records";
 import {
     laobanPackageCommands,
     loadConfigAndPackages,
@@ -13,10 +13,10 @@ import type {
     LoadedPackageDetail,
     NormalisedPackageDetails
 } from "@laoban/package_details";
-import { packageDetailsGraph } from "@laoban/package_details/src/package.details.sort";
-import { prettyPrintGenerationsSwimlanes, prettyPrintGenerationsVertical } from "@laoban/topologicalsort";
-import { loadConfig } from "@laoban/config_cli";
-import { loadPackages } from "@laoban/package_details";
+import {packageDetailsGraph} from "@laoban/package_details/src/package.details.sort";
+import {prettyPrintGenerationsSwimlanes, prettyPrintGenerationsVertical} from "@laoban/topologicalsort";
+import {loadConfig} from "@laoban/config_cli";
+import {loadPackages} from "@laoban/package_details";
 
 jest.mock("@laoban/config_cli", () => ({
     ...jest.requireActual("@laoban/config_cli"),
@@ -35,7 +35,7 @@ function loadedPackageDetail(
     packageFile: string,
     contents: NormalisedPackageDetails
 ): LoadedPackageDetail {
-    return { packageFile, contents } as LoadedPackageDetail;
+    return {packageFile, contents} as LoadedPackageDetail;
 }
 
 function normalised(
@@ -85,7 +85,12 @@ function loadedProject(
 function makeContext(): LaobanPackageCliContext & {
     recording: ReturnType<typeof recordingObservability>;
 } {
-    const recording = recordingObservability();
+    const recording = recordingObservability(
+        {},
+        "test-correlation-id",
+        fixedTimeService(0)
+    );
+
     return {
         cwd: "/workspace",
         fileOps: {} as any,
@@ -100,6 +105,11 @@ function command(name: "list" | "view" | "sort"): any {
     const group: any = laobanPackageCommands as any;
     return group.commands?.[name] ?? group.children?.[name] ?? group[name];
 }
+
+const expectedLog = (msg: string) => ({
+    module: undefined,
+    msg: `0 INFO [test-correlation-id] ${msg}`
+});
 
 describe("package cli", () => {
     beforeEach(() => {
@@ -150,12 +160,12 @@ describe("package cli", () => {
 
         it("returns config load errors", async () => {
             const context = makeContext();
-            mockedLoadConfig.mockResolvedValue(errors({ kind: "badConfig", message: "cannot load config" } as any));
+            mockedLoadConfig.mockResolvedValue(errors({kind: "badConfig", message: "cannot load config"} as any));
 
             const result = await loadConfigAndPackages(context);
 
             expect(errorsOrThrow(result)).toEqual([
-                { kind: "badConfig", message: "cannot load config" }
+                {kind: "badConfig", message: "cannot load config"}
             ]);
             expect(mockedLoadPackages).not.toHaveBeenCalled();
         });
@@ -167,12 +177,12 @@ describe("package cli", () => {
             } as any;
 
             mockedLoadConfig.mockResolvedValue(value(loadedConfig));
-            mockedLoadPackages.mockResolvedValue(errors({ kind: "badPackages", message: "cannot load packages" } as any));
+            mockedLoadPackages.mockResolvedValue(errors({kind: "badPackages", message: "cannot load packages"} as any));
 
             const result = await loadConfigAndPackages(context);
 
             expect(errorsOrThrow(result)).toEqual([
-                { kind: "badPackages", message: "cannot load packages" }
+                {kind: "badPackages", message: "cannot load packages"}
             ]);
         });
     });
@@ -225,16 +235,16 @@ describe("package cli", () => {
 
             expect(errorsOrThrow(result)).toEqual([
                 {
-                    "context": {
-                        "cyclePath": [
+                    context: {
+                        cyclePath: [
                             "alpha",
                             "beta",
                             "alpha"
                         ],
-                        "purpose": "sortLaobanProject"
+                        purpose: "sortLaobanProject"
                     },
-                    "kind": "graphCycle",
-                    "message": "Cycle detected in sortLaobanProject: alpha -> beta -> alpha"
+                    kind: "graphCycle",
+                    message: "Cycle detected in sortLaobanProject: alpha -> beta -> alpha"
                 }
             ]);
         });
@@ -254,29 +264,21 @@ describe("package cli", () => {
             await command("list").execute({}, context);
 
             expect(context.recording.logs).toEqual([
-                {
-                    level: "info",
-                    msg: [
-                        prettyRecordJson({
-                            alpha: "/workspace/alpha/package.details.json",
-                            beta: "/workspace/beta/package.details.json"
-                        })
-                    ]
-                }
+                expectedLog(prettyRecordJson({
+                    alpha: "/workspace/alpha/package.details.json",
+                    beta: "/workspace/beta/package.details.json"
+                }))
             ]);
         });
 
         it("view logs the package name requested", async () => {
             const context = makeContext();
 
-            const result = await command("view").execute({ name: "alpha" }, context);
+            const result = await command("view").execute({name: "alpha"}, context);
 
             expect(result).toEqual({});
             expect(context.recording.logs).toEqual([
-                {
-                    level: "info",
-                    msg: ["package view", "alpha"]
-                }
+                expectedLog("package view alpha")
             ]);
         });
 
@@ -296,13 +298,10 @@ describe("package cli", () => {
 
             context.recording.logs.length = 0;
 
-            await command("sort").execute({ horizontal: false }, context);
+            await command("sort").execute({horizontal: false}, context);
 
             expect(context.recording.logs).toEqual([
-                {
-                    level: "info",
-                    msg: [expectedOutput]
-                }
+                expectedLog(expectedOutput)
             ]);
         });
 
@@ -322,13 +321,10 @@ describe("package cli", () => {
 
             context.recording.logs.length = 0;
 
-            await command("sort").execute({ horizontal: true }, context);
+            await command("sort").execute({horizontal: true}, context);
 
             expect(context.recording.logs).toEqual([
-                {
-                    level: "info",
-                    msg: [expectedOutput]
-                }
+                expectedLog(expectedOutput)
             ]);
         });
     });

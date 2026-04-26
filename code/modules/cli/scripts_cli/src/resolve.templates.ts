@@ -27,14 +27,13 @@ export const makeScriptExecutionItemTemplateDictionary: ScriptExecutionItemTempl
 export const detemplateOneScriptExecutionItem = (
     item: ScriptExecutionItem,
     loadedProject: LoadedLaobanProject,
-    observability: Observability,
     makeDictionary: ScriptExecutionItemTemplateDictionaryFn = makeScriptExecutionItemTemplateDictionary
 ): ErrorsOr<ScriptExecutionItem, TemplateIssue> => {
     const dictionary = makeDictionary(item, loadedProject);
     const rendered = renderTemplate(
         item.command.command,
         dictionary,
-        { observability, onMissing: "error" }
+        {  onMissing: "error" }
     );
 
     return mapErrorsOr(
@@ -57,10 +56,5 @@ export const detemplateScriptExecutionPlan = (
 ): ErrorsOr<ScriptExecutionItem[][], TemplateIssue> =>
     flatmapArrayOfArrayOfErrorsOr(
         plan,
-        item => detemplateOneScriptExecutionItem(
-            item,
-            loadedProject,
-            observability,
-            makeDictionary
-        )
+        item => detemplateOneScriptExecutionItem(item, loadedProject, makeDictionary)
     );

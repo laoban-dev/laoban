@@ -49,7 +49,7 @@ const configListCommand = defineCommand<{}, LaobanConfigCliContext>()({
                     mainFile: configDetails.configFile,
                     files: configDetails.loadedFiles
                 };
-                context.observability.logger("info", JSON.stringify(details, null, 2));
+                context.observability.log( JSON.stringify(details, null, 2));
                 return details;
             }
         )

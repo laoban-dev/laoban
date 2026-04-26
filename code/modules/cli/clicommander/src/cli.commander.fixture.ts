@@ -1,34 +1,39 @@
 import {Command} from "commander";
-import type {ModuleName, Observability} from "@laoban/observability";
+import {
+    defaultObservabilityContext,
+    makeObservability,
+    ModuleName,
+    Observability,
+} from "@laoban/observability";
 import {addCliModelToCommander} from "./cli.commander.add.model";
 
-export function makeObservability(module: ModuleName = undefined): Observability {
-    const logger = jest.fn();
+export function makeTestObservability(module: ModuleName = undefined): Observability {
+    const log = jest.fn();
     const debug = jest.fn();
     const countMetric = jest.fn();
     const durationMetric = jest.fn();
 
-    const build = (module: ModuleName): Observability => ({
-        correlationId: "test-correlation-id",
-        module,
-        logger,
-        debug,
+    return makeObservability({
+        context: {
+            ...defaultObservabilityContext("test-correlation-id", {}, module),
+            timeService: {now: () => 0},
+        },
+        target: {
+            write: log,
+        },
         countMetric,
         durationMetric,
-        debugLevels: {},
-        timeService: { now: () => 0 },
-        withModule: build
     });
-
-    return build(module);
 }
 
 export function buildProgram(model: any) {
     const program = new Command();
+
     addCliModelToCommander(program, model, {
-        observability: makeObservability(),
+        observability: makeTestObservability(),
         addAction: cmd => cmd.action(() => {})
     });
+
     return program;
 }
 

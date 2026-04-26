@@ -30,18 +30,18 @@ function logPlan(
     scriptName: ScriptName,
     plan: ScriptExecutionItem[][],
     stats: ExecutionPlanStats<LoadedPackageDetail>,
-    {logger}: Observability
+    {log}: Observability
 ): void {
-    logger("info", `Plan for script: ${scriptName}`);
-    logger("info", "\n" + prettyPrintExecutionPlan(plan, scriptExecutionPlanPrettyPrintTypeClass));
-    logger("info", "Stats");
-    logger("info", `  commandCount: ${stats.commandCount}`);
-    logger("info", `  distinctPackageDetails: ${stats.distinctPackageDetails.length}`);
-    logger("info", `  executionItemCount: ${stats.executionItemCount}`);
-    logger("info", `  packageExecutionItemCount: ${stats.packageExecutionItemCount}`);
-    logger("info", `  barrierCount: ${stats.barrierCount}`);
-    logger("info", `  generationCount: ${stats.generationCount}`);
-    logger("info", `  largestGenerationSize: ${stats.largestGenerationSize}`);
+    log(`Plan for script: ${scriptName}`);
+    log("\n" + prettyPrintExecutionPlan(plan, scriptExecutionPlanPrettyPrintTypeClass));
+    log("Stats");
+    log(`  commandCount: ${stats.commandCount}`);
+    log(`  distinctPackageDetails: ${stats.distinctPackageDetails.length}`);
+    log(`  executionItemCount: ${stats.executionItemCount}`);
+    log(`  packageExecutionItemCount: ${stats.packageExecutionItemCount}`);
+    log(`  barrierCount: ${stats.barrierCount}`);
+    log(`  generationCount: ${stats.generationCount}`);
+    log(`  largestGenerationSize: ${stats.largestGenerationSize}`);
 }
 
 function packageNameOf(item: ScriptExecutionItem): string {
@@ -79,14 +79,14 @@ function prettyPrintPlanWithRhs<G>(
 
 function logDryRunPlan(
     fullPlan: ScriptExecutionItem[][],
-    {logger}: Observability
+    {log}: Observability
 ): void {
-    logger("info", '\n'+prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => item.command.command));
+    log('\n' + prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => item.command.command));
 }
 
 function logVariables<TContext extends LaobanScriptCliContext>(loadedProject: LoadedLaobanProject, fullPlan: ScriptExecutionItem[][], context: TContext) {
     const observability = context.observability;
-    observability.logger("info", prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => {
+    observability.log(prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => {
         const dictionary = context.makeDictionary(item, loadedProject);
         return safePrettyJson(dictionary)
     }));
@@ -127,10 +127,7 @@ export async function defaultHandleLaobanScript<TContext extends LaobanScriptCli
                             } else if (options.dryrun) logDryRunPlan(fullPlan, context.observability);
                             else if (options.variables) logVariables(loadedProject, fullPlan, context);
                             else {
-                                context.observability.logger(
-                                    "info",
-                                    `Script ${scriptName} execution not implemented yet`
-                                );
+                                context.observability.log(`Script ${scriptName} execution not implemented yet`);
                             }
                         }
                     );

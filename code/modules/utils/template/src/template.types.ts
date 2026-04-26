@@ -1,5 +1,5 @@
 import {type BaseIssue, type ErrorsOr} from "@laoban/errors";
-import {type Observability} from "@laoban/observability";
+
 
 
 export type VariableDefn = {
@@ -80,7 +80,6 @@ export type TemplateFn<T> = (args: {
 export type TemplateFns<T> = Record<string, TemplateFn<T>>;
 
 export type TemplateConfig<T> = {
-    observability: Observability;
     variableDefn: VariableDefn;
     onMissing: MissingValueMode;
     functions: TemplateFns<T>;

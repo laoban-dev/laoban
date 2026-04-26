@@ -1,17 +1,43 @@
 import {value, errors} from "@laoban/errors";
-import {laobanConfigCommands, type LaobanConfigCliContext, loadConfig,} from "./config.cli";
-import {isCliCommand, isCliGroup, isCliRoot} from "@laoban/clidsl";
-import {LoadConfigFn, loadLaobanConfig} from "@laoban/laoban_config";
+import {laobanConfigCommands, type LaobanConfigCliContext, loadConfig} from "./config.cli";
+import {isCliCommand, isCliGroup} from "@laoban/clidsl";
+import {LoadConfigFn} from "@laoban/laoban_config";
+import {
+    defaultObservabilityContext,
+    makeObservability,
+    type Observability
+} from "@laoban/observability";
 
-function makeContext(loadConfig: LoadConfigFn): LaobanConfigCliContext {
+type TestObs = {
+    observability: Observability
+    write: jest.Mock
+}
+
+function makeTestObservability(): TestObs {
+    const write = jest.fn();
+
+    return {
+        write,
+        observability: makeObservability({
+            context: {
+                ...defaultObservabilityContext("test-correlation-id"),
+                timeService: {now: () => 0}
+            },
+            target: {write},
+            countMetric: jest.fn(),
+            durationMetric: jest.fn()
+        })
+    };
+}
+
+function makeContext(loadConfig: LoadConfigFn, testObs = makeTestObservability()): LaobanConfigCliContext & {testObs: TestObs} {
     return {
         cwd: "/workspace/project",
         fileOps: {} as any,
         loadLaobanFileConfig: {} as any,
         loadLaobanConfig: loadConfig,
-        observability: {
-            logger: jest.fn()
-        } as any
+        observability: testObs.observability,
+        testObs
     };
 }
 
@@ -70,7 +96,7 @@ describe("laoban config commands", () => {
         const result = await getViewCommand().execute({}, context);
 
         expect(result).toEqual(value(config));
-        expect(context.observability.logger).not.toHaveBeenCalled();
+        expect(context.testObs.write).not.toHaveBeenCalled();
     });
 
     it("config list returns source details and logs them", async () => {
@@ -99,9 +125,8 @@ describe("laoban config commands", () => {
         };
 
         expect(result).toEqual(value(expected));
-        expect(context.observability.logger).toHaveBeenCalledWith(
-            "info",
-            JSON.stringify(expected, null, 2)
+        expect(context.testObs.write).toHaveBeenCalledWith(
+            `0 INFO [test-correlation-id] ${JSON.stringify(expected, null, 2)}`
         );
     });
 
@@ -135,7 +160,7 @@ describe("laoban config commands", () => {
         const result = await getListCommand().execute({}, context);
 
         expect(result).toBe(failure);
-        expect(context.observability.logger).not.toHaveBeenCalled();
+        expect(context.testObs.write).not.toHaveBeenCalled();
     });
 
     it("has view and list commands", () => {

@@ -11,31 +11,73 @@ describe("recordingObservability", () => {
         expect(recorded.durations).toEqual([]);
     });
 
-    it("records log messages", () => {
-        const recorded = recordingObservability();
+    it("records rendered log messages", () => {
+        const recorded = recordingObservability(
+            {},
+            "corr-123",
+            steppingTimeService(100, 5),
+        );
 
-        recorded.observability.logger("info", "hello", 1, { a: true });
-        recorded.observability.logger("error", "bad news");
+        recorded.observability.log("hello", 1, {a: true});
+        recorded.observability.log("bad news");
 
         expect(recorded.logs).toEqual([
-            { level: "info", msg: ["hello", 1, { a: true }] },
-            { level: "error", msg: ["bad news"] },
+            {module: undefined, msg: '100 INFO [corr-123] hello 1 {"a":true}'},
+            {module: undefined, msg: "105 INFO [corr-123] bad news"},
         ]);
     });
 
-    it("records debug messages with context and level", () => {
-        const recorded = recordingObservability();
+    it("records debug calls with module, context and level", () => {
+        const recorded = recordingObservability(
+            {
+                load: ["debug"],
+                findContainingDirectory: ["info"],
+            },
+            "corr-123",
+            steppingTimeService(100, 5),
+        );
 
         recorded.observability.debug("load", "debug", "loading file", "a.txt");
         recorded.observability.debug("findContainingDirectory", "info", "checking", "/tmp/laoban.json");
 
         expect(recorded.debug).toEqual([
-            { context: "load", level: "debug", msg: ["loading file", "a.txt"] },
             {
+                module: undefined,
+                context: "load",
+                level: "debug",
+                msg: ["loading file", "a.txt"],
+            },
+            {
+                module: undefined,
                 context: "findContainingDirectory",
                 level: "info",
                 msg: ["checking", "/tmp/laoban.json"],
             },
+        ]);
+    });
+
+    it("records rendered debug lines only when enabled", () => {
+        const recorded = recordingObservability(
+            {
+                load: ["debug"],
+                exec: ["info"],
+            },
+            "corr-123",
+            steppingTimeService(100, 5),
+        );
+
+        recorded.observability.debug("load", "debug", "loading");
+        recorded.observability.debug("exec", "debug", "hidden");
+        recorded.observability.debug("exec", "info", "visible");
+
+        expect(recorded.logs).toEqual([
+            {module: undefined, msg: "100 DEBUG [corr-123] [load] loading"},
+            {module: undefined, msg: "105 INFO [corr-123] [exec] visible"},
+        ]);
+        expect(recorded.debug).toEqual([
+            {module: undefined, context: "load", level: "debug", msg: ["loading"]},
+            {module: undefined, context: "exec", level: "debug", msg: ["hidden"]},
+            {module: undefined, context: "exec", level: "info", msg: ["visible"]},
         ]);
     });
 
@@ -60,8 +102,8 @@ describe("recordingObservability", () => {
         recorded.observability.durationMetric("fileops.load.url.ms", 7);
 
         expect(recorded.durations).toEqual([
-            { name: "fileops.load.file.ms", durationMs: 12 },
-            { name: "fileops.load.url.ms", durationMs: 7 },
+            {name: "fileops.load.file.ms", durationMs: 12},
+            {name: "fileops.load.url.ms", durationMs: 7},
         ]);
     });
 
@@ -97,6 +139,23 @@ describe("recordingObservability", () => {
         expect(recorded.observability.timeService).toBe(timeService);
     });
 
+    it("preserves the supplied module", () => {
+        const recorded = recordingObservability(
+            {},
+            "corr-123",
+            steppingTimeService(100, 5),
+            "alpha",
+        );
+
+        expect(recorded.observability.module).toBe("alpha");
+    });
+
+    it("defaults the module to undefined", () => {
+        const recorded = recordingObservability();
+
+        expect(recorded.observability.module).toBeUndefined();
+    });
+
     it("uses the supplied time service for deterministic time", () => {
         const recorded = recordingObservability(
             {},
@@ -110,22 +169,51 @@ describe("recordingObservability", () => {
     });
 
     it("uses one shared recording surface for all observability methods", () => {
-        const recorded = recordingObservability();
+        const recorded = recordingObservability(
+            {
+                load: ["debug"],
+            },
+            "corr-123",
+            steppingTimeService(100, 5),
+        );
 
-        recorded.observability.logger("warn", "warning");
+        recorded.observability.log("warning");
         recorded.observability.debug("load", "debug", "loading");
         recorded.observability.countMetric("metric.one");
         recorded.observability.durationMetric("metric.ms", 5);
 
         expect(recorded.logs).toEqual([
-            { level: "warn", msg: ["warning"] },
+            {module: undefined, msg: "100 INFO [corr-123] warning"},
+            {module: undefined, msg: "105 DEBUG [corr-123] [load] loading"},
         ]);
         expect(recorded.debug).toEqual([
-            { context: "load", level: "debug", msg: ["loading"] },
+            {module: undefined, context: "load", level: "debug", msg: ["loading"]},
         ]);
         expect(recorded.counts).toEqual(["metric.one"]);
         expect(recorded.durations).toEqual([
-            { name: "metric.ms", durationMs: 5 },
+            {name: "metric.ms", durationMs: 5},
+        ]);
+    });
+
+    it("records the configured module on log and debug", () => {
+        const recorded = recordingObservability(
+            {
+                load: ["debug"],
+            },
+            "corr-123",
+            steppingTimeService(100, 5),
+            "alpha",
+        );
+
+        recorded.observability.log("hello");
+        recorded.observability.debug("load", "debug", "details");
+
+        expect(recorded.logs).toEqual([
+            {module: "alpha", msg: "100 INFO [corr-123] hello"},
+            {module: "alpha", msg: "105 DEBUG [corr-123] [load] details"},
+        ]);
+        expect(recorded.debug).toEqual([
+            {module: "alpha", context: "load", level: "debug", msg: ["details"]},
         ]);
     });
 });

@@ -1,12 +1,14 @@
-import {Errors, ErrorsOr, isErrors} from "@laoban/errors/src/error.monad";
+import {Errors} from "@laoban/errors";
 import {safePrettyJson} from "@laoban/safe";
+import {defaultObservabilityTemplates, ObservabilityTemplates, renderObservabilityLine} from "./observability.log";
+import {Write} from "./write.with.flush";
 
 export type CorrelationId = string
 export type ModuleName = string | null | undefined
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
 
-export type Logger = (level: LogLevel, ...msg: unknown[]) => void
+export type Log = (...msg: unknown[]) => void
 
 export type Debug = (
     context: string,
@@ -24,16 +26,31 @@ export type TimeService = {
 
 export type DebugLevels = Record<string, LogLevel[]>
 
-export type Observability = Readonly<{
+export type ObservabilityContext = Readonly<{
     correlationId: CorrelationId
     module: ModuleName
-    logger: Logger
+    debugLevels: DebugLevels
+    timeService: TimeService
+    templates: Partial<ObservabilityTemplates>
+    dictionary: Record<string, unknown>
+}>
+
+export type ObservabilityTarget = Readonly<{
+    write: Write
+}>
+
+export type Observability = ObservabilityContext & Readonly<{
+    log: Log
     debug: Debug
     countMetric: CountMetric
     durationMetric: DurationMetric
-    debugLevels: DebugLevels
-    timeService: TimeService
-    withModule: (module: ModuleName) => Observability
+}>
+
+export type MakeObservabilityOptions = Readonly<{
+    context: ObservabilityContext
+    target: ObservabilityTarget
+    countMetric?: CountMetric
+    durationMetric?: DurationMetric
 }>
 
 export const shouldDebug = (
@@ -42,7 +59,7 @@ export const shouldDebug = (
     level: LogLevel
 ): boolean => (debugLevels[context] ?? []).includes(level)
 
-export const nullLogger: Logger = () => {
+export const nullLog: Log = () => {
 }
 export const nullCountMetric: CountMetric = () => {
 }
@@ -67,36 +84,70 @@ export const steppingTimeService = (
     }
 }
 
+export const defaultObservabilityContext = (
+    correlationId: CorrelationId = 'none',
+    debugLevels: DebugLevels = {},
+    module: ModuleName = undefined
+): ObservabilityContext => ({
+    correlationId,
+    module,
+    debugLevels,
+    timeService: realTimeService,
+    templates: defaultObservabilityTemplates,
+    dictionary: {},
+})
+
+export const makeObservability = ({
+                                      context,
+                                      target,
+                                      countMetric = nullCountMetric,
+                                      durationMetric = nullDurationMetric,
+                                  }: MakeObservabilityOptions): Observability => ({
+    ...context,
+    countMetric,
+    durationMetric,
+
+    log: (...msg: unknown[]) =>
+        target.write(renderObservabilityLine({
+            ...context,
+            template: "log",
+            level: "info",
+            msg,
+        })),
+
+    debug: (debugContext, level, ...msg) => {
+        if (!shouldDebug(context.debugLevels, debugContext, level)) return
+
+        return target.write(renderObservabilityLine({
+            ...context,
+            template: "debug",
+            context: debugContext,
+            level,
+            msg,
+        }))
+    },
+})
+
 export const nullObservability = (
     correlationId: CorrelationId = 'none'
-): Observability => {
-    const build = (module: ModuleName): Observability => ({
-        correlationId,
-        module,
-        logger: nullLogger,
-        debug: () => {
-        },
-        countMetric: nullCountMetric,
-        durationMetric: nullDurationMetric,
-        debugLevels: {},
-        timeService: realTimeService,
-        withModule: build
+): Observability =>
+    makeObservability({
+        context: defaultObservabilityContext(correlationId),
+        target: {write: nullLog},
     })
-    return build(undefined)
-}
 
-export function dumpErrors(o: Observability, e: Errors, level: LogLevel = 'error'): void {
+export function dumpErrors(o: Observability, e: Errors): void {
     function dumpOne<T>(title: string, array?: T[]) {
         if (array && array.length) {
-            o.logger(level, title)
+            o.log(title)
             array.forEach((item, index) => {
-                o.logger(level, `  ${index + 1}.`, safePrettyJson(item))
+                o.log(`  ${index + 1}.`, safePrettyJson(item))
             })
         }
     }
 
     if (e.reference)
-        o.logger(level, "Reference:", e.reference)
+        o.log("Reference:", e.reference)
     dumpOne("Errors:", e.errors)
     dumpOne("Warnings:", e.warnings)
 }

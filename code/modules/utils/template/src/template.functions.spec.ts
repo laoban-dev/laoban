@@ -1,5 +1,4 @@
 import {isValue} from "@laoban/errors";
-import {nullObservability} from "@laoban/observability";
 import {defaultTemplateFns} from "./template.functions";
 import {dollarsBracesVarDefn, type TemplateConfig,} from "./template.types";
 
@@ -23,7 +22,6 @@ const makeConfig = (
     variableDefn: dollarsBracesVarDefn,
     onMissing: "error",
     functions,
-    observability: nullObservability(),
 });
 
 function invokeFunction(

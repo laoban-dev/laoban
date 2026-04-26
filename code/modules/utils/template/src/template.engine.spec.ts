@@ -1,8 +1,11 @@
 import {isErrors, isValue} from "@laoban/errors";
-import {nullObservability} from "@laoban/observability";
 import {renderTemplate} from "./template.engine";
 import {defaultTemplateFns} from "./template.functions";
-import {dollarsBracesVarDefn, mustachesVarDefn, type TemplateConfig,} from "./template.types";
+import {
+    dollarsBracesVarDefn,
+    mustachesVarDefn,
+    type TemplateConfig,
+} from "./template.types";
 
 type Dictionary = Record<string, unknown>;
 
@@ -13,7 +16,6 @@ function makeConfig(
         variableDefn: dollarsBracesVarDefn,
         onMissing: "error",
         functions: defaultTemplateFns<Dictionary>(),
-        observability: nullObservability(),
         ...overrides,
     };
 }

@@ -1,182 +1,291 @@
-import {ErrorsOr, isErrors, isValue, valueOrThrow} from "@laoban/errors";
+import {errors, ErrorsOr, isErrors, value} from "@laoban/errors"
 import {
-    type CorrelationId,
-    countMetricFor,
-    type CountMetrics,
-    type DebugLevels,
-    durationMetricFor,
-    type DurationMetrics,
+    ChannelObservability,
+    channelObservability,
+    channelObservabilityWithModule,
+    ChannelsState,
+    ChannelTc,
+    CountMetric,
+    CreateOptions,
+    DebugLevels,
+    defaultObservabilityContext,
+    DurationMetric,
+    emptyChannelState,
+    ErrorsFn,
     LogLevel,
-    type ModuleName,
-    nullCountMetric,
-    nullDurationMetric,
-    nullObservability,
-    type Observability,
-    realTimeService,
-    shouldDebug,
-} from "@laoban/observability";
-import {safePrettyJson, safeString} from "@laoban/safe";
-import {renderTemplate} from "@laoban/template";
-import {fileLogSink, type NodeLogSink} from "./log.sinks";
+    Marker,
+    ModuleKey,
+    ModuleName,
+    Observability,
+    ObservabilityContext,
+    ObservabilityTemplates,
+    Write,
+} from "@laoban/observability"
+import {createReadStream, createWriteStream, promises as fs} from "node:fs"
+import {Readable, Writable} from "node:stream"
+import {safePrettyJson} from "@laoban/safe"
 
-export type SinkFactory = (fileName: string) => NodeLogSink;
+export type NodeReadChannel = Readable
+export type NodeWriteChannel = Writable
+export type NodeRef = string
 
-export type NodeObservabilityTemplates = Readonly<{
-    log: string;
-    debug: string;
-}>;
+export type NodeChannelTcOptions<Purpose> = Readonly<{
+    reference: (moduleName: ModuleName) => (purpose: Purpose) => NodeRef
+    keyFrom?: (moduleName: ModuleName) => ModuleKey
+}>
 
-export type NodeObservabilityConfig = Readonly<{
-    correlationId: CorrelationId;
-    debugLevels?: DebugLevels;
-    sinks?: (NodeLogSink | string)[];
-    sinkFactory?: SinkFactory;
-    dictionary?: Record<string, unknown>;
-    now?: () => Date;
-    templates?: Partial<NodeObservabilityTemplates>;
-    countMetrics?: CountMetrics;
-    durationMetrics?: DurationMetrics;
-}>;
+const nodeChannelError = (message: string, e?: unknown): ErrorsOr<never> =>
+    errors({
+        kind: "nodeChannel",
+        message,
+        context: {error: String(e)},
+    } as any)
 
-const defaultNow = () => new Date();
+export const nodeChannelTc = <Purpose>(
+    options: NodeChannelTcOptions<Purpose>
+): ChannelTc<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef> => ({
+    reference: options.reference,
 
-const defaultTemplates: NodeObservabilityTemplates = {
-    log: "${timestamp} ${level} [${correlationId}] ${message}",
-    debug: "${timestamp} ${level} [${correlationId}] [${context}] ${message}",
-};
+    keyFrom: options.keyFrom ?? (moduleName =>
+            String(moduleName ?? "<none>")
+    ),
 
-const renderTemplateSafely = (
-    template: string,
-    dictionary: Record<string, unknown>
-): string => {
-    const result = renderTemplate(template, dictionary, {
-        observability: nullObservability(),
-    });
-    return isValue(result) ? result.value : template;
-};
+    create: async (ref: NodeRef, {append}: CreateOptions): Promise<ErrorsOr<NodeWriteChannel>> => {
+        try {
+            const stat = await fs.stat(ref).catch(() => undefined)
+            if (stat?.isDirectory()) {
+                return nodeChannelError(`Failed to create write channel for ${ref}`, "ref is a directory")
+            }
 
-const renderOneMessage = (
-    message: unknown,
-    dictionary: Record<string, unknown>
-): string => {
-    if (typeof message !== "string") return safeString(message);
-    return renderTemplateSafely(message, dictionary);
-};
+            const channel = createWriteStream(ref, {
+                flags: append ? "a" : "w",
+                encoding: "utf8",
+            })
 
-const renderMessages = (
-    messages: unknown[],
-    dictionary: Record<string, unknown>
-): string =>
-    messages.map(msg => renderOneMessage(msg, dictionary)).join(" ");
+            await new Promise<void>((resolve, reject) => {
+                channel.once("open", () => resolve())
+                channel.once("error", reject)
+            })
 
-const normaliseSinks = (
-    sinks: (NodeLogSink | string)[],
-    sinkFactory: SinkFactory
-): NodeLogSink[] =>
-    sinks.map(sink => typeof sink === "string" ? sinkFactory(sink) : sink);
+            return value(channel)
+        } catch (e) {
+            return nodeChannelError(`Failed to create write channel for ${ref}`, e)
+        }
+    },
 
-const writeToSinks = (
-    sinks: NodeLogSink[],
-    module: ModuleName,
-    line: string
-): void => {
-    for (const sink of sinks) sink(module, line);
-};
+    write: async (channel: NodeWriteChannel, text: string): Promise<ErrorsOr<void>> => {
+        try {
+            await new Promise<void>((resolve, reject) => {
+                channel.write(text, "utf8", err => err ? reject(err) : resolve())
+            })
+            return value(undefined)
+        } catch (e) {
+            return nodeChannelError("Failed to write to channel", e)
+        }
+    },
 
-export function createNodeObservability<Context extends string>(): Observability;
-export function createNodeObservability<Context extends string>(
-    config: NodeObservabilityConfig
-): Observability;
-export function createNodeObservability<Context extends string>(
-    config?: NodeObservabilityConfig
-): Observability {
-    const {
-        correlationId = "NoCorrelationId",
-        debugLevels = {},
-        sinks = config?.sinks ?? [],
-        sinkFactory = fileLogSink,
-        dictionary = {},
-        now = defaultNow,
-        templates = {},
-        countMetrics,
-        durationMetrics,
-    } = config ?? {};
+    pipeTo: async (source: NodeReadChannel, target: NodeWriteChannel): Promise<ErrorsOr<void>> => {
+        try {
+            source.pipe(target, {end: false})
 
-    const effectiveTemplates: NodeObservabilityTemplates = {
-        ...defaultTemplates,
-        ...templates,
-    };
+            await new Promise<void>((resolve, reject) => {
+                source.once("end", resolve)
+                source.once("error", reject)
+                target.once("error", reject)
+            })
 
-    const effectiveSinks = normaliseSinks(sinks, sinkFactory);
+            return value(undefined)
+        } catch (e) {
+            return nodeChannelError("Failed to pipe readable channel to writable channel", e)
+        }
+    },
 
-    const build = (module: ModuleName): Observability => {
-        const baseDictionary: Record<string, unknown> = {
-            correlationId,
-            module,
-            ...dictionary,
-        };
+    closeReadable: async (channel: NodeReadChannel): Promise<ErrorsOr<void>> => {
+        try {
+            channel.destroy()
+            return value(undefined)
+        } catch (e) {
+            return nodeChannelError("Failed to close readable channel", e)
+        }
+    },
 
-        return {
-            correlationId,
-            module,
-            debugLevels,
-            countMetric: countMetrics ? countMetricFor(countMetrics) : nullCountMetric,
-            durationMetric: durationMetrics ? durationMetricFor(durationMetrics) : nullDurationMetric,
-            timeService: realTimeService,
+    closeWritable: async (channel: NodeWriteChannel): Promise<ErrorsOr<void>> => {
+        try {
+            await new Promise<void>((resolve, reject) => {
+                channel.once("error", reject)
+                channel.end(() => resolve())
+            })
+            return value(undefined)
+        } catch (e) {
+            return nodeChannelError("Failed to close writable channel", e)
+        }
+    },
 
-            logger: (level, ...msg) => {
-                const timestamp = now().toISOString();
-                const message = renderMessages(msg, baseDictionary);
-                const line = renderTemplateSafely(effectiveTemplates.log, {
-                    ...baseDictionary,
-                    timestamp,
-                    level: level.toUpperCase(),
-                    message,
-                });
-                writeToSinks(effectiveSinks, module, line);
-            },
+    sendFromRefToWrite: async (
+        ref: NodeRef,
+        from: Marker,
+        write: Write
+    ): Promise<ErrorsOr<Marker>> => {
+        try {
+            const stat = await fs.stat(ref)
+            const end = stat.size
 
-            debug: (context, level, ...msg) => {
-                if (!shouldDebug(debugLevels, context, level)) return;
+            if (end <= from) return value(end)
 
-                const timestamp = now().toISOString();
-                const message = renderMessages(msg, baseDictionary);
-                const line = renderTemplateSafely(effectiveTemplates.debug, {
-                    ...baseDictionary,
-                    timestamp,
-                    context,
-                    level: level.toUpperCase(),
-                    message,
-                });
-                writeToSinks(effectiveSinks, module, line);
-            },
+            await new Promise<void>((resolve, reject) => {
+                const read = createReadStream(ref, {
+                    start: from,
+                    end: end - 1,
+                    encoding: "utf8",
+                })
 
-            withModule: build,
-        };
-    };
+                read.on("data", chunk => write(String(chunk)))
+                read.once("error", reject)
+                read.once("end", resolve)
+            })
 
-    return build(undefined);
+            return value(end)
+        } catch (e: any) {
+            if (e?.code === "ENOENT") {
+                return nodeChannelError(`Failed to send durable content from ${ref}`, "ref does not exist")
+            }
+            return nodeChannelError(`Failed to send durable content from ${ref}`, e)
+        }
+    },
+})
+
+export type CreateNodeObservabilityConfig<Purpose> = Readonly<{
+    correlationId?: string
+    module?: ModuleName
+    debugLevels?: DebugLevels
+    timeService?: ObservabilityContext["timeService"]
+    templates?: Partial<ObservabilityTemplates>
+    dictionary?: Record<string, unknown>
+
+    /**
+     * Root writable channel for this observability.
+     *
+     * Usually process.stdout, but injected so tests and other runtimes can
+     * provide their own writable stream.
+     */
+    channel: NodeWriteChannel
+
+    /**
+     * The durable purposes used for module-aware observability.
+     *
+     * The Node layer does not decide what purposes exist. Typical callers may
+     * choose values like ".log" and ".session".
+     */
+    purposes: Purpose[]
+
+    /**
+     * Runtime-specific durable reference mapping.
+     *
+     * This decides where module/purpose output is written. Node only owns
+     * the stream/file mechanics; the caller owns the logical purposes.
+     */
+    reference: (moduleName: ModuleName) => (purpose: Purpose) => NodeRef
+
+    keyFrom?: (moduleName: ModuleName) => ModuleKey
+    onError: ErrorsFn
+    countMetric?: CountMetric
+    durationMetric?: DurationMetric
+}>
+
+export type CreatedNodeObservability<Purpose> = Readonly<{
+    observability: Observability
+    channelsState: ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef>
+    tc: ChannelTc<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef>
+    withModule: (module: ModuleName) => ChannelObservability
+}>
+
+export const createNodeObservability = <Purpose>({
+                                                     correlationId = "NoCorrelationId",
+                                                     module = undefined,
+                                                     debugLevels = {},
+                                                     timeService,
+                                                     templates,
+                                                     dictionary = {},
+                                                     channel,
+                                                     purposes,
+                                                     reference,
+                                                     keyFrom,
+                                                     onError,
+                                                     countMetric,
+                                                     durationMetric,
+                                                 }: CreateNodeObservabilityConfig<Purpose>): CreatedNodeObservability<Purpose> => {
+    const defaultContext = defaultObservabilityContext(
+        correlationId,
+        debugLevels,
+        module,
+    )
+
+    const context: ObservabilityContext = {
+        ...defaultContext,
+        timeService: timeService ?? defaultContext.timeService,
+        templates: {
+            ...defaultContext.templates,
+            ...(templates ?? {}),
+        },
+        dictionary,
+    }
+
+    const tc = nodeChannelTc<Purpose>({
+        reference,
+        keyFrom,
+    })
+
+    const channelsState = emptyChannelState(tc, purposes, onError)
+
+    return {
+        observability: channelObservability(
+            context,
+            tc,
+            channel,
+            onError,
+            countMetric,
+            durationMetric,
+        ),
+        channelsState,
+        tc,
+        withModule: module =>
+            channelObservabilityWithModule(
+                {
+                    ...context,
+                    module,
+                },
+                channelsState,
+                countMetric,
+                durationMetric,
+            ),
+    }
 }
 
 
-export function dumpAndExitIfErrors<T>(o: Observability, e: ErrorsOr<T>, level: LogLevel = 'error'): T {
+export function dumpAndExitIfErrors<T>(
+    o: Observability,
+    e: ErrorsOr<T>,
+    level: LogLevel = "error"
+): T {
     function dumpOne<T>(title: string, array?: T[]) {
         if (array && array.length) {
-            o.logger(level, title)
+            o.log(level, title)
             array.forEach((item, index) => {
-                o.logger(level, `  ${index + 1}.`, safePrettyJson(item))
+                o.log(level, `  ${index + 1}.`, safePrettyJson(item))
             })
         }
     }
 
     if (isErrors(e)) {
         if (e.reference)
-            o.logger(level, "Reference:", e.reference)
+            o.log(level, "Reference:", e.reference)
         dumpOne("Errors:", e.errors)
         dumpOne("Warnings:", e.warnings)
-        process.exit(1);
-    } else {
-        if (e.warnings) dumpOne("Warnings:", e.warnings)
-        return e.value
+        process.exit(1)
     }
+
+    if (e.warnings)
+        dumpOne("Warnings:", e.warnings)
+
+    return e.value
 }

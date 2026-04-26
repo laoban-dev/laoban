@@ -1,4 +1,4 @@
-import { errors, isErrors, value, type ErrorsOr } from "@laoban/errors";
+import {errors, isErrors, value, type ErrorsOr} from "@laoban/errors";
 import {
     makeTemplateIssue,
     type TemplateConfig,
@@ -253,8 +253,6 @@ function resolveMissingValue<T>(
         },
     );
 
-    config.observability.countMetric("template.missingValue");
-
     switch (config.onMissing) {
         case "error":
             return errors(issue);
@@ -280,7 +278,6 @@ function applyFunctionPipeline<T>(
         const fn = config.functions[functionCall.functionName];
 
         if (!fn) {
-            config.observability.countMetric("template.unknownFunction");
             const issue = makeTemplateIssue(
                 "unknownFunction",
                 `Unknown template function ${functionCall.functionName}`,
@@ -293,17 +290,6 @@ function applyFunctionPipeline<T>(
             return warnings ? errors(issue, undefined, warnings) : errors(issue);
         }
 
-        const start = Date.now();
-        config.observability.debug(
-            "template.function",
-            "debug",
-            "Applying template function",
-            functionCall.functionName,
-            "to",
-            parsedExpression.rawExpression,
-        );
-        config.observability.countMetric("template.function.call");
-
         const result = fn({
             value: currentValue,
             dictionary,
@@ -313,11 +299,7 @@ function applyFunctionPipeline<T>(
             config,
         });
 
-        config.observability.durationMetric("template.function.durationMs", Date.now() - start);
-
         if (isErrors(result)) {
-            config.observability.countMetric("template.function.failed");
-
             const converted = result.errors.map((issue) =>
                 issue.kind
                     ? issue
@@ -347,17 +329,8 @@ export function replaceTemplateToken<T>(
 ): ErrorsOr<string, TemplateIssue> {
     const expression = config.variableDefn.removeStartEnd(rawToken).trim();
 
-    config.observability.debug("template.parse", "debug", "Rendering template token", rawToken);
-
     const parsed = parseExpression(expression);
     if (isErrors(parsed)) return parsed;
-
-    config.observability.debug(
-        "template.resolve",
-        "debug",
-        "Resolving template path",
-        parsed.value.pathSegments.join("."),
-    );
 
     const resolved = lookupPath(dictionary, parsed.value.pathSegments);
 

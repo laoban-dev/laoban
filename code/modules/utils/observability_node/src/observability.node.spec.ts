@@ -1,382 +1,366 @@
-import { createNodeObservability, type SinkFactory } from './observability.node';
-import type { CountMetrics, DurationMetrics } from '@laoban/observability';
-import type { NodeLogSink } from './log.sinks';
+import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises"
+import {tmpdir} from "node:os"
+import * as path from "node:path"
+import {Readable, Writable} from "node:stream"
+import {errorsOrThrow, valueOrThrow} from "@laoban/errors"
+import {
+    createNodeObservability,
+    nodeChannelTc,
+    NodeReadChannel,
+    NodeRef,
+    NodeWriteChannel,
+} from "./observability.node"
+import {fixedTimeService, ModuleName} from "@laoban/observability"
 
-type TestContext = 'exec' | 'config';
+type Purpose = ".log" | ".session"
 
-describe('createNodeObservability', () => {
-    const fixedDate = new Date('2026-04-18T12:34:56.789Z');
-    const now = () => fixedDate;
+class RecordingWritable extends Writable {
+    public writes: string[] = []
 
-    it('can be created with no config', () => {
-        const obs = createNodeObservability<TestContext>();
+    _write(chunk: any, _encoding: BufferEncoding, callback: (error?: Error | null) => void) {
+        this.writes.push(String(chunk))
+        callback()
+    }
+}
 
-        expect(obs.correlationId).toBe('NoCorrelationId');
-        expect(obs.module).toBeUndefined();
-        expect(obs.debugLevels).toEqual({});
-        expect(() => obs.logger('info', 'hello')).not.toThrow();
-        expect(() => obs.debug('exec', 'debug', 'hello')).not.toThrow();
-        expect(() => obs.countMetric('templates.rendered')).not.toThrow();
-        expect(() => obs.durationMetric('compile', 12)).not.toThrow();
-    });
+describe("nodeChannelTc", () => {
+    let dir: string
 
-    it('creates an observability with the supplied correlation id', () => {
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            now,
-        });
+    beforeEach(async () => {
+        dir = await mkdtemp(path.join(tmpdir(), "laoban-node-channel-"))
+    })
 
-        expect(obs.correlationId).toBe('corr-123');
-        expect(obs.module).toBeUndefined();
-    });
+    afterEach(async () => {
+        await rm(dir, {recursive: true, force: true})
+    })
 
-    it('defaults debugLevels to an empty object', () => {
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            now,
-        });
+    const makeTc = () =>
+        nodeChannelTc<Purpose>({
+            keyFrom: (moduleName: ModuleName) => String(moduleName ?? "<none>"),
+            reference: (moduleName: ModuleName) => (purpose: Purpose): NodeRef =>
+                path.join(dir, `${String(moduleName ?? "<none>")}${purpose}`),
+        })
 
-        expect(obs.debugLevels).toEqual({});
-    });
+    it("maps module and purpose to durable refs", () => {
+        const tc = makeTc()
 
-    it('writes logger output to all direct sinks', () => {
-        const sink1 = jest.fn<void, [string | null | undefined, string]>();
-        const sink2 = jest.fn<void, [string | null | undefined, string]>();
+        expect(tc.keyFrom("alpha")).toBe("alpha")
+        expect(tc.keyFrom(undefined)).toBe("<none>")
+        expect(tc.reference("alpha")(".log")).toBe(path.join(dir, "alpha.log"))
+        expect(tc.reference(undefined)(".session")).toBe(path.join(dir, "<none>.session"))
+    })
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink1, sink2],
-            now,
-        });
+    it("creates a fresh writable channel when append is false", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
 
-        obs.logger('info', 'hello');
+        await writeFile(ref, "old")
 
-        const expected = '2026-04-18T12:34:56.789Z INFO [corr-123] hello';
-        expect(sink1).toHaveBeenCalledWith(undefined, expected);
-        expect(sink2).toHaveBeenCalledWith(undefined, expected);
-    });
+        const channel = valueOrThrow(
+            await tc.create(ref, {append: false})
+        )
 
-    it('uses the sink factory for string sinks', () => {
-        const producedSink = jest.fn<void, [string | null | undefined, string]>();
-        const sinkFactory = jest.fn<NodeLogSink, [string]>() as jest.MockedFunction<SinkFactory>;
-        sinkFactory.mockReturnValue(producedSink);
+        expect(valueOrThrow(await tc.write(channel, "new"))).toBeUndefined()
+        expect(valueOrThrow(await tc.closeWritable(channel))).toBeUndefined()
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: ['one.log', 'two.log'],
-            sinkFactory,
-            now,
-        });
+        await expect(readFile(ref, "utf8")).resolves.toBe("new")
+    })
 
-        obs.logger('info', 'hello');
+    it("creates an append writable channel when append is true", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
 
-        expect(sinkFactory).toHaveBeenCalledTimes(2);
-        expect(sinkFactory).toHaveBeenNthCalledWith(1, 'one.log');
-        expect(sinkFactory).toHaveBeenNthCalledWith(2, 'two.log');
-        expect(producedSink).toHaveBeenCalledTimes(2);
-        expect(producedSink).toHaveBeenCalledWith(undefined, '2026-04-18T12:34:56.789Z INFO [corr-123] hello');
-    });
+        await writeFile(ref, "old")
 
-    it('uses direct sinks unchanged and only applies the sink factory to string sinks', () => {
-        const directSink = jest.fn<void, [string | null | undefined, string]>();
-        const producedSink = jest.fn<void, [string | null | undefined, string]>();
-        const sinkFactory = jest.fn<NodeLogSink, [string]>() as jest.MockedFunction<SinkFactory>;
-        sinkFactory.mockReturnValue(producedSink);
+        const channel = valueOrThrow(
+            await tc.create(ref, {append: true})
+        )
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [directSink, 'one.log'],
-            sinkFactory,
-            now,
-        });
+        expect(valueOrThrow(await tc.write(channel, "new"))).toBeUndefined()
+        expect(valueOrThrow(await tc.closeWritable(channel))).toBeUndefined()
 
-        obs.logger('info', 'hello');
+        await expect(readFile(ref, "utf8")).resolves.toBe("oldnew")
+    })
 
-        expect(sinkFactory).toHaveBeenCalledTimes(1);
-        expect(sinkFactory).toHaveBeenCalledWith('one.log');
-        expect(directSink).toHaveBeenCalledWith(undefined, '2026-04-18T12:34:56.789Z INFO [corr-123] hello');
-        expect(producedSink).toHaveBeenCalledWith(undefined, '2026-04-18T12:34:56.789Z INFO [corr-123] hello');
-    });
+    it("writes multiple strings to a writable channel in order", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
 
-    it('does nothing safely when there are no sinks', () => {
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            now,
-        });
+        const channel = valueOrThrow(
+            await tc.create(ref, {append: false})
+        )
 
-        expect(() => obs.logger('info', 'hello')).not.toThrow();
-        expect(() => obs.debug('exec', 'debug', 'hello')).not.toThrow();
-    });
+        expect(valueOrThrow(await tc.write(channel, "one"))).toBeUndefined()
+        expect(valueOrThrow(await tc.write(channel, "two"))).toBeUndefined()
+        expect(valueOrThrow(await tc.closeWritable(channel))).toBeUndefined()
 
-    it('renders string messages using the dictionary', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
+        await expect(readFile(ref, "utf8")).resolves.toBe("onetwo")
+    })
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            dictionary: { moduleName: 'package-a' },
-            now,
-        });
+    it("returns an error when writing to a closed writable channel", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
 
-        obs.logger('info', 'compiling ${moduleName}');
+        const channel = valueOrThrow(
+            await tc.create(ref, {append: false})
+        )
 
-        expect(sink).toHaveBeenCalledWith(
-            undefined,
-            '2026-04-18T12:34:56.789Z INFO [corr-123] compiling package-a'
-        );
-    });
+        expect(valueOrThrow(await tc.closeWritable(channel))).toBeUndefined()
 
-    it('makes correlationId available in message templating', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
+        const result = await tc.write(channel, "after-close")
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now,
-        });
-
-        obs.logger('info', 'correlation=${correlationId}');
-
-        expect(sink).toHaveBeenCalledWith(
-            undefined,
-            '2026-04-18T12:34:56.789Z INFO [corr-123] correlation=corr-123'
-        );
-    });
-
-    it('safe-strings non-string message parts and joins them with spaces', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
-
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now,
-        });
-
-        obs.logger('warn', 'value', 42, false, { a: 1 });
-
-        expect(sink).toHaveBeenCalledWith(
-            undefined,
-            '2026-04-18T12:34:56.789Z WARN [corr-123] value 42 false {"a":1}'
-        );
-    });
-
-    it('uses the default log template when no custom template is supplied', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
-
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now,
-        });
-
-        obs.logger('error', 'boom');
-
-        expect(sink).toHaveBeenCalledWith(
-            undefined,
-            '2026-04-18T12:34:56.789Z ERROR [corr-123] boom'
-        );
-    });
-
-    it('uses a custom log template when supplied', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
-
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now,
-            templates: {
-                log: '[${level}] ${message} (${correlationId}) @ ${timestamp}',
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "nodeChannel",
+                message: "Failed to write to channel",
+                context: {error: "Error [ERR_STREAM_WRITE_AFTER_END]: write after end"},
             },
-        });
+        ])
+    })
 
-        obs.logger('info', 'hello');
+    it("pipes a readable channel into a writable channel without closing the writable", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
+        const source = Readable.from(["one", "two"]) as NodeReadChannel
 
-        expect(sink).toHaveBeenCalledWith(
-            undefined,
-            '[INFO] hello (corr-123) @ 2026-04-18T12:34:56.789Z'
-        );
-    });
+        const target = valueOrThrow(
+            await tc.create(ref, {append: false})
+        )
 
-    it('does not emit debug output when the level is not enabled for the context', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
+        expect(valueOrThrow(await tc.pipeTo(source, target))).toBeUndefined()
+        expect(valueOrThrow(await tc.write(target, "three"))).toBeUndefined()
+        expect(valueOrThrow(await tc.closeWritable(target))).toBeUndefined()
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now,
-            debugLevels: {
-                exec: ['info'],
+        await expect(readFile(ref, "utf8")).resolves.toBe("onetwothree")
+    })
+
+    it("closes a readable channel", async () => {
+        const tc = makeTc()
+
+        const source = new Readable({
+            read() {
+                this.push("hello")
             },
-        });
+        }) as NodeReadChannel
 
-        obs.debug('exec', 'debug', 'hidden');
+        expect(source.destroyed).toBe(false)
 
-        expect(sink).not.toHaveBeenCalled();
-    });
+        expect(valueOrThrow(await tc.closeReadable(source))).toBeUndefined()
 
-    it('emits debug output when the level is enabled for the context', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
+        expect(source.destroyed).toBe(true)
+    })
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now,
-            debugLevels: {
-                exec: ['debug'],
+    it("sends durable content from marker to Write and returns the new marker", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
+        const writes: string[] = []
+
+        await writeFile(ref, "hello world")
+
+        const result = await tc.sendFromRefToWrite(ref, 6, text => writes.push(text))
+
+        expect(valueOrThrow(result)).toBe(Buffer.byteLength("hello world", "utf8"))
+        expect(writes.join("")).toBe("world")
+    })
+
+    it("sends nothing and returns current marker when from is at the durable end", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
+        const writes: string[] = []
+
+        await writeFile(ref, "hello")
+
+        const marker = Buffer.byteLength("hello", "utf8")
+        const result = await tc.sendFromRefToWrite(ref, marker, text => writes.push(text))
+
+        expect(valueOrThrow(result)).toBe(marker)
+        expect(writes).toEqual([])
+    })
+
+    it("uses byte markers for utf8 content", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
+        const writes: string[] = []
+        const prefix = "你好"
+        const suffix = "world"
+
+        await writeFile(ref, `${prefix}${suffix}`, "utf8")
+
+        const from = Buffer.byteLength(prefix, "utf8")
+        const result = await tc.sendFromRefToWrite(ref, from, text => writes.push(text))
+
+        expect(valueOrThrow(result)).toBe(Buffer.byteLength(`${prefix}${suffix}`, "utf8"))
+        expect(writes.join("")).toBe(suffix)
+    })
+
+    it("returns an error when sendFromRefToWrite is given a missing ref", async () => {
+        const tc = makeTc()
+        const ref = path.join(dir, "missing.log")
+
+        const result = await tc.sendFromRefToWrite(ref, 0, jest.fn())
+
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "nodeChannel",
+                message: `Failed to send durable content from ${ref}`,
+                context: {
+                    error: "ref does not exist",
+                },
             },
-        });
+        ])
+    })
 
-        obs.debug('exec', 'debug', 'visible');
+    it("returns an error when create is given a directory ref", async () => {
+        const tc = makeTc()
 
-        expect(sink).toHaveBeenCalledWith(
-            undefined,
-            '2026-04-18T12:34:56.789Z DEBUG [corr-123] [exec] visible'
-        );
-    });
+        const result = await tc.create(dir, {append: false})
 
-    it('uses a custom debug template when supplied', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
-
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now,
-            debugLevels: {
-                exec: ['debug'],
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "nodeChannel",
+                message: `Failed to create write channel for ${dir}`,
+                context: {
+                    error: "ref is a directory",
+                },
             },
-            templates: {
-                debug: 'ctx=${context} level=${level} msg=${message}',
+        ])
+    })
+
+    it("returns an error when create cannot open because the parent directory is missing", async () => {
+        const tc = makeTc()
+        const ref = path.join(dir, "missing-parent", "alpha.log")
+
+        const result = await tc.create(ref, {append: false})
+
+        expect(errorsOrThrow(result)).toEqual([
+            {
+                kind: "nodeChannel",
+                message: `Failed to create write channel for ${ref}`,
+                context: {
+                    error: `Error: ENOENT: no such file or directory, open '${ref}'`,
+                },
             },
-        });
+        ])
+    })
+})
 
-        obs.debug('exec', 'debug', 'hello');
+describe("createNodeObservability", () => {
+    let dir: string
 
-        expect(sink).toHaveBeenCalledWith(
-            undefined,
-            'ctx=exec level=DEBUG msg=hello'
-        );
-    });
+    beforeEach(async () => {
+        dir = await mkdtemp(path.join(tmpdir(), "laoban-node-observability-"))
+    })
 
-    it('uses injected countMetrics when provided', () => {
-        const counts: CountMetrics = {};
+    afterEach(async () => {
+        await rm(dir, {recursive: true, force: true})
+    })
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            now,
-            countMetrics: counts,
-        });
+    const reference = (moduleName: ModuleName) => (purpose: Purpose): NodeRef =>
+        path.join(dir, `${String(moduleName ?? "<none>")}${purpose}`)
 
-        obs.countMetric('templates.rendered');
-        obs.countMetric('templates.rendered');
-        obs.countMetric('files.generated');
+    it("creates a root observability writing to the supplied channel", async () => {
+        const channel = new RecordingWritable()
+        const onError = jest.fn()
 
-        expect(counts).toEqual({
-            'templates.rendered': 2,
-            'files.generated': 1,
-        });
-    });
+        const created = createNodeObservability<Purpose>({
+            correlationId: "corr-123",
+            module: undefined,
+            timeService: fixedTimeService(100),
+            channel,
+            purposes: [".log", ".session"],
+            reference,
+            onError,
+        })
 
-    it('uses injected durationMetrics when provided', () => {
-        const durations: DurationMetrics = {};
+        await (created.observability.log("root", "started") as unknown as Promise<void>)
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            now,
-            durationMetrics: durations,
-        });
+        expect(channel.writes).toEqual([
+            "100 INFO [corr-123] root started",
+        ])
+        expect(created.channelsState.purposes).toEqual([".log", ".session"])
+        expect(created.tc.reference("alpha")(".log")).toBe(path.join(dir, "alpha.log"))
+        expect(onError).not.toHaveBeenCalled()
+    })
 
-        obs.durationMetric('compile', 10);
-        obs.durationMetric('compile', 15);
-        obs.durationMetric('publish', 7);
+    it("creates module observability sharing the same channel state", async () => {
+        const channel = new RecordingWritable()
+        const onError = jest.fn()
 
-        expect(durations).toEqual({
-            compile: {
-                count: 2,
-                totalMs: 25,
-            },
-            publish: {
-                count: 1,
-                totalMs: 7,
-            },
-        });
-    });
+        const created = createNodeObservability<Purpose>({
+            correlationId: "corr-123",
+            timeService: fixedTimeService(100),
+            channel,
+            purposes: [".log", ".session"],
+            reference,
+            onError,
+        })
 
-    it('uses null countMetric when countMetrics are not supplied', () => {
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            now,
-        });
+        const alpha = created.withModule("alpha")
 
-        expect(() => obs.countMetric('templates.rendered')).not.toThrow();
-    });
+        await (alpha.log("module", "started") as unknown as Promise<void>)
 
-    it('uses null durationMetric when durationMetrics are not supplied', () => {
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            now,
-        });
+        expect(Object.keys(created.channelsState.state)).toEqual(["alpha"])
+        expect(created.channelsState.state.alpha.refs).toEqual([
+            path.join(dir, "alpha.log"),
+            path.join(dir, "alpha.session"),
+        ])
 
-        expect(() => obs.durationMetric('compile', 12)).not.toThrow();
-    });
+        expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe("100 INFO [corr-123] module started")
+        expect(await readFile(path.join(dir, "alpha.session"), "utf8")).toBe("100 INFO [corr-123] module started")
+        expect(channel.writes).toEqual([])
+    })
 
-    it('keeps logger and debug separate while sharing the same sinks and base dictionary', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
+    it("flushes module observability to an injected Write", async () => {
+        const channel = new RecordingWritable()
+        const onError = jest.fn()
+        const out: string[] = []
 
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now,
-            dictionary: { moduleName: 'package-a' },
-            debugLevels: {
-                exec: ['debug'],
-            },
-        });
+        const created = createNodeObservability<Purpose>({
+            correlationId: "corr-123",
+            timeService: fixedTimeService(100),
+            channel,
+            purposes: [".log", ".session"],
+            reference,
+            onError,
+        })
 
-        obs.logger('info', 'compile ${moduleName}');
-        obs.debug('exec', 'debug', 'running ${moduleName}');
+        const alpha = created.withModule("alpha")
 
-        expect(sink.mock.calls).toEqual([
-            [undefined, '2026-04-18T12:34:56.789Z INFO [corr-123] compile package-a'],
-            [undefined, '2026-04-18T12:34:56.789Z DEBUG [corr-123] [exec] running package-a'],
-        ]);
-    });
+        await (alpha.log("one") as unknown as Promise<void>)
+        await alpha.flush(text => out.push(text))
 
-    it('uses NoCorrelationId in output when created with no config and a sink is provided later via explicit config path', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'NoCorrelationId',
-            sinks: [sink],
-            now
-        });
+        expect(out.join("")).toBe("100 INFO [corr-123] one")
+        expect(created.channelsState.state.alpha.lastSize).toBe(
+            Buffer.byteLength("100 INFO [corr-123] one", "utf8")
+        )
+        expect(created.channelsState.state.alpha.channels).toBeUndefined()
+    })
 
-        obs.logger('info', 'hello');
+    it("uses debug levels for root and module observability", async () => {
+        const channel = new RecordingWritable()
+        const onError = jest.fn()
 
-        expect(sink).toHaveBeenCalledWith(
-            undefined,
-            '2026-04-18T12:34:56.789Z INFO [NoCorrelationId] hello'
-        );
-    });
+        const created = createNodeObservability<Purpose>({
+            correlationId: "corr-123",
+            timeService: fixedTimeService(100),
+            debugLevels: {exec: ["debug"]},
+            channel,
+            purposes: [".log"],
+            reference,
+            onError,
+        })
 
-    it('withModule returns a new observability for that module', () => {
-        const sink = jest.fn<void, [string | null | undefined, string]>();
-        const obs = createNodeObservability<TestContext>({
-            correlationId: 'corr-123',
-            sinks: [sink],
-            now
-        });
+        await (created.observability.debug("exec", "debug", "root debug") as unknown as Promise<void>)
+        await (created.observability.debug("exec", "info", "hidden") as unknown as Promise<void> | undefined)
 
-        const moduleObs = obs.withModule('alpha');
+        const alpha = created.withModule("alpha")
+        await (alpha.debug("exec", "debug", "module debug") as unknown as Promise<void>)
 
-        expect(moduleObs).not.toBe(obs);
-        expect(moduleObs.correlationId).toBe('corr-123');
-        expect(moduleObs.module).toBe('alpha');
-        expect(obs.module).toBeUndefined();
-
-        moduleObs.logger('info', 'hello');
-
-        expect(sink).toHaveBeenCalledWith(
-            'alpha',
-            '2026-04-18T12:34:56.789Z INFO [corr-123] hello'
-        );
-    });
-});
+        expect(channel.writes).toEqual([
+            "100 DEBUG [corr-123] [exec] root debug",
+        ])
+        expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe(
+            "100 DEBUG [corr-123] [exec] module debug"
+        )
+    })
+})
