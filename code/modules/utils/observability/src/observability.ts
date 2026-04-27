@@ -108,23 +108,23 @@ export const makeObservability = ({
     durationMetric,
 
     log: (...msg: unknown[]) =>
-        target.write(renderObservabilityLine({
+        target.write(`${renderObservabilityLine({
             ...context,
             template: "log",
             level: "info",
             msg,
-        })),
+        })}\n`),
 
     debug: (debugContext, level, ...msg) => {
         if (!shouldDebug(context.debugLevels, debugContext, level)) return
 
-        return target.write(renderObservabilityLine({
+        return target.write(`${renderObservabilityLine({
             ...context,
             template: "debug",
             context: debugContext,
             level,
             msg,
-        }))
+        })}\n`)
     },
 })
 

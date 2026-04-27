@@ -15,7 +15,7 @@ export type LaobanDebugContext = "cli";
 
 export type LoadConfigAndPackagesFn = (context: LaobanConfigCliContext) => Promise<ErrorsOr<LoadedLaobanProject>>
 
-export type LaobanPackageCliContext = LaobanConfigCliContext & {
+export type LaobanPackageCliContext = LaobanConfigCliContext &  {
     loadConfigAndPackagesFn: LoadConfigAndPackagesFn
 }
 

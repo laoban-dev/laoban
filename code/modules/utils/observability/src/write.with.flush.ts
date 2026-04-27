@@ -21,13 +21,71 @@ export type ModuleKey = string
  */
 export type Marker = number
 
+export type AsyncWriteResult = void | Promise<void>
+
 /**
  * A simple text sink.
  *
  * This is used when data read from a durable reference needs to be projected
  * somewhere else, for example to standard output during a flush.
+ *
+ * The return type is intentionally `void | Promise<void>`. Normal production
+ * logging callers can ignore the result, while observability can track the
+ * returned Promise and wait for outstanding writes before flushing.
  */
-export type Write = (msg: string) => void
+export type Write = (msg: string) => AsyncWriteResult
+
+/**
+ * Mutable state for fire-and-forget async writes.
+ *
+ * Log/debug calls should not normally await writes. This state records the
+ * outstanding write promises so a later synchronization point, such as flush,
+ * can wait until all already-started writes have settled.
+ */
+export type AsyncWritesState = {
+    asyncWrites: Set<Promise<void>>
+}
+
+export const emptyAsyncWritesState = (): AsyncWritesState => ({
+    asyncWrites: new Set()
+})
+
+const isPromiseLike = (value: unknown): value is Promise<void> =>
+    typeof value === "object" &&
+    value !== null &&
+    "then" in value &&
+    typeof (value as {then?: unknown}).then === "function"
+
+export const trackAsyncWrite = <S extends AsyncWritesState>(
+    state: S,
+    result: AsyncWriteResult
+): AsyncWriteResult => {
+    if (!isPromiseLike(result)) return result
+
+    state.asyncWrites.add(result)
+
+    result.then(
+        () => state.asyncWrites.delete(result),
+        () => state.asyncWrites.delete(result)
+    )
+
+    return result
+}
+
+export const waitForAsyncWrites = async <S extends AsyncWritesState>(
+    state: S
+): Promise<void> => {
+    while (state.asyncWrites.size > 0) {
+        await Promise.all(
+            [...state.asyncWrites].map(p =>
+                p.then(
+                    () => undefined,
+                    () => undefined
+                )
+            )
+        )
+    }
+}
 
 /**
  * Callback for channel-level or asynchronous write/flush errors.
@@ -100,17 +158,6 @@ export type ChannelTc<Purpose, ReadChannel, WriteChannel, Ref> = {
      */
     write: (channel: WriteChannel, text: string) => Promise<ErrorsOr<void>>
 
-    /**
-     * Pipe all data from a readable channel into an open writable channel.
-     *
-     * This transfers data only. The caller remains responsible for lifecycle:
-     * closeReadable for the source if the caller owns it, and closeWritable for
-     * the target when the durable write boundary is complete.
-     *
-     * This is used for streamed process output, for example wiring stdout from
-     * a child process into durable log/session append channels.
-     */
-    pipeTo: (source: ReadChannel, target: WriteChannel) => Promise<ErrorsOr<void>>
 
     /**
      * Close/release a readable channel.
@@ -181,7 +228,8 @@ export type ChannelState<WriteChannel, Ref> = {
     channels?: WriteChannel[]
 }
 
-export type ChannelsState<Purpose, ReadChannel, WriteChannel, Ref> = {
+export type ChannelsState<Purpose, ReadChannel, WriteChannel, Ref> =
+    AsyncWritesState & {
     tc: ChannelTc<Purpose, ReadChannel, WriteChannel, Ref>
     purposes: Purpose[]
     state: Record<ModuleKey, ChannelState<WriteChannel, Ref>>
@@ -200,7 +248,7 @@ export function emptyChannelState<Purpose, ReadChannel, WriteChannel, Ref>(
     purposes: Purpose[],
     onError: ErrorsFn
 ): ChannelsState<Purpose, ReadChannel, WriteChannel, Ref> {
-    return {tc, purposes, state: {}, onError}
+    return {tc, purposes, state: {}, onError, asyncWrites: new Set()}
 }
 
 export async function getOrCreateChannels<Purpose, ReadChannel, WriteChannel, Ref>(
@@ -254,37 +302,29 @@ export const asyncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
  * This deliberately returns the underlying Promise at runtime even though
  * Write is typed as void. Production callers can ignore it, while tests can
  * await it deterministically.
+ *
+ * The Promise is also tracked in channelState.asyncWrites so flush can wait
+ * for already-started writes before closing/projecting durable channels.
  */
 export const syncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>
 ) =>
     (moduleName: ModuleName,): Write =>
-        (text: string,) => asyncWriteTo(channelState)(moduleName)(text)
+        (text: string,) =>
+            trackAsyncWrite(
+                channelState,
+                asyncWriteTo(channelState)(moduleName)(text)
+            )
 
-/**
- * Pipe a readable channel into every currently-open durable writable channel
- * for the supplied module.
- *
- * This is intended for process output streams. The readable source is supplied
- * by the runtime, while the writable targets are created from this module's
- * configured purposes.
- *
- * The helper closes the readable channel after all pipe operations have
- * completed successfully. It does not close the writable channels; they remain
- * open until flush closes them.
- */
-export const pipeTo = <Purpose, ReadChannel, WriteChannel, Ref>(
-    channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>
-) =>
-    async (moduleName: ModuleName, source: ReadChannel): Promise<ErrorsOr<unknown>> =>
-        flatMapErrorsOrK(await getOrCreateChannels(channelState, moduleName), async channels =>
-            flatMapErrorsOrK(await mapArrayK(channels, channel =>
-                    channelState.tc.pipeTo(source, channel)),
-                async () =>
-                    mapErrorsOr(await channelState.tc.closeReadable(source), () => undefined)))
+
 
 /**
  * Flush all module streams that currently have open append channels.
+ *
+ * Before touching the durable channels, flush waits for all tracked async
+ * writes that have already been started. This preserves the normal
+ * fire-and-forget logging behaviour while ensuring that flush does not close
+ * or project a file before pending writes have reached it.
  *
  * For each touched module:
  * - close all mirrored append channels
@@ -297,10 +337,13 @@ export const pipeTo = <Purpose, ReadChannel, WriteChannel, Ref>(
  * each durable target up to date through the write path.
  */
 export const flush = <Purpose, ReadChannel, WriteChannel, Ref>(
-    {tc, state, purposes}: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
+    channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
     async (write: Write): Promise<ErrorsOr<unknown>> => {
+        const {tc, state, purposes} = channelState
         if (purposes.length === 0) return value([])
+
+        await waitForAsyncWrites(channelState)
 
         const touchedStates = Object.values(state).filter(s => s.channels !== undefined)
 

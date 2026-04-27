@@ -22,6 +22,7 @@ import {
     Write,
 } from "@laoban/observability"
 import {createReadStream, createWriteStream, promises as fs} from "node:fs"
+import * as path from "node:path"
 import {Readable, Writable} from "node:stream"
 import {safePrettyJson} from "@laoban/safe"
 
@@ -41,6 +42,45 @@ const nodeChannelError = (message: string, e?: unknown): ErrorsOr<never> =>
         context: {error: String(e)},
     } as any)
 
+const isPromiseLike = (value: unknown): value is Promise<void> =>
+    typeof value === "object" &&
+    value !== null &&
+    "then" in value &&
+    typeof (value as {then?: unknown}).then === "function"
+
+const awaitWriteResult = async (result: void | Promise<void>): Promise<void> => {
+    if (isPromiseLike(result)) await result
+}
+
+const openWriteChannel = async (
+    ref: NodeRef,
+    append: boolean
+): Promise<NodeWriteChannel> => {
+    const channel = createWriteStream(ref, {
+        flags: append ? "a" : "w",
+        encoding: "utf8",
+    })
+
+    await new Promise<void>((resolve, reject) => {
+        channel.once("open", () => resolve())
+        channel.once("error", reject)
+    })
+
+    return channel
+}
+
+const createWriteChannel = async (
+    ref: NodeRef,
+    append: boolean
+): Promise<NodeWriteChannel> => {
+    try {
+        return await openWriteChannel(ref, append)
+    } catch {
+        await fs.mkdir(path.dirname(ref), {recursive: true})
+        return await openWriteChannel(ref, append)
+    }
+}
+
 export const nodeChannelTc = <Purpose>(
     options: NodeChannelTcOptions<Purpose>
 ): ChannelTc<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef> => ({
@@ -52,22 +92,7 @@ export const nodeChannelTc = <Purpose>(
 
     create: async (ref: NodeRef, {append}: CreateOptions): Promise<ErrorsOr<NodeWriteChannel>> => {
         try {
-            const stat = await fs.stat(ref).catch(() => undefined)
-            if (stat?.isDirectory()) {
-                return nodeChannelError(`Failed to create write channel for ${ref}`, "ref is a directory")
-            }
-
-            const channel = createWriteStream(ref, {
-                flags: append ? "a" : "w",
-                encoding: "utf8",
-            })
-
-            await new Promise<void>((resolve, reject) => {
-                channel.once("open", () => resolve())
-                channel.once("error", reject)
-            })
-
-            return value(channel)
+            return value(await createWriteChannel(ref, append))
         } catch (e) {
             return nodeChannelError(`Failed to create write channel for ${ref}`, e)
         }
@@ -81,22 +106,6 @@ export const nodeChannelTc = <Purpose>(
             return value(undefined)
         } catch (e) {
             return nodeChannelError("Failed to write to channel", e)
-        }
-    },
-
-    pipeTo: async (source: NodeReadChannel, target: NodeWriteChannel): Promise<ErrorsOr<void>> => {
-        try {
-            source.pipe(target, {end: false})
-
-            await new Promise<void>((resolve, reject) => {
-                source.once("end", resolve)
-                source.once("error", reject)
-                target.once("error", reject)
-            })
-
-            return value(undefined)
-        } catch (e) {
-            return nodeChannelError("Failed to pipe readable channel to writable channel", e)
         }
     },
 
@@ -132,22 +141,23 @@ export const nodeChannelTc = <Purpose>(
 
             if (end <= from) return value(end)
 
-            await new Promise<void>((resolve, reject) => {
-                const read = createReadStream(ref, {
-                    start: from,
-                    end: end - 1,
-                    encoding: "utf8",
-                })
-
-                read.on("data", chunk => write(String(chunk)))
-                read.once("error", reject)
-                read.once("end", resolve)
+            const read = createReadStream(ref, {
+                start: from,
+                end: end - 1,
+                encoding: "utf8",
             })
+
+            for await (const chunk of read) {
+                await awaitWriteResult(write(String(chunk)))
+            }
 
             return value(end)
         } catch (e: any) {
             if (e?.code === "ENOENT") {
-                return nodeChannelError(`Failed to send durable content from ${ref}`, "ref does not exist")
+                return nodeChannelError(
+                    `Failed to send durable content from ${ref}`,
+                    "ref does not exist"
+                )
             }
             return nodeChannelError(`Failed to send durable content from ${ref}`, e)
         }
@@ -260,7 +270,6 @@ export const createNodeObservability = <Purpose>({
             ),
     }
 }
-
 
 export function dumpAndExitIfErrors<T>(
     o: Observability,

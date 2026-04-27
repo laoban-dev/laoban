@@ -2,7 +2,7 @@ import {ErrorsOr, isErrors, makeErrorFromException} from "@laoban/errors";
 import {
     CountMetric,
     DurationMetric,
-    makeObservability,
+    makeObservability, ModuleName,
     nullCountMetric,
     nullDurationMetric,
     Observability,

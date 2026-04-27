@@ -8,7 +8,13 @@ import {
     ExecutionPlanStats,
     prettyPrintExecutionPlan
 } from "@laoban/execution_plan";
-import {Observability} from "@laoban/observability";
+import {
+    channelObservabilityWithModule,
+    ChannelsState,
+    flush, ModuleName,
+    Observability,
+    writeToChannel
+} from "@laoban/observability";
 import {LoadedLaobanProject, LoadedPackageDetail} from "@laoban/package_details";
 import {LaobanScript, ScriptName} from "@laoban/scripts";
 import {LaobanScriptCliContext, ScriptCommandValues} from "./scripts.cli";
@@ -127,7 +133,22 @@ export async function defaultHandleLaobanScript<TContext extends LaobanScriptCli
                             } else if (options.dryrun) logDryRunPlan(fullPlan, context.observability);
                             else if (options.variables) logVariables(loadedProject, fullPlan, context);
                             else {
-                                context.observability.log(`Script ${scriptName} execution not implemented yet`);
+                                context.observability.log(`Script ${scriptName} mock execution`);
+                                for (const gen of filtered) {
+                                    for (const item of gen) {
+                                        const moduleName: ModuleName = item.pkg?.contents?.name
+                                        const withO = channelObservabilityWithModule({
+                                            ...context,
+                                            module: moduleName
+                                        }, context.channelsState)
+                                        withO.log('... ' + moduleName)
+                                    }
+                                    context.observability.log('Flushing...')
+                                    //note with0 doesn't need flush
+                                    flush(context.channelsState)(writeToChannel(context.channelsState.tc, context.channelsState.onError)(context.stdOut))
+                                }
+                                context.observability.log('Finished')
+
                             }
                         }
                     );

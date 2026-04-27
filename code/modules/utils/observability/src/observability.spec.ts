@@ -136,7 +136,11 @@ describe('makeObservability', () => {
 
         const obs = makeObservability({
             context,
-            target: {write: msg => writes.push(msg)},
+            target: {
+                write: msg => {
+                    writes.push(msg)
+                },
+            },
         })
 
         expect(obs.correlationId).toBe('corr-123')
@@ -158,13 +162,17 @@ describe('makeObservability', () => {
 
         const obs = makeObservability({
             context,
-            target: {write: msg => writes.push(msg)},
+            target: {
+                write: msg => {
+                    writes.push(msg)
+                },
+            },
         })
 
         obs.log('hello', 1, {a: true})
 
         expect(writes).toEqual([
-            '100 INFO [corr-123] hello 1 {"a":true}',
+            '100 INFO [corr-123] hello 1 {"a":true}\n',
         ])
     })
 
@@ -178,13 +186,17 @@ describe('makeObservability', () => {
 
         const obs = makeObservability({
             context,
-            target: {write: msg => writes.push(msg)},
+            target: {
+                write: msg => {
+                    writes.push(msg)
+                },
+            },
         })
 
         obs.log('hello ${name}')
 
         expect(writes).toEqual([
-            '100 INFO [corr-123] hello Phil',
+            '100 INFO [corr-123] hello Phil\n',
         ])
     })
 
@@ -197,7 +209,11 @@ describe('makeObservability', () => {
 
         const obs = makeObservability({
             context,
-            target: {write: msg => writes.push(msg)},
+            target: {
+                write: msg => {
+                    writes.push(msg)
+                },
+            },
         })
 
         obs.debug('exec', 'debug', 'hidden')
@@ -214,13 +230,17 @@ describe('makeObservability', () => {
 
         const obs = makeObservability({
             context,
-            target: {write: msg => writes.push(msg)},
+            target: {
+                write: msg => {
+                    writes.push(msg)
+                },
+            },
         })
 
         obs.debug('exec', 'debug', 'visible')
 
         expect(writes).toEqual([
-            '100 DEBUG [corr-123] [exec] visible',
+            '100 DEBUG [corr-123] [exec] visible\n',
         ])
     })
 
@@ -231,8 +251,12 @@ describe('makeObservability', () => {
         const obs = makeObservability({
             context: defaultObservabilityContext('corr-123'),
             target: {write: nullLog},
-            countMetric: name => counts.push(name),
-            durationMetric: (name, durationMs) => durations.push({name, durationMs}),
+            countMetric: name => {
+                counts.push(name)
+            },
+            durationMetric: (name, durationMs) => {
+                durations.push({name, durationMs})
+            },
         })
 
         obs.countMetric('count.one')
@@ -249,10 +273,10 @@ describe('makeObservability', () => {
 
         const obs = makeObservability({
             context,
-            target: {write: write as any},
+            target: {write},
         })
 
-        const result = obs.log('hello') as unknown as Promise<void>
+        const result = obs.log('hello') as any as  Promise<void>
 
         expect(result).toBe(promise)
 

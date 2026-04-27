@@ -1,4 +1,4 @@
-import { freezeArray, freezeObject, safeArray, safeJson, safeObject } from './safe'
+import {freezeArray, freezeObject, safeArray, safeJson, safeObject, safePathSegment} from './safe'
 
 describe('safeArray', () => {
     it('returns [] for undefined', () => {
@@ -115,5 +115,39 @@ describe('safeJson', () => {
         const x: any = {}
         x.self = x
         expect(safeJson(x)).toBe('<unstringifiable>')
+    })
+})
+
+
+describe("safePathSegment", () => {
+    it("leaves ordinary path-safe text unchanged", () => {
+        expect(safePathSegment("alpha")).toBe("alpha")
+        expect(safePathSegment("alpha-beta_123.log")).toBe("alpha-beta_123.log")
+    })
+
+    it("replaces Windows-invalid filename characters with hyphens", () => {
+        expect(safePathSegment(`a<b>c:d"e/f\\g|h?i*j`)).toBe("a-b-c-d-e-f-g-h-i-j")
+    })
+
+    it("replaces ISO timestamp colons so it can be used as a Windows path segment", () => {
+        expect(safePathSegment("2026-04-27T10:52:13.507Z")).toBe(
+            "2026-04-27T10-52-13.507Z"
+        )
+    })
+
+    it("replaces slashes so values cannot create nested directories", () => {
+        expect(safePathSegment("2026-04-27T10-52-13.507Z/config")).toBe(
+            "2026-04-27T10-52-13.507Z-config"
+        )
+    })
+
+    it("replaces ASCII control characters", () => {
+        expect(safePathSegment("alpha\nbeta\tgamma\rdelta")).toBe(
+            "alpha-beta-gamma-delta"
+        )
+    })
+
+    it("returns an empty string for an empty string", () => {
+        expect(safePathSegment("")).toBe("")
     })
 })

@@ -1,4 +1,4 @@
-import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises"
+import {mkdtemp, readFile, rm, stat, writeFile} from "node:fs/promises"
 import {tmpdir} from "node:os"
 import * as path from "node:path"
 import {Readable, Writable} from "node:stream"
@@ -8,7 +8,6 @@ import {
     nodeChannelTc,
     NodeReadChannel,
     NodeRef,
-    NodeWriteChannel,
 } from "./observability.node"
 import {fixedTimeService, ModuleName} from "@laoban/observability"
 
@@ -82,6 +81,21 @@ describe("nodeChannelTc", () => {
         await expect(readFile(ref, "utf8")).resolves.toBe("oldnew")
     })
 
+    it("creates the parent directory when opening a writable channel", async () => {
+        const tc = makeTc()
+        const ref = path.join(dir, "missing-parent", "nested", "alpha.log")
+
+        const channel = valueOrThrow(
+            await tc.create(ref, {append: false})
+        )
+
+        expect(valueOrThrow(await tc.write(channel, "new"))).toBeUndefined()
+        expect(valueOrThrow(await tc.closeWritable(channel))).toBeUndefined()
+
+        expect((await stat(path.dirname(ref))).isDirectory()).toBe(true)
+        await expect(readFile(ref, "utf8")).resolves.toBe("new")
+    })
+
     it("writes multiple strings to a writable channel in order", async () => {
         const tc = makeTc()
         const ref = tc.reference("alpha")(".log")
@@ -118,22 +132,6 @@ describe("nodeChannelTc", () => {
         ])
     })
 
-    it("pipes a readable channel into a writable channel without closing the writable", async () => {
-        const tc = makeTc()
-        const ref = tc.reference("alpha")(".log")
-        const source = Readable.from(["one", "two"]) as NodeReadChannel
-
-        const target = valueOrThrow(
-            await tc.create(ref, {append: false})
-        )
-
-        expect(valueOrThrow(await tc.pipeTo(source, target))).toBeUndefined()
-        expect(valueOrThrow(await tc.write(target, "three"))).toBeUndefined()
-        expect(valueOrThrow(await tc.closeWritable(target))).toBeUndefined()
-
-        await expect(readFile(ref, "utf8")).resolves.toBe("onetwothree")
-    })
-
     it("closes a readable channel", async () => {
         const tc = makeTc()
 
@@ -157,10 +155,34 @@ describe("nodeChannelTc", () => {
 
         await writeFile(ref, "hello world")
 
-        const result = await tc.sendFromRefToWrite(ref, 6, text => writes.push(text))
+        const result = await tc.sendFromRefToWrite(ref, 6, text => {
+            writes.push(text)
+        })
 
         expect(valueOrThrow(result)).toBe(Buffer.byteLength("hello world", "utf8"))
         expect(writes.join("")).toBe("world")
+    })
+
+    it("waits for an async Write while sending durable content", async () => {
+        const tc = makeTc()
+        const ref = tc.reference("alpha")(".log")
+        const writes: string[] = []
+        const events: string[] = []
+
+        await writeFile(ref, "hello world")
+
+        const result = await tc.sendFromRefToWrite(ref, 0, async text => {
+            events.push("write-start")
+            await new Promise<void>(resolve => setTimeout(resolve, 5))
+            writes.push(text)
+            events.push("write-end")
+        })
+
+        events.push("after-send")
+
+        expect(valueOrThrow(result)).toBe(Buffer.byteLength("hello world", "utf8"))
+        expect(writes.join("")).toBe("hello world")
+        expect(events).toEqual(["write-start", "write-end", "after-send"])
     })
 
     it("sends nothing and returns current marker when from is at the durable end", async () => {
@@ -171,7 +193,9 @@ describe("nodeChannelTc", () => {
         await writeFile(ref, "hello")
 
         const marker = Buffer.byteLength("hello", "utf8")
-        const result = await tc.sendFromRefToWrite(ref, marker, text => writes.push(text))
+        const result = await tc.sendFromRefToWrite(ref, marker, text => {
+            writes.push(text)
+        })
 
         expect(valueOrThrow(result)).toBe(marker)
         expect(writes).toEqual([])
@@ -187,7 +211,9 @@ describe("nodeChannelTc", () => {
         await writeFile(ref, `${prefix}${suffix}`, "utf8")
 
         const from = Buffer.byteLength(prefix, "utf8")
-        const result = await tc.sendFromRefToWrite(ref, from, text => writes.push(text))
+        const result = await tc.sendFromRefToWrite(ref, from, text => {
+            writes.push(text)
+        })
 
         expect(valueOrThrow(result)).toBe(Buffer.byteLength(`${prefix}${suffix}`, "utf8"))
         expect(writes.join("")).toBe(suffix)
@@ -215,32 +241,19 @@ describe("nodeChannelTc", () => {
 
         const result = await tc.create(dir, {append: false})
 
-        expect(errorsOrThrow(result)).toEqual([
+        const actual = errorsOrThrow(result);
+        const errorContext = actual.map(e => (e.context as any).error)
+        const errorMessages = actual.map(e => e.message)
+        const withoutErrors = actual.map(e => ({...e, context: undefined, message: undefined}))
+        expect(withoutErrors).toEqual([
             {
-                kind: "nodeChannel",
-                message: `Failed to create write channel for ${dir}`,
-                context: {
-                    error: "ref is a directory",
-                },
-            },
+                "kind": "nodeChannel",
+            }
         ])
-    })
-
-    it("returns an error when create cannot open because the parent directory is missing", async () => {
-        const tc = makeTc()
-        const ref = path.join(dir, "missing-parent", "alpha.log")
-
-        const result = await tc.create(ref, {append: false})
-
-        expect(errorsOrThrow(result)).toEqual([
-            {
-                kind: "nodeChannel",
-                message: `Failed to create write channel for ${ref}`,
-                context: {
-                    error: `Error: ENOENT: no such file or directory, open '${ref}'`,
-                },
-            },
-        ])
+        for (const e of errorContext)
+            expect(e).toContain(`Error: EISDIR: illegal operation on a directory, open`)
+        for (const e of errorMessages)
+            expect(e).toContain(`Failed to create write channel for `)
     })
 })
 
@@ -272,10 +285,10 @@ describe("createNodeObservability", () => {
             onError,
         })
 
-        await (created.observability.log("root", "started") as unknown as Promise<void>)
+        await (created.observability.log("root", "started") as any  as Promise<void>)
 
         expect(channel.writes).toEqual([
-            "100 INFO [corr-123] root started",
+            "100 INFO [corr-123] root started\n",
         ])
         expect(created.channelsState.purposes).toEqual([".log", ".session"])
         expect(created.tc.reference("alpha")(".log")).toBe(path.join(dir, "alpha.log"))
@@ -297,7 +310,7 @@ describe("createNodeObservability", () => {
 
         const alpha = created.withModule("alpha")
 
-        await (alpha.log("module", "started") as unknown as Promise<void>)
+        await (alpha.log("module", "started") as any  as Promise<void>)
 
         expect(Object.keys(created.channelsState.state)).toEqual(["alpha"])
         expect(created.channelsState.state.alpha.refs).toEqual([
@@ -305,8 +318,8 @@ describe("createNodeObservability", () => {
             path.join(dir, "alpha.session"),
         ])
 
-        expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe("100 INFO [corr-123] module started")
-        expect(await readFile(path.join(dir, "alpha.session"), "utf8")).toBe("100 INFO [corr-123] module started")
+        expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe("100 INFO [corr-123] module started\n")
+        expect(await readFile(path.join(dir, "alpha.session"), "utf8")).toBe("100 INFO [corr-123] module started\n")
         expect(channel.writes).toEqual([])
     })
 
@@ -326,12 +339,14 @@ describe("createNodeObservability", () => {
 
         const alpha = created.withModule("alpha")
 
-        await (alpha.log("one") as unknown as Promise<void>)
-        await alpha.flush(text => out.push(text))
+        await (alpha.log("one") as any  as Promise<void>)
+        await alpha.flush(text => {
+            out.push(text)
+        })
 
-        expect(out.join("")).toBe("100 INFO [corr-123] one")
+        expect(out.join("")).toBe("100 INFO [corr-123] one\n")
         expect(created.channelsState.state.alpha.lastSize).toBe(
-            Buffer.byteLength("100 INFO [corr-123] one", "utf8")
+            Buffer.byteLength("100 INFO [corr-123] one\n", "utf8")
         )
         expect(created.channelsState.state.alpha.channels).toBeUndefined()
     })
@@ -350,17 +365,19 @@ describe("createNodeObservability", () => {
             onError,
         })
 
-        await (created.observability.debug("exec", "debug", "root debug") as unknown as Promise<void>)
-        await (created.observability.debug("exec", "info", "hidden") as unknown as Promise<void> | undefined)
+        await (created.observability.debug("exec", "debug", "root debug") as any  as Promise<void>)
+
+        const hidden = created.observability.debug("exec", "info", "hidden") as any
+        if (hidden) await hidden
 
         const alpha = created.withModule("alpha")
-        await (alpha.debug("exec", "debug", "module debug") as unknown as Promise<void>)
+        await (alpha.debug("exec", "debug", "module debug") as any  as Promise<void>)
 
         expect(channel.writes).toEqual([
-            "100 DEBUG [corr-123] [exec] root debug",
+            "100 DEBUG [corr-123] [exec] root debug\n",
         ])
         expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe(
-            "100 DEBUG [corr-123] [exec] module debug"
+            "100 DEBUG [corr-123] [exec] module debug\n"
         )
     })
 })

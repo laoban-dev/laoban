@@ -13,7 +13,7 @@ import {
     flattenRecordOfErrorsOr,
     isErrors,
     isValue,
-    makeErrorFromException, mapBaseIssue,
+    makeErrorFromException, mapArrayK, mapBaseIssue,
     mapErrorsOr,
     mapErrorsOrK,
     partitionNameAndErrorsOr,
@@ -673,3 +673,81 @@ describe("flatMapBaseIssue", () => {
         });
     });
 });
+describe("mapArrayK", () => {
+    it("maps values and returns a value containing the mapped array", async () => {
+        const result = await mapArrayK(
+            [1, 2, 3],
+            async n => value(n * 2)
+        )
+
+        expect(result).toEqual(value([2, 4, 6]))
+    })
+
+    it("preserves warnings from successful mapped values", async () => {
+        const warning = {kind: "test", message: "careful"} as any
+
+        const result = await mapArrayK(
+            [1, 2],
+            async n => n === 1
+                ? value(n, [warning])
+                : value(n)
+        )
+
+        expect(result).toEqual(value([1, 2], [warning]))
+    })
+
+    it("returns errors from failed mapped values", async () => {
+        const error = {kind: "test", message: "boom"} as any
+
+        const result = await mapArrayK(
+            [1, 2, 3],
+            async n => n === 2
+                ? errors(error)
+                : value(n)
+        )
+
+        expect(errorsOrThrow(result)).toEqual([error])
+    })
+
+    it("combines errors from multiple failed mapped values", async () => {
+        const error1 = {kind: "test", message: "boom 1"} as any
+        const error2 = {kind: "test", message: "boom 2"} as any
+
+        const result = await mapArrayK(
+            [1, 2, 3],
+            async n => {
+                if (n === 1) return errors(error1)
+                if (n === 3) return errors(error2)
+                return value(n)
+            }
+        )
+
+        expect(errorsOrThrow(result)).toEqual([error1, error2])
+    })
+
+    it("throws a useful error when the mapper returns undefined", async () => {
+        await expect(
+            mapArrayK(
+                ["a", "b", "c"],
+                async item => item === "b"
+                    ? undefined as any
+                    : value(item)
+            )
+        ).rejects.toThrow(
+            'mapArrayK mapper returned undefined at index 1. Item: "b"'
+        )
+    })
+
+    it("throws a useful error when the mapper returns null", async () => {
+        await expect(
+            mapArrayK(
+                ["a", "b", "c"],
+                async item => item === "c"
+                    ? null as any
+                    : value(item)
+            )
+        ).rejects.toThrow(
+            'mapArrayK mapper returned null at index 2. Item: "c"'
+        )
+    })
+})

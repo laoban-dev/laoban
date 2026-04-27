@@ -434,10 +434,21 @@ export function mapBaseIssue<G, H, E extends BaseIssue>(
         fn
     );
 }
-export function mapArrayK<T,T1,E extends BaseIssue>(
+export async function mapArrayK<T, T1, E extends BaseIssue>(
     arr: T[],
     fn: (t: T) => Promise<ErrorsOr<T1, E>>
 ): Promise<ErrorsOr<T1[], E>> {
-    return Promise.all(arr.map(fn)).then(flattenArrayOfErrorsOr);
+    const results = await Promise.all(arr.map(async (item, index) => {
+        const result = await fn(item)
 
+        if (result === undefined || result === null) {
+            throw new Error(
+                `mapArrayK mapper returned ${result} at index ${index}. Item: ${JSON.stringify(item)}`
+            )
+        }
+
+        return result
+    }))
+
+    return flattenArrayOfErrorsOr(results)
 }

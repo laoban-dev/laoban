@@ -39,3 +39,6 @@ export function safePrettyJson(value: unknown): string {
         return "<unstringifiable>";
     }
 }
+
+export const safePathSegment = (s: string): string =>
+    s.replace(/[<>:"/\\|?*\x00-\x1F]/g, "-")

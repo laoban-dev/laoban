@@ -1,12 +1,14 @@
-import { BasicCliContext, CliCommand, defineCommand } from "@laoban/clidsl";
-import { LaobanScript, LaobanScripts, ScriptName } from "@laoban/scripts";
-import { mapObject, sortObjectByName } from "@laoban/records";
+import {BasicCliContext, CliCommand, defineCommand} from "@laoban/clidsl";
+import {LaobanScript, LaobanScripts, ScriptName} from "@laoban/scripts";
+import {mapObject, sortObjectByName} from "@laoban/records";
 import {LaobanPackageCliContext} from "@laoban/package_cli/src/package.cli";
 import {ErrorsOr} from "@laoban/errors";
 import {ScriptExecutionItemTemplateDictionaryFn} from "./resolve.templates";
 import {ScriptFilterValues} from "./filter.packages";
+import {ChannelsState, ObservabilityContext} from "@laoban/observability";
+import {NodeReadChannel, NodeWriteChannel} from "@laoban/observability_node";
 
-export interface ScriptCommandValues extends ScriptFilterValues{
+export interface ScriptCommandValues extends ScriptFilterValues {
     // one: boolean; from ScriptFilterValues
     // all: boolean;
     // packages: string;
@@ -24,9 +26,15 @@ export interface ScriptCommandValues extends ScriptFilterValues{
 export type HandleLaobanScriptFn<TContext extends LaobanPackageCliContext> =
     (scriptName: ScriptName, script: LaobanScript, values: ScriptCommandValues, context: TContext) => Promise<ErrorsOr<any>>;
 
-export interface LaobanScriptCliContext extends LaobanPackageCliContext {
+export type ReferenceFileName = string
+export type Purpose = 'log' | 'session'
+export const purposes: Purpose[] = ['log', 'session'];
+
+export type LaobanScriptCliContext = LaobanPackageCliContext & ObservabilityContext & {
     handleLaobanScript: HandleLaobanScriptFn<LaobanScriptCliContext>;
     makeDictionary: ScriptExecutionItemTemplateDictionaryFn
+    channelsState: ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel,ReferenceFileName>
+    stdOut: NodeWriteChannel
 }
 
 export const scriptCommandOptions = {
@@ -132,7 +140,8 @@ export function makeScriptCommands<C extends LaobanScriptCliContext>(
     return sortObjectByName(
         mapObject(
             scripts,
-            (script, name) => makeScriptCommand<C>(name, script)
+            (script, name) =>
+                makeScriptCommand<C>(name, script)
         )
     );
 }

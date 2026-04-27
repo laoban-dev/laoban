@@ -54,7 +54,9 @@ export const recordingObservability = (
     const base = makeObservability({
         context,
         target: {
-            write: msg => logs.push({module, msg}),
+            write: msg => {
+                logs.push({module, msg})
+            },
         },
         countMetric: name => counts.push(name),
         durationMetric: (name, durationMs) =>

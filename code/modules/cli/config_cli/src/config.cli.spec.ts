@@ -126,7 +126,7 @@ describe("laoban config commands", () => {
 
         expect(result).toEqual(value(expected));
         expect(context.testObs.write).toHaveBeenCalledWith(
-            `0 INFO [test-correlation-id] ${JSON.stringify(expected, null, 2)}`
+            `0 INFO [test-correlation-id] ${JSON.stringify(expected, null, 2)}\n`
         );
     });
 

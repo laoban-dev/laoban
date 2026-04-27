@@ -7,33 +7,91 @@ import {laobanConfigCommands} from "@laoban/config_cli";
 import {defaultLoadTextConfig} from "@laoban/files";
 import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure} from "@laoban/files_node";
 import {loadLaobanConfig} from "@laoban/laoban_config";
-import {dumpErrors, Observability} from "@laoban/observability";
-import {createNodeObservability, dumpAndExitIfErrors} from "@laoban/observability_node";
+import {
+    ChannelsState,
+    defaultObservabilityTemplates,
+    dumpErrors,
+    ModuleName,
+    realTimeService
+} from "@laoban/observability";
+import {
+    createNodeObservability,
+    dumpAndExitIfErrors,
+    nodeChannelTc,
+    NodeReadChannel,
+    NodeWriteChannel
+} from "@laoban/observability_node";
 import {LaobanPackageCliContext, laobanPackageCommands, loadConfigAndPackages} from "@laoban/package_cli";
 import {
+    defaultHandleLaobanScript,
     LaobanScriptCliContext,
     makeScriptCommands,
-    makeScriptExecutionItemTemplateDictionary
+    makeScriptExecutionItemTemplateDictionary, Purpose,
+    purposes
 } from "@laoban/scripts_cli";
 import {isErrors} from "@laoban/errors";
-import {defaultHandleLaobanScript} from "@laoban/scripts_cli";
 import * as path from "node:path";
-
-type Purpose = ".log" | ".session"
+import {safePathSegment, safePrettyJson} from "@laoban/safe";
+import * as process from "node:process";
 
 const {observability} = createNodeObservability<Purpose>({
     channel: process.stdout,
-    purposes: [".log", ".session"],
+    purposes,
     onError: e => console.error(e),
     reference: moduleName => purpose =>
         path.join(".laoban", String(moduleName ?? "root"), purpose),
 })
 
-type LaobanCliContext =
-    LaobanPackageCliContext & LaobanScriptCliContext;
+type LaobanCliContext = LaobanPackageCliContext & LaobanScriptCliContext;
 
-type LaobanCliChild =
-    CliGroup<LaobanCliContext> | AnyCliCommand<LaobanCliContext>;
+export const args = process.argv
+type LaobanCliChild = CliGroup<LaobanCliContext> | AnyCliCommand<LaobanCliContext>;
+
+const now = new Date().toISOString();
+const pathSafeNow = safePathSegment(now)
+export const correlationId = `${pathSafeNow}/${args[2]}`
+export const makeReference = (moduleName: ModuleName) => (purpose: Purpose): string => {
+    const safeModuleName = moduleName ?? "__root__";
+    switch (purpose) {
+        case 'log':
+            return `.log/${safeModuleName}.log`;
+        case 'session':
+            return `.session/${pathSafeNow}/${safeModuleName}.log`
+    }
+};
+export const channelsState: ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel, string> = {
+    state: {},
+    onError: error =>
+        console.error(safePrettyJson(error)),
+    purposes,
+    asyncWrites: new Set(),
+    tc: nodeChannelTc({
+        reference: makeReference,
+        keyFrom: moduleName => moduleName ?? ''
+    })
+}
+
+
+export function laobanCliContext(): LaobanCliContext {
+    const infrastructure = makeInfrastructure();
+    return {
+        correlationId,
+        channelsState,
+        timeService: realTimeService,
+        module: null,
+        dictionary: {},
+        templates: defaultObservabilityTemplates,
+        debugLevels: {},
+        observability,
+        ...infrastructure,
+        cwd: process.cwd(),
+        loadLaobanConfig,
+        stdOut: process.stdout,
+        loadConfigAndPackagesFn: loadConfigAndPackages,
+        handleLaobanScript: defaultHandleLaobanScript,
+        makeDictionary: makeScriptExecutionItemTemplateDictionary
+    }
+}
 
 function makeInfrastructure() {
     return {
@@ -45,20 +103,6 @@ function makeInfrastructure() {
                 observability
             }
         )
-    };
-}
-
-function makeContext(): LaobanCliContext {
-    const infrastructure = makeInfrastructure();
-    return {
-        observability,
-        ...infrastructure,
-        cwd: process.cwd(),
-        loadLaobanConfig,
-        loadConfigAndPackagesFn: loadConfigAndPackages,
-        handleLaobanScript: defaultHandleLaobanScript,
-        makeDictionary: makeScriptExecutionItemTemplateDictionary
-
     };
 }
 
@@ -97,7 +141,7 @@ async function makeCliDsl(argv: string[]): Promise<CliRoot<LaobanCliContext>> {
         return staticCliDsl;
     }
 
-    const context = makeContext();
+    const context = laobanCliContext();
 
     const loadedConfig = await loadLaobanConfig(
         {
@@ -133,7 +177,7 @@ async function main() {
         cliDsl,
         makeCommanderCliAdapter<LaobanCliContext>({
             observability,
-            makeContext,
+            makeContext: laobanCliContext,
             onError: async (observability, e) => {
                 dumpErrors(observability, e);
             }

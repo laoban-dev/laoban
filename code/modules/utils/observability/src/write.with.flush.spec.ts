@@ -5,7 +5,6 @@ import {
     flush,
     getOrCreateChannels,
     Marker,
-    pipeTo,
     syncWriteTo,
     Write,
 } from "./write.with.flush"
@@ -15,11 +14,7 @@ import {ModuleName} from "./observability"
 type Purpose = ".log" | ".session"
 type Ref = string
 
-type ReadChannel = {
-    name: string
-    data: string[]
-    closed?: boolean
-}
+type ReadChannel = never
 
 type WriteChannel = {
     ref: Ref
@@ -37,41 +32,35 @@ const failure = <T>(...messages: string[]): ErrorsOr<T> =>
 
 function makeTc(overrides?: Partial<ChannelTc<Purpose, ReadChannel, WriteChannel, Ref>>) {
     const channelsByRef: Record<string, WriteChannel[]> = {}
+    const durableByRef: Record<string, string> = {}
     const projectedByRef: Record<string, string> = {}
-
-    const latestChannel = (ref: Ref): WriteChannel | undefined => {
-        const channels = channelsByRef[ref] ?? []
-        return channels[channels.length - 1]
-    }
 
     const tc: ChannelTc<Purpose, ReadChannel, WriteChannel, Ref> = {
         keyFrom: jest.fn((moduleName: ModuleName) => String(moduleName ?? "<none>")),
         reference: jest.fn((moduleName: ModuleName) => (purpose: Purpose) =>
             `${String(moduleName ?? "<none>")}/${purpose}`
         ),
-        create: jest.fn(async (ref: Ref, _options) => {
+        create: jest.fn(async (ref: Ref, options) => {
+            if (!options.append) durableByRef[ref] = ""
+
             const channel: WriteChannel = {ref, writes: []}
             channelsByRef[ref] = [...(channelsByRef[ref] ?? []), channel]
             return value(channel)
         }),
         write: jest.fn(async (channel: WriteChannel, text: string) => {
             channel.writes.push(text)
+            durableByRef[channel.ref] = (durableByRef[channel.ref] ?? "") + text
             return value(undefined)
         }),
-        pipeTo: jest.fn(async (source: ReadChannel, target: WriteChannel) => {
-            target.writes.push(...source.data)
-            return value(undefined)
-        }),
-        closeReadable: jest.fn(async (channel: ReadChannel) => {
-            channel.closed = true
-            return value(undefined)
-        }),
+        closeReadable: jest.fn(async (_channel: ReadChannel) =>
+            value(undefined)
+        ),
         closeWritable: jest.fn(async (channel: WriteChannel) => {
             channel.closed = true
             return value(undefined)
         }),
         sendFromRefToWrite: jest.fn(async (ref: Ref, from, write: Write) => {
-            const allText = (latestChannel(ref)?.writes ?? []).join("")
+            const allText = durableByRef[ref] ?? ""
             const delta = allText.slice(from)
             write(delta)
             projectedByRef[ref] = (projectedByRef[ref] ?? "") + delta
@@ -80,7 +69,7 @@ function makeTc(overrides?: Partial<ChannelTc<Purpose, ReadChannel, WriteChannel
         ...overrides,
     }
 
-    return {tc, channelsByRef, projectedByRef}
+    return {tc, channelsByRef, durableByRef, projectedByRef}
 }
 
 describe("emptyChannelState", () => {
@@ -93,6 +82,7 @@ describe("emptyChannelState", () => {
         expect(state.purposes).toEqual([".log", ".session"])
         expect(state.state).toEqual({})
         expect(state.onError).toBe(onError)
+        expect(state.asyncWrites).toEqual(new Set())
     })
 })
 
@@ -216,7 +206,7 @@ describe("getOrCreateChannels", () => {
 
 describe("asyncWriteTo", () => {
     it("writes text to all mirrored writable channels", async () => {
-        const {tc} = makeTc()
+        const {tc, durableByRef} = makeTc()
         const onError = jest.fn()
         const state = emptyChannelState(tc, [".log", ".session"], onError)
 
@@ -237,11 +227,15 @@ describe("asyncWriteTo", () => {
             ["hello"],
             ["hello"],
         ])
+        expect(durableByRef).toEqual({
+            "alpha/.log": "hello",
+            "alpha/.session": "hello",
+        })
         expect(onError).not.toHaveBeenCalled()
     })
 
     it("reuses existing writable channels on subsequent writes", async () => {
-        const {tc} = makeTc()
+        const {tc, durableByRef} = makeTc()
         const onError = jest.fn()
         const state = emptyChannelState(tc, [".log", ".session"], onError)
 
@@ -254,6 +248,10 @@ describe("asyncWriteTo", () => {
             ["one", "two"],
             ["one", "two"],
         ])
+        expect(durableByRef).toEqual({
+            "alpha/.log": "onetwo",
+            "alpha/.session": "onetwo",
+        })
     })
 
     it("routes writable channel write errors to onError", async () => {
@@ -305,7 +303,7 @@ describe("syncWriteTo", () => {
 
         const write = syncWriteTo(state)("alpha")
 
-        await (write("hello") as unknown as Promise<void>)
+        await (write("hello") as Promise<void>)
 
         expect(tc.write).toHaveBeenCalledTimes(2)
         expect(tc.write).toHaveBeenNthCalledWith(
@@ -321,6 +319,59 @@ describe("syncWriteTo", () => {
         expect(onError).not.toHaveBeenCalled()
     })
 
+    it("tracks outstanding writes so flush waits before closing and projecting", async () => {
+        let releaseWrite!: () => void
+        let writeIsBlocked!: Promise<void>
+
+        writeIsBlocked = new Promise<void>(resolveBlocked => {
+            const {tc} = makeTc()
+        })
+
+        let resolveWriteIsBlocked!: () => void
+        writeIsBlocked = new Promise<void>(resolve => {
+            resolveWriteIsBlocked = resolve
+        })
+
+        const {tc} = makeTc({
+            write: jest.fn(async (channel: WriteChannel, text: string) => {
+                resolveWriteIsBlocked()
+
+                await new Promise<void>(resolve => {
+                    releaseWrite = resolve
+                })
+
+                channel.writes.push(text)
+                return value(undefined)
+            }),
+            sendFromRefToWrite: jest.fn(async (_ref: Ref, _from: Marker, write: Write) => {
+                write("projected")
+                return value(9)
+            }),
+        })
+
+        const onError = jest.fn()
+        const state = emptyChannelState(tc, [".log"], onError)
+        const out = jest.fn()
+
+        const write = syncWriteTo(state)("alpha")
+        write("hello")
+
+        await writeIsBlocked
+
+        const flushPromise = flush(state)(out)
+
+        expect(tc.closeWritable).not.toHaveBeenCalled()
+        expect(tc.sendFromRefToWrite).not.toHaveBeenCalled()
+
+        releaseWrite()
+
+        const result = await flushPromise
+
+        expect(isErrors(result)).toBe(false)
+        expect(tc.closeWritable).toHaveBeenCalledTimes(1)
+        expect(tc.sendFromRefToWrite).toHaveBeenCalledTimes(1)
+        expect(out).toHaveBeenCalledWith("projected")
+    })
     it("routes async failures through onError rather than throwing from the Write", async () => {
         const {tc} = makeTc({
             write: jest.fn(async () => failure<void>("nope")),
@@ -331,7 +382,7 @@ describe("syncWriteTo", () => {
         const write = syncWriteTo(state)("alpha")
 
         await expect(
-            write("hello") as unknown as Promise<void>
+            write("hello") as Promise<void>
         ).resolves.toBeUndefined()
 
         expect(onError).toHaveBeenCalledTimes(1)
@@ -340,45 +391,6 @@ describe("syncWriteTo", () => {
                 errors: expect.any(Array),
             })
         )
-    })
-})
-
-describe("pipeTo", () => {
-    it("pipes a readable channel into all mirrored writable channels", async () => {
-        const {tc} = makeTc()
-        const onError = jest.fn()
-        const state = emptyChannelState(tc, [".log", ".session"], onError)
-        const source: ReadChannel = {name: "stdout", data: ["one", "two"]}
-
-        const result = await pipeTo(state)("alpha", source)
-
-        expect(isErrors(result)).toBe(false)
-        expect(tc.create).toHaveBeenCalledTimes(2)
-        expect(tc.pipeTo).toHaveBeenCalledTimes(2)
-        expect(tc.pipeTo).toHaveBeenNthCalledWith(1, source, state.state.alpha.channels?.[0])
-        expect(tc.pipeTo).toHaveBeenNthCalledWith(2, source, state.state.alpha.channels?.[1])
-        expect(state.state.alpha.channels?.map(c => c.writes)).toEqual([
-            ["one", "two"],
-            ["one", "two"],
-        ])
-        expect(tc.closeReadable).toHaveBeenCalledTimes(1)
-        expect(tc.closeReadable).toHaveBeenCalledWith(source)
-        expect(source.closed).toBe(true)
-    })
-
-    it("does not close the readable channel if piping fails", async () => {
-        const {tc} = makeTc({
-            pipeTo: jest.fn(async () => failure<void>("pipe failed")),
-        })
-        const onError = jest.fn()
-        const state = emptyChannelState(tc, [".log"], onError)
-        const source: ReadChannel = {name: "stdout", data: ["one"]}
-
-        const result = await pipeTo(state)("alpha", source)
-
-        expect(isErrors(result)).toBe(true)
-        expect(tc.closeReadable).not.toHaveBeenCalled()
-        expect(source.closed).toBeUndefined()
     })
 })
 
@@ -416,6 +428,7 @@ describe("flush", () => {
         expect(tc.closeWritable).toHaveBeenCalledTimes(2)
         expect(tc.sendFromRefToWrite).toHaveBeenCalledTimes(1)
         expect(tc.sendFromRefToWrite).toHaveBeenCalledWith("alpha/.log", 0, out)
+        expect(out).toHaveBeenCalledWith("hello")
         expect(state.state.alpha.channels).toBeUndefined()
         expect(state.state.beta.channels).toBeUndefined()
     })
@@ -442,8 +455,27 @@ describe("flush", () => {
         expect(state.state.alpha.channels).toBeUndefined()
     })
 
-    it("reopens writable channels in append mode after a successful flush", async () => {
+    it("projects only newly durable content after the previous marker", async () => {
         const {tc} = makeTc()
+        const onError = jest.fn()
+        const state = emptyChannelState(tc, [".log", ".session"], onError)
+        const out = jest.fn()
+
+        await asyncWriteTo(state)("alpha")("one")
+        await flush(state)(out)
+
+        await asyncWriteTo(state)("alpha")("two")
+        await flush(state)(out)
+
+        expect(tc.sendFromRefToWrite).toHaveBeenNthCalledWith(1, "alpha/.log", 0, out)
+        expect(tc.sendFromRefToWrite).toHaveBeenNthCalledWith(2, "alpha/.log", 3, out)
+        expect(out).toHaveBeenNthCalledWith(1, "one")
+        expect(out).toHaveBeenNthCalledWith(2, "two")
+        expect(state.state.alpha.lastSize).toBe(6)
+    })
+
+    it("reopens writable channels in append mode after a successful flush", async () => {
+        const {tc, durableByRef} = makeTc()
         const onError = jest.fn()
         const state = emptyChannelState(tc, [".log"], onError)
         const out = jest.fn()
@@ -463,6 +495,7 @@ describe("flush", () => {
             "alpha/.log",
             expect.objectContaining({append: true})
         )
+        expect(durableByRef["alpha/.log"]).toBe("onetwo")
     })
 
     it("does not advance lastSize or clear channels if projection fails", async () => {
@@ -480,5 +513,37 @@ describe("flush", () => {
         expect(isErrors(result)).toBe(true)
         expect(state.state.alpha.lastSize).toBe(0)
         expect(state.state.alpha.channels).toBeDefined()
+    })
+
+    it("closes all mirrored writable channels before projecting from the representative ref", async () => {
+        const order: string[] = []
+
+        const {tc} = makeTc({
+            closeWritable: jest.fn(async (channel: WriteChannel) => {
+                order.push(`close:${channel.ref}`)
+                channel.closed = true
+                return value(undefined)
+            }),
+            sendFromRefToWrite: jest.fn(async (ref: Ref, _from: Marker, write: Write) => {
+                order.push(`project:${ref}`)
+                write("hello")
+                return value(5)
+            }),
+        })
+
+        const onError = jest.fn()
+        const state = emptyChannelState(tc, [".log", ".session"], onError)
+        const out = jest.fn()
+
+        await asyncWriteTo(state)("alpha")("hello")
+
+        const result = await flush(state)(out)
+
+        expect(isErrors(result)).toBe(false)
+        expect(order).toEqual([
+            "close:alpha/.log",
+            "close:alpha/.session",
+            "project:alpha/.log",
+        ])
     })
 })
