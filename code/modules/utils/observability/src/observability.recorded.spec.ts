@@ -22,8 +22,8 @@ describe("recordingObservability", () => {
         recorded.observability.log("bad news");
 
         expect(recorded.logs).toEqual([
-            {module: undefined, msg: '100 INFO [corr-123] hello 1 {"a":true}\n'},
-            {module: undefined, msg: "105 INFO [corr-123] bad news\n"},
+            {module: undefined, msg: '00:00:00 INFO hello 1 {"a":true}\n'},
+            {module: undefined, msg: "00:00:00 INFO bad news\n"},
         ]);
     });
 
@@ -71,8 +71,8 @@ describe("recordingObservability", () => {
         recorded.observability.debug("exec", "info", "visible");
 
         expect(recorded.logs).toEqual([
-            {module: undefined, msg: "100 DEBUG [corr-123] [load] loading\n"},
-            {module: undefined, msg: "105 INFO [corr-123] [exec] visible\n"},
+            {module: undefined, msg: "00:00:00 DEBUG [load] loading\n"},
+            {module: undefined, msg: "00:00:00 INFO [exec] visible\n"},
         ]);
         expect(recorded.debug).toEqual([
             {module: undefined, context: "load", level: "debug", msg: ["loading"]},
@@ -183,8 +183,8 @@ describe("recordingObservability", () => {
         recorded.observability.durationMetric("metric.ms", 5);
 
         expect(recorded.logs).toEqual([
-            {module: undefined, msg: "100 INFO [corr-123] warning\n"},
-            {module: undefined, msg: "105 DEBUG [corr-123] [load] loading\n"},
+            {module: undefined, msg: "00:00:00 INFO warning\n"},
+            {module: undefined, msg: "00:00:00 DEBUG [load] loading\n"},
         ]);
         expect(recorded.debug).toEqual([
             {module: undefined, context: "load", level: "debug", msg: ["loading"]},
@@ -209,8 +209,8 @@ describe("recordingObservability", () => {
         recorded.observability.debug("load", "debug", "details");
 
         expect(recorded.logs).toEqual([
-            {module: "alpha", msg: "100 INFO [corr-123] hello\n"},
-            {module: "alpha", msg: "105 DEBUG [corr-123] [load] details\n"},
+            {module: "alpha", msg: "00:00:00 INFO hello\n"},
+            {module: "alpha", msg: "00:00:00 DEBUG [load] details\n"},
         ]);
         expect(recorded.debug).toEqual([
             {module: "alpha", context: "load", level: "debug", msg: ["details"]},

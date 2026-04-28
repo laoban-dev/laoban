@@ -241,14 +241,14 @@ describe("nodeChannelTc", () => {
 
         const result = await tc.create(dir, {append: false})
 
-        const actual = errorsOrThrow(result);
+        const actual = errorsOrThrow(result)
         const errorContext = actual.map(e => (e.context as any).error)
         const errorMessages = actual.map(e => e.message)
         const withoutErrors = actual.map(e => ({...e, context: undefined, message: undefined}))
         expect(withoutErrors).toEqual([
             {
-                "kind": "nodeChannel",
-            }
+                kind: "nodeChannel",
+            },
         ])
         for (const e of errorContext)
             expect(e).toContain(`Error: EISDIR: illegal operation on a directory, open`)
@@ -285,10 +285,10 @@ describe("createNodeObservability", () => {
             onError,
         })
 
-        await (created.observability.log("root", "started") as any  as Promise<void>)
+        await (created.observability.log("root", "started") as any as Promise<void>)
 
         expect(channel.writes).toEqual([
-            "100 INFO [corr-123] root started\n",
+            "00:00:00 INFO root started\n",
         ])
         expect(created.channelsState.purposes).toEqual([".log", ".session"])
         expect(created.tc.reference("alpha")(".log")).toBe(path.join(dir, "alpha.log"))
@@ -310,7 +310,7 @@ describe("createNodeObservability", () => {
 
         const alpha = created.withModule("alpha")
 
-        await (alpha.log("module", "started") as any  as Promise<void>)
+        await (alpha.log("module", "started") as any as Promise<void>)
 
         expect(Object.keys(created.channelsState.state)).toEqual(["alpha"])
         expect(created.channelsState.state.alpha.refs).toEqual([
@@ -318,8 +318,8 @@ describe("createNodeObservability", () => {
             path.join(dir, "alpha.session"),
         ])
 
-        expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe("100 INFO [corr-123] module started\n")
-        expect(await readFile(path.join(dir, "alpha.session"), "utf8")).toBe("100 INFO [corr-123] module started\n")
+        expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe("00:00:00 INFO module started\n")
+        expect(await readFile(path.join(dir, "alpha.session"), "utf8")).toBe("00:00:00 INFO module started\n")
         expect(channel.writes).toEqual([])
     })
 
@@ -339,14 +339,14 @@ describe("createNodeObservability", () => {
 
         const alpha = created.withModule("alpha")
 
-        await (alpha.log("one") as any  as Promise<void>)
+        await (alpha.log("one") as any as Promise<void>)
         await alpha.flush(text => {
             out.push(text)
         })
 
-        expect(out.join("")).toBe("100 INFO [corr-123] one\n")
+        expect(out.join("")).toBe("00:00:00 INFO one\n")
         expect(created.channelsState.state.alpha.lastSize).toBe(
-            Buffer.byteLength("100 INFO [corr-123] one\n", "utf8")
+            Buffer.byteLength("00:00:00 INFO one\n", "utf8")
         )
         expect(created.channelsState.state.alpha.channels).toBeUndefined()
     })
@@ -365,19 +365,19 @@ describe("createNodeObservability", () => {
             onError,
         })
 
-        await (created.observability.debug("exec", "debug", "root debug") as any  as Promise<void>)
+        await (created.observability.debug("exec", "debug", "root debug") as any as Promise<void>)
 
         const hidden = created.observability.debug("exec", "info", "hidden") as any
         if (hidden) await hidden
 
         const alpha = created.withModule("alpha")
-        await (alpha.debug("exec", "debug", "module debug") as any  as Promise<void>)
+        await (alpha.debug("exec", "debug", "module debug") as any as Promise<void>)
 
         expect(channel.writes).toEqual([
-            "100 DEBUG [corr-123] [exec] root debug\n",
+            "00:00:00 DEBUG [exec] root debug\n",
         ])
         expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe(
-            "100 DEBUG [corr-123] [exec] module debug\n"
+            "00:00:00 DEBUG [exec] module debug\n"
         )
     })
 })

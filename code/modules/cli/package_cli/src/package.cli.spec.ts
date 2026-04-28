@@ -108,7 +108,7 @@ function command(name: "list" | "view" | "sort"): any {
 
 const expectedLog = (msg: string) => ({
     module: undefined,
-    msg: `0 INFO [test-correlation-id] ${msg}\n`
+    msg: `00:00:00 INFO ${msg}\n`
 });
 
 describe("package cli", () => {

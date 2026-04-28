@@ -1,4 +1,4 @@
-import {channelObservability, channelObservabilityWithModule, writeToChannel,} from "./channelObservability"
+import {channelObservability, channelObservabilityWithModule, writeToChannel} from "./channelObservability"
 import {ChannelTc, emptyChannelState, Write} from "./write.with.flush"
 import {
     defaultObservabilityContext,
@@ -7,6 +7,7 @@ import {
     nullCountMetric,
     nullDurationMetric,
 } from "./observability"
+import {defaultObservabilityWithCorrelationIdTemplates} from "./observability.log"
 import {Errors, ErrorsOr, isErrors, value} from "@laoban/errors"
 
 type Purpose = ".log" | ".session"
@@ -75,6 +76,14 @@ const context = (
 ) => ({
     ...defaultObservabilityContext("corr-123", debugLevels, module),
     timeService: fixedTimeService(100),
+})
+
+const contextWithCorrelationIdTemplate = (
+    module: ModuleName = undefined,
+    debugLevels = {},
+) => ({
+    ...context(module, debugLevels),
+    templates: defaultObservabilityWithCorrelationIdTemplates,
 })
 
 describe("writeToChannel", () => {
@@ -154,9 +163,28 @@ describe("channelObservability", () => {
         expect(obs.durationMetric).toBe(nullDurationMetric)
         expect(tc.write).toHaveBeenCalledTimes(1)
         expect(channel.writes).toEqual([
-            '100 INFO [corr-123] hello {"a":true}\n',
+            '00:00:00 INFO hello {"a":true}\n',
         ])
         expect(onError).not.toHaveBeenCalled()
+    })
+
+    it("can include correlation id when the correlation-id template is supplied", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const channel: WriteChannel = {ref: "stdout", writes: []}
+
+        const obs = channelObservability(
+            contextWithCorrelationIdTemplate("root"),
+            tc,
+            channel,
+            onError
+        )
+
+        await (obs.log("hello", {a: true}) as any as Promise<void>)
+
+        expect(channel.writes).toEqual([
+            '00:00:00 INFO [corr-123] hello {"a":true}\n',
+        ])
     })
 
     it("writes rendered debug lines to the supplied writable channel when enabled", async () => {
@@ -170,7 +198,7 @@ describe("channelObservability", () => {
 
         expect(tc.write).toHaveBeenCalledTimes(1)
         expect(channel.writes).toEqual([
-            "100 DEBUG [corr-123] [load] loading\n",
+            "00:00:00 DEBUG [load] loading\n",
         ])
     })
 
@@ -239,12 +267,12 @@ describe("channelObservabilityWithModule", () => {
         )
         expect(tc.write).toHaveBeenCalledTimes(2)
         expect(channelsState.state.alpha.channels?.map(c => c.writes)).toEqual([
-            ["100 INFO [corr-123] hello 1\n"],
-            ["100 INFO [corr-123] hello 1\n"],
+            ["00:00:00 INFO hello 1\n"],
+            ["00:00:00 INFO hello 1\n"],
         ])
         expect(durableByRef).toEqual({
-            "alpha/.log": "100 INFO [corr-123] hello 1\n",
-            "alpha/.session": "100 INFO [corr-123] hello 1\n",
+            "alpha/.log": "00:00:00 INFO hello 1\n",
+            "alpha/.session": "00:00:00 INFO hello 1\n",
         })
     })
 
@@ -262,7 +290,7 @@ describe("channelObservabilityWithModule", () => {
 
         expect(tc.write).toHaveBeenCalledTimes(1)
         expect(channelsState.state.alpha.channels?.map(c => c.writes)).toEqual([
-            ["100 DEBUG [corr-123] [exec] running\n"],
+            ["00:00:00 DEBUG [exec] running\n"],
         ])
     })
 
@@ -330,7 +358,7 @@ describe("channelObservabilityWithModule", () => {
             expect.objectContaining({append: true})
         )
         expect(durableByRef["alpha/.log"]).toBe(
-            "100 INFO [corr-123] one\n100 INFO [corr-123] two\n"
+            "00:00:00 INFO one\n00:00:00 INFO two\n"
         )
     })
 })

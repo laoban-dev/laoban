@@ -172,7 +172,7 @@ describe('makeObservability', () => {
         obs.log('hello', 1, {a: true})
 
         expect(writes).toEqual([
-            '100 INFO [corr-123] hello 1 {"a":true}\n',
+            "00:00:00 INFO hello 1 {\"a\":true}\n"
         ])
     })
 
@@ -196,7 +196,7 @@ describe('makeObservability', () => {
         obs.log('hello ${name}')
 
         expect(writes).toEqual([
-            '100 INFO [corr-123] hello Phil\n',
+            "00:00:00 INFO hello Phil\n"
         ])
     })
 
@@ -240,7 +240,7 @@ describe('makeObservability', () => {
         obs.debug('exec', 'debug', 'visible')
 
         expect(writes).toEqual([
-            '100 DEBUG [corr-123] [exec] visible\n',
+            "00:00:00 DEBUG [exec] visible\n"
         ])
     })
 

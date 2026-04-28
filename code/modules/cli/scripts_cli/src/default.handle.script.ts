@@ -1,20 +1,6 @@
-import {
-    BaseIssue,
-    ErrorsOr,
-    flatMapBaseIssue, isValue,
-    mapBaseIssue
-} from "@laoban/errors";
-import {
-    ExecutionPlanStats,
-    prettyPrintExecutionPlan
-} from "@laoban/execution_plan";
-import {
-    channelObservabilityWithModule,
-    ChannelsState,
-    flush, ModuleName,
-    Observability,
-    writeToChannel
-} from "@laoban/observability";
+import {BaseIssue, ErrorsOr, flatMapBaseIssueK, mapBaseIssueK} from "@laoban/errors";
+import {ExecutionPlanStats, prettyPrintExecutionPlan} from "@laoban/execution_plan";
+import {channelObservabilityWithModule, flush, ModuleName, Observability, writeToChannel} from "@laoban/observability";
 import {LoadedLaobanProject, LoadedPackageDetail} from "@laoban/package_details";
 import {LaobanScript, ScriptName} from "@laoban/scripts";
 import {LaobanScriptCliContext, ScriptCommandValues} from "./scripts.cli";
@@ -23,12 +9,7 @@ import {
     ScriptExecutionItem,
     scriptExecutionPlanPrettyPrintTypeClass
 } from "@laoban/script_plan";
-import {
-    detemplateOneScriptExecutionItem,
-    detemplateScriptExecutionPlan,
-    makeScriptExecutionItemTemplateDictionary
-} from "./resolve.templates";
-import {sortObjectByName} from "@laoban/records";
+import {detemplateScriptExecutionPlan} from "./resolve.templates";
 import {safePrettyJson} from "@laoban/safe";
 import {filterExecutionPlan} from "./filter.packages";
 
@@ -98,31 +79,61 @@ function logVariables<TContext extends LaobanScriptCliContext>(loadedProject: Lo
     }));
 }
 
+async function executeScript<TContext extends LaobanScriptCliContext>(context: TContext, scriptName: string, executionPlan: ScriptExecutionItem[][]) {
+    context.observability.log(`Script ${scriptName} mock execution`);
+    let count = 0;
+    for (const gen of executionPlan) {
+        for (const item of gen) {
+            const moduleName: ModuleName = item.pkg?.contents?.name;
+
+            const withO = channelObservabilityWithModule(
+                {
+                    ...context,
+                    module: moduleName
+                },
+                context.channelsState
+            );
+
+            withO.log("... " + moduleName);
+        }
+
+        context.observability.log(`Flushing... ${count}`);
+
+        await flush(context.channelsState)(
+            writeToChannel(context.channelsState.tc, context.channelsState.onError)(context.stdOut)
+        );
+
+        context.observability.log(`end of flush... ${count}`);
+
+        count++;
+    }
+}
+
 export async function defaultHandleLaobanScript<TContext extends LaobanScriptCliContext>(
     scriptName: ScriptName,
     script: LaobanScript,
     options: ScriptCommandValues,
     context: TContext
 ): Promise<ErrorsOr<void, BaseIssue>> {
-    return flatMapBaseIssue(
+    return flatMapBaseIssueK(
         await context.loadConfigAndPackagesFn(context),
-        loadedProject =>
-            flatMapBaseIssue(
+        async loadedProject =>
+            flatMapBaseIssueK(
                 makeScriptExecutionPlan(
                     loadedProject,
                     scriptName,
                     script,
                     context.observability
                 ),
-                executionPlan => {
+                async (executionPlan): Promise<ErrorsOr<void>> => {
                     const filtered = filterExecutionPlan(loadedProject, executionPlan.plan, options, context)
-                    return mapBaseIssue(
+                    return await mapBaseIssueK(
                         detemplateScriptExecutionPlan(
                             filtered,
                             loadedProject,
                             context.observability
                         ),
-                        fullPlan => {
+                        async fullPlan => {
                             if (options.generationPlan) {
                                 logPlan(
                                     scriptName,
@@ -133,22 +144,7 @@ export async function defaultHandleLaobanScript<TContext extends LaobanScriptCli
                             } else if (options.dryrun) logDryRunPlan(fullPlan, context.observability);
                             else if (options.variables) logVariables(loadedProject, fullPlan, context);
                             else {
-                                context.observability.log(`Script ${scriptName} mock execution`);
-                                for (const gen of filtered) {
-                                    for (const item of gen) {
-                                        const moduleName: ModuleName = item.pkg?.contents?.name
-                                        const withO = channelObservabilityWithModule({
-                                            ...context,
-                                            module: moduleName
-                                        }, context.channelsState)
-                                        withO.log('... ' + moduleName)
-                                    }
-                                    context.observability.log('Flushing...')
-                                    //note with0 doesn't need flush
-                                    flush(context.channelsState)(writeToChannel(context.channelsState.tc, context.channelsState.onError)(context.stdOut))
-                                }
-                                context.observability.log('Finished')
-
+                                await executeScript(context, scriptName, filtered);
                             }
                         }
                     );

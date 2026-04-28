@@ -309,7 +309,7 @@ export function flattenArrayOfErrorsOr<T, E extends BaseIssue = BaseIssue>(
 
     if (allErrors.length > 0) {
         return {
-             errors: allErrors,
+            errors: allErrors,
             ...(allWarnings.length > 0 ? {warnings: allWarnings} : {}),
         };
     }
@@ -425,6 +425,13 @@ export function flatMapBaseIssue<G, H, E1 extends BaseIssue, E2 extends BaseIssu
     );
 }
 
+export async function flatMapBaseIssueK<G, H, E1 extends BaseIssue, E2 extends BaseIssue>(
+    inp: ErrorsOr<G, E1>,
+    fn: (g: G) => Promise<ErrorsOr<H, E2>>
+): Promise<ErrorsOr<H, BaseIssue>> {
+    return flatMapErrorsOrK(inp, g => fn(g) as Promise<ErrorsOr<H, BaseIssue>>);
+}
+
 export function mapBaseIssue<G, H, E extends BaseIssue>(
     inp: ErrorsOr<G, E>,
     fn: (g: G) => H
@@ -434,6 +441,17 @@ export function mapBaseIssue<G, H, E extends BaseIssue>(
         fn
     );
 }
+
+export async function mapBaseIssueK<G, H, E extends BaseIssue>(
+    inp: ErrorsOr<G, E>,
+    fn: (g: G) => Promise<H>
+): Promise<ErrorsOr<H, BaseIssue>> {
+    return mapErrorsOrK(
+        inp as ErrorsOr<G, BaseIssue>,
+        fn
+    );
+}
+
 export async function mapArrayK<T, T1, E extends BaseIssue>(
     arr: T[],
     fn: (t: T) => Promise<ErrorsOr<T1, E>>
