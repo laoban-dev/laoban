@@ -3,11 +3,11 @@ import {safeString} from "@laoban/safe";
 import {renderTemplate} from "@laoban/template";
 import {
     CorrelationId,
-    LogLevel,
     ModuleName,
     realTimeService,
     TimeService
 } from "./observability";
+import {LogLevel} from "./observability.debug";
 
 export type ObservabilityTemplates = Readonly<{
     log: string;

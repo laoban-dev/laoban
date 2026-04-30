@@ -1,10 +1,10 @@
-import {ErrorsOr, mapErrorsOr} from "@laoban/errors";
-import {Observability} from "@laoban/observability";
+import {ErrorsOr, mapErrorsOr} from "@laoban/errors"
+import {Observability} from "@laoban/observability"
 import {
     topologicalGenerations,
     NameAndDependsOn,
-    TopologicalGenerationIssue
-} from "@laoban/topologicalsort";
+    TopologicalGenerationIssue,
+} from "@laoban/topologicalsort"
 
 /*
  * Workspace barriers are currently modelled conservatively:
@@ -17,9 +17,15 @@ import {
  * meaning of the plan.
  */
 
+export type ExecutionScope = "eachPackage" | "oncePerWorkSpace"
+export type ExecutionItemKind = ExecutionScope
 
-export type ExecutionScope = "eachPackage" | "oncePerWorkSpace";
-export type ExecutionItemKind = ExecutionScope;
+export type ExecutionPlanDebugArea =
+    | readonly ["execution", "plan", "start"]
+    | readonly ["execution", "plan", "finished"]
+
+const executionPlanStartDebug: ExecutionPlanDebugArea = ["execution", "plan", "start"]
+const executionPlanFinishedDebug: ExecutionPlanDebugArea = ["execution", "plan", "finished"]
 
 /**
  * One package-scoped unit of work in the execution plan.
@@ -28,10 +34,10 @@ export type ExecutionItemKind = ExecutionScope;
  * P = the package type carried by the execution item
  */
 export interface EachPackageExecutionItem<C, P> {
-    kind: "eachPackage";
-    stepIndex: number;
-    command: C;
-    pkg: P;
+    kind: "eachPackage"
+    stepIndex: number
+    command: C
+    pkg: P
 }
 
 /**
@@ -40,9 +46,9 @@ export interface EachPackageExecutionItem<C, P> {
  * C = the command type carried by the execution item
  */
 export interface OncePerWorkspaceExecutionItem<C> {
-    kind: "oncePerWorkSpace";
-    stepIndex: number;
-    command: C;
+    kind: "oncePerWorkSpace"
+    stepIndex: number
+    command: C
 }
 
 /**
@@ -53,7 +59,7 @@ export interface OncePerWorkspaceExecutionItem<C> {
  */
 export type ExecutionItem<C, P> =
     | EachPackageExecutionItem<C, P>
-    | OncePerWorkspaceExecutionItem<C>;
+    | OncePerWorkspaceExecutionItem<C>
 
 /**
  * Planner-facing typeclass for constructing and inspecting execution items.
@@ -69,36 +75,36 @@ export type ExecutionItem<C, P> =
  * generic so callers can use a richer execution-item type if needed.
  */
 export interface ExecutionItemPlannerTypeClass<C, P, H> {
-    makeEachPackage(stepIndex: number, command: C, pkg: P): H;
+    makeEachPackage(stepIndex: number, command: C, pkg: P): H
 
-    makeOncePerWorkspace(stepIndex: number, command: C): H;
+    makeOncePerWorkspace(stepIndex: number, command: C): H
 
-    kind(h: H): ExecutionItemKind;
+    kind(h: H): ExecutionItemKind
 
-    stepIndex(h: H): number;
+    stepIndex(h: H): number
 
-    command(h: H): C;
+    command(h: H): C
 
-    pkg(h: H): P | undefined;
+    pkg(h: H): P | undefined
 
-    display(h: H): string;
+    display(h: H): string
 }
 
 export interface ExecutionPlanStats<P> {
-    commandCount: number;
-    distinctPackageDetails: P[];
+    commandCount: number
+    distinctPackageDetails: P[]
 
-    executionItemCount: number;
-    packageExecutionItemCount: number;
-    barrierCount: number;
+    executionItemCount: number
+    packageExecutionItemCount: number
+    barrierCount: number
 
-    generationCount: number;
-    largestGenerationSize: number;
+    generationCount: number
+    largestGenerationSize: number
 }
 
 export interface ExecutionPlanResult<P, H> {
-    plan: H[][];
-    stats: ExecutionPlanStats<P>;
+    plan: H[][]
+    stats: ExecutionPlanStats<P>
 }
 
 /**
@@ -118,14 +124,15 @@ export interface ExecutionPlanResult<P, H> {
 export function executionItemGraphName<C, P, H>(
     h: H,
     tc: ExecutionItemPlannerTypeClass<C, P, H>,
-    packageTc: NameAndDependsOn<P>
+    packageTc: NameAndDependsOn<P>,
 ): string {
     if (tc.kind(h) === "eachPackage") {
-        const pkg = tc.pkg(h);
-        if (!pkg) throw new Error(`Execution item ${tc.display(h)} claimed kind eachPackage but had no package`);
-        return `step:${tc.stepIndex(h)}:pkg:${packageTc.getName(pkg)}`;
+        const pkg = tc.pkg(h)
+        if (!pkg) throw new Error(`Execution item ${tc.display(h)} claimed kind eachPackage but had no package`)
+        return `step:${tc.stepIndex(h)}:pkg:${packageTc.getName(pkg)}`
     }
-    return `step:${tc.stepIndex(h)}:workspace`;
+
+    return `step:${tc.stepIndex(h)}:workspace`
 }
 
 /**
@@ -142,64 +149,67 @@ export function executionItemGraphName<C, P, H>(
 export function buildExecutionItems<C extends { executionScope: ExecutionScope }, P, H>(
     commands: C[],
     packagesForCommand: P[][],
-    tc: ExecutionItemPlannerTypeClass<C, P, H>
+    tc: ExecutionItemPlannerTypeClass<C, P, H>,
 ): H[] {
     if (commands.length !== packagesForCommand.length) {
         throw new Error(
-            `buildExecutionItems expected commands.length (${commands.length}) to equal packagesForCommand.length (${packagesForCommand.length})`
-        );
+            `buildExecutionItems expected commands.length (${commands.length}) to equal packagesForCommand.length (${packagesForCommand.length})`,
+        )
     }
 
-    const result: H[] = [];
+    const result: H[] = []
+
     for (let stepIndex = 0; stepIndex < commands.length; stepIndex++) {
-        const command = commands[stepIndex];
+        const command = commands[stepIndex]
+
         if (command.executionScope === "eachPackage") {
             for (const pkg of packagesForCommand[stepIndex]) {
-                result.push(tc.makeEachPackage(stepIndex, command, pkg));
+                result.push(tc.makeEachPackage(stepIndex, command, pkg))
             }
         } else {
-            result.push(tc.makeOncePerWorkspace(stepIndex, command));
+            result.push(tc.makeOncePerWorkspace(stepIndex, command))
         }
     }
-    return result;
+
+    return result
 }
 
 function findNearestEarlierPackageItem<C, P, H>(
     item: H,
     items: H[],
     tc: ExecutionItemPlannerTypeClass<C, P, H>,
-    packageTc: NameAndDependsOn<P>
+    packageTc: NameAndDependsOn<P>,
 ): H | undefined {
-    if (tc.kind(item) !== "eachPackage") return undefined;
+    if (tc.kind(item) !== "eachPackage") return undefined
 
-    const pkg = tc.pkg(item);
-    if (!pkg) throw new Error(`Execution item ${tc.display(item)} claimed kind eachPackage but had no package`);
+    const pkg = tc.pkg(item)
+    if (!pkg) throw new Error(`Execution item ${tc.display(item)} claimed kind eachPackage but had no package`)
 
-    const itemStep = tc.stepIndex(item);
-    const itemPkgName = packageTc.getName(pkg);
+    const itemStep = tc.stepIndex(item)
+    const itemPkgName = packageTc.getName(pkg)
 
-    let best: H | undefined = undefined;
-    let bestStep = -1;
+    let best: H | undefined = undefined
+    let bestStep = -1
 
     for (const candidate of items) {
-        if (tc.kind(candidate) !== "eachPackage") continue;
+        if (tc.kind(candidate) !== "eachPackage") continue
 
-        const candidatePkg = tc.pkg(candidate);
+        const candidatePkg = tc.pkg(candidate)
         if (!candidatePkg) {
-            throw new Error(`Execution item ${tc.display(candidate)} claimed kind eachPackage but had no package`);
+            throw new Error(`Execution item ${tc.display(candidate)} claimed kind eachPackage but had no package`)
         }
 
-        const candidateStep = tc.stepIndex(candidate);
-        if (candidateStep >= itemStep) continue;
-        if (packageTc.getName(candidatePkg) !== itemPkgName) continue;
+        const candidateStep = tc.stepIndex(candidate)
+        if (candidateStep >= itemStep) continue
+        if (packageTc.getName(candidatePkg) !== itemPkgName) continue
 
         if (candidateStep > bestStep) {
-            best = candidate;
-            bestStep = candidateStep;
+            best = candidate
+            bestStep = candidateStep
         }
     }
 
-    return best;
+    return best
 }
 
 /**
@@ -215,54 +225,54 @@ export function dependsOnExecutionItem<C, P, H>(
     item: H,
     items: H[],
     tc: ExecutionItemPlannerTypeClass<C, P, H>,
-    packageTc: NameAndDependsOn<P>
+    packageTc: NameAndDependsOn<P>,
 ): string[] {
-    const result = new Set<string>();
-    const itemStep = tc.stepIndex(item);
+    const result = new Set<string>()
+    const itemStep = tc.stepIndex(item)
 
     if (tc.kind(item) === "eachPackage") {
-        const pkg = tc.pkg(item);
-        if (!pkg) throw new Error(`Execution item ${tc.display(item)} claimed kind eachPackage but had no package`);
+        const pkg = tc.pkg(item)
+        if (!pkg) throw new Error(`Execution item ${tc.display(item)} claimed kind eachPackage but had no package`)
 
-        const pkgDependencyNames = new Set(packageTc.dependsOn(pkg));
+        const pkgDependencyNames = new Set(packageTc.dependsOn(pkg))
 
         for (const candidate of items) {
-            if (tc.kind(candidate) !== "eachPackage") continue;
-            if (tc.stepIndex(candidate) !== itemStep) continue;
+            if (tc.kind(candidate) !== "eachPackage") continue
+            if (tc.stepIndex(candidate) !== itemStep) continue
 
-            const candidatePkg = tc.pkg(candidate);
+            const candidatePkg = tc.pkg(candidate)
             if (!candidatePkg) {
-                throw new Error(`Execution item ${tc.display(candidate)} claimed kind eachPackage but had no package`);
+                throw new Error(`Execution item ${tc.display(candidate)} claimed kind eachPackage but had no package`)
             }
 
-            const candidatePkgName = packageTc.getName(candidatePkg);
+            const candidatePkgName = packageTc.getName(candidatePkg)
             if (pkgDependencyNames.has(candidatePkgName)) {
-                result.add(executionItemGraphName(candidate, tc, packageTc));
+                result.add(executionItemGraphName(candidate, tc, packageTc))
             }
         }
 
-        const previous = findNearestEarlierPackageItem(item, items, tc, packageTc);
+        const previous = findNearestEarlierPackageItem(item, items, tc, packageTc)
         if (previous) {
-            result.add(executionItemGraphName(previous, tc, packageTc));
+            result.add(executionItemGraphName(previous, tc, packageTc))
         }
 
         for (const candidate of items) {
-            if (tc.kind(candidate) !== "oncePerWorkSpace") continue;
+            if (tc.kind(candidate) !== "oncePerWorkSpace") continue
             if (tc.stepIndex(candidate) < itemStep) {
-                result.add(executionItemGraphName(candidate, tc, packageTc));
+                result.add(executionItemGraphName(candidate, tc, packageTc))
             }
         }
 
-        return [...result];
+        return [...result]
     }
 
     for (const candidate of items) {
         if (tc.stepIndex(candidate) < itemStep) {
-            result.add(executionItemGraphName(candidate, tc, packageTc));
+            result.add(executionItemGraphName(candidate, tc, packageTc))
         }
     }
 
-    return [...result];
+    return [...result]
 }
 
 /**
@@ -271,32 +281,32 @@ export function dependsOnExecutionItem<C, P, H>(
 export function buildExecutionGraph<C, P, H>(
     items: H[],
     tc: ExecutionItemPlannerTypeClass<C, P, H>,
-    packageTc: NameAndDependsOn<P>
+    packageTc: NameAndDependsOn<P>,
 ): NameAndDependsOn<H> {
     return {
         getName: h => executionItemGraphName(h, tc, packageTc),
-        dependsOn: h => dependsOnExecutionItem(h, items, tc, packageTc)
-    };
+        dependsOn: h => dependsOnExecutionItem(h, items, tc, packageTc),
+    }
 }
 
 function distinctPackageDetails<P>(
     packagesForCommand: P[][],
-    packageTc: NameAndDependsOn<P>
+    packageTc: NameAndDependsOn<P>,
 ): P[] {
-    const result: P[] = [];
-    const seen = new Set<string>();
+    const result: P[] = []
+    const seen = new Set<string>()
 
     for (const packages of packagesForCommand) {
         for (const pkg of packages) {
-            const name = packageTc.getName(pkg);
+            const name = packageTc.getName(pkg)
             if (!seen.has(name)) {
-                seen.add(name);
-                result.push(pkg);
+                seen.add(name)
+                result.push(pkg)
             }
         }
     }
 
-    return result;
+    return result
 }
 
 function makeExecutionPlanStats<C, P, H>(
@@ -305,12 +315,12 @@ function makeExecutionPlanStats<C, P, H>(
     items: H[],
     plan: H[][],
     tc: ExecutionItemPlannerTypeClass<C, P, H>,
-    packageTc: NameAndDependsOn<P>
+    packageTc: NameAndDependsOn<P>,
 ): ExecutionPlanStats<P> {
-    const distinctPackages = distinctPackageDetails(packagesForCommand, packageTc);
-    const packageExecutionItemCount = items.filter(i => tc.kind(i) === "eachPackage").length;
-    const barrierCount = items.filter(i => tc.kind(i) === "oncePerWorkSpace").length;
-    const largestGenerationSize = plan.length === 0 ? 0 : Math.max(...plan.map(g => g.length));
+    const distinctPackages = distinctPackageDetails(packagesForCommand, packageTc)
+    const packageExecutionItemCount = items.filter(i => tc.kind(i) === "eachPackage").length
+    const barrierCount = items.filter(i => tc.kind(i) === "oncePerWorkSpace").length
+    const largestGenerationSize = plan.length === 0 ? 0 : Math.max(...plan.map(g => g.length))
 
     return {
         commandCount: commands.length,
@@ -319,34 +329,34 @@ function makeExecutionPlanStats<C, P, H>(
         packageExecutionItemCount,
         barrierCount,
         generationCount: plan.length,
-        largestGenerationSize
-    };
+        largestGenerationSize,
+    }
 }
 
 function debugExecutionPlanStart<C extends { executionScope: ExecutionScope }, P>(
     purpose: string,
     commands: C[],
     packagesForCommand: P[][],
-    observability: Observability
+    observability: Observability,
 ): void {
     observability.debug(
-        "makeExecutionPlan:start",
+        executionPlanStartDebug,
         "debug",
         {
             purpose,
             commandCount: commands.length,
-            packageSetCount: packagesForCommand.length
-        }
-    );
+            packageSetCount: packagesForCommand.length,
+        },
+    )
 }
 
 function debugExecutionPlanFinished<P>(
     purpose: string,
     stats: ExecutionPlanStats<P>,
-    observability: Observability
+    observability: Observability,
 ): void {
     observability.debug(
-        "makeExecutionPlan:finished",
+        executionPlanFinishedDebug,
         "debug",
         {
             purpose,
@@ -356,9 +366,9 @@ function debugExecutionPlanFinished<P>(
             packageExecutionItemCount: stats.packageExecutionItemCount,
             barrierCount: stats.barrierCount,
             generationCount: stats.generationCount,
-            largestGenerationSize: stats.largestGenerationSize
-        }
-    );
+            largestGenerationSize: stats.largestGenerationSize,
+        },
+    )
 }
 
 /**
@@ -370,20 +380,21 @@ export function makeExecutionPlan<C extends { executionScope: ExecutionScope }, 
     packagesForCommand: P[][],
     tc: ExecutionItemPlannerTypeClass<C, P, H>,
     packageTc: NameAndDependsOn<P>,
-    observability: Observability
+    observability: Observability,
 ): ErrorsOr<ExecutionPlanResult<P, H>, TopologicalGenerationIssue> {
-    debugExecutionPlanStart(purpose, commands, packagesForCommand, observability);
+    debugExecutionPlanStart(purpose, commands, packagesForCommand, observability)
 
-    const items = buildExecutionItems(commands, packagesForCommand, tc);
-    const graph = buildExecutionGraph(items, tc, packageTc);
+    const items = buildExecutionItems(commands, packagesForCommand, tc)
+    const graph = buildExecutionGraph(items, tc, packageTc)
 
     return mapErrorsOr(
         topologicalGenerations(`${purpose}:execution_plan`, items, graph, observability),
         generations => {
-            const plan = generations.filter(g => g.length > 0);
-            const stats = makeExecutionPlanStats(commands, packagesForCommand, items, plan, tc, packageTc);
-            debugExecutionPlanFinished(purpose, stats, observability);
-            return {plan, stats};
-        }
-    );
+            const plan = generations.filter(g => g.length > 0)
+            const stats = makeExecutionPlanStats(commands, packagesForCommand, items, plan, tc, packageTc)
+            debugExecutionPlanFinished(purpose, stats, observability)
+
+            return {plan, stats}
+        },
+    )
 }

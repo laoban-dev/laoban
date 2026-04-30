@@ -23,6 +23,7 @@
     "@laoban/config_cli": "2.0.0",
     "@laoban/errors": "2.0.0",
     "@laoban/laoban_config": "2.0.0",
+    "@laoban/node_execution": "2.0.0",
     "@laoban/observability": "2.0.0",
     "@laoban/package_cli": "2.0.0",
     "@laoban/safe": "2.0.0",
@@ -33,6 +34,7 @@
     "debug": "^4.3.4"
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
     "typescript": "^5.2.2",
     "@testing-library/jest-dom": "^6.1.4",
     "@types/jest": "^29.0.0",

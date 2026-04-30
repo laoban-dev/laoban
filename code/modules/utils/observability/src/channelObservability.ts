@@ -1,14 +1,14 @@
-import {ErrorsOr, isErrors, makeErrorFromException} from "@laoban/errors";
+import {ErrorsOr, isErrors, makeErrorFromException, value} from "@laoban/errors"
 import {
     CountMetric,
     DurationMetric,
-    makeObservability, ModuleName,
+    makeObservability,
     nullCountMetric,
     nullDurationMetric,
     Observability,
     ObservabilityContext,
     ObservabilityTarget,
-} from "./observability";
+} from "./observability"
 import {
     ChannelTc,
     ChannelsState,
@@ -16,10 +16,11 @@ import {
     flush,
     syncWriteTo,
     Write,
-} from "./write.with.flush";
+} from "./write.with.flush"
 
 export type ChannelObservability = Observability & {
     flush: (out: Write) => Promise<ErrorsOr<unknown>>
+    close: () => Promise<ErrorsOr<void>>
 }
 
 /**
@@ -73,6 +74,39 @@ export const channelObservability = <Purpose, ReadChannel, WriteChannel, Ref>(
     })
 }
 
+export const closeChannelObservability = async <Purpose, ReadChannel, WriteChannel, Ref>(
+    context: ObservabilityContext,
+    channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
+): Promise<ErrorsOr<void>> => {
+    const key = channelsState.tc.keyFrom(context.module)
+    const moduleState = channelsState.state[key]
+
+    if (!moduleState?.channels)
+        return value(undefined)
+
+    const errors: unknown[] = []
+
+    for (const channel of moduleState.channels) {
+        try {
+            const result = await channelsState.tc.closeWritable(channel)
+            if (isErrors(result)) {
+                channelsState.onError(result)
+                errors.push(...result.errors)
+            }
+        } catch (e) {
+            const error = makeErrorFromException("closeChannelObservability", e)
+            channelsState.onError(error)
+            errors.push(...error.errors)
+        }
+    }
+
+    moduleState.channels = undefined
+
+    return errors.length === 0
+        ? value(undefined)
+        : {errors: errors as any}
+}
+
 /**
  * Create a module-aware channel-backed observability from existing shared
  * channel state.
@@ -88,7 +122,7 @@ export const channelObservabilityWithModule = <Purpose, ReadChannel, WriteChanne
     durationMetric: DurationMetric = nullDurationMetric,
 ): ChannelObservability => {
     const target: ObservabilityTarget = {
-        write: syncWriteTo(channelsState)(context.module)
+        write: syncWriteTo(channelsState)(context.module),
     }
 
     return {
@@ -98,6 +132,7 @@ export const channelObservabilityWithModule = <Purpose, ReadChannel, WriteChanne
             countMetric,
             durationMetric,
         }),
-        flush: flush(channelsState)
+        flush: flush(channelsState),
+        close: () => closeChannelObservability(context, channelsState),
     }
 }

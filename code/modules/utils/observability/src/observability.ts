@@ -1,17 +1,27 @@
-import {Errors} from "@laoban/errors";
-import {safePrettyJson} from "@laoban/safe";
-import {defaultObservabilityTemplates, ObservabilityTemplates, renderObservabilityLine} from "./observability.log";
-import {Write} from "./write.with.flush";
+import {Errors} from "@laoban/errors"
+import {safePrettyJson} from "@laoban/safe"
+import {
+    DebugConfig,
+    DebugName,
+    emptyDebugConfig,
+    LogLevel,
+    renderDebugName,
+    shouldDebug,
+} from "./observability.debug"
+import {
+    defaultObservabilityTemplates,
+    ObservabilityTemplates,
+    renderObservabilityLine,
+} from "./observability.log"
+import {Write} from "./write.with.flush"
 
 export type CorrelationId = string
 export type ModuleName = string | null | undefined
 
-export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
-
 export type Log = (...msg: unknown[]) => void
 
 export type Debug = (
-    context: string,
+    debugName: DebugName,
     level: LogLevel,
     ...msg: unknown[]
 ) => void
@@ -24,12 +34,10 @@ export type TimeService = {
     now: () => number
 }
 
-export type DebugLevels = Record<string, LogLevel[]>
-
 export type ObservabilityContext = Readonly<{
     correlationId: CorrelationId
     module: ModuleName
-    debugLevels: DebugLevels
+    debugConfig: DebugConfig
     timeService: TimeService
     templates: Partial<ObservabilityTemplates>
     dictionary: Record<string, unknown>
@@ -53,28 +61,29 @@ export type MakeObservabilityOptions = Readonly<{
     durationMetric?: DurationMetric
 }>
 
-export const shouldDebug = (
-    debugLevels: DebugLevels,
-    context: string,
-    level: LogLevel
-): boolean => (debugLevels[context] ?? []).includes(level)
-
 export const nullLog: Log = () => {
 }
+
 export const nullCountMetric: CountMetric = () => {
 }
+
 export const nullDurationMetric: DurationMetric = () => {
 }
-export const realTimeService: TimeService = {now: () => Date.now()}
+
+export const realTimeService: TimeService = {
+    now: () => Date.now(),
+}
+
 export const fixedTimeService = (now: number): TimeService => ({
     now: () => now,
 })
 
 export const steppingTimeService = (
     start: number = 0,
-    stepMs: number = 1
+    stepMs: number = 1,
 ): TimeService => {
     let current = start
+
     return {
         now: () => {
             const result = current
@@ -85,13 +94,13 @@ export const steppingTimeService = (
 }
 
 export const defaultObservabilityContext = (
-    correlationId: CorrelationId = 'none',
-    debugLevels: DebugLevels = {},
-    module: ModuleName = undefined
+    correlationId: CorrelationId = "none",
+    debugConfig: DebugConfig = emptyDebugConfig,
+    module: ModuleName = undefined,
 ): ObservabilityContext => ({
     correlationId,
     module,
-    debugLevels,
+    debugConfig,
     timeService: realTimeService,
     templates: defaultObservabilityTemplates,
     dictionary: {},
@@ -115,13 +124,13 @@ export const makeObservability = ({
             msg,
         })}\n`),
 
-    debug: (debugContext, level, ...msg) => {
-        if (!shouldDebug(context.debugLevels, debugContext, level)) return
+    debug: (debugName, level, ...msg) => {
+        if (!shouldDebug(context.debugConfig, debugName, level)) return
 
         return target.write(`${renderObservabilityLine({
             ...context,
             template: "debug",
-            context: debugContext,
+            context: renderDebugName(debugName),
             level,
             msg,
         })}\n`)
@@ -129,7 +138,7 @@ export const makeObservability = ({
 })
 
 export const nullObservability = (
-    correlationId: CorrelationId = 'none'
+    correlationId: CorrelationId = "none",
 ): Observability =>
     makeObservability({
         context: defaultObservabilityContext(correlationId),
@@ -148,6 +157,7 @@ export function dumpErrors(o: Observability, e: Errors): void {
 
     if (e.reference)
         o.log("Reference:", e.reference)
+
     dumpOne("Errors:", e.errors)
     dumpOne("Warnings:", e.warnings)
 }

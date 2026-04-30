@@ -7,7 +7,7 @@ import {
     ChannelTc,
     CountMetric,
     CreateOptions,
-    DebugLevels,
+    DebugConfig,
     defaultObservabilityContext,
     DurationMetric,
     emptyChannelState,
@@ -54,7 +54,7 @@ const awaitWriteResult = async (result: void | Promise<void>): Promise<void> => 
 
 const openWriteChannel = async (
     ref: NodeRef,
-    append: boolean
+    append: boolean,
 ): Promise<NodeWriteChannel> => {
     const channel = createWriteStream(ref, {
         flags: append ? "a" : "w",
@@ -71,7 +71,7 @@ const openWriteChannel = async (
 
 const createWriteChannel = async (
     ref: NodeRef,
-    append: boolean
+    append: boolean,
 ): Promise<NodeWriteChannel> => {
     try {
         return await openWriteChannel(ref, append)
@@ -82,7 +82,7 @@ const createWriteChannel = async (
 }
 
 export const nodeChannelTc = <Purpose>(
-    options: NodeChannelTcOptions<Purpose>
+    options: NodeChannelTcOptions<Purpose>,
 ): ChannelTc<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef> => ({
     reference: options.reference,
 
@@ -133,7 +133,7 @@ export const nodeChannelTc = <Purpose>(
     sendFromRefToWrite: async (
         ref: NodeRef,
         from: Marker,
-        write: Write
+        write: Write,
     ): Promise<ErrorsOr<Marker>> => {
         try {
             const stat = await fs.stat(ref)
@@ -156,9 +156,10 @@ export const nodeChannelTc = <Purpose>(
             if (e?.code === "ENOENT") {
                 return nodeChannelError(
                     `Failed to send durable content from ${ref}`,
-                    "ref does not exist"
+                    "ref does not exist",
                 )
             }
+
             return nodeChannelError(`Failed to send durable content from ${ref}`, e)
         }
     },
@@ -167,7 +168,7 @@ export const nodeChannelTc = <Purpose>(
 export type CreateNodeObservabilityConfig<Purpose> = Readonly<{
     correlationId?: string
     module?: ModuleName
-    debugLevels?: DebugLevels
+    debugConfig?: DebugConfig
     timeService?: ObservabilityContext["timeService"]
     templates?: Partial<ObservabilityTemplates>
     dictionary?: Record<string, unknown>
@@ -212,7 +213,7 @@ export type CreatedNodeObservability<Purpose> = Readonly<{
 export const createNodeObservability = <Purpose>({
                                                      correlationId = "NoCorrelationId",
                                                      module = undefined,
-                                                     debugLevels = {},
+                                                     debugConfig = {},
                                                      timeService,
                                                      templates,
                                                      dictionary = {},
@@ -226,7 +227,7 @@ export const createNodeObservability = <Purpose>({
                                                  }: CreateNodeObservabilityConfig<Purpose>): CreatedNodeObservability<Purpose> => {
     const defaultContext = defaultObservabilityContext(
         correlationId,
-        debugLevels,
+        debugConfig,
         module,
     )
 
@@ -274,7 +275,7 @@ export const createNodeObservability = <Purpose>({
 export function dumpAndExitIfErrors<T>(
     o: Observability,
     e: ErrorsOr<T>,
-    level: LogLevel = "error"
+    level: LogLevel = "error",
 ): T {
     function dumpOne<T>(title: string, array?: T[]) {
         if (array && array.length) {
@@ -288,6 +289,7 @@ export function dumpAndExitIfErrors<T>(
     if (isErrors(e)) {
         if (e.reference)
             o.log(level, "Reference:", e.reference)
+
         dumpOne("Errors:", e.errors)
         dumpOne("Warnings:", e.warnings)
         process.exit(1)

@@ -32,7 +32,7 @@ export function walkCliModel<Acc, C extends BasicCliContext = BasicCliContext>(
     model: CliRoot<C>,
     config: CliWalkerConfig<Acc, C>
 ): Acc {
-    config.observability.debug("cli:adapter", "debug", `Walking CLI model ${model.name}`);
+    config.observability.debug(["cli","adapter"], "debug", `Walking CLI model ${model.name}`);
     const rootAcc = config.addRoot(acc, model);
     return walkCliRootChildren(rootAcc, model, config);
 }
@@ -66,13 +66,13 @@ export function walkCliNode<Acc, C extends BasicCliContext = BasicCliContext>(
     config: CliWalkerConfig<Acc, C>
 ): Acc {
     if (isCliGroup(node)) {
-        config.observability.debug("cli:adapter", "debug", `Walking CLI group ${name}`);
+        config.observability.debug(["cli","adapter"], "debug", `Walking CLI group ${name}`);
         const childAcc = config.addGroup(acc, name, node);
         walkCliGroupChildren(childAcc, node, config);
         return acc;
     }
     if (isCliCommand(node)) {
-        config.observability.debug("cli:adapter", "debug", `Walking CLI command ${name}`);
+        config.observability.debug(["cli","adapter"], "debug", `Walking CLI command ${name}`);
         config.addLeafCommand(acc, name, node);
         return acc;
     }

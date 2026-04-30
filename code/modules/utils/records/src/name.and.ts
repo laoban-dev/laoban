@@ -1,5 +1,5 @@
 export type NameAnd<T> = { [name: string]: T }
-export type Env = NameAnd<string>
+export type Env = NameAnd<string|undefined>
 export const mutableEmptyObject: NameAnd<never> = {};
 export const frozenEmptyObject = Object.freeze({} as NameAnd<never>);
 

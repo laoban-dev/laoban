@@ -1,0 +1,23 @@
+{
+  "template": "typescript",
+  "name": "@laoban/execution",
+  "description": "Executes a string in a directory. The output is piped to a channel",
+  "links": [
+    "@laoban/records",
+    "@laoban/safe"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

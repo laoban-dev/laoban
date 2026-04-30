@@ -254,7 +254,7 @@ export async function loadPackages(
     }
 
     observability.debug(
-        "loading.package.details",
+        ["packageDetails", "details"],
         "debug",
         {
             configDirectory,

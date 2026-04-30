@@ -4,10 +4,11 @@ import * as process from "node:process";
 import {defaultLoadTextConfig} from "@laoban/files";
 import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure} from "@laoban/files_node";
 import {loadLaobanConfig} from "@laoban/laoban_config";
+import {Env} from "@laoban/records"
 import {
-    ChannelsState,
+    ChannelsState, DebugConfig,
     defaultObservabilityTemplates,
-    ModuleName,
+    ModuleName, parseDebugConfig, parseDebugName,
     realTimeService
 } from "@laoban/observability";
 import {
@@ -27,6 +28,10 @@ import {
 } from "@laoban/scripts_cli";
 
 import {LaobanCliContext} from "./laoban.context";
+import {makeNodeExecution, NodeExecution, NodeExecutionOptions} from "@laoban/node_execution/src/node.execution";
+import {defaultFileCommands} from "@laoban/node_execution";
+import {defaultPrefixAndValueOptions} from "@laoban/execution";
+import {ErrorsOr, mapErrorsOr, mapErrorsOrK} from "@laoban/errors";
 
 export type LaobanDi = {
     argv: string[];
@@ -66,7 +71,7 @@ export function makeChannelsState(
     };
 }
 
-export function makeLaobanDi(argv: string[] = process.argv): LaobanDi {
+export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> {
     const now = new Date().toISOString();
     const pathSafeNow = safePathSegment(now);
     const command = argv[2] ?? "root";
@@ -99,34 +104,44 @@ export function makeLaobanDi(argv: string[] = process.argv): LaobanDi {
 
     const cwd = process.cwd();
     const stdOut = process.stdout;
+    const env: Env = process.env;
+    const nodeExecuteOptions: NodeExecutionOptions = {
+        fileCommands: defaultFileCommands,
+        prefixAndValueOptions: defaultPrefixAndValueOptions
+    }
+    const execution: NodeExecution = makeNodeExecution(nodeExecuteOptions)
+    return mapErrorsOr(parseDebugConfig(command), (debugConfig: DebugConfig) => {
+            const result: LaobanDi = {
+                argv,
+                makeCommand: () => new Command(),
+                loadLaobanConfig,
+                handleFatalErrors: dumpAndExitIfErrors,
 
-    return {
-        argv,
-        makeCommand: () => new Command(),
-        loadLaobanConfig,
-        handleFatalErrors: dumpAndExitIfErrors,
+                makeContext: () => ({
+                    correlationId,
+                    channelsState,
+                    execution,
+                    timeService: realTimeService,
+                    module: null,
+                    env,
+                    debugConfig,
+                    dictionary: {},
+                    templates: defaultObservabilityTemplates,
+                    debugLevels: {},
+                    observability,
+                    fileOps,
+                    loadLaobanFileConfig,
 
-        makeContext: () => ({
-            correlationId,
-            channelsState,
-            timeService: realTimeService,
-            module: null,
+                    cwd,
+                    loadLaobanConfig,
+                    stdOut,
 
-            dictionary: {},
-            templates: defaultObservabilityTemplates,
-            debugLevels: {},
-            observability,
-
-            fileOps,
-            loadLaobanFileConfig,
-
-            cwd,
-            loadLaobanConfig,
-            stdOut,
-
-            loadConfigAndPackagesFn: loadConfigAndPackages,
-            handleLaobanScript: defaultHandleLaobanScript,
-            makeDictionary: makeScriptExecutionItemTemplateDictionary
-        })
-    };
+                    loadConfigAndPackagesFn: loadConfigAndPackages,
+                    handleLaobanScript: defaultHandleLaobanScript,
+                    makeDictionary: makeScriptExecutionItemTemplateDictionary
+                })
+            };
+            return result;
+        }
+    )
 }

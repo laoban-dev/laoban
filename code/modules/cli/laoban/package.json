@@ -21,6 +21,7 @@
     "@laoban/clidsl": "2.0.0",
     "@laoban/commander": "2.0.0",
     "@laoban/errors": "2.0.0",
+    "@laoban/node_execution": "2.0.0",
     "@laoban/observability": "2.0.0",
     "@laoban/observability_node": "2.0.0",
     "@laoban/safe": "2.0.0",

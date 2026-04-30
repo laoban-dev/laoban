@@ -7,6 +7,7 @@ import {
     nullCountMetric,
     nullDurationMetric,
 } from "./observability"
+import {DebugConfig} from "./observability.debug"
 import {defaultObservabilityWithCorrelationIdTemplates} from "./observability.log"
 import {Errors, ErrorsOr, isErrors, value} from "@laoban/errors"
 
@@ -72,17 +73,17 @@ function makeTc(overrides?: Partial<ChannelTc<Purpose, ReadChannel, WriteChannel
 
 const context = (
     module: ModuleName = undefined,
-    debugLevels = {},
+    debugConfig: DebugConfig = {},
 ) => ({
-    ...defaultObservabilityContext("corr-123", debugLevels, module),
+    ...defaultObservabilityContext("corr-123", debugConfig, module),
     timeService: fixedTimeService(100),
 })
 
 const contextWithCorrelationIdTemplate = (
     module: ModuleName = undefined,
-    debugLevels = {},
+    debugConfig: DebugConfig = {},
 ) => ({
-    ...context(module, debugLevels),
+    ...context(module, debugConfig),
     templates: defaultObservabilityWithCorrelationIdTemplates,
 })
 
@@ -187,18 +188,85 @@ describe("channelObservability", () => {
         ])
     })
 
-    it("writes rendered debug lines to the supplied writable channel when enabled", async () => {
+    it("writes rendered debug lines to the supplied writable channel when the whole area is enabled", async () => {
         const {tc} = makeTc()
         const onError = jest.fn()
         const channel: WriteChannel = {ref: "stdout", writes: []}
 
-        const obs = channelObservability(context("root", {load: ["debug"]}), tc, channel, onError)
+        const obs = channelObservability(
+            context("root", {
+                load: {
+                    debug: [],
+                },
+            }),
+            tc,
+            channel,
+            onError,
+        )
 
-        await (obs.debug("load", "debug", "loading") as any as Promise<void>)
+        await (obs.debug(["load"], "debug", "loading") as any as Promise<void>)
 
         expect(tc.write).toHaveBeenCalledTimes(1)
         expect(channel.writes).toEqual([
             "00:00:00 DEBUG [load] loading\n",
+        ])
+    })
+
+    it("writes rendered child debug lines when the whole area is enabled", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const channel: WriteChannel = {ref: "stdout", writes: []}
+
+        const obs = channelObservability(
+            context("root", {
+                script: {
+                    debug: [],
+                },
+            }),
+            tc,
+            channel,
+            onError,
+        )
+
+        await (obs.debug(["script", "type1"], "debug", "running type1") as any as Promise<void>)
+        await (obs.debug(["script", "type2"], "debug", "running type2") as any as Promise<void>)
+
+        expect(tc.write).toHaveBeenCalledTimes(2)
+        expect(channel.writes).toEqual([
+            "00:00:00 DEBUG [script:type1] running type1\n",
+            "00:00:00 DEBUG [script:type2] running type2\n",
+        ])
+    })
+
+    it("writes only configured child debug lines when a child path is enabled", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const channel: WriteChannel = {ref: "stdout", writes: []}
+
+        const obs = channelObservability(
+            context("root", {
+                template: {
+                    debug: [["parse"]],
+                },
+            }),
+            tc,
+            channel,
+            onError,
+        )
+
+        const rootResult = obs.debug(["template"], "debug", "hidden root") as any
+        if (rootResult) await rootResult
+
+        await (obs.debug(["template", "parse"], "debug", "parsing") as any as Promise<void>)
+        await (obs.debug(["template", "parse", "tokens"], "debug", "tokens") as any as Promise<void>)
+
+        const renderResult = obs.debug(["template", "render"], "debug", "hidden render") as any
+        if (renderResult) await renderResult
+
+        expect(tc.write).toHaveBeenCalledTimes(2)
+        expect(channel.writes).toEqual([
+            "00:00:00 DEBUG [template:parse] parsing\n",
+            "00:00:00 DEBUG [template:parse:tokens] tokens\n",
         ])
     })
 
@@ -207,9 +275,18 @@ describe("channelObservability", () => {
         const onError = jest.fn()
         const channel: WriteChannel = {ref: "stdout", writes: []}
 
-        const obs = channelObservability(context("root", {load: ["info"]}), tc, channel, onError)
+        const obs = channelObservability(
+            context("root", {
+                load: {
+                    info: [],
+                },
+            }),
+            tc,
+            channel,
+            onError,
+        )
 
-        const result = obs.debug("load", "debug", "hidden") as any
+        const result = obs.debug(["load"], "debug", "hidden") as any
         if (result) await result
 
         expect(tc.write).not.toHaveBeenCalled()
@@ -276,21 +353,75 @@ describe("channelObservabilityWithModule", () => {
         })
     })
 
-    it("writes debug through module channels when enabled", async () => {
+    it("writes debug through module channels when the whole area is enabled", async () => {
         const {tc} = makeTc()
         const onError = jest.fn()
         const channelsState = emptyChannelState(tc, [".log"], onError)
 
         const obs = channelObservabilityWithModule(
-            context("alpha", {exec: ["debug"]}),
+            context("alpha", {
+                exec: {
+                    debug: [],
+                },
+            }),
             channelsState,
         )
 
-        await (obs.debug("exec", "debug", "running") as any as Promise<void>)
+        await (obs.debug(["exec"], "debug", "running") as any as Promise<void>)
 
         expect(tc.write).toHaveBeenCalledTimes(1)
         expect(channelsState.state.alpha.channels?.map(c => c.writes)).toEqual([
             ["00:00:00 DEBUG [exec] running\n"],
+        ])
+    })
+
+    it("writes child debug through module channels when the whole area is enabled", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const channelsState = emptyChannelState(tc, [".log"], onError)
+
+        const obs = channelObservabilityWithModule(
+            context("alpha", {
+                script: {
+                    debug: [],
+                },
+            }),
+            channelsState,
+        )
+
+        await (obs.debug(["script", "type1"], "debug", "running") as any as Promise<void>)
+
+        expect(tc.write).toHaveBeenCalledTimes(1)
+        expect(channelsState.state.alpha.channels?.map(c => c.writes)).toEqual([
+            ["00:00:00 DEBUG [script:type1] running\n"],
+        ])
+    })
+
+    it("writes only configured child debug through module channels", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const channelsState = emptyChannelState(tc, [".log"], onError)
+
+        const obs = channelObservabilityWithModule(
+            context("alpha", {
+                template: {
+                    debug: [["parse"]],
+                },
+            }),
+            channelsState,
+        )
+
+        const rootResult = obs.debug(["template"], "debug", "hidden root") as any
+        if (rootResult) await rootResult
+
+        await (obs.debug(["template", "parse"], "debug", "parsing") as any as Promise<void>)
+
+        const renderResult = obs.debug(["template", "render"], "debug", "hidden render") as any
+        if (renderResult) await renderResult
+
+        expect(tc.write).toHaveBeenCalledTimes(1)
+        expect(channelsState.state.alpha.channels?.map(c => c.writes)).toEqual([
+            ["00:00:00 DEBUG [template:parse] parsing\n"],
         ])
     })
 
@@ -300,11 +431,15 @@ describe("channelObservabilityWithModule", () => {
         const channelsState = emptyChannelState(tc, [".log"], onError)
 
         const obs = channelObservabilityWithModule(
-            context("alpha", {exec: ["info"]}),
+            context("alpha", {
+                exec: {
+                    info: [],
+                },
+            }),
             channelsState,
         )
 
-        const result = obs.debug("exec", "debug", "hidden") as any
+        const result = obs.debug(["exec"], "debug", "hidden") as any
         if (result) await result
 
         expect(tc.create).not.toHaveBeenCalled()

@@ -1,55 +1,61 @@
 import {
     CorrelationId,
-    DebugLevels,
-    LogLevel,
     ModuleName,
     Observability,
     realTimeService,
     TimeService,
     defaultObservabilityContext,
     makeObservability,
-} from "./observability";
+} from "./observability"
+import {
+    DebugConfig,
+    DebugName,
+    emptyDebugConfig,
+    LogLevel,
+    renderDebugName,
+} from "./observability.debug"
 
 export type RecordedLog = Readonly<{
-    module: ModuleName;
-    msg: string;
-}>;
+    module: ModuleName
+    msg: string
+}>
 
 export type RecordedDebug = Readonly<{
-    module: ModuleName;
-    context: string;
-    level: LogLevel;
-    msg: unknown[];
-}>;
+    module: ModuleName
+    debugName: DebugName
+    context: string
+    level: LogLevel
+    msg: unknown[]
+}>
 
 export type RecordedDuration = Readonly<{
-    name: string;
-    durationMs: number;
-}>;
+    name: string
+    durationMs: number
+}>
 
 export type RecordingObservability = Readonly<{
-    observability: Observability;
-    logs: RecordedLog[];
-    debug: RecordedDebug[];
-    counts: string[];
-    durations: RecordedDuration[];
-}>;
+    observability: Observability
+    logs: RecordedLog[]
+    debug: RecordedDebug[]
+    counts: string[]
+    durations: RecordedDuration[]
+}>
 
 export const recordingObservability = (
-    debugLevels: DebugLevels = {},
+    debugConfig: DebugConfig = emptyDebugConfig,
     correlationId: CorrelationId = "test-correlation-id",
     timeService: TimeService = realTimeService,
     module: ModuleName = undefined,
 ): RecordingObservability => {
-    const logs: RecordedLog[] = [];
-    const debug: RecordedDebug[] = [];
-    const counts: string[] = [];
-    const durations: RecordedDuration[] = [];
+    const logs: RecordedLog[] = []
+    const debug: RecordedDebug[] = []
+    const counts: string[] = []
+    const durations: RecordedDuration[] = []
 
     const context = {
-        ...defaultObservabilityContext(correlationId, debugLevels, module),
+        ...defaultObservabilityContext(correlationId, debugConfig, module),
         timeService,
-    };
+    }
 
     const base = makeObservability({
         context,
@@ -61,15 +67,22 @@ export const recordingObservability = (
         countMetric: name => counts.push(name),
         durationMetric: (name, durationMs) =>
             durations.push({name, durationMs}),
-    });
+    })
 
     const observability: Observability = {
         ...base,
-        debug: (debugContext, level, ...msg) => {
-            debug.push({module, context: debugContext, level, msg});
-            return base.debug(debugContext, level, ...msg);
+        debug: (debugName, level, ...msg) => {
+            debug.push({
+                module,
+                debugName,
+                context: renderDebugName(debugName),
+                level,
+                msg,
+            })
+
+            return base.debug(debugName, level, ...msg)
         },
-    };
+    }
 
     return {
         observability,
@@ -77,5 +90,5 @@ export const recordingObservability = (
         debug,
         counts,
         durations,
-    };
-};
+    }
+}

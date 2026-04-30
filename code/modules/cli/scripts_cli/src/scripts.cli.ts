@@ -1,41 +1,10 @@
-import {BasicCliContext, CliCommand, defineCommand} from "@laoban/clidsl";
+import {CliCommand, defineCommand} from "@laoban/clidsl";
 import {LaobanScript, LaobanScripts, ScriptName} from "@laoban/scripts";
 import {mapObject, sortObjectByName} from "@laoban/records";
-import {LaobanPackageCliContext} from "@laoban/package_cli/src/package.cli";
-import {ErrorsOr} from "@laoban/errors";
-import {ScriptExecutionItemTemplateDictionaryFn} from "./resolve.templates";
-import {ScriptFilterValues} from "./filter.packages";
-import {ChannelsState, ObservabilityContext} from "@laoban/observability";
-import {NodeReadChannel, NodeWriteChannel} from "@laoban/observability_node";
+import {LaobanScriptCliContext} from "./script.context";
+import {Purpose, ScriptCommandValues} from "./handleLaobanScriptFn";
 
-export interface ScriptCommandValues extends ScriptFilterValues {
-    // one: boolean; from ScriptFilterValues
-    // all: boolean;
-    // packages: string;
-    dryrun: boolean;
-    shellDebug: boolean;
-    quiet: boolean;
-    variables: boolean;
-    generationPlan: boolean;
-    throttle: string;
-    debug: string;
-    sessionId: string;
-    ignoreGuards: boolean;
-}
-
-export type HandleLaobanScriptFn<TContext extends LaobanPackageCliContext> =
-    (scriptName: ScriptName, script: LaobanScript, values: ScriptCommandValues, context: TContext) => Promise<ErrorsOr<any>>;
-
-export type ReferenceFileName = string
-export type Purpose = 'log' | 'session'
 export const purposes: Purpose[] = ['log', 'session'];
-
-export type LaobanScriptCliContext = LaobanPackageCliContext & ObservabilityContext & {
-    handleLaobanScript: HandleLaobanScriptFn<LaobanScriptCliContext>;
-    makeDictionary: ScriptExecutionItemTemplateDictionaryFn
-    channelsState: ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel,ReferenceFileName>
-    stdOut: NodeWriteChannel
-}
 
 export const scriptCommandOptions = {
     dryrun: {

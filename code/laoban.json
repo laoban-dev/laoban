@@ -17,6 +17,16 @@
     "repository": "git@github.com:phil-rice/laoban.git"
   },
   "scripts": {
+    "pwd": {
+      "description": "Shows the pwd",
+      "inLinksOrder": true,
+      "commands": [
+        {
+          "name": "test",
+          "command": "js:process.cwd()"
+        }
+      ]
+    },
     "threethings": {
       "description": "Executes three commands for tests",
       "commands": [

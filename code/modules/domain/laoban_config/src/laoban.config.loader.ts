@@ -33,7 +33,7 @@ function debug(
     diagnosticContext: LaobanConfigDiagnosticContext,
     ...msg: unknown[]
 ): void {
-    config.observability.debug(area, "debug", diagnosticContext, ...msg);
+    config.observability.debug([area], "debug", diagnosticContext, ...msg);
 }
 
 function initialDiagnosticContext(): LaobanConfigDiagnosticContext {

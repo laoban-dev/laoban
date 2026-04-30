@@ -3,23 +3,28 @@ import {tmpdir} from "node:os"
 import * as path from "node:path"
 import {Readable, Writable} from "node:stream"
 import {errorsOrThrow, valueOrThrow} from "@laoban/errors"
-import {
-    createNodeObservability,
-    nodeChannelTc,
-    NodeReadChannel,
-    NodeRef,
-} from "./observability.node"
-import {fixedTimeService, ModuleName} from "@laoban/observability"
+import {createNodeObservability, nodeChannelTc, NodeReadChannel, NodeRef} from "./observability.node"
+import {DebugConfig, fixedTimeService, ModuleName} from "@laoban/observability"
 
 type Purpose = ".log" | ".session"
 
-class RecordingWritable extends Writable {
-    public writes: string[] = []
+type RecordingWritable = Writable & {
+    writes: string[]
+}
 
-    _write(chunk: any, _encoding: BufferEncoding, callback: (error?: Error | null) => void) {
-        this.writes.push(String(chunk))
-        callback()
-    }
+const recordingWritable = (): RecordingWritable => {
+    const writes: string[] = []
+
+    const channel = new Writable({
+        write(chunk, _encoding, callback) {
+            writes.push(String(chunk))
+            callback()
+        },
+    }) as RecordingWritable
+
+    channel.writes = writes
+
+    return channel
 }
 
 describe("nodeChannelTc", () => {
@@ -56,7 +61,7 @@ describe("nodeChannelTc", () => {
         await writeFile(ref, "old")
 
         const channel = valueOrThrow(
-            await tc.create(ref, {append: false})
+            await tc.create(ref, {append: false}),
         )
 
         expect(valueOrThrow(await tc.write(channel, "new"))).toBeUndefined()
@@ -72,7 +77,7 @@ describe("nodeChannelTc", () => {
         await writeFile(ref, "old")
 
         const channel = valueOrThrow(
-            await tc.create(ref, {append: true})
+            await tc.create(ref, {append: true}),
         )
 
         expect(valueOrThrow(await tc.write(channel, "new"))).toBeUndefined()
@@ -86,7 +91,7 @@ describe("nodeChannelTc", () => {
         const ref = path.join(dir, "missing-parent", "nested", "alpha.log")
 
         const channel = valueOrThrow(
-            await tc.create(ref, {append: false})
+            await tc.create(ref, {append: false}),
         )
 
         expect(valueOrThrow(await tc.write(channel, "new"))).toBeUndefined()
@@ -101,7 +106,7 @@ describe("nodeChannelTc", () => {
         const ref = tc.reference("alpha")(".log")
 
         const channel = valueOrThrow(
-            await tc.create(ref, {append: false})
+            await tc.create(ref, {append: false}),
         )
 
         expect(valueOrThrow(await tc.write(channel, "one"))).toBeUndefined()
@@ -116,7 +121,7 @@ describe("nodeChannelTc", () => {
         const ref = tc.reference("alpha")(".log")
 
         const channel = valueOrThrow(
-            await tc.create(ref, {append: false})
+            await tc.create(ref, {append: false}),
         )
 
         expect(valueOrThrow(await tc.closeWritable(channel))).toBeUndefined()
@@ -245,15 +250,18 @@ describe("nodeChannelTc", () => {
         const errorContext = actual.map(e => (e.context as any).error)
         const errorMessages = actual.map(e => e.message)
         const withoutErrors = actual.map(e => ({...e, context: undefined, message: undefined}))
+
         expect(withoutErrors).toEqual([
             {
                 kind: "nodeChannel",
             },
         ])
+
         for (const e of errorContext)
-            expect(e).toContain(`Error: EISDIR: illegal operation on a directory, open`)
+            expect(e).toContain("Error: EISDIR: illegal operation on a directory, open")
+
         for (const e of errorMessages)
-            expect(e).toContain(`Failed to create write channel for `)
+            expect(e).toContain("Failed to create write channel for ")
     })
 })
 
@@ -271,8 +279,17 @@ describe("createNodeObservability", () => {
     const reference = (moduleName: ModuleName) => (purpose: Purpose): NodeRef =>
         path.join(dir, `${String(moduleName ?? "<none>")}${purpose}`)
 
+    const debugConfig: DebugConfig = {
+        exec: {
+            debug: [],
+        },
+        template: {
+            debug: [["parse"]],
+        },
+    }
+
     it("creates a root observability writing to the supplied channel", async () => {
-        const channel = new RecordingWritable()
+        const channel = recordingWritable()
         const onError = jest.fn()
 
         const created = createNodeObservability<Purpose>({
@@ -296,7 +313,7 @@ describe("createNodeObservability", () => {
     })
 
     it("creates module observability sharing the same channel state", async () => {
-        const channel = new RecordingWritable()
+        const channel = recordingWritable()
         const onError = jest.fn()
 
         const created = createNodeObservability<Purpose>({
@@ -324,7 +341,7 @@ describe("createNodeObservability", () => {
     })
 
     it("flushes module observability to an injected Write", async () => {
-        const channel = new RecordingWritable()
+        const channel = recordingWritable()
         const onError = jest.fn()
         const out: string[] = []
 
@@ -346,38 +363,108 @@ describe("createNodeObservability", () => {
 
         expect(out.join("")).toBe("00:00:00 INFO one\n")
         expect(created.channelsState.state.alpha.lastSize).toBe(
-            Buffer.byteLength("00:00:00 INFO one\n", "utf8")
+            Buffer.byteLength("00:00:00 INFO one\n", "utf8"),
         )
         expect(created.channelsState.state.alpha.channels).toBeUndefined()
     })
 
-    it("uses debug levels for root and module observability", async () => {
-        const channel = new RecordingWritable()
+    it("uses debug config for root and module observability", async () => {
+        const channel = recordingWritable()
         const onError = jest.fn()
 
         const created = createNodeObservability<Purpose>({
             correlationId: "corr-123",
             timeService: fixedTimeService(100),
-            debugLevels: {exec: ["debug"]},
+            debugConfig,
             channel,
             purposes: [".log"],
             reference,
             onError,
         })
 
-        await (created.observability.debug("exec", "debug", "root debug") as any as Promise<void>)
+        await (created.observability.debug(["exec"], "debug", "root debug") as any as Promise<void>)
 
-        const hidden = created.observability.debug("exec", "info", "hidden") as any
-        if (hidden) await hidden
+        const hiddenLevel = created.observability.debug(["exec"], "info", "hidden level") as any
+        if (hiddenLevel) await hiddenLevel
+
+        const hiddenChild = created.observability.debug(["template", "render"], "debug", "hidden child") as any
+        if (hiddenChild) await hiddenChild
+
+        await (created.observability.debug(["template", "parse"], "debug", "root parse") as any as Promise<void>)
 
         const alpha = created.withModule("alpha")
-        await (alpha.debug("exec", "debug", "module debug") as any as Promise<void>)
+        await (alpha.debug(["exec"], "debug", "module debug") as any as Promise<void>)
+        await (alpha.debug(["template", "parse"], "debug", "module parse") as any as Promise<void>)
 
         expect(channel.writes).toEqual([
             "00:00:00 DEBUG [exec] root debug\n",
+            "00:00:00 DEBUG [template:parse] root parse\n",
         ])
         expect(await readFile(path.join(dir, "alpha.log"), "utf8")).toBe(
-            "00:00:00 DEBUG [exec] module debug\n"
+            [
+                "00:00:00 DEBUG [exec] module debug\n",
+                "00:00:00 DEBUG [template:parse] module parse\n",
+            ].join(""),
         )
+    })
+
+    it("enables child debug names when the whole area is enabled", async () => {
+        const channel = recordingWritable()
+        const onError = jest.fn()
+
+        const created = createNodeObservability<Purpose>({
+            correlationId: "corr-123",
+            timeService: fixedTimeService(100),
+            debugConfig: {
+                script: {
+                    debug: [],
+                },
+            },
+            channel,
+            purposes: [".log"],
+            reference,
+            onError,
+        })
+
+        await (created.observability.debug(["script"], "debug", "script root") as any as Promise<void>)
+        await (created.observability.debug(["script", "type1"], "debug", "script type1") as any as Promise<void>)
+        await (created.observability.debug(["script", "type2"], "debug", "script type2") as any as Promise<void>)
+
+        expect(channel.writes).toEqual([
+            "00:00:00 DEBUG [script] script root\n",
+            "00:00:00 DEBUG [script:type1] script type1\n",
+            "00:00:00 DEBUG [script:type2] script type2\n",
+        ])
+    })
+
+    it("does not enable unconfigured sibling child debug names", async () => {
+        const channel = recordingWritable()
+        const onError = jest.fn()
+
+        const created = createNodeObservability<Purpose>({
+            correlationId: "corr-123",
+            timeService: fixedTimeService(100),
+            debugConfig: {
+                template: {
+                    debug: [["parse"]],
+                },
+            },
+            channel,
+            purposes: [".log"],
+            reference,
+            onError,
+        })
+
+        const hiddenRoot = created.observability.debug(["template"], "debug", "hidden root") as any
+        if (hiddenRoot) await hiddenRoot
+
+        await (created.observability.debug(["template", "parse"], "debug", "parse") as any as Promise<void>)
+
+        const hiddenRender = created.observability.debug(["template", "render"], "debug", "hidden render") as any
+        if (hiddenRender) await hiddenRender
+
+        expect(channel.writes).toEqual([
+            "00:00:00 DEBUG [template:parse] parse\n",
+        ])
     })
 })
