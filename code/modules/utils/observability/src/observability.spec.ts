@@ -1,4 +1,5 @@
 import {
+    defaultModuleObservabilityScope,
     defaultObservabilityContext,
     fixedTimeService,
     makeObservability,
@@ -7,6 +8,8 @@ import {
     nullLog,
     nullObservability,
     realTimeService,
+    type ModuleName,
+    type ModuleObservabilityScope,
     type Observability,
 } from "./observability"
 import {
@@ -16,6 +19,14 @@ import {
     type LogLevel,
 } from "./observability.debug"
 import {defaultObservabilityTemplates} from "./observability.log"
+
+const scope = (
+    module: ModuleName,
+    directory: string = String(module ?? "."),
+): ModuleObservabilityScope => ({
+    module,
+    directory,
+})
 
 describe("shouldDebug", () => {
     it("returns false when the area is not configured", () => {
@@ -156,25 +167,28 @@ describe("defaultObservabilityContext", () => {
         const context = defaultObservabilityContext()
 
         expect(context.correlationId).toBe("none")
-        expect(context.module).toBeUndefined()
+        expect(context.moduleScope).toEqual(defaultModuleObservabilityScope())
         expect(context.debugConfig).toEqual(emptyDebugConfig)
         expect(context.timeService).toBe(realTimeService)
         expect(context.templates).toEqual(defaultObservabilityTemplates)
         expect(context.dictionary).toEqual({})
     })
 
-    it("uses supplied correlation id, debug config and module", () => {
+    it("uses supplied correlation id, debug config and module scope", () => {
         const debugConfig: DebugConfig = {
             exec: {
                 debug: [],
             },
         }
+        const moduleScope = scope("alpha", "modules/alpha")
 
-        const context = defaultObservabilityContext("corr-123", debugConfig, "alpha")
+        const context = defaultObservabilityContext("corr-123", debugConfig, moduleScope)
 
         expect(context.correlationId).toBe("corr-123")
         expect(context.debugConfig).toBe(debugConfig)
-        expect(context.module).toBe("alpha")
+        expect(context.moduleScope).toBe(moduleScope)
+        expect(context.moduleScope.module).toBe("alpha")
+        expect(context.moduleScope.directory).toBe("modules/alpha")
     })
 })
 
@@ -183,7 +197,7 @@ describe("makeObservability", () => {
         const writes: string[] = []
 
         const context = {
-            ...defaultObservabilityContext("corr-123", emptyDebugConfig, "alpha"),
+            ...defaultObservabilityContext("corr-123", emptyDebugConfig, scope("alpha", "modules/alpha")),
             timeService: fixedTimeService(100),
         }
 
@@ -197,7 +211,8 @@ describe("makeObservability", () => {
         })
 
         expect(obs.correlationId).toBe("corr-123")
-        expect(obs.module).toBe("alpha")
+        expect(obs.moduleScope).toBe(context.moduleScope)
+        expect(obs.moduleScope.module).toBe("alpha")
         expect(obs.debugConfig).toEqual(emptyDebugConfig)
         expect(obs.timeService).toBe(context.timeService)
         expect(obs.templates).toBe(context.templates)
@@ -210,7 +225,7 @@ describe("makeObservability", () => {
         const writes: string[] = []
 
         const context = {
-            ...defaultObservabilityContext("corr-123", emptyDebugConfig, "alpha"),
+            ...defaultObservabilityContext("corr-123", emptyDebugConfig, scope("alpha", "modules/alpha")),
             timeService: fixedTimeService(100),
         }
 
@@ -234,7 +249,7 @@ describe("makeObservability", () => {
         const writes: string[] = []
 
         const context = {
-            ...defaultObservabilityContext("corr-123", emptyDebugConfig, "alpha"),
+            ...defaultObservabilityContext("corr-123", emptyDebugConfig, scope("alpha", "modules/alpha")),
             timeService: fixedTimeService(100),
             dictionary: {name: "Phil"},
         }
@@ -266,7 +281,7 @@ describe("makeObservability", () => {
                         info: [],
                     },
                 },
-                "alpha",
+                scope("alpha", "modules/alpha"),
             ),
             timeService: fixedTimeService(100),
         }
@@ -296,7 +311,7 @@ describe("makeObservability", () => {
                         debug: [],
                     },
                 },
-                "alpha",
+                scope("alpha", "modules/alpha"),
             ),
             timeService: fixedTimeService(100),
         }
@@ -328,7 +343,7 @@ describe("makeObservability", () => {
                         debug: [["parse"]],
                     },
                 },
-                "alpha",
+                scope("alpha", "modules/alpha"),
             ),
             timeService: fixedTimeService(100),
         }
@@ -405,10 +420,11 @@ describe("nullObservability", () => {
         expect(obs.correlationId).toBe("none")
     })
 
-    it("defaults the module to undefined", () => {
+    it("defaults the module scope to an empty default", () => {
         const obs = nullObservability("corr-123")
 
-        expect(obs.module).toBeUndefined()
+        expect(obs.moduleScope).toEqual(defaultModuleObservabilityScope())
+        expect(obs.moduleScope.module).toBeUndefined()
     })
 
     it("has empty debug config", () => {
@@ -449,7 +465,7 @@ describe("nullObservability", () => {
         const obs: Observability = nullObservability("corr-123")
 
         expect(obs.correlationId).toBe("corr-123")
-        expect(obs.module).toBeUndefined()
+        expect(obs.moduleScope.module).toBeUndefined()
         expect(typeof obs.log).toBe("function")
         expect(typeof obs.debug).toBe("function")
         expect(typeof obs.countMetric).toBe("function")

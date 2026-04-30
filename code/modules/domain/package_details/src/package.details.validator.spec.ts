@@ -1,19 +1,27 @@
 import {isErrors, value, type ErrorsOr} from "@laoban/errors";
 import {type ValidationIssue} from "@laoban/validation";
-import {type Observability} from "@laoban/observability";
+import {
+    defaultObservabilityContext,
+    fixedTimeService,
+    makeObservability,
+    nullLog,
+    type Observability,
+} from "@laoban/observability";
 import {validatePackageDetails} from "./package.details.validator";
 import {type PackageDetails} from "./package.details";
 
-function makeObservability(): Observability {
-    return {
-        correlationId: "test-correlation-id",
-        logger: jest.fn(),
-        debug: jest.fn(),
+function makeObservabilityForTest(): Observability {
+    return makeObservability({
+        context: {
+            ...defaultObservabilityContext("test-correlation-id"),
+            timeService: fixedTimeService(0),
+        },
+        target: {
+            write: nullLog,
+        },
         countMetric: jest.fn(),
         durationMetric: jest.fn(),
-        debugLevels: {},
-        timeService: {now: () => 0}
-    };
+    });
 }
 
 function issuesOf<T>(result: ErrorsOr<T, ValidationIssue>): ValidationIssue[] {
@@ -27,7 +35,7 @@ describe("validatePackageDetails", () => {
             name: "@laoban/example"
         };
 
-        expect(validatePackageDetails([], makeObservability())(details)).toEqual(value(details));
+        expect(validatePackageDetails([], makeObservabilityForTest())(details)).toEqual(value(details));
     });
 
     test("accepts full package details", () => {
@@ -57,7 +65,7 @@ describe("validatePackageDetails", () => {
             }
         };
 
-        expect(validatePackageDetails([], makeObservability())(details)).toEqual(value(details));
+        expect(validatePackageDetails([], makeObservabilityForTest())(details)).toEqual(value(details));
     });
 
     test("rejects missing template", () => {
@@ -65,7 +73,7 @@ describe("validatePackageDetails", () => {
             name: "@laoban/example"
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -81,7 +89,7 @@ describe("validatePackageDetails", () => {
             template: "typescript"
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -98,7 +106,7 @@ describe("validatePackageDetails", () => {
             name: "@laoban/example"
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -115,7 +123,7 @@ describe("validatePackageDetails", () => {
             name: " "
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -133,7 +141,7 @@ describe("validatePackageDetails", () => {
             links: ["@laoban/a", 42]
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -151,7 +159,7 @@ describe("validatePackageDetails", () => {
             devLinks: ["ok", ""]
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -169,7 +177,7 @@ describe("validatePackageDetails", () => {
             peerLinks: "react"
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -189,7 +197,7 @@ describe("validatePackageDetails", () => {
             }
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -207,7 +215,7 @@ describe("validatePackageDetails", () => {
             files: "package.json"
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -225,7 +233,7 @@ describe("validatePackageDetails", () => {
             meta: ["a", "b"]
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",
@@ -246,7 +254,7 @@ describe("validatePackageDetails", () => {
             meta: false
         } as any;
 
-        expect(issuesOf(validatePackageDetails([], makeObservability())(details))).toEqual([
+        expect(issuesOf(validatePackageDetails([], makeObservabilityForTest())(details))).toEqual([
             {
                 kind: "validation",
                 severity: "error",

@@ -1,6 +1,14 @@
-import {steppingTimeService} from "./observability"
+import {ModuleName, ModuleObservabilityScope, steppingTimeService} from "./observability"
 import {recordingObservability} from "./observability.recorded"
 import {DebugConfig} from "./observability.debug"
+
+const scope = (
+    module: ModuleName,
+    directory: string = String(module ?? "."),
+): ModuleObservabilityScope => ({
+    module,
+    directory,
+})
 
 describe("recordingObservability", () => {
     it("starts empty", () => {
@@ -23,12 +31,12 @@ describe("recordingObservability", () => {
         recorded.observability.log("bad news")
 
         expect(recorded.logs).toEqual([
-            {module: undefined, msg: '00:00:00 INFO hello 1 {"a":true}\n'},
-            {module: undefined, msg: "00:00:00 INFO bad news\n"},
+            {moduleScope: scope(undefined), msg: '00:00:00 INFO hello 1 {"a":true}\n'},
+            {moduleScope: scope(undefined), msg: "00:00:00 INFO bad news\n"},
         ])
     })
 
-    it("records debug calls with module, debugName, rendered context and level", () => {
+    it("records debug calls with module scope, debugName, rendered context and level", () => {
         const recorded = recordingObservability(
             {
                 load: {
@@ -52,14 +60,14 @@ describe("recordingObservability", () => {
 
         expect(recorded.debug).toEqual([
             {
-                module: undefined,
+                moduleScope: scope(undefined),
                 debugName: ["load"],
                 context: "load",
                 level: "debug",
                 msg: ["loading file", "a.txt"],
             },
             {
-                module: undefined,
+                moduleScope: scope(undefined),
                 debugName: ["findContainingDirectory"],
                 context: "findContainingDirectory",
                 level: "info",
@@ -87,28 +95,28 @@ describe("recordingObservability", () => {
         recorded.observability.debug(["exec"], "info", "visible")
 
         expect(recorded.logs).toEqual([
-            {module: undefined, msg: "00:00:00 DEBUG [load] loading\n"},
-            {module: undefined, msg: "00:00:00 INFO [exec] visible\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 DEBUG [load] loading\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 INFO [exec] visible\n"},
         ])
 
         // The recording wrapper records debug calls before filtering.
         expect(recorded.debug).toEqual([
             {
-                module: undefined,
+                moduleScope: scope(undefined),
                 debugName: ["load"],
                 context: "load",
                 level: "debug",
                 msg: ["loading"],
             },
             {
-                module: undefined,
+                moduleScope: scope(undefined),
                 debugName: ["exec"],
                 context: "exec",
                 level: "debug",
                 msg: ["hidden"],
             },
             {
-                module: undefined,
+                moduleScope: scope(undefined),
                 debugName: ["exec"],
                 context: "exec",
                 level: "info",
@@ -133,9 +141,9 @@ describe("recordingObservability", () => {
         recorded.observability.debug(["script", "type2"], "debug", "type2")
 
         expect(recorded.logs).toEqual([
-            {module: undefined, msg: "00:00:00 DEBUG [script] root\n"},
-            {module: undefined, msg: "00:00:00 DEBUG [script:type1] type1\n"},
-            {module: undefined, msg: "00:00:00 DEBUG [script:type2] type2\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 DEBUG [script] root\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 DEBUG [script:type1] type1\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 DEBUG [script:type2] type2\n"},
         ])
     })
 
@@ -156,8 +164,8 @@ describe("recordingObservability", () => {
         recorded.observability.debug(["template", "render"], "debug", "hidden render")
 
         expect(recorded.logs).toEqual([
-            {module: undefined, msg: "00:00:00 DEBUG [template:parse] parse\n"},
-            {module: undefined, msg: "00:00:00 DEBUG [template:parse:tokens] tokens\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 DEBUG [template:parse] parse\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 DEBUG [template:parse:tokens] tokens\n"},
         ])
     })
 
@@ -226,21 +234,25 @@ describe("recordingObservability", () => {
         expect(recorded.observability.timeService).toBe(timeService)
     })
 
-    it("preserves the supplied module", () => {
+    it("preserves the supplied module scope", () => {
+        const moduleScope = scope("alpha", "modules/alpha")
+
         const recorded = recordingObservability(
             {},
             "corr-123",
             steppingTimeService(100, 5),
-            "alpha",
+            moduleScope,
         )
 
-        expect(recorded.observability.module).toBe("alpha")
+        expect(recorded.observability.moduleScope).toBe(moduleScope)
+        expect(recorded.observability.moduleScope.module).toBe("alpha")
+        expect(recorded.observability.moduleScope.directory).toBe("modules/alpha")
     })
 
-    it("defaults the module to undefined", () => {
+    it("defaults the module scope", () => {
         const recorded = recordingObservability()
 
-        expect(recorded.observability.module).toBeUndefined()
+        expect(recorded.observability.moduleScope).toEqual(scope(undefined))
     })
 
     it("uses the supplied time service for deterministic time", () => {
@@ -272,13 +284,13 @@ describe("recordingObservability", () => {
         recorded.observability.durationMetric("metric.ms", 5)
 
         expect(recorded.logs).toEqual([
-            {module: undefined, msg: "00:00:00 INFO warning\n"},
-            {module: undefined, msg: "00:00:00 DEBUG [load] loading\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 INFO warning\n"},
+            {moduleScope: scope(undefined), msg: "00:00:00 DEBUG [load] loading\n"},
         ])
 
         expect(recorded.debug).toEqual([
             {
-                module: undefined,
+                moduleScope: scope(undefined),
                 debugName: ["load"],
                 context: "load",
                 level: "debug",
@@ -292,7 +304,9 @@ describe("recordingObservability", () => {
         ])
     })
 
-    it("records the configured module on log and debug", () => {
+    it("records the configured module scope on log and debug", () => {
+        const moduleScope = scope("alpha", "modules/alpha")
+
         const recorded = recordingObservability(
             {
                 load: {
@@ -301,20 +315,20 @@ describe("recordingObservability", () => {
             },
             "corr-123",
             steppingTimeService(100, 5),
-            "alpha",
+            moduleScope,
         )
 
         recorded.observability.log("hello")
         recorded.observability.debug(["load"], "debug", "details")
 
         expect(recorded.logs).toEqual([
-            {module: "alpha", msg: "00:00:00 INFO hello\n"},
-            {module: "alpha", msg: "00:00:00 DEBUG [load] details\n"},
+            {moduleScope, msg: "00:00:00 INFO hello\n"},
+            {moduleScope, msg: "00:00:00 DEBUG [load] details\n"},
         ])
 
         expect(recorded.debug).toEqual([
             {
-                module: "alpha",
+                moduleScope,
                 debugName: ["load"],
                 context: "load",
                 level: "debug",

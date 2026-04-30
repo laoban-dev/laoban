@@ -18,6 +18,11 @@ import {Write} from "./write.with.flush"
 export type CorrelationId = string
 export type ModuleName = string | null | undefined
 
+export type ModuleObservabilityScope = Readonly<{
+    module: ModuleName
+    directory: string
+}>
+
 export type Log = (...msg: unknown[]) => void
 
 export type Debug = (
@@ -36,7 +41,7 @@ export type TimeService = {
 
 export type ObservabilityContext = Readonly<{
     correlationId: CorrelationId
-    module: ModuleName
+    moduleScope: ModuleObservabilityScope
     debugConfig: DebugConfig
     timeService: TimeService
     templates: Partial<ObservabilityTemplates>
@@ -93,13 +98,21 @@ export const steppingTimeService = (
     }
 }
 
+export const defaultModuleObservabilityScope = (
+    module: ModuleName = undefined,
+    directory: string = ".",
+): ModuleObservabilityScope => ({
+    module,
+    directory,
+})
+
 export const defaultObservabilityContext = (
     correlationId: CorrelationId = "none",
     debugConfig: DebugConfig = emptyDebugConfig,
-    module: ModuleName = undefined,
+    moduleScope: ModuleObservabilityScope = defaultModuleObservabilityScope(),
 ): ObservabilityContext => ({
     correlationId,
-    module,
+    moduleScope,
     debugConfig,
     timeService: realTimeService,
     templates: defaultObservabilityTemplates,

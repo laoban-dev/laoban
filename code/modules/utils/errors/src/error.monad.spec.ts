@@ -734,7 +734,7 @@ describe("mapArrayK", () => {
                     : value(item)
             )
         ).rejects.toThrow(
-            'mapArrayK mapper returned undefined at index 1. Item: "b"'
+            'traverseArrayErrorsOrK mapper resolved to invalid ErrorsOr undefined at index 1. Item: "b"'
         )
     })
 
@@ -747,7 +747,7 @@ describe("mapArrayK", () => {
                     : value(item)
             )
         ).rejects.toThrow(
-            'mapArrayK mapper returned null at index 2. Item: "c"'
+            'traverseArrayErrorsOrK mapper resolved to invalid ErrorsOr null at index 2. Item: "c"'
         )
     })
 })

@@ -6,6 +6,7 @@ import {
     syncWriteTo,
     Write,
 } from "./write.with.flush"
+import {ModuleName, ModuleObservabilityScope} from "./observability"
 
 const delay = (ms: number) => new Promise<void>(res => setTimeout(res, ms))
 
@@ -18,13 +19,21 @@ type FakeChannel = {
     closed?: boolean
 }
 
+const scope = (
+    module: ModuleName,
+    directory: string = String(module ?? "root"),
+): ModuleObservabilityScope => ({
+    module,
+    directory,
+})
+
 const makeFakeTc = () => {
     const durable: Record<Ref, string[]> = {}
 
     const tc: ChannelTc<Purpose, never, FakeChannel, Ref> = {
-        reference: module => () => module ?? "root",
+        reference: moduleScope => () => moduleScope.directory,
 
-        keyFrom: module => module ?? "root",
+        keyFrom: moduleScope => moduleScope.module ?? "root",
 
         create: async (ref, opts) => {
             if (!opts.append) durable[ref] = []
@@ -77,27 +86,34 @@ describe("stress: async logging does not lose messages", () => {
 
         const writer = syncWriteTo(state)
         const modules = Array.from({length: N}, (_, i) => `module-${i}`)
+        const moduleScopes = modules.map(module => scope(module, module))
 
         for (let c = 0; c < cycles; c++) {
             await Promise.all(
-                modules.flatMap(module =>
+                moduleScopes.flatMap(moduleScope =>
                     Array.from({length: M}, async (_, i) => {
                         await delay(Math.floor(Math.random() * 5))
-                        writer(module)(`msg ${c}-${i}\n`)
+                        writer(moduleScope)(`msg ${c}-${i}\n`)
                     })
                 )
             )
 
             const flushed: string[] = []
-            const result = await flush(state)(text => {
-                flushed.push(text)
-            })
 
-            expect(result).toEqual(value(modules.map(() => undefined)))
+            const results = await Promise.all(
+                moduleScopes.map(moduleScope =>
+                    flush(state)(moduleScope)(text => {
+                        flushed.push(text)
+                    })
+                )
+            )
+
+            expect(results).toEqual(modules.map(() => value(undefined)))
         }
 
         for (const module of modules) {
-            const ref = tc.reference(module)("log")
+            const moduleScope = scope(module, module)
+            const ref = tc.reference(moduleScope)("log")
 
             expect(durable[ref]).toHaveLength(M * cycles)
 

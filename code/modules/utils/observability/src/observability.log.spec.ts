@@ -8,7 +8,15 @@ import {
     renderOneMessage,
     renderTemplateSafely,
 } from "./observability.log";
-import {fixedTimeService, steppingTimeService} from "./observability";
+import {fixedTimeService, ModuleName, ModuleObservabilityScope, steppingTimeService} from "./observability";
+
+const scope = (
+    module: ModuleName,
+    directory: string = String(module ?? "."),
+): ModuleObservabilityScope => ({
+    module,
+    directory,
+})
 
 describe("effectiveLogDictionaryContext", () => {
     it("applies defaults when no context is supplied", () => {
@@ -103,12 +111,13 @@ describe("makeLogDictionary", () => {
     it("builds a dictionary with defaults", () => {
         const result = makeLogDictionary({
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
         });
 
         expect(result).toEqual({
             correlationId: "corr-123",
             module: "alpha",
+            directory: "modules/alpha",
             timestamp: expect.any(Number),
             time: expect.any(String),
             context: undefined,
@@ -118,7 +127,7 @@ describe("makeLogDictionary", () => {
     it("uses the supplied time service and derives HH:mm:ss time", () => {
         const result = makeLogDictionary({
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
         });
 
@@ -129,7 +138,7 @@ describe("makeLogDictionary", () => {
     it("includes debug context when supplied", () => {
         const result = makeLogDictionary({
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             context: "load",
             timeService: fixedTimeService(1000),
         });
@@ -137,6 +146,7 @@ describe("makeLogDictionary", () => {
         expect(result).toEqual({
             correlationId: "corr-123",
             module: "alpha",
+            directory: "modules/alpha",
             timestamp: 1000,
             time: "00:00:01",
             context: "load",
@@ -146,7 +156,7 @@ describe("makeLogDictionary", () => {
     it("includes custom dictionary values", () => {
         const result = makeLogDictionary({
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             dictionary: {
                 app: "laoban",
@@ -159,21 +169,23 @@ describe("makeLogDictionary", () => {
             env: "test",
             correlationId: "corr-123",
             module: "alpha",
+            directory: "modules/alpha",
             timestamp: 1000,
             time: "00:00:01",
             context: undefined,
         });
     });
 
-    it("correlation id, module, timestamp, time and context override custom dictionary values", () => {
+    it("correlation id, module, directory, timestamp, time and context override custom dictionary values", () => {
         const result = makeLogDictionary({
             correlationId: "corr-actual",
-            module: "module-actual",
+            moduleScope: scope("module-actual", "directory-actual"),
             context: "context-actual",
             timeService: fixedTimeService(1000),
             dictionary: {
                 correlationId: "corr-from-dict",
                 module: "module-from-dict",
+                directory: "directory-from-dict",
                 timestamp: 999,
                 time: "time-from-dict",
                 context: "context-from-dict",
@@ -183,6 +195,7 @@ describe("makeLogDictionary", () => {
         expect(result).toEqual({
             correlationId: "corr-actual",
             module: "module-actual",
+            directory: "directory-actual",
             timestamp: 1000,
             time: "00:00:01",
             context: "context-actual",
@@ -197,7 +210,7 @@ describe("renderObservabilityLine", () => {
             level: "info",
             msg: ["Started ${app}", {ok: true}],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             dictionary: {
                 app: "laoban",
@@ -214,7 +227,7 @@ describe("renderObservabilityLine", () => {
             context: "load",
             msg: ["Loading ${file}"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             dictionary: {
                 file: "package.details.json",
@@ -230,7 +243,7 @@ describe("renderObservabilityLine", () => {
             level: "info",
             msg: ["Started ${app}"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             dictionary: {
                 app: "laoban",
@@ -248,7 +261,7 @@ describe("renderObservabilityLine", () => {
             context: "load",
             msg: ["Loading ${file}"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             dictionary: {
                 file: "package.details.json",
@@ -265,7 +278,7 @@ describe("renderObservabilityLine", () => {
             level: "warn",
             msg: ["Careful ${name}"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             dictionary: {
                 name: "Phil",
@@ -278,6 +291,22 @@ describe("renderObservabilityLine", () => {
         expect(result).toBe("WARN:alpha:Careful Phil");
     });
 
+    it("supports directory in custom templates", () => {
+        const result = renderObservabilityLine({
+            template: "log",
+            level: "warn",
+            msg: ["Careful"],
+            correlationId: "corr-123",
+            moduleScope: scope("alpha", "modules/alpha"),
+            timeService: fixedTimeService(1000),
+            templates: {
+                log: "${level}:${module}:${directory}:${message}",
+            },
+        });
+
+        expect(result).toBe("WARN:alpha:modules/alpha:Careful");
+    });
+
     it("keeps the default template for the other template kind when only one is overridden", () => {
         const result = renderObservabilityLine({
             template: "debug",
@@ -285,7 +314,7 @@ describe("renderObservabilityLine", () => {
             context: "exec",
             msg: ["Running"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             templates: {
                 log: "${message}",
@@ -301,7 +330,7 @@ describe("renderObservabilityLine", () => {
             level: "info",
             msg: ["Hello ${name|toUpperCase}"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             dictionary: {
                 name: "Phil",
@@ -319,7 +348,7 @@ describe("renderObservabilityLine", () => {
             level: "info",
             msg: ["first"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService,
         });
 
@@ -328,7 +357,7 @@ describe("renderObservabilityLine", () => {
             level: "info",
             msg: ["second"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService,
         });
 
@@ -342,7 +371,7 @@ describe("renderObservabilityLine", () => {
             level: "info",
             msg: ["hello"],
             correlationId: "corr-123",
-            module: "alpha",
+            moduleScope: scope("alpha", "modules/alpha"),
             timeService: fixedTimeService(1000),
             dictionary: {
                 app: "laoban",

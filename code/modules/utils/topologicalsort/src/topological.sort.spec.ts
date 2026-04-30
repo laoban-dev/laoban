@@ -47,12 +47,18 @@ describe("topologicalGenerations", () => {
             debugName: topologicalGenerationsContext("package.dependencies"),
             context: "package.dependencies:topologicalGenerations",
             level: "debug",
+            "moduleScope": {
+                "directory": "."
+            },
             msg: ["starting", {roots: []}],
         })
         expect(debug[debug.length - 1]).toEqual({
             module: undefined,
             debugName: topologicalGenerationsContext("package.dependencies"),
             context: "package.dependencies:topologicalGenerations",
+            "moduleScope": {
+                "directory": "."
+            },
             level: "debug",
             msg: ["finished", {generationCount: 0, generations: []}],
         })
@@ -174,37 +180,127 @@ describe("topologicalGenerations", () => {
             ["a"],
         ])
 
-        expect(debug).toEqual(
-            expect.arrayContaining([
+        expect(debug).toEqual(            [
                 {
-                    module: undefined,
-                    debugName: topologicalGenerationsVisitContext("package.dependencies"),
-                    context: "package.dependencies:topologicalGenerations:visit",
-                    level: "debug",
-                    msg: ["enter", {name: "a"}],
+                    "context": "package.dependencies:topologicalGenerations",
+                    "debugName": [
+                        "package.dependencies",
+                        "topologicalGenerations"
+                    ],
+                    "level": "debug",
+                    "moduleScope": {
+                        "directory": "."
+                    },
+                    "msg": [
+                        "starting",
+                        {
+                            "roots": [
+                                "a",
+                                "b"
+                            ]
+                        }
+                    ]
                 },
                 {
-                    module: undefined,
-                    debugName: topologicalGenerationsVisitContext("package.dependencies"),
-                    context: "package.dependencies:topologicalGenerations:visit",
-                    level: "debug",
-                    msg: ["enter", {name: "b"}],
+                    "context": "package.dependencies:topologicalGenerations:visit",
+                    "debugName": [
+                        "package.dependencies",
+                        "topologicalGenerations",
+                        "visit"
+                    ],
+                    "level": "debug",
+                    "moduleScope": {
+                        "directory": "."
+                    },
+                    "msg": [
+                        "enter",
+                        {
+                            "name": "a"
+                        }
+                    ]
                 },
                 {
-                    module: undefined,
-                    debugName: topologicalGenerationsVisitContext("package.dependencies"),
-                    context: "package.dependencies:topologicalGenerations:visit",
-                    level: "debug",
-                    msg: ["leave", {name: "b", generation: 0}],
+                    "context": "package.dependencies:topologicalGenerations:visit",
+                    "debugName": [
+                        "package.dependencies",
+                        "topologicalGenerations",
+                        "visit"
+                    ],
+                    "level": "debug",
+                    "moduleScope": {
+                        "directory": "."
+                    },
+                    "msg": [
+                        "enter",
+                        {
+                            "name": "b"
+                        }
+                    ]
                 },
                 {
-                    module: undefined,
-                    debugName: topologicalGenerationsVisitContext("package.dependencies"),
-                    context: "package.dependencies:topologicalGenerations:visit",
-                    level: "debug",
-                    msg: ["leave", {name: "a", generation: 1}],
+                    "context": "package.dependencies:topologicalGenerations:visit",
+                    "debugName": [
+                        "package.dependencies",
+                        "topologicalGenerations",
+                        "visit"
+                    ],
+                    "level": "debug",
+                    "moduleScope": {
+                        "directory": "."
+                    },
+                    "msg": [
+                        "leave",
+                        {
+                            "generation": 0,
+                            "name": "b"
+                        }
+                    ]
                 },
-            ]),
+                {
+                    "context": "package.dependencies:topologicalGenerations:visit",
+                    "debugName": [
+                        "package.dependencies",
+                        "topologicalGenerations",
+                        "visit"
+                    ],
+                    "level": "debug",
+                    "moduleScope": {
+                        "directory": "."
+                    },
+                    "msg": [
+                        "leave",
+                        {
+                            "generation": 1,
+                            "name": "a"
+                        }
+                    ]
+                },
+                {
+                    "context": "package.dependencies:topologicalGenerations",
+                    "debugName": [
+                        "package.dependencies",
+                        "topologicalGenerations"
+                    ],
+                    "level": "debug",
+                    "moduleScope": {
+                        "directory": "."
+                    },
+                    "msg": [
+                        "finished",
+                        {
+                            "generationCount": 2,
+                            "generations": [
+                                [
+                                    "b"
+                                ],
+                                [
+                                    "a"
+                                ]
+                            ]
+                        }
+                    ]
+                }
+            ]
         )
     })
 

@@ -4,6 +4,7 @@ import {
     defaultObservabilityContext,
     fixedTimeService,
     ModuleName,
+    ModuleObservabilityScope,
     nullCountMetric,
     nullDurationMetric,
 } from "./observability"
@@ -30,14 +31,24 @@ const errors = (...messages: string[]): Errors =>
 const failure = <T>(...messages: string[]): ErrorsOr<T> =>
     errors(...messages) as ErrorsOr<T>
 
+const scope = (
+    module: ModuleName,
+    directory: string = String(module ?? "<none>"),
+): ModuleObservabilityScope => ({
+    module,
+    directory,
+})
+
 function makeTc(overrides?: Partial<ChannelTc<Purpose, ReadChannel, WriteChannel, Ref>>) {
     const channelsByRef: Record<string, WriteChannel[]> = {}
     const durableByRef: Record<string, string> = {}
 
     const tc: ChannelTc<Purpose, ReadChannel, WriteChannel, Ref> = {
-        keyFrom: jest.fn((moduleName: ModuleName) => String(moduleName ?? "<none>")),
-        reference: jest.fn((moduleName: ModuleName) => (purpose: Purpose) =>
-            `${String(moduleName ?? "<none>")}/${purpose}`
+        keyFrom: jest.fn((moduleScope: ModuleObservabilityScope) =>
+            String(moduleScope.module ?? "<none>")
+        ),
+        reference: jest.fn((moduleScope: ModuleObservabilityScope) => (purpose: Purpose) =>
+            `${moduleScope.directory}/${purpose}`
         ),
         create: jest.fn(async (ref: Ref, options) => {
             if (!options.append) durableByRef[ref] = ""
@@ -74,10 +85,14 @@ function makeTc(overrides?: Partial<ChannelTc<Purpose, ReadChannel, WriteChannel
 const context = (
     module: ModuleName = undefined,
     debugConfig: DebugConfig = {},
-) => ({
-    ...defaultObservabilityContext("corr-123", debugConfig, module),
-    timeService: fixedTimeService(100),
-})
+) => {
+    const moduleScope = scope(module)
+
+    return {
+        ...defaultObservabilityContext("corr-123", debugConfig, moduleScope),
+        timeService: fixedTimeService(100),
+    }
+}
 
 const contextWithCorrelationIdTemplate = (
     module: ModuleName = undefined,
@@ -159,7 +174,7 @@ describe("channelObservability", () => {
         await (obs.log("hello", {a: true}) as any as Promise<void>)
 
         expect(obs.correlationId).toBe("corr-123")
-        expect(obs.module).toBe("root")
+        expect(obs.moduleScope.module).toBe("root")
         expect(obs.countMetric).toBe(nullCountMetric)
         expect(obs.durationMetric).toBe(nullDurationMetric)
         expect(tc.write).toHaveBeenCalledTimes(1)
@@ -326,8 +341,16 @@ describe("channelObservabilityWithModule", () => {
         const {tc, durableByRef} = makeTc()
         const onError = jest.fn()
         const channelsState = emptyChannelState(tc, [".log", ".session"], onError)
+        const moduleScope = scope("alpha", "alpha")
 
-        const obs = channelObservabilityWithModule(context("alpha"), channelsState)
+        const obs = channelObservabilityWithModule(
+            {
+                ...context("alpha"),
+                moduleScope,
+            },
+            moduleScope,
+            channelsState,
+        )
 
         await (obs.log("hello", 1) as any as Promise<void>)
 
@@ -357,13 +380,18 @@ describe("channelObservabilityWithModule", () => {
         const {tc} = makeTc()
         const onError = jest.fn()
         const channelsState = emptyChannelState(tc, [".log"], onError)
+        const moduleScope = scope("alpha", "alpha")
 
         const obs = channelObservabilityWithModule(
-            context("alpha", {
-                exec: {
-                    debug: [],
-                },
-            }),
+            {
+                ...context("alpha", {
+                    exec: {
+                        debug: [],
+                    },
+                }),
+                moduleScope,
+            },
+            moduleScope,
             channelsState,
         )
 
@@ -379,13 +407,18 @@ describe("channelObservabilityWithModule", () => {
         const {tc} = makeTc()
         const onError = jest.fn()
         const channelsState = emptyChannelState(tc, [".log"], onError)
+        const moduleScope = scope("alpha", "alpha")
 
         const obs = channelObservabilityWithModule(
-            context("alpha", {
-                script: {
-                    debug: [],
-                },
-            }),
+            {
+                ...context("alpha", {
+                    script: {
+                        debug: [],
+                    },
+                }),
+                moduleScope,
+            },
+            moduleScope,
             channelsState,
         )
 
@@ -401,13 +434,18 @@ describe("channelObservabilityWithModule", () => {
         const {tc} = makeTc()
         const onError = jest.fn()
         const channelsState = emptyChannelState(tc, [".log"], onError)
+        const moduleScope = scope("alpha", "alpha")
 
         const obs = channelObservabilityWithModule(
-            context("alpha", {
-                template: {
-                    debug: [["parse"]],
-                },
-            }),
+            {
+                ...context("alpha", {
+                    template: {
+                        debug: [["parse"]],
+                    },
+                }),
+                moduleScope,
+            },
+            moduleScope,
             channelsState,
         )
 
@@ -429,13 +467,18 @@ describe("channelObservabilityWithModule", () => {
         const {tc} = makeTc()
         const onError = jest.fn()
         const channelsState = emptyChannelState(tc, [".log"], onError)
+        const moduleScope = scope("alpha", "alpha")
 
         const obs = channelObservabilityWithModule(
-            context("alpha", {
-                exec: {
-                    info: [],
-                },
-            }),
+            {
+                ...context("alpha", {
+                    exec: {
+                        info: [],
+                    },
+                }),
+                moduleScope,
+            },
+            moduleScope,
             channelsState,
         )
 
@@ -456,28 +499,45 @@ describe("channelObservabilityWithModule", () => {
         })
         const onError = jest.fn()
         const channelsState = emptyChannelState(tc, [".log", ".session"], onError)
-        const obs = channelObservabilityWithModule(context("alpha"), channelsState)
+        const moduleScope = scope("alpha", "alpha")
+        const obs = channelObservabilityWithModule(
+            {
+                ...context("alpha"),
+                moduleScope,
+            },
+            moduleScope,
+            channelsState,
+        )
         const out = jest.fn()
 
         await (obs.log("hello") as any as Promise<void>)
         const result = await obs.flush(out)
 
         expect(isErrors(result)).toBe(false)
-        expect(tc.closeWritable).toHaveBeenCalledTimes(2)
+        expect(tc.closeWritable).toHaveBeenCalledTimes(0)
         expect(tc.sendFromRefToWrite).toHaveBeenCalledTimes(1)
         expect(tc.sendFromRefToWrite).toHaveBeenCalledWith("alpha/.log", 0, out)
         expect(out).toHaveBeenCalledWith("delta")
         expect(channelsState.state.alpha.lastSize).toBe(5)
-        expect(channelsState.state.alpha.channels).toBeUndefined()
+        expect(channelsState.state.alpha.channels).toBeDefined()
     })
 
-    it("reopens channels in append mode after flush", async () => {
+    it("reopens channels in append mode after close and flush", async () => {
         const {tc, durableByRef} = makeTc()
         const onError = jest.fn()
         const channelsState = emptyChannelState(tc, [".log"], onError)
-        const obs = channelObservabilityWithModule(context("alpha"), channelsState)
+        const moduleScope = scope("alpha", "alpha")
+        const obs = channelObservabilityWithModule(
+            {
+                ...context("alpha"),
+                moduleScope,
+            },
+            moduleScope,
+            channelsState,
+        )
 
         await (obs.log("one") as any as Promise<void>)
+        await obs.close()
         await obs.flush(jest.fn())
         await (obs.log("two") as any as Promise<void>)
 

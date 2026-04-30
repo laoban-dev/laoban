@@ -3,6 +3,7 @@ import {
     CountMetric,
     DurationMetric,
     makeObservability,
+    ModuleObservabilityScope,
     nullCountMetric,
     nullDurationMetric,
     Observability,
@@ -75,10 +76,10 @@ export const channelObservability = <Purpose, ReadChannel, WriteChannel, Ref>(
 }
 
 export const closeChannelObservability = async <Purpose, ReadChannel, WriteChannel, Ref>(
-    context: ObservabilityContext,
+    moduleScope: ModuleObservabilityScope,
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ): Promise<ErrorsOr<void>> => {
-    const key = channelsState.tc.keyFrom(context.module)
+    const key = channelsState.tc.keyFrom(moduleScope)
     const moduleState = channelsState.state[key]
 
     if (!moduleState?.channels)
@@ -117,12 +118,13 @@ export const closeChannelObservability = async <Purpose, ReadChannel, WriteChann
  */
 export const channelObservabilityWithModule = <Purpose, ReadChannel, WriteChannel, Ref>(
     context: ObservabilityContext,
+    moduleScope: ModuleObservabilityScope,
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
     countMetric: CountMetric = nullCountMetric,
     durationMetric: DurationMetric = nullDurationMetric,
 ): ChannelObservability => {
     const target: ObservabilityTarget = {
-        write: syncWriteTo(channelsState)(context.module),
+        write: syncWriteTo(channelsState)(moduleScope),
     }
 
     return {
@@ -132,7 +134,7 @@ export const channelObservabilityWithModule = <Purpose, ReadChannel, WriteChanne
             countMetric,
             durationMetric,
         }),
-        flush: flush(channelsState),
-        close: () => closeChannelObservability(context, channelsState),
+        flush: flush(channelsState)(moduleScope),
+        close: () => closeChannelObservability(moduleScope, channelsState),
     }
 }

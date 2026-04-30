@@ -13,6 +13,7 @@ import {
     channelObservabilityWithModule,
     flush,
     ModuleName,
+    ModuleObservabilityScope,
     Observability,
     writeToChannel,
 } from "@laoban/observability"
@@ -99,10 +100,17 @@ function logVariables<TContext extends LaobanScriptCliContext>(
 }
 
 function executionDirectoryOf(item: ScriptExecutionItem): DirectoryName {
-    const result = item.pkg.dir
+    const result = item.pkg!.dir
     if (!result) throw new Error(`Script execution item has no command directory: ${item.command.command}`)
 
     return result
+}
+
+function moduleScopeOf(item: ScriptExecutionItem): ModuleObservabilityScope {
+    return {
+        module: item.pkg!.contents.name,
+        directory: item.pkg!.dir,
+    }
 }
 
 /**
@@ -116,14 +124,15 @@ function executionDirectoryOf(item: ScriptExecutionItem): DirectoryName {
  */
 async function withModuleObservability<TContext extends LaobanScriptExecutionContext, T>(
     context: TContext,
-    moduleName: ModuleName,
+    moduleScope: ModuleObservabilityScope,
     fn: (observability: ChannelObservability) => Promise<T>,
 ): Promise<T> {
     const observability = channelObservabilityWithModule(
         {
-            ...context,
-            module: moduleName,
+            ...context.observability,
+            moduleScope,
         },
+        moduleScope,
         context.channelsState,
     )
 
@@ -161,9 +170,10 @@ async function executeOneScriptItem<TContext extends LaobanScriptExecutionContex
     options: ScriptCommandValues,
     item: ScriptExecutionItem,
 ): Promise<ErrorsOr<number, BaseIssue>> {
-    const moduleName: ModuleName = item.pkg?.contents?.name
+    const moduleScope = moduleScopeOf(item)
+    const moduleName = moduleScope.module
 
-    return withModuleObservability(context, moduleName, async observability => {
+    return withModuleObservability(context, moduleScope, async observability => {
         const cwd = executionDirectoryOf(item)
 
         const result = await context.execution.execute({
@@ -192,10 +202,22 @@ async function executeOneScriptItem<TContext extends LaobanScriptExecutionContex
 
 async function flushGeneration<TContext extends LaobanScriptExecutionContext>(
     context: TContext,
+    generation: ScriptExecutionItem[],
 ): Promise<ErrorsOr<unknown, BaseIssue>> {
-    return flush(context.channelsState)(
-        writeToChannel(context.channelsState.tc, context.channelsState.onError)(context.stdOut),
-    )
+    const write = writeToChannel(context.channelsState.tc, context.channelsState.onError)(context.stdOut)
+
+    const issues: BaseIssue[] = []
+
+    for (const item of generation) {
+        const result = await flush(context.channelsState)(moduleScopeOf(item))(write)
+
+        if (isErrors(result))
+            issues.push(...result.errors)
+    }
+
+    return issues.length > 0
+        ? {errors: issues}
+        : value(undefined)
 }
 
 async function executeScript<TContext extends LaobanScriptExecutionContext>(
@@ -213,7 +235,7 @@ async function executeScript<TContext extends LaobanScriptExecutionContext>(
             executeOneScriptItem(context, scriptName, options, item),
         )
 
-        const flushResult = await flushGeneration(context)
+        const flushResult = await flushGeneration(context, generation)
 
         if (isErrors(generationErrors))
             issues.push(...generationErrors.errors)

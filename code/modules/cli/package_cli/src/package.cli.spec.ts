@@ -6,7 +6,9 @@ import {
     loadConfigAndPackages,
     loadSortedLaobanProject,
     makeNameToNormalisedPackageDetails,
-    type LaobanPackageCliContext
+    type LaobanPackageCliContext,
+    type LoadConfigFn,
+    type LoadPackagesFn,
 } from "./package.cli";
 import type {
     LoadedLaobanProject,
@@ -15,27 +17,16 @@ import type {
 } from "@laoban/package_details";
 import {packageDetailsGraph} from "@laoban/package_details/src/package.details.sort";
 import {prettyPrintGenerationsSwimlanes, prettyPrintGenerationsVertical} from "@laoban/topologicalsort";
-import {loadConfig} from "@laoban/config_cli";
-import {loadPackages} from "@laoban/package_details";
-
-jest.mock("@laoban/config_cli", () => ({
-    ...jest.requireActual("@laoban/config_cli"),
-    loadConfig: jest.fn()
-}));
-
-jest.mock("@laoban/package_details", () => ({
-    ...jest.requireActual("@laoban/package_details"),
-    loadPackages: jest.fn()
-}));
-
-const mockedLoadConfig = loadConfig as jest.MockedFunction<typeof loadConfig>;
-const mockedLoadPackages = loadPackages as jest.MockedFunction<typeof loadPackages>;
 
 function loadedPackageDetail(
     packageFile: string,
     contents: NormalisedPackageDetails
 ): LoadedPackageDetail {
-    return {packageFile, contents} as LoadedPackageDetail;
+    return {
+        packageFile,
+        dir: packageFile.replace(/\/package\.details\.json$/, ""),
+        contents,
+    } as LoadedPackageDetail;
 }
 
 function normalised(
@@ -82,23 +73,33 @@ function loadedProject(
     };
 }
 
-function makeContext(): LaobanPackageCliContext & {
+type TestLaobanPackageCliContext = LaobanPackageCliContext & {
     recording: ReturnType<typeof recordingObservability>;
-} {
+    loadConfigFn: jest.MockedFunction<LoadConfigFn>;
+    loadPackagesFn: jest.MockedFunction<LoadPackagesFn>;
+};
+
+function makeContext(): TestLaobanPackageCliContext {
     const recording = recordingObservability(
         {},
         "test-correlation-id",
         fixedTimeService(0)
     );
 
+    const loadConfigFn = jest.fn() as jest.MockedFunction<LoadConfigFn>;
+    const loadPackagesFn = jest.fn() as jest.MockedFunction<LoadPackagesFn>;
+
     return {
         cwd: "/workspace",
         fileOps: {} as any,
         observability: recording.observability,
+        loadLaobanConfig: jest.fn(),
         loadLaobanFileConfig: jest.fn(),
+        loadConfigFn,
+        loadPackagesFn,
         loadConfigAndPackagesFn: loadConfigAndPackages,
         recording
-    } as any;
+    } as unknown as TestLaobanPackageCliContext;
 }
 
 function command(name: "list" | "view" | "sort"): any {
@@ -107,7 +108,10 @@ function command(name: "list" | "view" | "sort"): any {
 }
 
 const expectedLog = (msg: string) => ({
-    module: undefined,
+    moduleScope: {
+        module: undefined,
+        directory: ".",
+    },
     msg: `00:00:00 INFO ${msg}\n`
 });
 
@@ -148,26 +152,26 @@ describe("package cli", () => {
                 beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"]))
             });
 
-            mockedLoadConfig.mockResolvedValue(value(loadedConfig));
-            mockedLoadPackages.mockResolvedValue(value(loaded));
+            context.loadConfigFn.mockResolvedValue(value(loadedConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             const result = await loadConfigAndPackages(context);
 
             expect(valueOrThrow(result)).toEqual(loaded);
-            expect(mockedLoadConfig).toHaveBeenCalledWith(context);
-            expect(mockedLoadPackages).toHaveBeenCalledWith(loadedConfig, context);
+            expect(context.loadConfigFn).toHaveBeenCalledWith(context);
+            expect(context.loadPackagesFn).toHaveBeenCalledWith(loadedConfig, context);
         });
 
         it("returns config load errors", async () => {
             const context = makeContext();
-            mockedLoadConfig.mockResolvedValue(errors({kind: "badConfig", message: "cannot load config"} as any));
+            context.loadConfigFn.mockResolvedValue(errors({kind: "badConfig", message: "cannot load config"} as any));
 
             const result = await loadConfigAndPackages(context);
 
             expect(errorsOrThrow(result)).toEqual([
                 {kind: "badConfig", message: "cannot load config"}
             ]);
-            expect(mockedLoadPackages).not.toHaveBeenCalled();
+            expect(context.loadPackagesFn).not.toHaveBeenCalled();
         });
 
         it("returns package load errors", async () => {
@@ -176,8 +180,8 @@ describe("package cli", () => {
                 configDirectory: "/workspace"
             } as any;
 
-            mockedLoadConfig.mockResolvedValue(value(loadedConfig));
-            mockedLoadPackages.mockResolvedValue(errors({kind: "badPackages", message: "cannot load packages"} as any));
+            context.loadConfigFn.mockResolvedValue(value(loadedConfig));
+            context.loadPackagesFn.mockResolvedValue(errors({kind: "badPackages", message: "cannot load packages"} as any));
 
             const result = await loadConfigAndPackages(context);
 
@@ -196,8 +200,8 @@ describe("package cli", () => {
                 gamma: loadedPackageDetail("/workspace/gamma/package.details.json", normalised("gamma", ["alpha"]))
             });
 
-            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
-            mockedLoadPackages.mockResolvedValue(value(loaded));
+            context.loadConfigFn.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             const result = await loadSortedLaobanProject(context);
             const sorted = valueOrThrow(result);
@@ -213,8 +217,8 @@ describe("package cli", () => {
             const context = makeContext();
             const loaded = loadedProject({});
 
-            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
-            mockedLoadPackages.mockResolvedValue(value(loaded));
+            context.loadConfigFn.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             const result = await loadSortedLaobanProject(context);
 
@@ -228,8 +232,8 @@ describe("package cli", () => {
                 beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"]))
             });
 
-            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
-            mockedLoadPackages.mockResolvedValue(value(loaded));
+            context.loadConfigFn.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             const result = await loadSortedLaobanProject(context);
 
@@ -258,8 +262,8 @@ describe("package cli", () => {
                 beta: loadedPackageDetail("/workspace/beta/package.details.json", normalised("beta", ["alpha"]))
             });
 
-            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
-            mockedLoadPackages.mockResolvedValue(value(loaded));
+            context.loadConfigFn.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             await command("list").execute({}, context);
 
@@ -290,13 +294,17 @@ describe("package cli", () => {
                 gamma: loadedPackageDetail("/workspace/gamma/package.details.json", normalised("gamma", ["beta"]))
             });
 
-            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
-            mockedLoadPackages.mockResolvedValue(value(loaded));
+            context.loadConfigFn.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             const expectedGenerations = valueOrThrow(await loadSortedLaobanProject(context)).generations;
             const expectedOutput = "\n" + prettyPrintGenerationsVertical(expectedGenerations, packageDetailsGraph);
 
             context.recording.logs.length = 0;
+            context.loadConfigFn.mockClear();
+            context.loadPackagesFn.mockClear();
+            context.loadConfigFn.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             await command("sort").execute({horizontal: false}, context);
 
@@ -313,13 +321,17 @@ describe("package cli", () => {
                 gamma: loadedPackageDetail("/workspace/gamma/package.details.json", normalised("gamma", ["beta"]))
             });
 
-            mockedLoadConfig.mockResolvedValue(value(loaded.loadedLaobanConfig));
-            mockedLoadPackages.mockResolvedValue(value(loaded));
+            context.loadConfigFn.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             const expectedGenerations = valueOrThrow(await loadSortedLaobanProject(context)).generations;
             const expectedOutput = "\n" + prettyPrintGenerationsSwimlanes(expectedGenerations, packageDetailsGraph);
 
             context.recording.logs.length = 0;
+            context.loadConfigFn.mockClear();
+            context.loadPackagesFn.mockClear();
+            context.loadConfigFn.mockResolvedValue(value(loaded.loadedLaobanConfig));
+            context.loadPackagesFn.mockResolvedValue(value(loaded));
 
             await command("sort").execute({horizontal: true}, context);
 

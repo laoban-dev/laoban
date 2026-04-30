@@ -8,6 +8,7 @@ import {
     CountMetric,
     CreateOptions,
     DebugConfig,
+    defaultModuleObservabilityScope,
     defaultObservabilityContext,
     DurationMetric,
     emptyChannelState,
@@ -15,7 +16,7 @@ import {
     LogLevel,
     Marker,
     ModuleKey,
-    ModuleName,
+    ModuleObservabilityScope,
     Observability,
     ObservabilityContext,
     ObservabilityTemplates,
@@ -31,8 +32,8 @@ export type NodeWriteChannel = Writable
 export type NodeRef = string
 
 export type NodeChannelTcOptions<Purpose> = Readonly<{
-    reference: (moduleName: ModuleName) => (purpose: Purpose) => NodeRef
-    keyFrom?: (moduleName: ModuleName) => ModuleKey
+    reference: (moduleScope: ModuleObservabilityScope) => (purpose: Purpose) => NodeRef
+    keyFrom?: (moduleScope: ModuleObservabilityScope) => ModuleKey
 }>
 
 const nodeChannelError = (message: string, e?: unknown): ErrorsOr<never> =>
@@ -86,8 +87,8 @@ export const nodeChannelTc = <Purpose>(
 ): ChannelTc<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef> => ({
     reference: options.reference,
 
-    keyFrom: options.keyFrom ?? (moduleName =>
-            String(moduleName ?? "<none>")
+    keyFrom: options.keyFrom ?? (moduleScope =>
+            String(moduleScope.module ?? "<none>")
     ),
 
     create: async (ref: NodeRef, {append}: CreateOptions): Promise<ErrorsOr<NodeWriteChannel>> => {
@@ -167,7 +168,7 @@ export const nodeChannelTc = <Purpose>(
 
 export type CreateNodeObservabilityConfig<Purpose> = Readonly<{
     correlationId?: string
-    module?: ModuleName
+    moduleScope?: ModuleObservabilityScope
     debugConfig?: DebugConfig
     timeService?: ObservabilityContext["timeService"]
     templates?: Partial<ObservabilityTemplates>
@@ -195,9 +196,9 @@ export type CreateNodeObservabilityConfig<Purpose> = Readonly<{
      * This decides where module/purpose output is written. Node only owns
      * the stream/file mechanics; the caller owns the logical purposes.
      */
-    reference: (moduleName: ModuleName) => (purpose: Purpose) => NodeRef
+    reference: (moduleScope: ModuleObservabilityScope) => (purpose: Purpose) => NodeRef
 
-    keyFrom?: (moduleName: ModuleName) => ModuleKey
+    keyFrom?: (moduleScope: ModuleObservabilityScope) => ModuleKey
     onError: ErrorsFn
     countMetric?: CountMetric
     durationMetric?: DurationMetric
@@ -207,12 +208,12 @@ export type CreatedNodeObservability<Purpose> = Readonly<{
     observability: Observability
     channelsState: ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef>
     tc: ChannelTc<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef>
-    withModule: (module: ModuleName) => ChannelObservability
+    withModule: (moduleScope: ModuleObservabilityScope) => ChannelObservability
 }>
 
 export const createNodeObservability = <Purpose>({
                                                      correlationId = "NoCorrelationId",
-                                                     module = undefined,
+                                                     moduleScope = defaultModuleObservabilityScope(),
                                                      debugConfig = {},
                                                      timeService,
                                                      templates,
@@ -228,7 +229,7 @@ export const createNodeObservability = <Purpose>({
     const defaultContext = defaultObservabilityContext(
         correlationId,
         debugConfig,
-        module,
+        moduleScope,
     )
 
     const context: ObservabilityContext = {
@@ -259,12 +260,13 @@ export const createNodeObservability = <Purpose>({
         ),
         channelsState,
         tc,
-        withModule: module =>
+        withModule: moduleScope =>
             channelObservabilityWithModule(
                 {
                     ...context,
-                    module,
+                    moduleScope,
                 },
+                moduleScope,
                 channelsState,
                 countMetric,
                 durationMetric,

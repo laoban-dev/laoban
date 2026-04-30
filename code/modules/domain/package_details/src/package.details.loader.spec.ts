@@ -267,17 +267,15 @@ describe("loadPackages", () => {
         if (isErrors(result)) throw new Error("Expected success")
 
         expect(result.value.loadedPackageDetails).toEqual({})
-        expect(recording.debug).toContainEqual({
-            module: undefined,
-            debugName: ["packageDetails", "details"],
-            context: "packageDetails:details",
-            level: "debug",
-            msg: [{
-                configDirectory: "/workspace",
-                packageCount: 0,
-                packageNames: [],
-            }],
-        })
+        expect(recording.debug).toEqual([
+            {
+                "context": "packageDetails:details",
+                "debugName": ["packageDetails", "details"],
+                "level": "debug",
+                "moduleScope": {"directory": "."},
+                "msg": [{"configDirectory": "/workspace", "packageCount": 0, "packageNames": []}]
+            }
+        ])
     })
 
     it("returns loaded package details keyed by package name in deterministic order", async () => {
@@ -353,16 +351,46 @@ describe("loadPackages", () => {
         expect(isErrors(result)).toBe(false)
         if (isErrors(result)) throw new Error("Expected success")
 
-        expect(recording.debug).toContainEqual({
-            module: undefined,
-            debugName: ["packageDetails", "details"],
-            context: "packageDetails:details",
-            level: "debug",
-            msg: [{
-                configDirectory: "/workspace",
-                packageCount: 1,
-                packageNames: ["alpha"],
-            }],
-        })
+        expect(recording.debug).toEqual([
+            {
+                "context": "validation:shape",
+                "debugName": ["validation", "shape"],
+                "level": "debug",
+                "moduleScope": {"directory": ".", module: undefined},
+                "msg": ["Validator <root> must be object with fields. Required true", "{\"name\":\"alpha\",\"template\":\"library\"}"]
+            },
+            {
+                "context": "validation",
+                "debugName": ["validation"],
+                "level": "debug",
+                "moduleScope": {"directory": ".", module: undefined},
+                "msg": ["Validator template must be type string", "\"library\""]
+            },
+            {
+                "context": "validation",
+                "debugName": ["validation"],
+                "level": "debug",
+                "moduleScope": {"directory": ".", module: undefined},
+                "msg": ["Validator name must be type string", "\"alpha\""]
+            },
+            {
+                "context": "validation:field",
+                "debugName": ["validation", "field"],
+                "level": "debug",
+                "moduleScope": {"directory": ".", module: undefined},
+                "msg": ["Validator guards must be NameAnd if present", undefined]
+            },
+            {
+                "context": "packageDetails:details",
+                "debugName": ["packageDetails", "details"],
+                "level": "debug",
+                "moduleScope": {"directory": ".", module: undefined},
+                "msg": [{
+                    "configDirectory": "/workspace",
+                    "packageCount": 1,
+                    "packageNames": ["alpha"]
+                }]
+            }
+        ])
     })
 })

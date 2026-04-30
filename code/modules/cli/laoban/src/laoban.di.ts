@@ -6,9 +6,13 @@ import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure} from "@lao
 import {loadLaobanConfig} from "@laoban/laoban_config";
 import {Env} from "@laoban/records"
 import {
-    ChannelsState, DebugConfig,
+    ChannelsState,
+    DebugConfig,
+    defaultModuleObservabilityScope,
     defaultObservabilityTemplates,
-    ModuleName, parseDebugConfig, parseDebugName,
+    emptyChannelState,
+    ModuleObservabilityScope,
+    parseDebugConfig,
     realTimeService
 } from "@laoban/observability";
 import {
@@ -18,7 +22,11 @@ import {
     NodeReadChannel,
     NodeWriteChannel
 } from "@laoban/observability_node";
-import {loadConfigAndPackages} from "@laoban/package_cli";
+import {
+    loadConfigAndPackages,
+} from "@laoban/package_cli";
+import {loadConfig} from "@laoban/config_cli";
+import {loadPackages} from "@laoban/package_details";
 import {safePathSegment, safePrettyJson} from "@laoban/safe";
 import {
     defaultHandleLaobanScript,
@@ -31,7 +39,7 @@ import {LaobanCliContext} from "./laoban.context";
 import {makeNodeExecution, NodeExecution, NodeExecutionOptions} from "@laoban/node_execution/src/node.execution";
 import {defaultFileCommands} from "@laoban/node_execution";
 import {defaultPrefixAndValueOptions} from "@laoban/execution";
-import {ErrorsOr, mapErrorsOr, mapErrorsOrK} from "@laoban/errors";
+import {ErrorsOr, mapErrorsOr} from "@laoban/errors";
 
 export type LaobanDi = {
     argv: string[];
@@ -42,12 +50,12 @@ export type LaobanDi = {
 };
 
 export function makeReference(pathSafeNow: string) {
-    return (moduleName: ModuleName) => (purpose: Purpose): string => {
-        const safeModuleName = moduleName ?? "__root__";
+    return (moduleScope: ModuleObservabilityScope) => (purpose: Purpose): string => {
+        const safeModuleName = moduleScope.module ?? "__root__";
 
         switch (purpose) {
             case "log":
-                return `.log/${safeModuleName}.log`;
+                return `${moduleScope.directory}/.log`;
 
             case "session":
                 return `.session/${pathSafeNow}/${safeModuleName}.log`;
@@ -59,16 +67,14 @@ export function makeChannelsState(
     pathSafeNow: string,
     onError: (e: unknown) => void
 ): ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel, string> {
-    return {
-        state: {},
-        onError: error => onError(safePrettyJson(error)),
-        purposes,
-        asyncWrites: new Set(),
-        tc: nodeChannelTc({
+    return emptyChannelState(
+        nodeChannelTc({
             reference: makeReference(pathSafeNow),
-            keyFrom: moduleName => moduleName ?? ""
-        })
-    };
+            keyFrom: moduleScope => String(moduleScope.module ?? "")
+        }),
+        purposes,
+        error => onError(safePrettyJson(error)),
+    );
 }
 
 export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> {
@@ -110,6 +116,7 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
         prefixAndValueOptions: defaultPrefixAndValueOptions
     }
     const execution: NodeExecution = makeNodeExecution(nodeExecuteOptions)
+
     return mapErrorsOr(parseDebugConfig(command), (debugConfig: DebugConfig) => {
             const result: LaobanDi = {
                 argv,
@@ -119,10 +126,10 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
 
                 makeContext: () => ({
                     correlationId,
+                    moduleScope: defaultModuleObservabilityScope(),
                     channelsState,
                     execution,
                     timeService: realTimeService,
-                    module: null,
                     env,
                     debugConfig,
                     dictionary: {},
@@ -136,7 +143,10 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
                     loadLaobanConfig,
                     stdOut,
 
+                    loadConfigFn: loadConfig,
+                    loadPackagesFn: loadPackages,
                     loadConfigAndPackagesFn: loadConfigAndPackages,
+
                     handleLaobanScript: defaultHandleLaobanScript,
                     makeDictionary: makeScriptExecutionItemTemplateDictionary
                 })

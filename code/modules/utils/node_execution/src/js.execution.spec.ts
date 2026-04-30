@@ -1,100 +1,111 @@
-// js.executor.test.ts
-
+import {mkdtemp, rm} from "node:fs/promises"
+import {tmpdir} from "node:os"
+import * as path from "node:path"
 import {Writable} from "node:stream"
 import {nullObservability, Observability} from "@laoban/observability"
-import {
-    executeNodeJs,
-    makeExecuteJs,
-    nodeWritableTc,
-    noConsoleRedirect,
-    withConsoleRedirectedToNodeWritable,
-    WritableTc,
-} from "./js.execution"
-
-type TestWritable = {
-    writes: string[]
-}
-
-const testWritableTc: WritableTc<TestWritable> = {
-    writeString: async (writable, text) => {
-        writable.writes.push(text)
-    },
-}
-
-const testWritable = (): TestWritable => ({
-    writes: [],
-})
-
-const testObservability = (): Observability => ({
-    ...nullObservability("test-correlation-id"),
-    log: jest.fn(),
-})
+import {executeNodeJs} from "./js.execution"
 
 const env = {TEST: "true"}
 
-describe("makeExecuteJs", () => {
+type RecordingObservability = Observability & {
+    logged: unknown[][]
+}
+
+const testObservability = (): RecordingObservability => {
+    const logged: unknown[][] = []
+
+    return {
+        ...nullObservability("test-correlation-id"),
+        logged,
+        log: jest.fn((...msg: unknown[]) => {
+            logged.push(msg)
+        }),
+    }
+}
+
+const recordingNodeWritable = () => {
+    const writes: string[] = []
+
+    const writable = new Writable({
+        write(chunk, _encoding, callback) {
+            writes.push(String(chunk))
+            callback()
+        },
+    })
+
+    return {writable, writes}
+}
+
+describe("executeNodeJs", () => {
+    let dir: string
+
+    beforeEach(async () => {
+        dir = await mkdtemp(path.join(tmpdir(), "laoban-js-executor-"))
+    })
+
+    afterEach(async () => {
+        await rm(dir, {recursive: true, force: true})
+    })
+
     it("returns 0 when the command evaluates successfully", async () => {
-        const writable = testWritable()
+        const {writable, writes} = recordingNodeWritable()
         const observability = testObservability()
 
-        const executeJs = makeExecuteJs(testWritableTc)
-
-        const exitCode = await executeJs(
+        const exitCode = await executeNodeJs(
             "1 + 1",
-            "/tmp/project",
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(0)
-        expect(writable.writes).toEqual([])
+        expect(writes).toEqual([])
         expect(observability.log).not.toHaveBeenCalled()
     })
 
-    it("writes returned strings through the supplied writable typeclass", async () => {
-        const writable = testWritable()
+    it("writes returned strings through observability.log", async () => {
+        const {writable, writes} = recordingNodeWritable()
         const observability = testObservability()
 
-        const executeJs = makeExecuteJs(testWritableTc)
-
-        const exitCode = await executeJs(
+        const exitCode = await executeNodeJs(
             `"hello"`,
-            "/tmp/project",
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(0)
-        expect(writable.writes).toEqual(["hello"])
+        expect(writes).toEqual([])
+        expect(observability.log).toHaveBeenCalledWith("hello")
+        expect(observability.logged).toEqual([["hello"]])
     })
 
-    it("awaits async command expressions", async () => {
-        const writable = testWritable()
+    it("rejects promise-returning command expressions", async () => {
+        const {writable, writes} = recordingNodeWritable()
         const observability = testObservability()
 
-        const executeJs = makeExecuteJs(testWritableTc)
-
-        const exitCode = await executeJs(
+        const exitCode = await executeNodeJs(
             `Promise.resolve("async result")`,
-            "/tmp/project",
+            dir,
             env,
             writable,
             observability,
         )
 
-        expect(exitCode).toBe(0)
-        expect(writable.writes).toEqual(["async result"])
+        expect(exitCode).toBe(1)
+        expect(writes).toEqual([])
+        expect(observability.log).toHaveBeenCalledWith(
+            "Error executing javascript command: Promise-returning JavaScript commands are not supported",
+        )
     })
 
     it("passes context, cwd, env, writable and observability into the expression", async () => {
-        const writable = testWritable()
+        const {writable} = recordingNodeWritable()
         const observability = testObservability()
 
-        const executeJs = makeExecuteJs(testWritableTc)
-
-        const exitCode = await executeJs(
+        const exitCode = await executeNodeJs(
             `[
                 context.cwd,
                 cwd,
@@ -103,287 +114,231 @@ describe("makeExecuteJs", () => {
                 context.writable === writable,
                 context.observability === observability
             ].join("|")`,
-            "/tmp/project",
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(0)
-        expect(writable.writes).toEqual([
-            "/tmp/project|/tmp/project|true|true|true|true",
-        ])
+        expect(observability.log).toHaveBeenCalledWith(
+            `${dir}|${dir}|true|true|true|true`,
+        )
+    })
+
+    it("passes the same context object fields as the individual arguments", async () => {
+        const {writable} = recordingNodeWritable()
+        const observability = testObservability()
+
+        const exitCode = await executeNodeJs(
+            `context.cwd === cwd &&
+             context.env === env &&
+             context.writable === writable &&
+             context.observability === observability
+                ? "same"
+                : "different"`,
+            dir,
+            env,
+            writable,
+            observability,
+        )
+
+        expect(exitCode).toBe(0)
+        expect(observability.log).toHaveBeenCalledWith("same")
     })
 
     it("uses strict mode inside the evaluated function", async () => {
-        const writable = testWritable()
+        const {writable} = recordingNodeWritable()
         const observability = testObservability()
 
-        const executeJs = makeExecuteJs(testWritableTc)
-
-        const exitCode = await executeJs(
+        const exitCode = await executeNodeJs(
             `this === undefined ? "strict" : "not strict"`,
-            "/tmp/project",
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(0)
-        expect(writable.writes).toEqual(["strict"])
+        expect(observability.log).toHaveBeenCalledWith("strict")
     })
 
-    it("does not write non-string return values", async () => {
-        const writable = testWritable()
+    it("does not write or log non-string return values", async () => {
+        const {writable, writes} = recordingNodeWritable()
         const observability = testObservability()
 
-        const executeJs = makeExecuteJs(testWritableTc)
-
-        const exitCode = await executeJs(
+        const exitCode = await executeNodeJs(
             `({a: 1})`,
-            "/tmp/project",
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(0)
-        expect(writable.writes).toEqual([])
+        expect(writes).toEqual([])
+        expect(observability.log).not.toHaveBeenCalled()
+    })
+
+    it("does not write or log undefined return values", async () => {
+        const {writable, writes} = recordingNodeWritable()
+        const observability = testObservability()
+
+        const exitCode = await executeNodeJs(
+            `undefined`,
+            dir,
+            env,
+            writable,
+            observability,
+        )
+
+        expect(exitCode).toBe(0)
+        expect(writes).toEqual([])
+        expect(observability.log).not.toHaveBeenCalled()
+    })
+
+    it("does not write or log numeric return values", async () => {
+        const {writable, writes} = recordingNodeWritable()
+        const observability = testObservability()
+
+        const exitCode = await executeNodeJs(
+            `123`,
+            dir,
+            env,
+            writable,
+            observability,
+        )
+
+        expect(exitCode).toBe(0)
+        expect(writes).toEqual([])
+        expect(observability.log).not.toHaveBeenCalled()
     })
 
     it("returns 1 and logs when evaluation throws", async () => {
-        const writable = testWritable()
+        const {writable, writes} = recordingNodeWritable()
         const observability = testObservability()
 
-        const executeJs = makeExecuteJs(testWritableTc)
-
-        const exitCode = await executeJs(
+        const exitCode = await executeNodeJs(
             `(() => { throw new Error("boom") })()`,
-            "/tmp/project",
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(1)
-        expect(writable.writes).toEqual([])
+        expect(writes).toEqual([])
         expect(observability.log).toHaveBeenCalledWith(
             "Error executing javascript command: Error: boom",
         )
     })
 
-    it("returns 1 and logs when writing the returned string fails", async () => {
-        const writable = testWritable()
+    it("returns 1 and logs syntax errors", async () => {
+        const {writable, writes} = recordingNodeWritable()
         const observability = testObservability()
 
-        const failingWritableTc: WritableTc<TestWritable> = {
-            writeString: async () => {
-                throw new Error("write failed")
-            },
-        }
-
-        const executeJs = makeExecuteJs(failingWritableTc)
-
-        const exitCode = await executeJs(
-            `"hello"`,
-            "/tmp/project",
+        const exitCode = await executeNodeJs(
+            `(() =>`,
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(1)
+        expect(writes).toEqual([])
         expect(observability.log).toHaveBeenCalledWith(
-            "Error executing javascript command: Error: write failed",
+            expect.stringContaining("Error executing javascript command: SyntaxError:"),
         )
     })
 
-    it("uses the supplied console redirect wrapper", async () => {
-        const writable = testWritable()
-        const observability = testObservability()
-        const events: string[] = []
-
-        const redirect = jest.fn(async (_writable: TestWritable, block: () => Promise<number>) => {
-            events.push("before")
-            const result = await block()
-            events.push("after")
-            return result
-        })
-
-        const executeJs = makeExecuteJs(testWritableTc, redirect)
-
-        const exitCode = await executeJs(
-            `"hello"`,
-            "/tmp/project",
-            env,
-            writable,
-            observability,
-        )
-
-        expect(exitCode).toBe(0)
-        expect(redirect).toHaveBeenCalledTimes(1)
-        expect(redirect).toHaveBeenCalledWith(writable, expect.any(Function))
-        expect(events).toEqual(["before", "after"])
-        expect(writable.writes).toEqual(["hello"])
-    })
-
-    it("noConsoleRedirect just executes the block", async () => {
-        const result = await noConsoleRedirect(testWritable(), async () => 123)
-
-        expect(result).toBe(123)
-    })
-})
-
-describe("nodeWritableTc", () => {
-    const recordingNodeWritable = () => {
-        const writes: string[] = []
-
-        const writable = new Writable({
-            write(chunk, _encoding, callback) {
-                writes.push(String(chunk))
-                callback()
-            },
-        })
-
-        return {writable, writes}
-    }
-
-    it("writes strings to a Node Writable", async () => {
-        const {writable, writes} = recordingNodeWritable()
-
-        await nodeWritableTc.writeString(writable, "hello")
-
-        expect(writes).toEqual(["hello"])
-    })
-
-    it("rejects when the Node Writable reports a write error", async () => {
-        const writable = {
-            write: jest.fn((_text: string, callback: (error?: Error | null) => void) => {
-                callback(new Error("write failed"))
-                return true
-            }),
-        } as unknown as Writable
-
-        await expect(
-            nodeWritableTc.writeString(writable, "hello"),
-        ).rejects.toThrow("write failed")
-
-        expect(writable.write).toHaveBeenCalledWith("hello", expect.any(Function))
-    })
-})
-
-describe("withConsoleRedirectedToNodeWritable", () => {
-    const recordingNodeWritable = () => {
-        const writes: string[] = []
-
-        const writable = new Writable({
-            write(chunk, _encoding, callback) {
-                writes.push(String(chunk))
-                callback()
-            },
-        })
-
-        return {writable, writes}
-    }
-
-    it("redirects process stdout writes to the supplied Node Writable", async () => {
-        const {writable, writes} = recordingNodeWritable()
-
-        const result = await withConsoleRedirectedToNodeWritable(writable, async () => {
-            process.stdout.write("hello stdout")
-            return 0
-        })
-
-        expect(result).toBe(0)
-        expect(writes).toEqual(["hello stdout"])
-    })
-
-    it("redirects process stderr writes to the supplied Node Writable", async () => {
-        const {writable, writes} = recordingNodeWritable()
-
-        const result = await withConsoleRedirectedToNodeWritable(writable, async () => {
-            process.stderr.write("hello stderr")
-            return 0
-        })
-
-        expect(result).toBe(0)
-        expect(writes).toEqual(["hello stderr"])
-    })
-
-    it("restores process stdout and stderr after success", async () => {
+    it("temporarily changes process.cwd during synchronous evaluation", async () => {
         const {writable} = recordingNodeWritable()
-        const originalStdoutWrite = process.stdout.write
-        const originalStderrWrite = process.stderr.write
-
-        await withConsoleRedirectedToNodeWritable(writable, async () => 0)
-
-        expect(process.stdout.write).toBe(originalStdoutWrite)
-        expect(process.stderr.write).toBe(originalStderrWrite)
-    })
-
-    it("restores process stdout and stderr after failure", async () => {
-        const {writable} = recordingNodeWritable()
-        const originalStdoutWrite = process.stdout.write
-        const originalStderrWrite = process.stderr.write
-
-        await expect(
-            withConsoleRedirectedToNodeWritable(writable, async () => {
-                throw new Error("boom")
-            }),
-        ).rejects.toThrow("boom")
-
-        expect(process.stdout.write).toBe(originalStdoutWrite)
-        expect(process.stderr.write).toBe(originalStderrWrite)
-    })
-})
-
-describe("executeNodeJs", () => {
-    const recordingNodeWritable = () => {
-        const writes: string[] = []
-
-        const writable = new Writable({
-            write(chunk, _encoding, callback) {
-                writes.push(String(chunk))
-                callback()
-            },
-        })
-
-        return {writable, writes}
-    }
-
-    it("writes returned strings to a Node Writable", async () => {
-        const {writable, writes} = recordingNodeWritable()
         const observability = testObservability()
 
         const exitCode = await executeNodeJs(
-            `"hello node"`,
-            "/tmp/project",
+            `process.cwd()`,
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(0)
-        expect(writes).toEqual(["hello node"])
+        expect(observability.log).toHaveBeenCalledWith(dir)
     })
 
-    it("redirects stdout and stderr during command execution", async () => {
+    it("restores process.cwd after successful evaluation", async () => {
+        const {writable} = recordingNodeWritable()
+        const observability = testObservability()
+        const originalCwd = process.cwd()
+
+        const exitCode = await executeNodeJs(
+            `process.cwd()`,
+            dir,
+            env,
+            writable,
+            observability,
+        )
+
+        expect(exitCode).toBe(0)
+        expect(process.cwd()).toBe(originalCwd)
+    })
+
+    it("restores process.cwd after evaluation throws", async () => {
+        const {writable} = recordingNodeWritable()
+        const observability = testObservability()
+        const originalCwd = process.cwd()
+
+        const exitCode = await executeNodeJs(
+            `(() => { throw new Error("boom") })()`,
+            dir,
+            env,
+            writable,
+            observability,
+        )
+
+        expect(exitCode).toBe(1)
+        expect(process.cwd()).toBe(originalCwd)
+    })
+
+    it("does not redirect stdout through the supplied writable", async () => {
         const {writable, writes} = recordingNodeWritable()
         const observability = testObservability()
 
         const exitCode = await executeNodeJs(
             `(() => {
-                process.stdout.write("stdout")
-                process.stderr.write("stderr")
-                return "return"
+                process.stdout.write("")
+                return "done"
             })()`,
-            "/tmp/project",
+            dir,
             env,
             writable,
             observability,
         )
 
         expect(exitCode).toBe(0)
-        expect(writes).toEqual(["stdout", "stderr", "return"])
+        expect(writes).toEqual([])
+        expect(observability.log).toHaveBeenCalledWith("done")
+    })
+
+    it("exposes writable to user code without automatically writing returned strings to it", async () => {
+        const {writable, writes} = recordingNodeWritable()
+        const observability = testObservability()
+
+        const exitCode = await executeNodeJs(
+            `(() => {
+                writable.write("manual")
+                return "returned"
+            })()`,
+            dir,
+            env,
+            writable,
+            observability,
+        )
+
+        expect(exitCode).toBe(0)
+        expect(writes).toEqual(["manual"])
+        expect(observability.log).toHaveBeenCalledWith("returned")
     })
 })

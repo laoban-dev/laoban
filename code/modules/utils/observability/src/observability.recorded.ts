@@ -1,6 +1,8 @@
 import {
     CorrelationId,
+    defaultModuleObservabilityScope,
     ModuleName,
+    ModuleObservabilityScope,
     Observability,
     realTimeService,
     TimeService,
@@ -16,12 +18,12 @@ import {
 } from "./observability.debug"
 
 export type RecordedLog = Readonly<{
-    module: ModuleName
+    moduleScope: ModuleObservabilityScope
     msg: string
 }>
 
 export type RecordedDebug = Readonly<{
-    module: ModuleName
+    moduleScope: ModuleObservabilityScope
     debugName: DebugName
     context: string
     level: LogLevel
@@ -45,7 +47,7 @@ export const recordingObservability = (
     debugConfig: DebugConfig = emptyDebugConfig,
     correlationId: CorrelationId = "test-correlation-id",
     timeService: TimeService = realTimeService,
-    module: ModuleName = undefined,
+    moduleScope: ModuleObservabilityScope = defaultModuleObservabilityScope(),
 ): RecordingObservability => {
     const logs: RecordedLog[] = []
     const debug: RecordedDebug[] = []
@@ -53,7 +55,7 @@ export const recordingObservability = (
     const durations: RecordedDuration[] = []
 
     const context = {
-        ...defaultObservabilityContext(correlationId, debugConfig, module),
+        ...defaultObservabilityContext(correlationId, debugConfig, moduleScope),
         timeService,
     }
 
@@ -61,7 +63,7 @@ export const recordingObservability = (
         context,
         target: {
             write: msg => {
-                logs.push({module, msg})
+                logs.push({moduleScope, msg})
             },
         },
         countMetric: name => counts.push(name),
@@ -73,7 +75,7 @@ export const recordingObservability = (
         ...base,
         debug: (debugName, level, ...msg) => {
             debug.push({
-                module,
+                moduleScope,
                 debugName,
                 context: renderDebugName(debugName),
                 level,

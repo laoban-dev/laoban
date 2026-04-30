@@ -8,7 +8,7 @@ import {
     mapErrorsOr,
     value,
 } from "@laoban/errors"
-import {ModuleName} from "./observability"
+import {ModuleObservabilityScope} from "./observability"
 
 export type ModuleKey = string
 
@@ -112,8 +112,8 @@ export type CreateOptions = {
  * implementation; tests and other runtimes can provide others.
  */
 export type ChannelTc<Purpose, ReadChannel, WriteChannel, Ref> = {
-    reference: (moduleName: ModuleName) => (purpose: Purpose) => Ref
-    keyFrom: (moduleName: ModuleName) => ModuleKey
+    reference: (moduleScope: ModuleObservabilityScope) => (purpose: Purpose) => Ref
+    keyFrom: (moduleScope: ModuleObservabilityScope) => ModuleKey
 
     create: (ref: Ref, options: CreateOptions) => Promise<ErrorsOr<WriteChannel>>
     write: (channel: WriteChannel, text: string) => Promise<ErrorsOr<void>>
@@ -186,16 +186,16 @@ export function emptyChannelState<Purpose, ReadChannel, WriteChannel, Ref>(
  */
 export async function getOrCreateChannels<Purpose, ReadChannel, WriteChannel, Ref>(
     channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
-    moduleName: ModuleName,
+    moduleScope: ModuleObservabilityScope,
 ): Promise<ErrorsOr<WriteChannel[]>> {
     const {tc, purposes} = channelState
-    const key = tc.keyFrom(moduleName)
+    const key = tc.keyFrom(moduleScope)
 
     const existingState = channelState.state[key]
     const append = existingState !== undefined
 
     const moduleState: ChannelState<WriteChannel, Ref> = existingState ?? {
-        refs: purposes.map(tc.reference(moduleName)),
+        refs: purposes.map(tc.reference(moduleScope)),
         lastSize: 0,
         channels: undefined,
     }
@@ -225,11 +225,11 @@ export type AsyncWrite = (msg: string) => Promise<void>
 export const asyncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
-    (moduleName: ModuleName): AsyncWrite =>
+    (moduleScope: ModuleObservabilityScope): AsyncWrite =>
         async (text: string): Promise<void> => {
             try {
                 const errorsOr = await flatMapErrorsOrK(
-                    await getOrCreateChannels(channelState, moduleName),
+                    await getOrCreateChannels(channelState, moduleScope),
                     channels =>
                         mapArrayK(channels, channel =>
                             channelState.tc.write(channel, text),
@@ -239,7 +239,7 @@ export const asyncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
                 if (isErrors(errorsOr))
                     channelState.onError(errorsOr)
             } catch (e: unknown) {
-                channelState.onError(makeErrorFromException(`asyncWriteTo(${moduleName})`, e))
+                channelState.onError(makeErrorFromException(`asyncWriteTo(${moduleScope.module})`, e))
             }
         }
 
@@ -252,11 +252,11 @@ export const asyncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
 export const syncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
-    (moduleName: ModuleName): Write =>
+    (moduleScope: ModuleObservabilityScope): Write =>
         (text: string) =>
             trackAsyncWrite(
                 channelState,
-                asyncWriteTo(channelState)(moduleName)(text),
+                asyncWriteTo(channelState)(moduleScope)(text),
             )
 
 /**
@@ -267,7 +267,7 @@ export const syncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
  * called. Flush only:
  *
  * - waits for already-started async writes to settle
- * - reads durable content from each module's representative ref at lastSize
+ * - reads durable content from the module's representative ref at lastSize
  * - writes that delta to the supplied sink
  * - updates lastSize to the returned marker
  *
@@ -278,18 +278,22 @@ export const syncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
 export const flush = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
-    async (write: Write): Promise<ErrorsOr<unknown>> => {
-        const {tc, state, purposes} = channelState
-        if (purposes.length === 0) return value([])
+    (moduleScope: ModuleObservabilityScope) =>
+        async (write: Write): Promise<ErrorsOr<unknown>> => {
+            const {tc, state, purposes} = channelState
+            if (purposes.length === 0) return value([])
 
-        await waitForAsyncWrites(channelState)
+            await waitForAsyncWrites(channelState)
 
-        return mapArrayK(Object.values(state), async moduleState =>
-            mapErrorsOr(
+            const key = tc.keyFrom(moduleScope)
+            const moduleState = state[key]
+
+            if (moduleState === undefined) return value([])
+
+            return mapErrorsOr(
                 await tc.sendFromRefToWrite(moduleState.refs[0], moduleState.lastSize, write),
                 newMarker => {
                     moduleState.lastSize = newMarker
                 },
-            ),
-        )
-    }
+            )
+        }

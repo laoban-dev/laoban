@@ -425,7 +425,10 @@ describe("execution plan", () => {
 
             expect(recording.debug).toEqual([
                 {
-                    module: undefined,
+                    moduleScope: {
+                        module: undefined,
+                        directory: ".",
+                    },
                     debugName: ["execution", "plan", "start"],
                     context: "execution:plan:start",
                     level: "debug",
@@ -438,7 +441,10 @@ describe("execution plan", () => {
                     ],
                 },
                 {
-                    module: undefined,
+                    moduleScope: {
+                        module: undefined,
+                        directory: ".",
+                    },
                     debugName: ["someContext:execution_plan", "topologicalGenerations"],
                     context: "someContext:execution_plan:topologicalGenerations",
                     level: "debug",
@@ -452,7 +458,10 @@ describe("execution plan", () => {
                     ],
                 },
                 {
-                    module: undefined,
+                    moduleScope: {
+                        module: undefined,
+                        directory: ".",
+                    },
                     debugName: ["someContext:execution_plan", "topologicalGenerations", "visit"],
                     context: "someContext:execution_plan:topologicalGenerations:visit",
                     level: "debug",
@@ -464,7 +473,10 @@ describe("execution plan", () => {
                     ],
                 },
                 {
-                    module: undefined,
+                    moduleScope: {
+                        module: undefined,
+                        directory: ".",
+                    },
                     debugName: ["someContext:execution_plan", "topologicalGenerations", "visit"],
                     context: "someContext:execution_plan:topologicalGenerations:visit",
                     level: "debug",
@@ -477,7 +489,10 @@ describe("execution plan", () => {
                     ],
                 },
                 {
-                    module: undefined,
+                    moduleScope: {
+                        module: undefined,
+                        directory: ".",
+                    },
                     debugName: ["someContext:execution_plan", "topologicalGenerations"],
                     context: "someContext:execution_plan:topologicalGenerations",
                     level: "debug",
@@ -494,7 +509,10 @@ describe("execution plan", () => {
                     ],
                 },
                 {
-                    module: undefined,
+                    moduleScope: {
+                        module: undefined,
+                        directory: ".",
+                    },
                     debugName: ["execution", "plan", "finished"],
                     context: "execution:plan:finished",
                     level: "debug",
@@ -512,7 +530,6 @@ describe("execution plan", () => {
                     ],
                 },
             ])
-
             expect(recording.counts).toEqual([
                 "someContext:execution_plan.topologicalGenerations.run",
             ])
