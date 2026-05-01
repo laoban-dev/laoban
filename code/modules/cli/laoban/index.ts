@@ -4,9 +4,9 @@ import {dumpErrors} from "@laoban/observability";
 import {makeLaobanDi} from "./src/laoban.di";
 import {runLaobanApp} from "./src/laoban.app";
 import {isErrors} from "@laoban/errors";
-import {setWritableMaxListenersFromCpu} from "@laoban/observability_node/src/observability.max.listeners";
+import {nodeOsOps, setWritableMaxListenersFromCpu} from "@laoban/node_os";
 
-setWritableMaxListenersFromCpu(process.stdout);
+setWritableMaxListenersFromCpu(nodeOsOps, process.stdout);
 
 const diOrError = makeLaobanDi();
 if (isErrors(diOrError)) {

@@ -4,6 +4,7 @@ import { scriptExecutionPlanPrettyPrintTypeClass, ScriptExecutionItem } from "./
 function pkg(name: string): LoadedPackageDetail {
     return {
         packageFile: `/repo/${name}/package.details.json`,
+        dir: `/repo/${name}`,
         contents: normalisePackageDetails({
             template: "default",
             name

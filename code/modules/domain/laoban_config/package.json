@@ -21,6 +21,7 @@
     "@laoban/files": "2.0.0",
     "@laoban/merge": "2.0.0",
     "@laoban/observability": "2.0.0",
+    "@laoban/os": "2.0.0",
     "@laoban/safe": "2.0.0",
     "@laoban/scripts": "2.0.0",
     "@laoban/validation": "2.0.0",

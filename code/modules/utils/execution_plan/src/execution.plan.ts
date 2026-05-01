@@ -1,7 +1,8 @@
-import {ErrorsOr, mapErrorsOr} from "@laoban/errors"
-import {Observability} from "@laoban/observability"
+import { ErrorsOr, mapErrorsOr } from "@laoban/errors"
+import { Observability } from "@laoban/observability"
 import {
     topologicalGenerations,
+    throttlePlan,
     NameAndDependsOn,
     TopologicalGenerationIssue,
 } from "@laoban/topologicalsort"
@@ -98,11 +99,24 @@ export interface ExecutionPlanStats<P> {
     packageExecutionItemCount: number
     barrierCount: number
 
+    /**
+     * Stats for the original dependency/topological plan before throttle is applied.
+     */
     generationCount: number
     largestGenerationSize: number
+
+    /**
+     * Stats for the executable plan after throttle is applied.
+     */
+    throttledGenerationCount: number
+    largestThrottledGenerationSize: number
+    throttledGenerationIncrease: number
 }
 
 export interface ExecutionPlanResult<P, H> {
+    /**
+     * The executable plan. This has already had throttle applied.
+     */
     plan: H[][]
     stats: ExecutionPlanStats<P>
 }
@@ -309,18 +323,22 @@ function distinctPackageDetails<P>(
     return result
 }
 
+function largestGenerationSize<H>(plan: H[][]): number {
+    return plan.length === 0 ? 0 : Math.max(...plan.map(g => g.length))
+}
+
 function makeExecutionPlanStats<C, P, H>(
     commands: C[],
     packagesForCommand: P[][],
     items: H[],
-    plan: H[][],
+    unthrottledPlan: H[][],
+    throttledPlan: H[][],
     tc: ExecutionItemPlannerTypeClass<C, P, H>,
     packageTc: NameAndDependsOn<P>,
 ): ExecutionPlanStats<P> {
     const distinctPackages = distinctPackageDetails(packagesForCommand, packageTc)
     const packageExecutionItemCount = items.filter(i => tc.kind(i) === "eachPackage").length
     const barrierCount = items.filter(i => tc.kind(i) === "oncePerWorkSpace").length
-    const largestGenerationSize = plan.length === 0 ? 0 : Math.max(...plan.map(g => g.length))
 
     return {
         commandCount: commands.length,
@@ -328,14 +346,20 @@ function makeExecutionPlanStats<C, P, H>(
         executionItemCount: items.length,
         packageExecutionItemCount,
         barrierCount,
-        generationCount: plan.length,
-        largestGenerationSize,
+
+        generationCount: unthrottledPlan.length,
+        largestGenerationSize: largestGenerationSize(unthrottledPlan),
+
+        throttledGenerationCount: throttledPlan.length,
+        largestThrottledGenerationSize: largestGenerationSize(throttledPlan),
+        throttledGenerationIncrease: throttledPlan.length - unthrottledPlan.length,
     }
 }
 
 function debugExecutionPlanStart<C extends { executionScope: ExecutionScope }, P>(
     purpose: string,
     commands: C[],
+    throttle: number,
     packagesForCommand: P[][],
     observability: Observability,
 ): void {
@@ -346,6 +370,7 @@ function debugExecutionPlanStart<C extends { executionScope: ExecutionScope }, P
             purpose,
             commandCount: commands.length,
             packageSetCount: packagesForCommand.length,
+            throttle,
         },
     )
 }
@@ -365,24 +390,36 @@ function debugExecutionPlanFinished<P>(
             executionItemCount: stats.executionItemCount,
             packageExecutionItemCount: stats.packageExecutionItemCount,
             barrierCount: stats.barrierCount,
+
             generationCount: stats.generationCount,
             largestGenerationSize: stats.largestGenerationSize,
+
+            throttledGenerationCount: stats.throttledGenerationCount,
+            largestThrottledGenerationSize: stats.largestThrottledGenerationSize,
+            throttledGenerationIncrease: stats.throttledGenerationIncrease,
         },
     )
 }
 
 /**
- * Builds the final execution plan as topological generations of execution items.
+ * Builds the final execution plan as throttled topological generations of execution items.
+ *
+ * The topological sort produces the dependency-respecting generations.
+ * throttlePlan then splits large generations into smaller executable batches.
+ *
+ * The returned plan is the throttled executable plan.
+ * Stats retain both the original generation shape and the throttled generation shape.
  */
 export function makeExecutionPlan<C extends { executionScope: ExecutionScope }, P, H>(
     purpose: string,
     commands: C[],
+    throttle: number,
     packagesForCommand: P[][],
     tc: ExecutionItemPlannerTypeClass<C, P, H>,
     packageTc: NameAndDependsOn<P>,
     observability: Observability,
 ): ErrorsOr<ExecutionPlanResult<P, H>, TopologicalGenerationIssue> {
-    debugExecutionPlanStart(purpose, commands, packagesForCommand, observability)
+    debugExecutionPlanStart(purpose, commands, throttle, packagesForCommand, observability)
 
     const items = buildExecutionItems(commands, packagesForCommand, tc)
     const graph = buildExecutionGraph(items, tc, packageTc)
@@ -390,11 +427,22 @@ export function makeExecutionPlan<C extends { executionScope: ExecutionScope }, 
     return mapErrorsOr(
         topologicalGenerations(`${purpose}:execution_plan`, items, graph, observability),
         generations => {
-            const plan = generations.filter(g => g.length > 0)
-            const stats = makeExecutionPlanStats(commands, packagesForCommand, items, plan, tc, packageTc)
+            const unthrottledPlan = generations.filter(g => g.length > 0)
+            const plan = throttlePlan(unthrottledPlan, throttle)
+
+            const stats = makeExecutionPlanStats(
+                commands,
+                packagesForCommand,
+                items,
+                unthrottledPlan,
+                plan,
+                tc,
+                packageTc,
+            )
+
             debugExecutionPlanFinished(purpose, stats, observability)
 
-            return {plan, stats}
+            return { plan, stats }
         },
     )
 }

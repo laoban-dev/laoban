@@ -8,6 +8,7 @@
     "@laoban/errors",
     "@laoban/laoban_config",
     "@laoban/observability",
+    "@laoban/os",
     "@laoban/safe",
     "@laoban/strings",
     "@laoban/validation"

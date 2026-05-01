@@ -40,6 +40,8 @@ import {makeNodeExecution, NodeExecution, NodeExecutionOptions} from "@laoban/no
 import {defaultFileCommands} from "@laoban/node_execution";
 import {defaultPrefixAndValueOptions} from "@laoban/execution";
 import {ErrorsOr, mapErrorsOr} from "@laoban/errors";
+import {nodeOsOps} from "@laoban/node_os";
+import {OsOps} from "@laoban/os";
 
 export type LaobanDi = {
     argv: string[];
@@ -116,7 +118,7 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
         prefixAndValueOptions: defaultPrefixAndValueOptions
     }
     const execution: NodeExecution = makeNodeExecution(nodeExecuteOptions)
-
+    const osOps: OsOps = nodeOsOps;
     return mapErrorsOr(parseDebugConfig(command), (debugConfig: DebugConfig) => {
             const result: LaobanDi = {
                 argv,
@@ -126,6 +128,7 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
 
                 makeContext: () => ({
                     correlationId,
+                    osOps,
                     moduleScope: defaultModuleObservabilityScope(),
                     channelsState,
                     execution,

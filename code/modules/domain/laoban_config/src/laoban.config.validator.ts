@@ -1,24 +1,27 @@
 import {
+    combineValidators, min,
     mustBeArrayOf,
     mustBeArrayOfIfPresent,
     mustBeNameAnd,
     mustBeNameAndIfPresent,
+    mustBeNumber, mustBeNumberIfPresent,
     mustBeObjectWithFields,
     mustBeString,
     mustBeStringIfPresent,
     type Validator,
-} from "@laoban/validation";
+} from "@laoban/validation"
 import {
     validateLaobanScript,
     validateRawLaobanScript,
-} from "@laoban/scripts";
-import type { LaobanConfig, LaobanConfigFile } from "./laoban.config";
+} from "@laoban/scripts"
+import type { LaobanConfig, LaobanConfigFile } from "./laoban.config"
 
 export const validateConfigFileContents: Validator<LaobanConfigFile> =
     mustBeObjectWithFields<LaobanConfigFile>(
         {
             packageManager: mustBeStringIfPresent,
             versionFile: mustBeStringIfPresent,
+            throttle: mustBeNumberIfPresent,
             parents: mustBeArrayOfIfPresent(mustBeString),
             properties: mustBeNameAndIfPresent(mustBeString),
             templates: mustBeNameAndIfPresent(mustBeString),
@@ -27,7 +30,7 @@ export const validateConfigFileContents: Validator<LaobanConfigFile> =
             skipDirectories: mustBeArrayOfIfPresent(mustBeString),
         },
         true
-    );
+    )
 
 export const validateLaobanConfig: Validator<LaobanConfig> =
     mustBeObjectWithFields<LaobanConfig>(
@@ -40,6 +43,7 @@ export const validateLaobanConfig: Validator<LaobanConfig> =
             defaultEnv: mustBeNameAnd(mustBeString, true),
             scripts: mustBeNameAnd(validateLaobanScript, true),
             skipDirectories: mustBeArrayOf(mustBeString),
+            throttle: combineValidators(mustBeNumber,min(1)),
         },
         true
-    );
+    )

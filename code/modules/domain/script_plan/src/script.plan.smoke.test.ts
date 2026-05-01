@@ -12,6 +12,7 @@ import { makeScriptExecutionPlan, ScriptExecutionItem } from "./script.plan";
 function pkg(name: string, links: string[] = []): LoadedPackageDetail {
     return {
         packageFile: `/repo/${name}/package.details.json`,
+        dir:  `/repo/${name}`,
         contents: normalisePackageDetails({
             template: "default",
             name,
@@ -23,7 +24,7 @@ function pkg(name: string, links: string[] = []): LoadedPackageDetail {
 function project(...pkgs: LoadedPackageDetail[]): LoadedLaobanProject {
     return {
         loadedLaobanConfig: {
-            config: {} as any,
+            config: {            throttle: 100,} as any,
             configFile: "/repo/laoban.json",
             configDirectory: "/repo",
             loadedFiles: ["/repo/laoban.json"]
@@ -82,13 +83,51 @@ describe("makeScriptExecutionPlan", () => {
             ["2:test:beta"]
         ]);
         expect(actual.stats).toEqual({
-            commandCount: 3,
-            distinctPackageDetails: [alpha, beta],
-            executionItemCount: 5,
-            packageExecutionItemCount: 4,
-            barrierCount: 1,
-            generationCount: 5,
-            largestGenerationSize: 1
+            "barrierCount": 1,
+            "commandCount": 3,
+            "distinctPackageDetails": [
+                {
+                    "contents": {
+                        "allLinks": [],
+                        "devLinks": [],
+                        "files": {},
+                        "guards": {},
+                        "links": [],
+                        "meta": {},
+                        "name": "alpha",
+                        "peerLinks": [],
+                        "template": "default"
+                    },
+                    "dir": "/repo/alpha",
+                    "packageFile": "/repo/alpha/package.details.json"
+                },
+                {
+                    "contents": {
+                        "allLinks": [
+                            "alpha"
+                        ],
+                        "devLinks": [],
+                        "files": {},
+                        "guards": {},
+                        "links": [
+                            "alpha"
+                        ],
+                        "meta": {},
+                        "name": "beta",
+                        "peerLinks": [],
+                        "template": "default"
+                    },
+                    "dir": "/repo/beta",
+                    "packageFile": "/repo/beta/package.details.json"
+                }
+            ],
+            "executionItemCount": 5,
+            "generationCount": 5,
+            "largestGenerationSize": 1,
+            "largestThrottledGenerationSize": 1,
+            "packageExecutionItemCount": 4,
+            "throttledGenerationCount": 5,
+            "throttledGenerationIncrease": 0
         });
     });
 
@@ -96,6 +135,7 @@ describe("makeScriptExecutionPlan", () => {
         const { observability } = recordingObservability();
         const alpha: LoadedPackageDetail = {
             packageFile: "/repo/alpha/package.details.json",
+            dir: "/repo/alpha",
             contents: normalisePackageDetails({
                 template: "default",
                 name: "alpha"
@@ -103,6 +143,7 @@ describe("makeScriptExecutionPlan", () => {
         };
         const beta: LoadedPackageDetail = {
             packageFile: "/repo/beta/package.details.json",
+            dir: "/repo/beta",
             contents: normalisePackageDetails({
                 template: "default",
                 name: "beta",

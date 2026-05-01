@@ -1,6 +1,6 @@
 {
-  "name": "laoban",
-  "description": "The cli for laoban, which is used to run commands defined in the various modules.",
+  "name": "@laoban/os",
+  "description": "The interface for OS services such as 'how many cpus'",
   "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
@@ -17,25 +17,9 @@
     ]
   },
   "dependencies": {
-    "commander": "^14.0.0",
-    "@laoban/clidsl": "2.0.0",
-    "@laoban/commander": "2.0.0",
-    "@laoban/errors": "2.0.0",
-    "@laoban/node_execution": "2.0.0",
-    "@laoban/observability": "2.0.0",
-    "@laoban/observability_node": "2.0.0",
-    "@laoban/os": "2.0.0",
-    "@laoban/node_os": "2.0.0",
-    "@laoban/safe": "2.0.0",
-    "@laoban/strings": "2.0.0",
-    "@laoban/validation": "2.0.0",
-    "@laoban/config_cli": "2.0.0",
-    "@laoban/scripts_cli": "2.0.0",
-    "@laoban/package_cli": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
     "typescript": "^5.2.2",
     "@testing-library/jest-dom": "^6.1.4",
     "@types/jest": "^29.0.0",

@@ -7,6 +7,7 @@ import {
     makeObservability,
     type Observability
 } from "@laoban/observability";
+import {OsOps} from "@laoban/os";
 
 type TestObs = {
     observability: Observability
@@ -33,6 +34,7 @@ function makeTestObservability(): TestObs {
 function makeContext(loadConfig: LoadConfigFn, testObs = makeTestObservability()): LaobanConfigCliContext & {testObs: TestObs} {
     return {
         cwd: "/workspace/project",
+        osOps: {cpuCount: () => 10} as OsOps,
         fileOps: {} as any,
         loadLaobanFileConfig: {} as any,
         loadLaobanConfig: loadConfig,
@@ -72,6 +74,7 @@ describe("laoban config commands", () => {
         expect(actual).toBe(result);
         expect(loadLaobanConfig).toHaveBeenCalledWith(
             {
+                osOps: context.osOps,
                 fileOps: context.fileOps,
                 observability: context.observability,
                 markerFileName: "laoban.json",

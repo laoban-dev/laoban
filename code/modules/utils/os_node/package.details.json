@@ -1,0 +1,22 @@
+{
+  "template": "node",
+  "name": "@laoban/node_os",
+  "description": "Node implementation for the os package",
+  "links": [
+    "@laoban/os"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

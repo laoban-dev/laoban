@@ -9,6 +9,8 @@
     "@laoban/node_execution",
     "@laoban/observability",
     "@laoban/observability_node",
+    "@laoban/os",
+    "@laoban/node_os",
     "@laoban/safe",
     "@laoban/strings",
     "@laoban/validation",

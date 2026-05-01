@@ -2,6 +2,7 @@ import {mapErrorsOr, type ErrorsOr} from "@laoban/errors";
 import {LoadConfigFn, type LoadedLaobanConfig, type LoaderIssue} from "@laoban/laoban_config";
 import {type BasicCliContext, CliGroup, type CliModel, defineCommand, group, root} from "@laoban/clidsl";
 import {type FileOps, type LoadTextConfig} from "@laoban/files";
+import {OsOps} from "@laoban/os";
 
 export type LaobanDebugContext = "cli";
 
@@ -9,13 +10,16 @@ export type LaobanDebugContext = "cli";
 export interface LaobanConfigCliContext extends BasicCliContext {
     cwd: string;
     fileOps: FileOps;
+    osOps: OsOps,
     loadLaobanFileConfig: LoadTextConfig;
     loadLaobanConfig: LoadConfigFn;
+
 }
 
 export function loadConfig(context: LaobanConfigCliContext): Promise<ErrorsOr<LoadedLaobanConfig, LoaderIssue>> {
     return context.loadLaobanConfig(
         {
+            osOps: context.osOps,
             fileOps: context.fileOps,
             observability: context.observability,
             markerFileName: "laoban.json",

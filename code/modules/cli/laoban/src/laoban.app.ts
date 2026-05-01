@@ -52,7 +52,7 @@ export async function makeLaobanCliModel(di: LaobanDi): Promise<CliRoot<LaobanCl
     const context = di.makeContext();
 
     const loadedConfig = await di.loadLaobanConfig(
-        {
+        {osOps: context.osOps,
             fileOps: context.fileOps,
             observability: context.observability,
             markerFileName: "laoban.json",

@@ -67,9 +67,11 @@ export function makeScriptExecutionPlan(
         command.executionScope === "eachPackage" ? allPackages : []
     );
 
+    const throttle = loadedProject.loadedLaobanConfig.config.throttle
     return makeExecutionPlan(
         `script ${scriptName}`,
         commands,
+        throttle,
         packagesForCommand,
         scriptExecutionItemTypeClass,
         loadedPackageDetailGraph,

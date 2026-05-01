@@ -1,6 +1,6 @@
-import {errorsOrThrow, valueOrThrow} from "@laoban/errors"
-import {recordingObservability} from "@laoban/observability"
-import {NameAndDependsOn} from "@laoban/topologicalsort"
+import { errorsOrThrow, valueOrThrow } from "@laoban/errors"
+import { recordingObservability } from "@laoban/observability"
+import { NameAndDependsOn } from "@laoban/topologicalsort"
 import {
     buildExecutionGraph,
     buildExecutionItems,
@@ -50,15 +50,39 @@ const executionItemTc: ExecutionItemPlannerTypeClass<TestCommand, TestPackage, E
 }
 
 function cmd(name: string, executionScope: ExecutionScope): TestCommand {
-    return {name, executionScope}
+    return { name, executionScope }
 }
 
 function pkg(name: string, dependsOn: string[] = []): TestPackage {
-    return {name, dependsOn}
+    return { name, dependsOn }
 }
 
 function planNames(plan: ExecutionItem<TestCommand, TestPackage>[][]): string[][] {
-    return plan.map(g => g.map(item => executionItemGraphName(item, executionItemTc, packageTc)))
+    return plan.map(g => g.map(item =>
+        executionItemGraphName(item, executionItemTc, packageTc)).sort())
+}
+
+function expectStats(
+    actual: unknown,
+    expected: {
+        commandCount: number
+        distinctPackageDetails: TestPackage[]
+        executionItemCount: number
+        packageExecutionItemCount: number
+        barrierCount: number
+        generationCount: number
+        largestGenerationSize: number
+        throttledGenerationCount?: number
+        largestThrottledGenerationSize?: number
+        throttledGenerationIncrease?: number
+    },
+): void {
+    expect(actual).toEqual({
+        ...expected,
+        throttledGenerationCount: expected.throttledGenerationCount ?? expected.generationCount,
+        largestThrottledGenerationSize: expected.largestThrottledGenerationSize ?? expected.largestGenerationSize,
+        throttledGenerationIncrease: expected.throttledGenerationIncrease ?? 0,
+    })
 }
 
 describe("execution plan", () => {
@@ -79,10 +103,10 @@ describe("execution plan", () => {
             ], executionItemTc)
 
             expect(actual).toEqual([
-                {kind: "eachPackage", stepIndex: 0, command: commands[0], pkg: alpha},
-                {kind: "eachPackage", stepIndex: 0, command: commands[0], pkg: beta},
-                {kind: "oncePerWorkSpace", stepIndex: 1, command: commands[1]},
-                {kind: "eachPackage", stepIndex: 2, command: commands[2], pkg: alpha},
+                { kind: "eachPackage", stepIndex: 0, command: commands[0], pkg: alpha },
+                { kind: "eachPackage", stepIndex: 0, command: commands[0], pkg: beta },
+                { kind: "oncePerWorkSpace", stepIndex: 1, command: commands[1] },
+                { kind: "eachPackage", stepIndex: 2, command: commands[2], pkg: alpha },
             ])
         })
 
@@ -230,7 +254,7 @@ describe("execution plan", () => {
 
     describe("makeExecutionPlan", () => {
         it("makes a simple one-step dependency ordered plan", () => {
-            const {observability} = recordingObservability()
+            const { observability } = recordingObservability()
             const alpha = pkg("alpha")
             const beta = pkg("beta", ["alpha"])
 
@@ -238,6 +262,7 @@ describe("execution plan", () => {
                 makeExecutionPlan(
                     "simple",
                     [cmd("compile", "eachPackage")],
+                    10,
                     [[alpha, beta]],
                     executionItemTc,
                     packageTc,
@@ -250,7 +275,7 @@ describe("execution plan", () => {
                 ["step:0:pkg:beta"],
             ])
 
-            expect(actual.stats).toEqual({
+            expectStats(actual.stats, {
                 commandCount: 1,
                 distinctPackageDetails: [alpha, beta],
                 executionItemCount: 2,
@@ -262,7 +287,7 @@ describe("execution plan", () => {
         })
 
         it("allows later steps to pipeline without a global barrier", () => {
-            const {observability} = recordingObservability()
+            const { observability } = recordingObservability()
             const alpha = pkg("alpha")
             const beta = pkg("beta", ["alpha"])
 
@@ -273,6 +298,7 @@ describe("execution plan", () => {
                         cmd("compile", "eachPackage"),
                         cmd("test", "eachPackage"),
                     ],
+                    10,
                     [
                         [alpha, beta],
                         [alpha, beta],
@@ -289,7 +315,7 @@ describe("execution plan", () => {
                 ["step:1:pkg:beta"],
             ])
 
-            expect(actual.stats).toEqual({
+            expectStats(actual.stats, {
                 commandCount: 2,
                 distinctPackageDetails: [alpha, beta],
                 executionItemCount: 4,
@@ -300,8 +326,46 @@ describe("execution plan", () => {
             })
         })
 
+        it("throttles large generations while keeping unthrottled stats", () => {
+            const { observability } = recordingObservability()
+            const alpha = pkg("alpha")
+            const beta = pkg("beta")
+            const gamma = pkg("gamma")
+            const delta = pkg("delta")
+
+            const actual = valueOrThrow(
+                makeExecutionPlan(
+                    "throttle",
+                    [cmd("compile", "eachPackage")],
+                    2,
+                    [[alpha, beta, gamma, delta]],
+                    executionItemTc,
+                    packageTc,
+                    observability,
+                ),
+            )
+
+            expect(planNames(actual.plan)).toEqual([
+                ["step:0:pkg:alpha", "step:0:pkg:beta"],
+                ["step:0:pkg:delta", "step:0:pkg:gamma"],
+            ])
+
+            expectStats(actual.stats, {
+                commandCount: 1,
+                distinctPackageDetails: [alpha, beta, gamma, delta],
+                executionItemCount: 4,
+                packageExecutionItemCount: 4,
+                barrierCount: 0,
+                generationCount: 1,
+                largestGenerationSize: 4,
+                throttledGenerationCount: 2,
+                largestThrottledGenerationSize: 2,
+                throttledGenerationIncrease: 1,
+            })
+        })
+
         it("treats oncePerWorkSpace as a barrier", () => {
-            const {observability} = recordingObservability()
+            const { observability } = recordingObservability()
             const alpha = pkg("alpha")
             const beta = pkg("beta", ["alpha"])
 
@@ -313,6 +377,7 @@ describe("execution plan", () => {
                         cmd("install", "oncePerWorkSpace"),
                         cmd("test", "eachPackage"),
                     ],
+                    10,
                     [
                         [alpha, beta],
                         [],
@@ -332,7 +397,7 @@ describe("execution plan", () => {
                 ["step:2:pkg:beta"],
             ])
 
-            expect(actual.stats).toEqual({
+            expectStats(actual.stats, {
                 commandCount: 3,
                 distinctPackageDetails: [alpha, beta],
                 executionItemCount: 5,
@@ -344,7 +409,7 @@ describe("execution plan", () => {
         })
 
         it("uses the nearest earlier actual step when a package is absent from an intermediate command", () => {
-            const {observability} = recordingObservability()
+            const { observability } = recordingObservability()
             const alpha = pkg("alpha")
 
             const actual = valueOrThrow(
@@ -355,6 +420,7 @@ describe("execution plan", () => {
                         cmd("lint", "eachPackage"),
                         cmd("test", "eachPackage"),
                     ],
+                    10,
                     [
                         [alpha],
                         [],
@@ -371,7 +437,7 @@ describe("execution plan", () => {
                 ["step:2:pkg:alpha"],
             ])
 
-            expect(actual.stats).toEqual({
+            expectStats(actual.stats, {
                 commandCount: 3,
                 distinctPackageDetails: [alpha],
                 executionItemCount: 2,
@@ -383,13 +449,14 @@ describe("execution plan", () => {
         })
 
         it("returns duplicate graph name issues when the same package appears twice in one step", () => {
-            const {observability} = recordingObservability()
+            const { observability } = recordingObservability()
             const alpha1 = pkg("alpha")
             const alpha2 = pkg("alpha")
 
             const actual = makeExecutionPlan(
                 "duplicate",
                 [cmd("compile", "eachPackage")],
+                10,
                 [[alpha1, alpha2]],
                 executionItemTc,
                 packageTc,
@@ -416,6 +483,7 @@ describe("execution plan", () => {
                 makeExecutionPlan(
                     "someContext",
                     [cmd("compile", "eachPackage")],
+                    10,
                     [[alpha]],
                     executionItemTc,
                     packageTc,
@@ -437,6 +505,7 @@ describe("execution plan", () => {
                             purpose: "someContext",
                             commandCount: 1,
                             packageSetCount: 1,
+                            throttle: 10,
                         },
                     ],
                 },
@@ -526,6 +595,9 @@ describe("execution plan", () => {
                             barrierCount: 0,
                             generationCount: 1,
                             largestGenerationSize: 1,
+                            throttledGenerationCount: 1,
+                            largestThrottledGenerationSize: 1,
+                            throttledGenerationIncrease: 0,
                         },
                     ],
                 },
@@ -544,7 +616,7 @@ describe("execution plan", () => {
     })
 
     it("puts independent packages in the same generation", () => {
-        const {observability} = recordingObservability()
+        const { observability } = recordingObservability()
         const alpha = pkg("alpha")
         const beta = pkg("beta")
 
@@ -552,6 +624,7 @@ describe("execution plan", () => {
             makeExecutionPlan(
                 "independent",
                 [cmd("compile", "eachPackage")],
+                10,
                 [[alpha, beta]],
                 executionItemTc,
                 packageTc,
@@ -563,7 +636,7 @@ describe("execution plan", () => {
             ["step:0:pkg:alpha", "step:0:pkg:beta"],
         ])
 
-        expect(actual.stats).toEqual({
+        expectStats(actual.stats, {
             commandCount: 1,
             distinctPackageDetails: [alpha, beta],
             executionItemCount: 2,
@@ -575,7 +648,7 @@ describe("execution plan", () => {
     })
 
     it("builds a workspace-only script plan", () => {
-        const {observability} = recordingObservability()
+        const { observability } = recordingObservability()
 
         const actual = valueOrThrow(
             makeExecutionPlan(
@@ -584,6 +657,7 @@ describe("execution plan", () => {
                     cmd("install", "oncePerWorkSpace"),
                     cmd("publish", "oncePerWorkSpace"),
                 ],
+                10,
                 [
                     [],
                     [],
@@ -599,7 +673,7 @@ describe("execution plan", () => {
             ["step:1:workspace"],
         ])
 
-        expect(actual.stats).toEqual({
+        expectStats(actual.stats, {
             commandCount: 2,
             distinctPackageDetails: [],
             executionItemCount: 2,
@@ -611,7 +685,7 @@ describe("execution plan", () => {
     })
 
     it("makes later package work depend on all earlier workspace barriers", () => {
-        const {observability} = recordingObservability()
+        const { observability } = recordingObservability()
         const alpha = pkg("alpha")
 
         const actual = valueOrThrow(
@@ -622,6 +696,7 @@ describe("execution plan", () => {
                     cmd("install", "oncePerWorkSpace"),
                     cmd("build", "eachPackage"),
                 ],
+                10,
                 [
                     [],
                     [],
@@ -639,7 +714,7 @@ describe("execution plan", () => {
             ["step:2:pkg:alpha"],
         ])
 
-        expect(actual.stats).toEqual({
+        expectStats(actual.stats, {
             commandCount: 3,
             distinctPackageDetails: [alpha],
             executionItemCount: 3,
@@ -651,7 +726,7 @@ describe("execution plan", () => {
     })
 
     it("keeps distinctPackageDetails in first-seen order", () => {
-        const {observability} = recordingObservability()
+        const { observability } = recordingObservability()
         const beta = pkg("beta")
         const alpha = pkg("alpha")
         const gamma = pkg("gamma")
@@ -663,6 +738,7 @@ describe("execution plan", () => {
                     cmd("compile", "eachPackage"),
                     cmd("test", "eachPackage"),
                 ],
+                10,
                 [
                     [beta, alpha],
                     [gamma, beta],
@@ -681,7 +757,7 @@ describe("execution plan", () => {
     })
 
     it("handles diamond dependencies correctly", () => {
-        const {observability} = recordingObservability()
+        const { observability } = recordingObservability()
         const d = pkg("d")
         const b = pkg("b", ["d"])
         const c = pkg("c", ["d"])
@@ -691,6 +767,7 @@ describe("execution plan", () => {
             makeExecutionPlan(
                 "diamond",
                 [cmd("compile", "eachPackage")],
+                10,
                 [[a, b, c, d]],
                 executionItemTc,
                 packageTc,
@@ -704,7 +781,7 @@ describe("execution plan", () => {
             ["step:0:pkg:a"],
         ])
 
-        expect(actual.stats).toEqual({
+        expectStats(actual.stats, {
             commandCount: 1,
             distinctPackageDetails: [a, b, c, d],
             executionItemCount: 4,
@@ -716,7 +793,7 @@ describe("execution plan", () => {
     })
 
     it("handles an empty workspace after filtering", () => {
-        const {observability} = recordingObservability()
+        const { observability } = recordingObservability()
 
         const actual = valueOrThrow(
             makeExecutionPlan(
@@ -725,6 +802,7 @@ describe("execution plan", () => {
                     cmd("compile", "eachPackage"),
                     cmd("test", "eachPackage"),
                 ],
+                10,
                 [
                     [],
                     [],
@@ -737,7 +815,7 @@ describe("execution plan", () => {
 
         expect(planNames(actual.plan)).toEqual([])
 
-        expect(actual.stats).toEqual({
+        expectStats(actual.stats, {
             commandCount: 2,
             distinctPackageDetails: [],
             executionItemCount: 0,

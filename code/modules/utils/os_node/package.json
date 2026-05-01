@@ -1,6 +1,6 @@
 {
-  "name": "laoban",
-  "description": "The cli for laoban, which is used to run commands defined in the various modules.",
+  "name": "@laoban/node_os",
+  "description": "Node implementation for the os package",
   "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
@@ -17,21 +17,7 @@
     ]
   },
   "dependencies": {
-    "commander": "^14.0.0",
-    "@laoban/clidsl": "2.0.0",
-    "@laoban/commander": "2.0.0",
-    "@laoban/errors": "2.0.0",
-    "@laoban/node_execution": "2.0.0",
-    "@laoban/observability": "2.0.0",
-    "@laoban/observability_node": "2.0.0",
     "@laoban/os": "2.0.0",
-    "@laoban/node_os": "2.0.0",
-    "@laoban/safe": "2.0.0",
-    "@laoban/strings": "2.0.0",
-    "@laoban/validation": "2.0.0",
-    "@laoban/config_cli": "2.0.0",
-    "@laoban/scripts_cli": "2.0.0",
-    "@laoban/package_cli": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {

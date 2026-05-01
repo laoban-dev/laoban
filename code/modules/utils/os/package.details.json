@@ -1,0 +1,21 @@
+{
+  "template": "typescript",
+  "name": "@laoban/os",
+  "description": "The interface for OS services such as 'how many cpus'",
+  "links": [
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": false,
+    "react": false
+  }
+}
