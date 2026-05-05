@@ -311,9 +311,14 @@ export function mustBeOneOf<const T extends readonly unknown[]>(...values: T): V
             return value(input as T[number])
         }
 
+        const expected =
+            values.length === 1
+                ? safeJson(values[0])
+                : `one of ${values.map(v => safeJson(v)).join(", ")}`
+
         return oneValidationError(
             context,
-            `${renderContext(context)} must be one of ${values.map(v => JSON.stringify(v)).join(", ")} but was ${JSON.stringify(input)}`,
+            `${renderContext(context)} must be ${expected} but was ${safeJson(input)}`,
             {code: "wrong.literal"},
         )
     }
@@ -450,7 +455,6 @@ export function mustBeObjectWithFields<
         return isErrors(flattened) ? flattened : value(input, flattened.warnings)
     }
 }
-
 export function mustBeNameAnd<T>(
     validator: Validator<T>,
     required?: boolean
@@ -458,9 +462,27 @@ export function mustBeNameAnd<T>(
     return (context: ValidationContext, observability: Observability) => (input: NameAnd<T>): ErrorsOr<NameAnd<T>, ValidationIssue> => {
         debugValidation(observability, ["validation", "field"], context, "must be NameAnd", input)
 
-        if (!required && !input) return value(input)
+        if (input === undefined) {
+            return required
+                ? oneValidationError(
+                    context,
+                    `${renderContext(context)} is required but was undefined`,
+                    {code: "required"},
+                )
+                : value(input)
+        }
 
-        if (typeof input !== "object" || input === null) {
+        if (input === null) {
+            return required
+                ? oneValidationError(
+                    context,
+                    `${renderContext(context)} is required but was null`,
+                    {code: "required"},
+                )
+                : value(input)
+        }
+
+        if (typeof input !== "object") {
             return oneValidationError(
                 context,
                 `${renderContext(context)} must be an object`,
@@ -704,10 +726,10 @@ export function nullableValidator<T>(
     }
 }
 
-export function deprecatedField(
-    message: string
-): Validator<unknown> {
-    return (context: ValidationContext) => (input: unknown): ErrorsOr<unknown, ValidationIssue> =>
+export function deprecatedField<T = unknown>(
+    message: string,
+): Validator<T> {
+    return (context: ValidationContext) => (input: T): ErrorsOr<T, ValidationIssue> =>
         value(input, [
             validationWarning(context, message, {code: "deprecated"}),
         ])

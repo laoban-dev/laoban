@@ -39,7 +39,7 @@ const dictionary = {
   }
 };
 
-const result = renderTemplate(
+const result = defaultTemplateEngine(
   "Hello ${packageDetails.name|toUpperCase}",
   dictionary
 );
@@ -62,7 +62,7 @@ Call the engine with:
 Conceptually:
 
 ```ts
-const result = renderTemplate(template, dictionary, config)
+const result = defaultTemplateEngine(template, dictionary, config)
 ```
 
 If no config is provided, the renderer uses sensible defaults:
@@ -72,8 +72,8 @@ If no config is provided, the renderer uses sensible defaults:
 - `functions`: the built-in default function set (created internally)
 - `observability`: `nullObservability`
 
-`renderTemplate` wires in built-in functions internally when `config.functions` is omitted.
-The package root exports `renderTemplate` and types; `defaultTemplateFns` is not exported from `index.ts`.
+`defaultTemplateEngine` wires in built-in functions internally when `config.functions` is omitted.
+The package root exports `defaultTemplateEngine` and types; `defaultTemplateFns` is not exported from `index.ts`.
 
 This is the simple case.
 
@@ -89,7 +89,7 @@ const config = {
   observability
 };
 
-const result = renderTemplate(template, dictionary, config);
+const result = defaultTemplateEngine(template, dictionary, config);
 ```
 
 Rendering should not depend on hidden global function registries, ambient logging, or hard-wired metrics.
@@ -364,7 +364,7 @@ const template = `{
   "description": "${description|default(no description)}"
 }`;
 
-const result = renderTemplate(template, dictionary, config);
+const result = defaultTemplateEngine(template, dictionary, config);
 ```
 
 Expected rendered output:

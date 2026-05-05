@@ -1,5 +1,5 @@
 import {isErrors, isValue} from "@laoban/errors";
-import {renderTemplate} from "./template.engine";
+import {defaultTemplateEngine} from "./template.engine";
 import {defaultTemplateFns} from "./template.functions";
 import {
     dollarsBracesVarDefn,
@@ -20,9 +20,9 @@ function makeConfig(
     };
 }
 
-describe("renderTemplate", () => {
+describe("defaultTemplateEngine", () => {
     it("returns the original string when there are no tokens", () => {
-        const result = renderTemplate("hello world", {}, makeConfig());
+        const result = defaultTemplateEngine("hello world", {}, makeConfig());
 
         expect(isValue(result)).toBe(true);
         if (isValue(result)) expect(result.value).toBe("hello world");
@@ -30,7 +30,7 @@ describe("renderTemplate", () => {
 
     it("renders a simple variable", () => {
         const dictionary = {version: "1.2.3"};
-        const result = renderTemplate("version=${version}", dictionary, makeConfig());
+        const result = defaultTemplateEngine("version=${version}", dictionary, makeConfig());
 
         expect(isValue(result)).toBe(true);
         if (isValue(result)) expect(result.value).toBe("version=1.2.3");
@@ -44,7 +44,7 @@ describe("renderTemplate", () => {
             },
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "name=${packageDetails.name}, version=${version}",
             dictionary,
             makeConfig(),
@@ -65,7 +65,7 @@ describe("renderTemplate", () => {
             },
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "compile=${packageDetails.guards.compile}",
             dictionary,
             makeConfig(),
@@ -82,7 +82,7 @@ describe("renderTemplate", () => {
             },
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "name=${'package.json'.name}",
             dictionary,
             makeConfig(),
@@ -99,7 +99,7 @@ describe("renderTemplate", () => {
             },
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "name=${packageDetails.name|toUpperCase}",
             dictionary,
             makeConfig(),
@@ -116,7 +116,7 @@ describe("renderTemplate", () => {
             },
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "value=${module.path|lastSegment|toUpperCase}",
             dictionary,
             makeConfig(),
@@ -133,7 +133,7 @@ describe("renderTemplate", () => {
             },
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "Hello {{packageDetails.name}}",
             dictionary,
             makeConfig({variableDefn: mustachesVarDefn}),
@@ -144,7 +144,7 @@ describe("renderTemplate", () => {
     });
 
     it("returns an error when a missing value is encountered and onMissing is error", () => {
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "value=${missing.value}",
             {},
             makeConfig({onMissing: "error"}),
@@ -158,7 +158,7 @@ describe("renderTemplate", () => {
     });
 
     it("returns a value with warnings when a missing value is encountered and onMissing is warning", () => {
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "value=${missing.value}",
             {},
             makeConfig({onMissing: "warning"}),
@@ -174,7 +174,7 @@ describe("renderTemplate", () => {
     });
 
     it("renders empty string for missing value when onMissing is empty", () => {
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "value=${missing.value}",
             {},
             makeConfig({onMissing: "empty"}),
@@ -185,7 +185,7 @@ describe("renderTemplate", () => {
     });
 
     it("keeps the raw token for missing value when onMissing is keep", () => {
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "value=${missing.value}",
             {},
             makeConfig({onMissing: "keep"}),
@@ -200,7 +200,7 @@ describe("renderTemplate", () => {
             first: "ok",
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "first=${first}, second=${missing.value}, third=${first}",
             dictionary,
             makeConfig({onMissing: "error"}),
@@ -213,7 +213,7 @@ describe("renderTemplate", () => {
     });
 
     it("accumulates warnings across multiple missing tokens", () => {
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "a=${missing.one}, b=${missing.two}",
             {},
             makeConfig({onMissing: "warning"}),
@@ -238,7 +238,7 @@ describe("renderTemplate", () => {
             },
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "metadata=${metadata}",
             dictionary,
             makeConfig(),
@@ -254,7 +254,7 @@ describe("renderTemplate", () => {
         const dictionary = {version: "1.2.3"};
         const template = {raw: "version=${version}"};
 
-        const result = renderTemplate(template, dictionary, makeConfig());
+        const result = defaultTemplateEngine(template, dictionary, makeConfig());
 
         expect(isValue(result)).toBe(true);
         if (isValue(result)) expect(result.value).toBe("version=1.2.3");
@@ -267,7 +267,7 @@ describe("renderTemplate", () => {
             },
         };
 
-        const result = renderTemplate(
+        const result = defaultTemplateEngine(
             "Hello ${packageDetails.name|toUpperCase}",
             dictionary,
         );

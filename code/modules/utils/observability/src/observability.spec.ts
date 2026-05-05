@@ -170,7 +170,7 @@ describe("defaultObservabilityContext", () => {
         expect(context.moduleScope).toEqual(defaultModuleObservabilityScope())
         expect(context.debugConfig).toEqual(emptyDebugConfig)
         expect(context.timeService).toBe(realTimeService)
-        expect(context.templates).toEqual(defaultObservabilityTemplates)
+        expect(context.observabilityTemplates).toEqual(defaultObservabilityTemplates)
         expect(context.dictionary).toEqual({})
     })
 
@@ -215,7 +215,7 @@ describe("makeObservability", () => {
         expect(obs.moduleScope.module).toBe("alpha")
         expect(obs.debugConfig).toEqual(emptyDebugConfig)
         expect(obs.timeService).toBe(context.timeService)
-        expect(obs.templates).toBe(context.templates)
+        expect(obs.observabilityTemplates).toBe(context.observabilityTemplates)
         expect(obs.dictionary).toBe(context.dictionary)
         expect(obs.countMetric).toBe(nullCountMetric)
         expect(obs.durationMetric).toBe(nullDurationMetric)
@@ -442,7 +442,7 @@ describe("nullObservability", () => {
     it("uses default templates and an empty dictionary", () => {
         const obs = nullObservability("corr-123")
 
-        expect(obs.templates).toEqual(defaultObservabilityTemplates)
+        expect(obs.observabilityTemplates).toEqual(defaultObservabilityTemplates)
         expect(obs.dictionary).toEqual({})
     })
 
@@ -472,7 +472,7 @@ describe("nullObservability", () => {
         expect(typeof obs.durationMetric).toBe("function")
         expect(typeof obs.timeService.now).toBe("function")
         expect(obs.debugConfig).toEqual(emptyDebugConfig)
-        expect(obs.templates).toEqual(defaultObservabilityTemplates)
+        expect(obs.observabilityTemplates).toEqual(defaultObservabilityTemplates)
         expect(obs.dictionary).toEqual({})
     })
 

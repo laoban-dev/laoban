@@ -3,6 +3,7 @@ import {frozenEmptyObject, mutableEmptyObject} from "@laoban/records";
 const mutableEmptyArray: never[] = [];
 
 const frozenEmptyArray = Object.freeze([] as never[]);
+export type OneOrMany<T> = T | T[]
 
 export function safeArray<T>(value: T | T[] | null | undefined): T[] {
     if (value == null) return mutableEmptyArray as T[];

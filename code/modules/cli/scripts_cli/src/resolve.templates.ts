@@ -2,7 +2,7 @@ import { ErrorsOr, flatmapArrayOfArrayOfErrorsOr, mapErrorsOr } from "@laoban/er
 import { Observability } from "@laoban/observability";
 import { LoadedLaobanProject } from "@laoban/package_details";
 import { NameAnd } from "@laoban/records";
-import { renderTemplate, TemplateIssue } from "@laoban/template";
+import { defaultTemplateEngine, TemplateIssue } from "@laoban/template";
 import {ScriptExecutionItem} from "@laoban/script_plan";
 
 export type ScriptExecutionItemTemplateDictionaryFn =
@@ -30,7 +30,7 @@ export const detemplateOneScriptExecutionItem = (
     makeDictionary: ScriptExecutionItemTemplateDictionaryFn = makeScriptExecutionItemTemplateDictionary
 ): ErrorsOr<ScriptExecutionItem, TemplateIssue> => {
     const dictionary = makeDictionary(item, loadedProject);
-    const rendered = renderTemplate(
+    const rendered = defaultTemplateEngine(
         item.command.command,
         dictionary,
         {  onMissing: "error" }

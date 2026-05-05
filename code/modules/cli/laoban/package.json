@@ -30,8 +30,9 @@
     "@laoban/strings": "2.0.0",
     "@laoban/validation": "2.0.0",
     "@laoban/config_cli": "2.0.0",
-    "@laoban/scripts_cli": "2.0.0",
     "@laoban/package_cli": "2.0.0",
+    "@laoban/scripts_cli": "2.0.0",
+    "@laoban/update_cli": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {

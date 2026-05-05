@@ -1,0 +1,26 @@
+{
+  "template": "typescript",
+  "name": "@laoban/codec",
+  "description": "turns objects into strings and vice versa",
+  "links": [
+    "@laoban/errors",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "files": [
+      "build/"
+    ],
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

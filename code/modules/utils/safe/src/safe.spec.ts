@@ -125,7 +125,7 @@ describe("safePathSegment", () => {
         expect(safePathSegment("alpha-beta_123.log")).toBe("alpha-beta_123.log")
     })
 
-    it("replaces Windows-invalid filename characters with hyphens", () => {
+    it("replaces Windows-invalid file characters with hyphens", () => {
         expect(safePathSegment(`a<b>c:d"e/f\\g|h?i*j`)).toBe("a-b-c-d-e-f-g-h-i-j")
     })
 

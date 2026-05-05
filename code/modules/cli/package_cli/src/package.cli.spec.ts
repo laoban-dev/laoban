@@ -61,6 +61,7 @@ function loadedProject(
                 parents: [],
                 properties: {},
                 templates: {},
+                throttle: 100,
                 defaultEnv: {},
                 scripts: {},
                 skipDirectories: []

@@ -1,20 +1,6 @@
-import {
-    FileOps,
-    findAllByNameUnder,
-    findContainingDirectory,
-    FileOpsHelperDefaults,
-    FindContainingDirectoryDefaults,
-    loadText,
-    LoadTextDefaults, PathOps
-} from "@laoban/files";
-
-export type FileOpsDefaults = Readonly<{
-    findContainingDirectory: FindContainingDirectoryDefaults;
-    findAllByNameUnder: FileOpsHelperDefaults;
-    loadText: LoadTextDefaults;
-    pathOps: PathOps
-
-}>;
+import {FileOps, findAllByNameUnder, findContainingDirectory, loadText,} from "@laoban/files"
+import {writeText} from "./fileops.write.text";
+import {FileOpsDefaults} from "./fileops.node.defaults";
 
 export const nodeFileOps = (defaults: FileOpsDefaults): FileOps => ({
     findContainingDirectory: (start, markerFileName, config) =>
@@ -26,5 +12,8 @@ export const nodeFileOps = (defaults: FileOpsDefaults): FileOps => ({
     loadText: (source, config) =>
         loadText(defaults.loadText)(source, config),
 
-    pathOps: defaults.pathOps
-});
+    writeText: (filename, content, config) =>
+        writeText(defaults.writeText)(filename, content, config),
+
+    pathOps: defaults.pathOps,
+})

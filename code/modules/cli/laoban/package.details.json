@@ -6,6 +6,7 @@
     "@laoban/clidsl",
     "@laoban/commander",
     "@laoban/errors",
+    "@laoban/file_operations",
     "@laoban/node_execution",
     "@laoban/observability",
     "@laoban/observability_node",
@@ -15,8 +16,9 @@
     "@laoban/strings",
     "@laoban/validation",
     "@laoban/config_cli",
+    "@laoban/package_cli",
     "@laoban/scripts_cli",
-    "@laoban/package_cli"
+    "@laoban/update_cli"
   ],
   "packageJson": {
     "dependencies": {

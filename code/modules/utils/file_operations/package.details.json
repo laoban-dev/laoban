@@ -1,0 +1,24 @@
+{
+  "template": "typescript",
+  "name": "@laoban/file_operations",
+  "description": "file operations to copy, merge and adjust files and folders (mostly for the update command)",
+  "links": [
+    "@laoban/codec",
+    "@laoban/errors",
+    "@laoban/observability"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

@@ -29,7 +29,7 @@ function fullTemplateConfig<T>(config?: Partial<TemplateConfig<T>>): TemplateCon
     } as TemplateConfig<T>;
 }
 
-export const renderTemplate: TemplateEngine = <T>(
+export const defaultTemplateEngine: TemplateEngine = <T>(
     template: Template | string,
     dictionary: T,
     partialConfig?: Partial<TemplateConfig<T>>,

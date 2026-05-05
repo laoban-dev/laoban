@@ -1,5 +1,6 @@
 export type ThrottlePlan<G> = G[][]
 
+export type ThrottlePlanFn<G> = (generations: G[][], throttle: number) => ThrottlePlan<G>
 export function throttlePlan<G>(
     generations: G[][],
     throttle: number,

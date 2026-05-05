@@ -9,7 +9,7 @@ Its purpose is to show **how to use the code correctly**.
 Use these imports unless there is a clear reason not to:
 
 ```ts
-import { renderTemplate } from "./template.engine";
+import { defaultTemplateEngine } from "./template.engine";
 import {
   dollarsBracesVarDefn,
   mustachesVarDefn,
@@ -39,7 +39,7 @@ const dictionary = {
   }
 };
 
-const result = renderTemplate(
+const result = defaultTemplateEngine(
   "Hello ${packageDetails.name|toUpperCase}",
   dictionary
 );
@@ -69,7 +69,7 @@ const config: Partial<TemplateConfig<typeof dictionary>> = {
   observability: nullObservability()
 };
 
-const result = renderTemplate(
+const result = defaultTemplateEngine(
   "name=${packageDetails.name}, version=${version}",
   dictionary,
   config
@@ -87,7 +87,7 @@ const dictionary = {
   }
 };
 
-const result = renderTemplate(
+const result = defaultTemplateEngine(
   "name=${'package.json'.name|toUpperCase}",
   dictionary
 );
@@ -106,7 +106,7 @@ const dictionary = {
   }
 };
 
-const result = renderTemplate(
+const result = defaultTemplateEngine(
   "Hello {{packageDetails.name}}",
   dictionary,
   {
@@ -129,7 +129,7 @@ Supported modes:
 Example:
 
 ```ts
-const result = renderTemplate(
+const result = defaultTemplateEngine(
   "value=${missing.value}",
   {},
   { onMissing: "keep" }
@@ -177,7 +177,7 @@ const functions = {
   surround: ({ value: v, params }) => value(`${params[0]}${String(v)}${params[1]}`)
 };
 
-const result = renderTemplate(
+const result = defaultTemplateEngine(
   "value=${name|trim|surround([,])}",
   { name: "  Phil  " },
   { functions }
@@ -335,7 +335,7 @@ This supports the rule:
 
 When writing tests:
 
-- use `renderTemplate(...)` for full-template behaviour
+- use `defaultTemplateEngine(...)` for full-template behaviour
 - use `replaceTemplateToken(...)` for single-token behaviour
 - use `nullObservability()` in test config
 - use `isErrors(...)` / `isValue(...)` from `@laoban/errors`
@@ -348,25 +348,25 @@ When writing tests:
 ### Simple render
 
 ```ts
-const result = renderTemplate("Hello ${name}", { name: "Phil" });
+const result = defaultTemplateEngine("Hello ${name}", { name: "Phil" });
 ```
 
 ### Keep missing values
 
 ```ts
-const result = renderTemplate("Hello ${name}", {}, { onMissing: "keep" });
+const result = defaultTemplateEngine("Hello ${name}", {}, { onMissing: "keep" });
 ```
 
 ### Mustache syntax
 
 ```ts
-const result = renderTemplate("Hello {{name}}", { name: "Phil" }, { variableDefn: mustachesVarDefn });
+const result = defaultTemplateEngine("Hello {{name}}", { name: "Phil" }, { variableDefn: mustachesVarDefn });
 ```
 
 ### Custom function
 
 ```ts
-const result = renderTemplate(
+const result = defaultTemplateEngine(
   "Hello ${name|toUpperCase}",
   { name: "Phil" },
   {

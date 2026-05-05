@@ -105,13 +105,3 @@ export const nodeListDirectory: ListDirectoryFn = async (
         );
     }
 };
-
-export const nodeFindAllByNameUnderDefaults: FileOpsHelperDefaults = {
-    infrastructure: {
-        fileExists: nodeFileExists,
-        listDirectory: nodeListDirectory,
-        pathOps
-    }
-};
-
-export const nodeFindAllByNameUnder = makeFindAllByNameUnder(nodeFindAllByNameUnderDefaults);

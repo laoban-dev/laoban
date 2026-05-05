@@ -1,14 +1,27 @@
-import {type BaseIssue, errors, isErrors, mapErrorsOr, type ErrorsOr, value} from "@laoban/errors";
-import {DirectoryName, type Filename, type FileOps} from "@laoban/files";
-import {type LoadedLaobanConfig} from "@laoban/laoban_config";
+import {type BaseIssue, errors, isErrors, mapErrorsOr, type ErrorsOr, value, flatMapErrorsOrK} from "@laoban/errors";
+import {DirectoryName, type Filename, type FileOps, type LoadTextConfig} from "@laoban/files";
+import {LoadConfigFn, type LoadedLaobanConfig} from "@laoban/laoban_config";
 import {type Observability} from "@laoban/observability";
 import {type ValidationIssue} from "@laoban/validation";
 import {type NormalisedPackageDetails, type PackageDetails} from "./package.details";
 import {normalisePackageDetails} from "./package.details.normalise";
 import {validatePackageDetails} from "./package.details.validator";
 import {normalisePath} from "@laoban/strings";
+import {LaobanConfigCliContext} from "@laoban/config_cli";
+import {OsOps} from "@laoban/os";
 
 export const packageDetailsFileName = "package.details.json" as const;
+
+
+export type LoadPackagesFn =
+    (loaded: LoadedLaobanConfig, context: LoadPackagesContext) => Promise<ErrorsOr<LoadedLaobanProject>>
+
+export type LoadConfig = {
+    loadConfig: LoadConfigFn
+    loadPackages: LoadPackagesFn
+    fileOps: FileOps;
+    observability: Observability
+}
 
 export interface LoadPackagesContext {
     fileOps: FileOps;

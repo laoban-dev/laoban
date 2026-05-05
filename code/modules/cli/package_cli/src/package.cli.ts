@@ -3,13 +3,13 @@ import {ErrorsOr, flatMapErrorsOr, flatMapErrorsOrK, mapErrorsOr} from "@laoban/
 import {
     LoadedLaobanProject,
     LoadedPackageDetail,
-    loadPackages,
-    NormalisedPackageDetails
+    NormalisedPackageDetails,
+    packageDetailsGraph,
+    topologicallySortPackageDetails
 } from "@laoban/package_details";
-import {LaobanConfigCliContext, loadConfig} from "@laoban/config_cli";
+import {LaobanConfigCliContext} from "@laoban/config_cli";
 import {LoadedLaobanConfig} from "@laoban/laoban_config";
 import {mapObject, prettyRecordJson} from "@laoban/records";
-import {packageDetailsGraph, topologicallySortPackageDetails} from "@laoban/package_details/src/package.details.sort";
 import {prettyPrintGenerationsSwimlanes, prettyPrintGenerationsVertical} from "@laoban/topologicalsort";
 
 export type LaobanDebugContext = "cli";

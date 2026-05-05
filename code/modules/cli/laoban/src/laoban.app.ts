@@ -8,14 +8,16 @@ import {makeScriptCommands} from "@laoban/scripts_cli";
 
 import {LaobanCliContext} from "./laoban.context";
 import {LaobanDi} from "./laoban.di";
+import {laobanUpdateCommand} from "@laoban/update_cli";
 
 export type LaobanCliChild =
     CliGroup<LaobanCliContext> |
     AnyCliCommand<LaobanCliContext>;
 
 export const builtInCliCommands: Record<string, LaobanCliChild> = {
-    config: laobanConfigCommands as CliGroup<LaobanCliContext>,
-    packages: laobanPackageCommands as CliGroup<LaobanCliContext>
+    config: laobanConfigCommands,
+    packages: laobanPackageCommands,
+    update: laobanUpdateCommand
 };
 
 export function makeCliRoot(commands: Record<string, LaobanCliChild>): CliRoot<LaobanCliContext> {
@@ -52,7 +54,8 @@ export async function makeLaobanCliModel(di: LaobanDi): Promise<CliRoot<LaobanCl
     const context = di.makeContext();
 
     const loadedConfig = await di.loadLaobanConfig(
-        {osOps: context.osOps,
+        {
+            osOps: context.osOps,
             fileOps: context.fileOps,
             observability: context.observability,
             markerFileName: "laoban.json",

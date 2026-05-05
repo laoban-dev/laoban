@@ -44,7 +44,7 @@ export type ObservabilityContext = Readonly<{
     moduleScope: ModuleObservabilityScope
     debugConfig: DebugConfig
     timeService: TimeService
-    templates: Partial<ObservabilityTemplates>
+    observabilityTemplates: Partial<ObservabilityTemplates>
     dictionary: Record<string, unknown>
 }>
 
@@ -115,7 +115,7 @@ export const defaultObservabilityContext = (
     moduleScope,
     debugConfig,
     timeService: realTimeService,
-    templates: defaultObservabilityTemplates,
+    observabilityTemplates: defaultObservabilityTemplates,
     dictionary: {},
 })
 

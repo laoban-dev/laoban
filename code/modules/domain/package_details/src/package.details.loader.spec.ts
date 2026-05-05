@@ -19,6 +19,7 @@ type MockFileOps = {
     findContainingDirectory: jest.MockedFunction<FileOps["findContainingDirectory"]>
     findAllByNameUnder: jest.MockedFunction<FileOps["findAllByNameUnder"]>
     loadText: jest.MockedFunction<FileOps["loadText"]>
+    writeText: jest.MockedFunction<FileOps["writeText"]>
     pathOps: PathOps
 }
 
@@ -27,6 +28,7 @@ function makeFileOps(overrides?: Partial<MockFileOps>): MockFileOps {
         findContainingDirectory: jest.fn() as jest.MockedFunction<FileOps["findContainingDirectory"]>,
         findAllByNameUnder: jest.fn() as jest.MockedFunction<FileOps["findAllByNameUnder"]>,
         loadText: jest.fn() as jest.MockedFunction<FileOps["loadText"]>,
+        writeText: jest.fn() as jest.MockedFunction<FileOps["writeText"]>,
         ...overrides,
         pathOps: nodePathOps,
     }
@@ -44,7 +46,8 @@ async function loadWith(fileOps: MockFileOps) {
     const recording = recordingObservability()
     const result = await loadPackages(
         makeLoadedLaobanConfig(),
-        {fileOps, observability: recording.observability},
+        {fileOps,
+            observability: recording.observability},
     )
 
     return {result, recording}

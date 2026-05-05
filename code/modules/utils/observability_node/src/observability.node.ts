@@ -235,8 +235,8 @@ export const createNodeObservability = <Purpose>({
     const context: ObservabilityContext = {
         ...defaultContext,
         timeService: timeService ?? defaultContext.timeService,
-        templates: {
-            ...defaultContext.templates,
+        observabilityTemplates: {
+            ...defaultContext.observabilityTemplates,
             ...(templates ?? {}),
         },
         dictionary,

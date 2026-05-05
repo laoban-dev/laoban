@@ -1,9 +1,10 @@
-import {Command} from "commander";
-import * as process from "node:process";
+import {jsonCodec} from "@laoban/codec"
+import {Command} from "commander"
+import * as process from "node:process"
 
-import {defaultLoadTextConfig} from "@laoban/files";
-import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure} from "@laoban/files_node";
-import {loadLaobanConfig} from "@laoban/laoban_config";
+import {defaultLoadTextConfig, FileOpsHelperConfig} from "@laoban/files"
+import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure} from "@laoban/files_node"
+import {LaobanConfigLoadConfig, loadLaobanConfig} from "@laoban/laoban_config"
 import {Env} from "@laoban/records"
 import {
     ChannelsState,
@@ -13,120 +14,150 @@ import {
     emptyChannelState,
     ModuleObservabilityScope,
     parseDebugConfig,
-    realTimeService
-} from "@laoban/observability";
+    realTimeService,
+} from "@laoban/observability"
 import {
     createNodeObservability,
     dumpAndExitIfErrors,
     nodeChannelTc,
     NodeReadChannel,
-    NodeWriteChannel
-} from "@laoban/observability_node";
-import {
-    loadConfigAndPackages,
-} from "@laoban/package_cli";
-import {loadConfig} from "@laoban/config_cli";
-import {loadPackages} from "@laoban/package_details";
-import {safePathSegment, safePrettyJson} from "@laoban/safe";
+    NodeWriteChannel,
+} from "@laoban/observability_node"
+import {loadConfigAndPackages} from "@laoban/package_cli"
+import {loadConfig} from "@laoban/config_cli"
+import {loadPackages} from "@laoban/package_details"
+import {safePathSegment, safePrettyJson} from "@laoban/safe"
 import {
     defaultHandleLaobanScript,
     makeScriptExecutionItemTemplateDictionary,
     Purpose,
-    purposes
-} from "@laoban/scripts_cli";
+    purposes,
+} from "@laoban/scripts_cli"
 
-import {LaobanCliContext} from "./laoban.context";
-import {makeNodeExecution, NodeExecution, NodeExecutionOptions} from "@laoban/node_execution/src/node.execution";
-import {defaultFileCommands} from "@laoban/node_execution";
-import {defaultPrefixAndValueOptions} from "@laoban/execution";
-import {ErrorsOr, mapErrorsOr} from "@laoban/errors";
-import {nodeOsOps} from "@laoban/node_os";
-import {OsOps} from "@laoban/os";
+import {LaobanCliContext} from "./laoban.context"
+import {makeNodeExecution, NodeExecution, NodeExecutionOptions} from "@laoban/node_execution/src/node.execution"
+import {defaultFileCommands} from "@laoban/node_execution"
+import {defaultPrefixAndValueOptions} from "@laoban/execution"
+import {ErrorsOr, mapErrorsOr} from "@laoban/errors"
+import {nodeOsOps} from "@laoban/node_os"
+import {OsOps} from "@laoban/os"
+import {throttlePlan} from "@laoban/topologicalsort"
+import {planManagedFiles, updateManagedFiles} from "@laoban/update"
+import {loadNormalisedTemplate} from "@laoban/template_files"
+import {defaultFileDefinitionFns} from "@laoban/file_operations"
+import {
+    colonPrefixedVarDefn,
+    dollarsBracesVarDefn,
+    doubleAngleVarDefn,
+    mustachesVarDefn,
+    defaultTemplateEngine,
+} from "@laoban/template"
 
 export type LaobanDi = {
-    argv: string[];
-    makeCommand: () => Command;
-    makeContext: () => LaobanCliContext;
-    loadLaobanConfig: typeof loadLaobanConfig;
-    handleFatalErrors: typeof dumpAndExitIfErrors;
-};
+    argv: string[]
+    makeCommand: () => Command
+    makeContext: () => LaobanCliContext
+    loadLaobanConfig: typeof loadLaobanConfig
+    handleFatalErrors: typeof dumpAndExitIfErrors
+}
 
 export function makeReference(pathSafeNow: string) {
     return (moduleScope: ModuleObservabilityScope) => (purpose: Purpose): string => {
-        const safeModuleName = moduleScope.module ?? "__root__";
+        const safeModuleName = moduleScope.module ?? "__root__"
 
         switch (purpose) {
             case "log":
-                return `${moduleScope.directory}/.log`;
+                return `${moduleScope.directory}/.log`
 
             case "session":
-                return `.session/${pathSafeNow}/${safeModuleName}.log`;
+                return `.session/${pathSafeNow}/${safeModuleName}.log`
         }
-    };
+    }
 }
 
 export function makeChannelsState(
     pathSafeNow: string,
-    onError: (e: unknown) => void
+    onError: (e: unknown) => void,
 ): ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel, string> {
     return emptyChannelState(
         nodeChannelTc({
             reference: makeReference(pathSafeNow),
-            keyFrom: moduleScope => String(moduleScope.module ?? "")
+            keyFrom: moduleScope => String(moduleScope.module ?? ""),
         }),
         purposes,
         error => onError(safePrettyJson(error)),
-    );
+    )
 }
 
 export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> {
-    const now = new Date().toISOString();
-    const pathSafeNow = safePathSegment(now);
-    const command = argv[2] ?? "root";
-    const correlationId = `${pathSafeNow}/${safePathSegment(command)}`;
+    const now = new Date().toISOString()
+    const pathSafeNow = safePathSegment(now)
+    const command = argv[2] ?? "root"
+    const correlationId = `${pathSafeNow}/${safePathSegment(command)}`
 
-    const onError = (e: unknown) => console.error(e);
+    const onError = (e: unknown) => console.error(e)
 
-    const reference = makeReference(pathSafeNow);
+    const reference = makeReference(pathSafeNow)
 
     const {observability} = createNodeObservability<Purpose>({
         channel: process.stdout,
         purposes,
         onError,
-        reference
-    });
+        reference,
+    })
 
-    const channelsState = makeChannelsState(pathSafeNow, onError);
+    const channelsState = makeChannelsState(pathSafeNow, onError)
 
-    const fileOps = nodeFileOps(nodeFileOpsDefaults);
+    const fileOps = nodeFileOps(nodeFileOpsDefaults)
 
     const loadLaobanFileConfig = defaultLoadTextConfig(
         {infrastructure: nodeLoadTextInfrastructure},
         {
             markers: {
-                "@laoban@": "https://raw.githubusercontent.com/phil-rice/laoban/master/common"
+                "@laoban@": "https://raw.githubusercontent.com/phil-rice/laoban/master/common",
             },
-            observability
-        }
-    );
+            observability,
+        },
+    )
 
-    const cwd = process.cwd();
-    const stdOut = process.stdout;
-    const env: Env = process.env;
+    const cwd = process.cwd()
+    const stdOut = process.stdout
+    const env: Env = process.env
+    const defaultJsonCodec = jsonCodec()
     const nodeExecuteOptions: NodeExecutionOptions = {
         fileCommands: defaultFileCommands,
-        prefixAndValueOptions: defaultPrefixAndValueOptions
+        prefixAndValueOptions: defaultPrefixAndValueOptions,
     }
-    const execution: NodeExecution = makeNodeExecution(nodeExecuteOptions)
-    const osOps: OsOps = nodeOsOps;
-    return mapErrorsOr(parseDebugConfig(command), (debugConfig: DebugConfig) => {
-            const result: LaobanDi = {
-                argv,
-                makeCommand: () => new Command(),
-                loadLaobanConfig,
-                handleFatalErrors: dumpAndExitIfErrors,
 
-                makeContext: () => ({
+    const execution: NodeExecution = makeNodeExecution(nodeExecuteOptions)
+    const osOps: OsOps = nodeOsOps
+
+    const laobanConfigLoadConfig: LaobanConfigLoadConfig = {
+        fileOps,
+        osOps,
+        loadTextConfig: loadLaobanFileConfig,
+        observability,
+        markerFileName: "laoban.json",
+    }
+
+    const fileOpsHelperConfig: FileOpsHelperConfig = {
+        observability,
+        infrastructure: nodeFileOpsDefaults.findAllByNameUnder.infrastructure,
+    }
+
+    const defaultUpdateDebug = false
+    const defaultUpdateDryRun = false
+    const defaultUpdateThrottle = 5
+
+    return mapErrorsOr(parseDebugConfig(command), (debugConfig: DebugConfig) => {
+        const result: LaobanDi = {
+            argv,
+            makeCommand: () => new Command(),
+            loadLaobanConfig,
+            handleFatalErrors: dumpAndExitIfErrors,
+
+            makeContext: () => {
+                const context: LaobanCliContext = {
                     correlationId,
                     osOps,
                     moduleScope: defaultModuleObservabilityScope(),
@@ -136,13 +167,13 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
                     env,
                     debugConfig,
                     dictionary: {},
-                    templates: defaultObservabilityTemplates,
-                    debugLevels: {},
+                    observabilityTemplates: defaultObservabilityTemplates,
                     observability,
                     fileOps,
                     loadLaobanFileConfig,
 
                     cwd,
+                    start: cwd,
                     loadLaobanConfig,
                     stdOut,
 
@@ -151,10 +182,72 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
                     loadConfigAndPackagesFn: loadConfigAndPackages,
 
                     handleLaobanScript: defaultHandleLaobanScript,
-                    makeDictionary: makeScriptExecutionItemTemplateDictionary
-                })
-            };
-            return result;
+                    makeDictionary: makeScriptExecutionItemTemplateDictionary,
+
+                    laobanConfigLoadConfig,
+                    loadConfig: loadLaobanConfig,
+                    loadPackages,
+
+                    loadTextConfig: loadLaobanFileConfig,
+                    jsonCodec: defaultJsonCodec,
+
+                    codecs: {
+                        json: defaultJsonCodec,
+                    },
+                    fns: defaultFileDefinitionFns(),
+                    templateEngine: defaultTemplateEngine,
+                    templateTypes: {
+                        "${}": dollarsBracesVarDefn,
+                        "{{}}": mustachesVarDefn,
+                        ":": colonPrefixedVarDefn,
+                        "<<>>": doubleAngleVarDefn,
+                    },
+
+                    fileOpsHelperConfig,
+                    debug: defaultUpdateDebug,
+                    dryRun: defaultUpdateDryRun,
+
+                    loadTemplate: input =>
+                        loadNormalisedTemplate(
+                            context,
+                            {
+                                templates: input.loadedConfig.config.templates ?? {},
+                                templateName: input.templateName,
+                                requestedBy: `package ${input.loadedPackageDetail.contents.name}`,
+                            },
+                        ),
+
+                    planTemplateFileOperation: input =>
+                        context.fns[input.fileDef.type](
+                            input.fileDef,
+                            {
+                                loadedConfig: input.loadedConfig,
+                                loadedPackageDetail: input.loadedPackageDetail,
+                                package: input.loadedPackageDetail.contents,
+                                template: input.template,
+                                fileName: input.fileName,
+                                files: input.loadedPackageDetail.contents.files ?? {},
+                            },
+                            context,
+                        ),
+
+                    throttlePlan,
+                    throttle: defaultUpdateThrottle,
+
+                    consumeBatch: ({files}) =>
+                        updateManagedFiles(
+                            context,
+                            files,
+                        ),
+
+                    planManagedFiles,
+                    updateManagedFiles,
+                }
+
+                return context
+            },
         }
-    )
+
+        return result
+    })
 }

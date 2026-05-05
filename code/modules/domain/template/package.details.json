@@ -1,0 +1,30 @@
+{
+  "template": "typescript",
+  "name": "@laoban/template_files",
+  "description": "The types and validation for templates",
+  "links": [
+    "@laoban/errors",
+    "@laoban/files",
+    "@laoban/file_operations",
+    "@laoban/observability",
+    "@laoban/package_details",
+    "@laoban/scripts",
+    "@laoban/safe",
+    "@laoban/template",
+    "@laoban/validation"
+  ],
+  "packageJson": {
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

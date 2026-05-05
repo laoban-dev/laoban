@@ -1,6 +1,6 @@
 import {isValue} from "@laoban/errors"
 import {safeString} from "@laoban/safe"
-import {renderTemplate} from "@laoban/template"
+import {defaultTemplateEngine} from "@laoban/template"
 import {
     CorrelationId,
     ModuleObservabilityScope,
@@ -62,7 +62,7 @@ export const renderTemplateSafely = (
     template: string,
     dictionary: Record<string, unknown>,
 ): string => {
-    const result = renderTemplate(template, dictionary)
+    const result = defaultTemplateEngine(template, dictionary)
     return isValue(result) ? result.value : template
 }
 

@@ -1,10 +1,15 @@
-import { ErrorsOr } from "@laoban/errors";
-import { nullObservability, Observability } from "@laoban/observability";
+import {ErrorsOr} from "@laoban/errors"
+import {nullObservability, Observability} from "@laoban/observability"
 
-export type Filename = string;
-export type DirectoryName = string;
-export type FileOrUrl = string;
-export type LoadTextSource = string;
+export type Filename = string
+export type DirectoryName = string
+export type FileOrUrl = string
+export type LoadTextSource = string
+
+export type FileNameAndContent = {
+    filename: Filename
+    content: string
+}
 
 export type FileOpIssueKind =
     | "notFound"
@@ -13,184 +18,180 @@ export type FileOpIssueKind =
     | "invalidUrl"
     | "unknownMarker"
     | "io"
-    | "unexpected";
+    | "unexpected"
 
 export type FileOpIssueContext = Readonly<{
-    operation: string;
-    filename?: FileOrUrl;
-    resolvedFilename?: string;
-    marker?: string;
-    start?: DirectoryName;
-    markerFileName?: Filename;
-    directory?: DirectoryName;
-    targetFileName?: Filename;
-    ignoreDirectories?: Filename[];
-    cause?: unknown;
-}>;
+    operation: string
+    filename?: FileOrUrl
+    resolvedFilename?: string
+    marker?: string
+    start?: DirectoryName
+    markerFileName?: Filename
+    directory?: DirectoryName
+    targetFileName?: Filename
+    ignoreDirectories?: Filename[]
+    cause?: unknown
+}>
 
 export type FileOpIssue = Readonly<{
-    kind: FileOpIssueKind;
-    message: string;
-    context?: FileOpIssueContext;
-    code?: string;
-    severity?: "error" | "warning";
-}>;
+    kind: FileOpIssueKind
+    message: string
+    context?: FileOpIssueContext
+    code?: string
+    severity?: "error" | "warning"
+}>
 
 export type LoadFileFn = (
     filename: FileOrUrl,
-    config?: LoadTextConfig
-) => Promise<ErrorsOr<string, FileOpIssue>>;
+    config?: LoadTextConfig,
+) => Promise<ErrorsOr<string, FileOpIssue>>
 
 export type LoadUrlFn = (
     url: string,
-    config?: LoadTextConfig
-) => Promise<ErrorsOr<string, FileOpIssue>>;
+    config?: LoadTextConfig,
+) => Promise<ErrorsOr<string, FileOpIssue>>
+
+export type WriteTextFn = (
+    filename: Filename,
+    content: string,
+    config?: FileOpsHelperConfig,
+) => Promise<ErrorsOr<void, FileOpIssue>>
+
+export interface WriteTextFileOps {
+    writeText: WriteTextFn
+}
 
 export type FileExistsFn = (
     filename: FileOrUrl,
-    config?: FindContainingDirectoryConfig | FileOpsHelperConfig
-) => Promise<ErrorsOr<boolean, FileOpIssue>>;
+    config?: FindContainingDirectoryConfig | FileOpsHelperConfig,
+) => Promise<ErrorsOr<boolean, FileOpIssue>>
 
 export type ListDirectoryFn = (
     directory: DirectoryName,
-    config?: FileOpsHelperConfig
-) => Promise<ErrorsOr<Filename[], FileOpIssue>>;
+    config?: FileOpsHelperConfig,
+) => Promise<ErrorsOr<Filename[], FileOpIssue>>
 
 export interface PathOps {
-    dirname(directory: DirectoryName): DirectoryName;
-    resolvePath(path: string): DirectoryName;
-    joinPath(directory: DirectoryName, filename: Filename): FileOrUrl;
+    dirname(directory: DirectoryName): DirectoryName
+    resolvePath(path: string): DirectoryName
+    joinPath(directory: DirectoryName, filename: Filename): FileOrUrl
 }
 
 export interface LoadTextInfrastructure {
-    loadFile: LoadFileFn;
-    loadUrl: LoadUrlFn;
+    loadFile: LoadFileFn
+    loadUrl: LoadUrlFn
 }
 
 export interface FindContainingDirectoryInfrastructure {
-    fileExists: FileExistsFn;
-    pathOps: PathOps;
+    fileExists: FileExistsFn
+    pathOps: PathOps
 }
 
 export interface FileOpsHelperInfrastructure {
-    fileExists: FileExistsFn;
-    listDirectory: ListDirectoryFn;
-    pathOps: PathOps;
+    fileExists: FileExistsFn
+    listDirectory: ListDirectoryFn
+    writeText: WriteTextFn
+    pathOps: PathOps
 }
 
 export type LoadTextConfig = Readonly<{
-    observability?: Observability;
-    markers?: Readonly<Record<string, string>>;
-    infrastructure?: LoadTextInfrastructure;
-}>;
+    observability?: Observability
+    markers?: Readonly<Record<string, string>>
+    infrastructure?: LoadTextInfrastructure
+}>
 
 export type RequiredLoadTextConfig = Readonly<{
-    observability: Observability;
-    markers: Readonly<Record<string, string>>;
-    infrastructure: LoadTextInfrastructure;
-}>;
+    observability: Observability
+    markers: Readonly<Record<string, string>>
+    infrastructure: LoadTextInfrastructure
+}>
 
 export type LoadTextDefaults = Readonly<{
-    infrastructure: LoadTextInfrastructure;
-}>;
+    infrastructure: LoadTextInfrastructure
+}>
 
 export const defaultLoadTextConfig = (
     defaults: LoadTextDefaults,
-    config: LoadTextConfig = {}
+    config: LoadTextConfig = {},
 ): RequiredLoadTextConfig => ({
     observability: config.observability ?? nullObservability(),
     markers: config.markers ?? {},
     infrastructure: config.infrastructure ?? defaults.infrastructure,
-});
+})
 
 export type FindContainingDirectoryConfig = Readonly<{
-    observability?: Observability;
-    infrastructure?: FindContainingDirectoryInfrastructure;
-}>;
+    observability?: Observability
+    infrastructure?: FindContainingDirectoryInfrastructure
+}>
 
 export type RequiredFindContainingDirectoryConfig = Readonly<{
-    observability: Observability;
-    infrastructure: FindContainingDirectoryInfrastructure;
-}>;
+    observability: Observability
+    infrastructure: FindContainingDirectoryInfrastructure
+}>
 
 export type FindContainingDirectoryDefaults = Readonly<{
-    infrastructure: FindContainingDirectoryInfrastructure;
-}>;
+    infrastructure: FindContainingDirectoryInfrastructure
+}>
 
 export const defaultFindContainingDirectoryConfig = (
     defaults: FindContainingDirectoryDefaults,
-    config: FindContainingDirectoryConfig = {}
+    config: FindContainingDirectoryConfig = {},
 ): RequiredFindContainingDirectoryConfig => ({
     observability: config.observability ?? nullObservability(),
     infrastructure: config.infrastructure ?? defaults.infrastructure,
-});
+})
 
-export const defaultIgnoreDirectories: Filename[] = [".git", "node_modules"];
+export const defaultIgnoreDirectories: Filename[] = [".git", "node_modules"]
 
 export type FileOpsHelperConfig = Readonly<{
-    observability?: Observability;
-    infrastructure?: FileOpsHelperInfrastructure;
-    ignoreDirectories?: Filename[];
-}>;
+    observability?: Observability
+    infrastructure?: FileOpsHelperInfrastructure
+    ignoreDirectories?: Filename[]
+}>
 
 export type RequiredFileOpsHelperConfig = Readonly<{
-    observability: Observability;
-    infrastructure: FileOpsHelperInfrastructure;
-    ignoreDirectories: Filename[];
-}>;
+    observability: Observability
+    infrastructure: FileOpsHelperInfrastructure
+    ignoreDirectories: Filename[]
+}>
 
 export type FileOpsHelperDefaults = Readonly<{
-    infrastructure: FileOpsHelperInfrastructure;
-    ignoreDirectories?: Filename[];
-}>;
+    infrastructure: FileOpsHelperInfrastructure
+    ignoreDirectories?: Filename[]
+}>
 
 export const defaultFileOpsHelperConfig = (
     defaults: FileOpsHelperDefaults,
-    config: FileOpsHelperConfig = {}
+    config: FileOpsHelperConfig = {},
 ): RequiredFileOpsHelperConfig => ({
     observability: config.observability ?? nullObservability(),
     infrastructure: config.infrastructure ?? defaults.infrastructure,
     ignoreDirectories: config.ignoreDirectories ?? defaults.ignoreDirectories ?? defaultIgnoreDirectories,
-});
+})
 
 /**
- * Port for reading text resources and discovering workspace marker directories.
+ * Port for reading/writing text resources and discovering workspace marker directories.
  *
  * This is an effectful boundary. Core logic should depend on this interface
  * rather than directly using Node filesystem or network APIs.
  */
-export interface FileOps {
-    /**
-     * Starting from a directory, walk upwards until a directory containing
-     * the given marker file is found.
-     *
-     * Returns the directory containing the marker file.
-     */
+export interface FileOps extends WriteTextFileOps {
     findContainingDirectory(
         start: DirectoryName,
         markerFileName: Filename,
-        config?: FindContainingDirectoryConfig
-    ): Promise<ErrorsOr<DirectoryName, FileOpIssue>>;
+        config?: FindContainingDirectoryConfig,
+    ): Promise<ErrorsOr<DirectoryName, FileOpIssue>>
 
-    /**
-     * Recursively find all files with the given filename under the supplied directory.
-     *
-     * Directories whose names are in ignoreDirectories are skipped.
-     * Returns full paths in deterministic order.
-     */
     findAllByNameUnder(
         directory: DirectoryName,
         targetFileName: Filename,
-        config?: FileOpsHelperConfig
-    ): Promise<ErrorsOr<Filename[], FileOpIssue>>;
+        config?: FileOpsHelperConfig,
+    ): Promise<ErrorsOr<Filename[], FileOpIssue>>
 
-    /**
-     * Load a UTF-8 text resource from a local file, a URL, or a marker-prefixed source.
-     */
     loadText(
         source: LoadTextSource,
-        config?: LoadTextConfig
-    ): Promise<ErrorsOr<string, FileOpIssue>>;
+        config?: LoadTextConfig,
+    ): Promise<ErrorsOr<string, FileOpIssue>>
 
     pathOps: PathOps
 }
@@ -210,8 +211,8 @@ export const makeFileOpIssue = (
             context:
                 cause === undefined
                     ? context
-                    : { ...context, cause },
+                    : {...context, cause},
         }),
-    ...(code === undefined ? {} : { code }),
+    ...(code === undefined ? {} : {code}),
     severity: "error",
-});
+})

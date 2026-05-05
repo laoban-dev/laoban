@@ -1,0 +1,33 @@
+{
+  "template": "typescript",
+  "name": "@laoban/update_cli",
+  "description": "Cli command for update. This is the 'create or update the managed files in each module' command",
+  "links": [
+    "@laoban/clidsl",
+    "@laoban/commander",
+    "@laoban/package_cli",
+    "@laoban/config_cli",
+    "@laoban/errors",
+    "@laoban/laoban_config",
+    "@laoban/observability",
+    "@laoban/safe",
+    "@laoban/strings",
+    "@laoban/validation",
+    "@laoban/update"
+  ],
+  "packageJson": {
+    "dependencies": {
+      "commander": "^14.0.0"
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

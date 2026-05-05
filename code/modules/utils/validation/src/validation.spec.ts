@@ -562,8 +562,8 @@ describe("mustBeNameAnd", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["context"],
-                message: "context must be an object",
-                code: "wrong.type",
+                message: "context is required but was null",
+                code: "required",
             },
         ])
 
@@ -574,8 +574,8 @@ describe("mustBeNameAnd", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["context"],
-                message: "context must be an object",
-                code: "wrong.type",
+                message: "context is required but was undefined",
+                code: "required",
             },
         ])
 
