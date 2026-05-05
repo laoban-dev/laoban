@@ -1,7 +1,7 @@
 {
   "template": "node",
-  "name": "laoban",
-  "description": "The cli for laoban, which is used to run commands defined in the various modules.",
+  "name": "@laoban/laoban_cli",
+  "description": "The code and integration tests for the cli for laoban, which is used to run commands defined in the various modules.",
   "links": [
     "@laoban/clidsl",
     "@laoban/commander",
@@ -16,7 +16,6 @@
     "@laoban/strings",
     "@laoban/validation",
     "@laoban/config_cli",
-    "@laoban/laoban_cli",
     "@laoban/package_cli",
     "@laoban/scripts_cli",
     "@laoban/update_cli"

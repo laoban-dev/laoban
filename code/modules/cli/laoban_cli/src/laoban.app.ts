@@ -1,7 +1,7 @@
 import {AnyCliCommand, CliGroup, CliRoot, makeValidateCliModel, root} from "@laoban/clidsl";
 import {addCliModelToCommander, makeCommanderCliAdapter} from "@laoban/commander";
 import {laobanConfigCommands} from "@laoban/config_cli";
-import {ErrorsOr, isErrors, value} from "@laoban/errors";
+import {ErrorsOr, isErrors, makeErrorFromException, value} from "@laoban/errors";
 import {dumpErrors} from "@laoban/observability";
 import {laobanPackageCommands} from "@laoban/package_cli";
 import {makeScriptCommands} from "@laoban/scripts_cli";
@@ -13,6 +13,10 @@ import {LaobanDi} from "./laoban.di";
 export type LaobanCliChild =
     CliGroup<LaobanCliContext> |
     AnyCliCommand<LaobanCliContext>;
+
+export type RunLaobanAppOptions = Readonly<{
+    exitOnCommanderError?: boolean
+}>;
 
 export const builtInCliCommands: Record<string, LaobanCliChild> = {
     config: laobanConfigCommands,
@@ -78,8 +82,35 @@ export async function makeLaobanCliModel(di: LaobanDi): Promise<ErrorsOr<CliRoot
     }));
 }
 
-export async function runLaobanApp(di: LaobanDi): Promise<number> {
+export function commanderExitCode(e: unknown): number | undefined {
+    if (typeof e !== "object" || e === null) return undefined;
+
+    const commanderError = e as {
+        code?: string
+        exitCode?: number
+    };
+
+    if (commanderError.code === "commander.helpDisplayed") {
+        return commanderError.exitCode ?? 0;
+    }
+
+    if (commanderError.code === "commander.help") {
+        return commanderError.exitCode ?? 0;
+    }
+
+    if (typeof commanderError.exitCode === "number") {
+        return commanderError.exitCode;
+    }
+
+    return undefined;
+}
+
+export async function runLaobanApp(
+    di: LaobanDi,
+    options: RunLaobanAppOptions = {},
+): Promise<number> {
     const context = di.makeContext();
+    const exitOnCommanderError = options.exitOnCommanderError ?? true;
 
     try {
         const cliModelOrErrors = await makeLaobanCliModel(di);
@@ -100,6 +131,10 @@ export async function runLaobanApp(di: LaobanDi): Promise<number> {
 
         const command = di.makeCommand();
 
+        if (!exitOnCommanderError) {
+            command.exitOverride();
+        }
+
         addCliModelToCommander(
             command,
             cliModel,
@@ -112,10 +147,20 @@ export async function runLaobanApp(di: LaobanDi): Promise<number> {
             })
         );
 
-        await command.parseAsync(di.argv);
-        return 0;
+        try {
+            await command.parseAsync(di.argv);
+            return 0;
+        } catch (e) {
+            const exitCode = commanderExitCode(e);
+
+            if (exitCode !== undefined) {
+                return exitCode;
+            }
+
+            throw e;
+        }
     } catch (e) {
-        di.dumpErrors(context.observability, e);
+        di.dumpErrors(context.observability, makeErrorFromException("running laoban app", e));
         return 1;
     }
 }

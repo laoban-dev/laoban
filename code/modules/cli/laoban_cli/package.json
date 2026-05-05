@@ -1,6 +1,6 @@
 {
-  "name": "laoban",
-  "description": "The cli for laoban, which is used to run commands defined in the various modules.",
+  "name": "@laoban/laoban_cli",
+  "description": "The code and integration tests for the cli for laoban, which is used to run commands defined in the various modules.",
   "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
@@ -31,7 +31,6 @@
     "@laoban/strings": "2.0.0",
     "@laoban/validation": "2.0.0",
     "@laoban/config_cli": "2.0.0",
-    "@laoban/laoban_cli": "2.0.0",
     "@laoban/package_cli": "2.0.0",
     "@laoban/scripts_cli": "2.0.0",
     "@laoban/update_cli": "2.0.0",

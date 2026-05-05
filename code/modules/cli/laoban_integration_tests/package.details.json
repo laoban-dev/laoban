@@ -1,7 +1,7 @@
 {
   "template": "node",
-  "name": "laoban",
-  "description": "The cli for laoban, which is used to run commands defined in the various modules.",
+  "name": "@laoban/integration_tests",
+  "description": "Integration tests that check the cli actually works",
   "links": [
     "@laoban/clidsl",
     "@laoban/commander",
@@ -11,6 +11,8 @@
     "@laoban/observability",
     "@laoban/observability_node",
     "@laoban/os",
+    "@laoban/laoban_cli",
+    "laoban",
     "@laoban/node_os",
     "@laoban/safe",
     "@laoban/strings",
@@ -26,6 +28,7 @@
       "commander": "^14.0.0"
     },
     "devDependencies": {
+      "ts-node": "^10.9.2"
     },
     "scripts": {
     }
@@ -33,7 +36,7 @@
   "guards": {
     "compile": true,
     "publish": true,
-    "test": false,
+    "test": true,
     "react": false
   }
 }

@@ -8,16 +8,28 @@ import {
     emptyChannelState,
     ModuleObservabilityScope,
     parseDebugConfig,
-    realTimeService
+    realTimeService,
 } from "@laoban/observability"
 import {Command} from "commander"
 import * as process from "node:process"
 
 import {defaultLoadTextConfig, FileOpsHelperConfig} from "@laoban/files"
-import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure} from "@laoban/files_node"
-import {LaobanConfigLoadConfig, loadLaobanConfig} from "@laoban/laoban_config"
+import {
+    nodeFileOps,
+    nodeFileOpsDefaults,
+    nodeLoadTextInfrastructure,
+} from "@laoban/files_node"
+import {
+    LaobanConfigLoadConfig,
+    loadLaobanConfig,
+} from "@laoban/laoban_config"
 import {Env} from "@laoban/records"
-import {createNodeObservability, nodeChannelTc, NodeReadChannel, NodeWriteChannel,} from "@laoban/observability_node"
+import {
+    createNodeObservability,
+    nodeChannelTc,
+    NodeReadChannel,
+    NodeWriteChannel,
+} from "@laoban/observability_node"
 import {loadConfigAndPackages} from "@laoban/package_cli"
 import {loadConfig} from "@laoban/config_cli"
 import {loadPackages} from "@laoban/package_details"
@@ -29,7 +41,11 @@ import {
     purposes,
 } from "@laoban/scripts_cli"
 import {LaobanCliContext} from "./laoban.context"
-import {makeNodeExecution, NodeExecution, NodeExecutionOptions} from "@laoban/node_execution/src/node.execution"
+import {
+    makeNodeExecution,
+    NodeExecution,
+    NodeExecutionOptions,
+} from "@laoban/node_execution/src/node.execution"
 import {defaultFileCommands} from "@laoban/node_execution"
 import {defaultPrefixAndValueOptions} from "@laoban/execution"
 import {ErrorsOr, mapErrorsOr} from "@laoban/errors"
@@ -94,8 +110,8 @@ export function makeChannelsState(
 
 export function makeLaobanDi(options: MakeLaobanDiOptions = {}): ErrorsOr<LaobanDi> {
     const argv = options.argv ?? process.argv
-    const cwd = options.cwd ?? process.cwd()
     const env: Env = options.env ?? process.env
+    const cwd = options.cwd ?? process.cwd()
     const stdOut = options.stdout ?? process.stdout
     const stdErr = options.stderr ?? process.stderr
     const now = options.now ?? new Date().toISOString()
@@ -129,6 +145,7 @@ export function makeLaobanDi(options: MakeLaobanDiOptions = {}): ErrorsOr<Laoban
     )
 
     const defaultJsonCodec = jsonCodec()
+
     const nodeExecuteOptions: NodeExecutionOptions = {
         fileCommands: defaultFileCommands,
         prefixAndValueOptions: defaultPrefixAndValueOptions,

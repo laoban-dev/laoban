@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "types": ["node", "jest"],
+    "lib": ["es2017"],
+    "target": "es6",
+    "outDir": "./dist",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true
+  },
+  "include": ["src/**/*.ts", "index.ts"],
+  "exclude": ["dist", "node_modules", "**/*.spec.ts", "**/*.test.ts"]
+}
