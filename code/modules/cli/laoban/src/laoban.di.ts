@@ -1,4 +1,15 @@
 import {jsonCodec} from "@laoban/codec"
+import {
+    ChannelsState,
+    DebugConfig,
+    defaultModuleObservabilityScope,
+    defaultObservabilityTemplates,
+    dumpErrors,
+    emptyChannelState,
+    ModuleObservabilityScope,
+    parseDebugConfig,
+    realTimeService
+} from "@laoban/observability"
 import {Command} from "commander"
 import * as process from "node:process"
 
@@ -6,23 +17,7 @@ import {defaultLoadTextConfig, FileOpsHelperConfig} from "@laoban/files"
 import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure} from "@laoban/files_node"
 import {LaobanConfigLoadConfig, loadLaobanConfig} from "@laoban/laoban_config"
 import {Env} from "@laoban/records"
-import {
-    ChannelsState,
-    DebugConfig,
-    defaultModuleObservabilityScope,
-    defaultObservabilityTemplates,
-    emptyChannelState,
-    ModuleObservabilityScope,
-    parseDebugConfig,
-    realTimeService,
-} from "@laoban/observability"
-import {
-    createNodeObservability,
-    dumpAndExitIfErrors,
-    nodeChannelTc,
-    NodeReadChannel,
-    NodeWriteChannel,
-} from "@laoban/observability_node"
+import {createNodeObservability, nodeChannelTc, NodeReadChannel, NodeWriteChannel,} from "@laoban/observability_node"
 import {loadConfigAndPackages} from "@laoban/package_cli"
 import {loadConfig} from "@laoban/config_cli"
 import {loadPackages} from "@laoban/package_details"
@@ -33,7 +28,6 @@ import {
     Purpose,
     purposes,
 } from "@laoban/scripts_cli"
-
 import {LaobanCliContext} from "./laoban.context"
 import {makeNodeExecution, NodeExecution, NodeExecutionOptions} from "@laoban/node_execution/src/node.execution"
 import {defaultFileCommands} from "@laoban/node_execution"
@@ -47,10 +41,10 @@ import {loadNormalisedTemplate} from "@laoban/template_files"
 import {defaultFileDefinitionFns} from "@laoban/file_operations"
 import {
     colonPrefixedVarDefn,
+    defaultTemplateEngine,
     dollarsBracesVarDefn,
     doubleAngleVarDefn,
     mustachesVarDefn,
-    defaultTemplateEngine,
 } from "@laoban/template"
 
 export type LaobanDi = {
@@ -58,8 +52,17 @@ export type LaobanDi = {
     makeCommand: () => Command
     makeContext: () => LaobanCliContext
     loadLaobanConfig: typeof loadLaobanConfig
-    handleFatalErrors: typeof dumpAndExitIfErrors
+    dumpErrors: typeof dumpErrors
 }
+
+export type MakeLaobanDiOptions = Readonly<{
+    argv?: string[]
+    cwd?: string
+    env?: Env
+    stdout?: NodeWriteChannel
+    stderr?: NodeWriteChannel
+    now?: string
+}>
 
 export function makeReference(pathSafeNow: string) {
     return (moduleScope: ModuleObservabilityScope) => (purpose: Purpose): string => {
@@ -89,18 +92,23 @@ export function makeChannelsState(
     )
 }
 
-export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> {
-    const now = new Date().toISOString()
+export function makeLaobanDi(options: MakeLaobanDiOptions = {}): ErrorsOr<LaobanDi> {
+    const argv = options.argv ?? process.argv
+    const cwd = options.cwd ?? process.cwd()
+    const env: Env = options.env ?? process.env
+    const stdOut = options.stdout ?? process.stdout
+    const stdErr = options.stderr ?? process.stderr
+    const now = options.now ?? new Date().toISOString()
     const pathSafeNow = safePathSegment(now)
     const command = argv[2] ?? "root"
     const correlationId = `${pathSafeNow}/${safePathSegment(command)}`
 
-    const onError = (e: unknown) => console.error(e)
+    const onError = (e: unknown) => stdErr.write(`${String(e)}\n`)
 
     const reference = makeReference(pathSafeNow)
 
     const {observability} = createNodeObservability<Purpose>({
-        channel: process.stdout,
+        channel: stdOut,
         purposes,
         onError,
         reference,
@@ -120,9 +128,6 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
         },
     )
 
-    const cwd = process.cwd()
-    const stdOut = process.stdout
-    const env: Env = process.env
     const defaultJsonCodec = jsonCodec()
     const nodeExecuteOptions: NodeExecutionOptions = {
         fileCommands: defaultFileCommands,
@@ -154,7 +159,7 @@ export function makeLaobanDi(argv: string[] = process.argv): ErrorsOr<LaobanDi> 
             argv,
             makeCommand: () => new Command(),
             loadLaobanConfig,
-            handleFatalErrors: dumpAndExitIfErrors,
+            dumpErrors,
 
             makeContext: () => {
                 const context: LaobanCliContext = {
