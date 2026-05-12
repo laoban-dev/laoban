@@ -12,25 +12,26 @@ import {
 jest.setTimeout(30_000)
 
 describe("config directory integration tests", () => {
-    forEachDirectory(testRoot, "config", directory => {
-        test(`packages in ${directory.fixtureName}`, async () => {
-            const result = await runLaobanInFixture({
-                fixtureDir: directory.fixtureDir,
-                args: ["packages"],
+    describe("package view", () =>
+        forEachDirectory(testRoot, "config", directory => {
+            test(`{packages list} in ${directory.fixtureName}`, async () => {
+                const result = await runLaobanInFixture({
+                    fixtureDir: directory.fixtureDir,
+                    args: ["packages", "list"],
+                })
+
+                const expected = expectedLines(
+                    directory.fixtureRoot,
+                    directory.fixtureDir,
+                    "expectedPackages.txt",
+                )
+
+                const actual = toArrayReplacingRoot(
+                    directory.fixtureRoot,
+                    `${result.stdout}${result.stderr}`,
+                )
+
+                expectActualToEqualExpected(actual, expected)
             })
-
-            const expected = expectedLines(
-                directory.fixtureRoot,
-                directory.fixtureDir,
-                "expectedPackages.txt",
-            )
-
-            const actual = toArrayReplacingRoot(
-                directory.fixtureRoot,
-                `${result.stdout}${result.stderr}`,
-            )
-
-            expectActualToEqualExpected(actual, expected)
-        })
-    })
+        }))
 })

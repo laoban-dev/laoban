@@ -7,6 +7,7 @@
     "@laoban/commander",
     "@laoban/config_cli",
     "@laoban/errors",
+    "@laoban/generational_reporter",
     "@laoban/laoban_config",
     "@laoban/observability",
     "@laoban/safe",

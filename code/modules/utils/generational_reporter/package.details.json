@@ -1,0 +1,27 @@
+{
+  "template": "typescript",
+  "name": "@laoban/generational_reporter",
+  "description": "Handles loop over generations 'print a title', 'for each item print a line', 'print a summary','print errors'",
+  "links": [
+    "@laoban/errors",
+    "@laoban/observability"
+  ],
+  "packageJson": {
+    "files": [
+      "build/"
+    ],
+    "dependencies": {
+    },
+    "devDependencies": {
+    },
+    "scripts": {
+      "start": "react-scripts start"
+    }
+  },
+  "guards": {
+    "compile": true,
+    "publish": true,
+    "test": true,
+    "react": false
+  }
+}

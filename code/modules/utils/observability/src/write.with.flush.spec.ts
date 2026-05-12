@@ -3,6 +3,7 @@ import {
     ChannelTc,
     emptyChannelState,
     flush,
+    flushAllTouchedChannels,
     getOrCreateChannels,
     Marker,
     syncWriteTo,
@@ -124,6 +125,7 @@ describe("getOrCreateChannels", () => {
             expect.objectContaining({append: false})
         )
         expect(state.state.alpha.refs).toEqual(["alpha/.log", "alpha/.session"])
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
         expect(state.state.alpha.channels).toBe(result.value)
         expect(state.state.alpha.lastSize).toBe(0)
     })
@@ -142,6 +144,7 @@ describe("getOrCreateChannels", () => {
         if (isErrors(first) || isErrors(second)) throw new Error("expected success")
 
         expect(second.value).toBe(first.value)
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
         expect(tc.keyFrom).toHaveBeenCalledTimes(2)
         expect(tc.reference).toHaveBeenCalledTimes(1)
         expect(tc.create).toHaveBeenCalledTimes(2)
@@ -164,6 +167,7 @@ describe("getOrCreateChannels", () => {
         if (isErrors(second)) throw new Error("expected success")
 
         expect(second.value).not.toBe(first.value)
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
         expect(tc.reference).toHaveBeenCalledTimes(1)
         expect(tc.create).toHaveBeenCalledTimes(4)
         expect(tc.create).toHaveBeenNthCalledWith(
@@ -196,6 +200,7 @@ describe("getOrCreateChannels", () => {
         await getOrCreateChannels(state, secondScope)
 
         expect(Object.keys(state.state)).toEqual(["shared-key"])
+        expect(state.state["shared-key"].moduleScope).toEqual(firstScope)
         expect(tc.reference).toHaveBeenCalledTimes(1)
         expect(tc.reference).toHaveBeenCalledWith(firstScope)
         expect(tc.create).toHaveBeenCalledTimes(1)
@@ -211,10 +216,12 @@ describe("getOrCreateChannels", () => {
         })
         const onError = jest.fn()
         const state = emptyChannelState(tc, [".log", ".session"], onError)
+        const alpha = scope("alpha", "alpha")
 
-        const result = await getOrCreateChannels(state, scope("alpha", "alpha"))
+        const result = await getOrCreateChannels(state, alpha)
 
         expect(isErrors(result)).toBe(true)
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
         expect(state.state.alpha.channels).toBeUndefined()
         expect(tc.create).toHaveBeenCalledTimes(2)
     })
@@ -240,6 +247,7 @@ describe("asyncWriteTo", () => {
             state.state.alpha.channels?.[1],
             "hello"
         )
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
         expect(state.state.alpha.channels?.map(c => c.writes)).toEqual([
             ["hello"],
             ["hello"],
@@ -262,6 +270,7 @@ describe("asyncWriteTo", () => {
 
         expect(tc.create).toHaveBeenCalledTimes(2)
         expect(tc.write).toHaveBeenCalledTimes(4)
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
         expect(state.state.alpha.channels?.map(c => c.writes)).toEqual([
             ["one", "two"],
             ["one", "two"],
@@ -335,6 +344,7 @@ describe("syncWriteTo", () => {
             state.state.alpha.channels?.[1],
             "hello"
         )
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
         expect(onError).not.toHaveBeenCalled()
     })
 
@@ -478,6 +488,7 @@ describe("flush", () => {
         expect(tc.sendFromRefToWrite).toHaveBeenCalledWith("alpha/.log", 0, out)
         expect(out).toHaveBeenCalledWith("delta")
         expect(state.state.alpha.lastSize).toBe(5)
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
         expect(state.state.alpha.channels).toBeDefined()
     })
 
@@ -568,5 +579,132 @@ describe("flush", () => {
         expect(order).toEqual([
             "project:alpha/.log",
         ])
+    })
+})
+
+describe("flushAllTouchedChannels", () => {
+    it("does nothing when no module states have open channels", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const state = emptyChannelState(tc, [".log"], onError)
+        const out = jest.fn()
+
+        const result = await flushAllTouchedChannels(state)(out)
+
+        expect(isErrors(result)).toBe(false)
+        expect(tc.sendFromRefToWrite).not.toHaveBeenCalled()
+        expect(out).not.toHaveBeenCalled()
+    })
+
+    it("flushes every module state with open channels using its stored module scope", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const state = emptyChannelState(tc, [".log"], onError)
+        const out = jest.fn()
+
+        const alpha = scope("alpha", "alpha-dir")
+        const beta = scope("beta", "beta-dir")
+
+        await asyncWriteTo(state)(alpha)("alpha text")
+        await asyncWriteTo(state)(beta)("beta text")
+
+        const result = await flushAllTouchedChannels(state)(out)
+
+        expect(isErrors(result)).toBe(false)
+
+        expect(tc.sendFromRefToWrite).toHaveBeenCalledTimes(2)
+        expect(tc.sendFromRefToWrite).toHaveBeenNthCalledWith(1, "alpha-dir/.log", 0, out)
+        expect(tc.sendFromRefToWrite).toHaveBeenNthCalledWith(2, "beta-dir/.log", 0, out)
+
+        expect(out).toHaveBeenNthCalledWith(1, "alpha text")
+        expect(out).toHaveBeenNthCalledWith(2, "beta text")
+
+        expect(state.state.alpha.moduleScope).toEqual(alpha)
+        expect(state.state.beta.moduleScope).toEqual(beta)
+    })
+    it("flushes module states whose channels have been cleared if they are touched", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const state = emptyChannelState(tc, [".log"], onError)
+        const out = jest.fn()
+
+        const alpha = scope("alpha", "alpha")
+        const beta = scope("beta", "beta")
+
+        await asyncWriteTo(state)(alpha)("alpha text")
+        await asyncWriteTo(state)(beta)("beta text")
+
+        state.state.alpha.channels = undefined
+
+        const result = await flushAllTouchedChannels(state)(out)
+
+        expect(isErrors(result)).toBe(false)
+
+        expect(tc.sendFromRefToWrite).toHaveBeenCalledTimes(2)
+        expect(tc.sendFromRefToWrite).toHaveBeenNthCalledWith(1, "alpha/.log", 0, out)
+        expect(tc.sendFromRefToWrite).toHaveBeenNthCalledWith(2, "beta/.log", 0, out)
+
+        expect(out).toHaveBeenNthCalledWith(1, "alpha text")
+        expect(out).toHaveBeenNthCalledWith(2, "beta text")
+
+        expect(state.state.alpha.touched).toBe(false)
+        expect(state.state.beta.touched).toBe(false)
+    })
+    it("skips module states that are not touched", async () => {
+        const {tc} = makeTc()
+        const onError = jest.fn()
+        const state = emptyChannelState(tc, [".log"], onError)
+        const out = jest.fn()
+
+        const alpha = scope("alpha", "alpha")
+        const beta = scope("beta", "beta")
+
+        await asyncWriteTo(state)(alpha)("alpha text")
+        await asyncWriteTo(state)(beta)("beta text")
+
+        state.state.alpha.touched = false
+
+        const result = await flushAllTouchedChannels(state)(out)
+
+        expect(isErrors(result)).toBe(false)
+
+        expect(tc.sendFromRefToWrite).toHaveBeenCalledTimes(1)
+        expect(tc.sendFromRefToWrite).toHaveBeenCalledWith("beta/.log", 0, out)
+        expect(out).toHaveBeenCalledWith("beta text")
+
+        expect(state.state.alpha.lastSize).toBe(0)
+        expect(state.state.beta.lastSize).toBe("beta text".length)
+        expect(state.state.beta.touched).toBe(false)
+    })
+    it("aggregates errors from touched module flushes", async () => {
+        const {tc} = makeTc({
+            sendFromRefToWrite: jest.fn(async (ref: Ref, _from: Marker, write: Write) => {
+                if (ref === "alpha/.log")
+                    return failure<Marker>("alpha projection failed")
+
+                write("beta text")
+                return value(9)
+            }),
+        })
+        const onError = jest.fn()
+        const state = emptyChannelState(tc, [".log"], onError)
+        const out = jest.fn()
+
+        const alpha = scope("alpha", "alpha")
+        const beta = scope("beta", "beta")
+
+        await asyncWriteTo(state)(alpha)("alpha text")
+        await asyncWriteTo(state)(beta)("beta text")
+
+        const result = await flushAllTouchedChannels(state)(out)
+
+        expect(isErrors(result)).toBe(true)
+
+        if (isErrors(result))
+            expect(result.errors).toEqual([{message: "alpha projection failed"}])
+
+        expect(out).toHaveBeenCalledWith("beta text")
+        expect(state.state.alpha.lastSize).toBe(0)
+        expect(state.state.beta.lastSize).toBe(9)
     })
 })

@@ -21,7 +21,7 @@ import {
     value,
     valueOrDefault,
     valueOrThrow,
-    warnings,
+    warnings, withCleanupErrorsOr,
 } from "./error.monad";
 
 type TestIssue = BaseIssue<string, unknown>;
@@ -749,5 +749,125 @@ describe("mapArrayK", () => {
         ).rejects.toThrow(
             'traverseArrayErrorsOrK mapper resolved to invalid ErrorsOr null at index 2. Item: "c"'
         )
+    })
+})
+
+describe("withCleanupErrorsOr", () => {
+    it("returns the main value when main and cleanup succeed", async () => {
+        const result = await withCleanupErrorsOr(
+            async () => value("done"),
+            async () => value(undefined),
+        )
+
+        expect(valueOrThrow(result)).toEqual("done")
+    })
+
+    it("runs cleanup after main succeeds", async () => {
+        const events: string[] = []
+
+        const result = await withCleanupErrorsOr(
+            async () => {
+                events.push("main")
+                return value("done")
+            },
+            async () => {
+                events.push("cleanup")
+                return value(undefined)
+            },
+        )
+
+        expect(valueOrThrow(result)).toEqual("done")
+        expect(events).toEqual(["main", "cleanup"])
+    })
+
+    it("returns main errors when main fails and cleanup succeeds", async () => {
+        const result = await withCleanupErrorsOr(
+            async () => errors({kind: "main", message: "main failed"}),
+            async () => value(undefined),
+        )
+
+        expect(errorsOrThrow(result)).toEqual([
+            {kind: "main", message: "main failed"},
+        ])
+    })
+
+    it("returns cleanup errors when main succeeds and cleanup fails", async () => {
+        const result = await withCleanupErrorsOr(
+            async () => value("done"),
+            async () => errors({kind: "cleanup", message: "cleanup failed"}),
+        )
+
+        expect(errorsOrThrow(result)).toEqual([
+            {kind: "cleanup", message: "cleanup failed"},
+        ])
+    })
+
+    it("accumulates main and cleanup errors when both fail", async () => {
+        const result = await withCleanupErrorsOr(
+            async () => errors({kind: "main", message: "main failed"}),
+            async () => errors({kind: "cleanup", message: "cleanup failed"}),
+        )
+
+        expect(errorsOrThrow(result)).toEqual([
+            {kind: "main", message: "main failed"},
+            {kind: "cleanup", message: "cleanup failed"},
+        ])
+    })
+
+    it("accumulates warnings from successful main and cleanup", async () => {
+        const result = await withCleanupErrorsOr(
+            async () => value("done", [
+                {kind: "mainWarning", message: "main warning"},
+            ]),
+            async () => value(undefined, [
+                {kind: "cleanupWarning", message: "cleanup warning"},
+            ]),
+        )
+
+        expect(valueOrThrow(result)).toEqual("done")
+        expect(warnings(result)).toEqual([
+            {kind: "mainWarning", message: "main warning"},
+            {kind: "cleanupWarning", message: "cleanup warning"},
+        ])
+    })
+
+    it("accumulates warnings when cleanup fails", async () => {
+        const result = await withCleanupErrorsOr(
+            async () => value("done", [
+                {kind: "mainWarning", message: "main warning"},
+            ]),
+            async () => errors(
+                {kind: "cleanup", message: "cleanup failed"},
+                undefined,
+                [{kind: "cleanupWarning", message: "cleanup warning"}],
+            ),
+        )
+
+        expect(errorsOrThrow(result)).toEqual([
+            {kind: "cleanup", message: "cleanup failed"},
+        ])
+
+        expect(warnings(result)).toEqual([
+            {kind: "mainWarning", message: "main warning"},
+            {kind: "cleanupWarning", message: "cleanup warning"},
+        ])
+    })
+
+    it("runs cleanup even when main returns errors", async () => {
+        const events: string[] = []
+
+        const result = await withCleanupErrorsOr(
+            async () => {
+                events.push("main")
+                return errors({kind: "main", message: "main failed"})
+            },
+            async () => {
+                events.push("cleanup")
+                return value(undefined)
+            },
+        )
+
+        expect(isErrors(result)).toBe(true)
+        expect(events).toEqual(["main", "cleanup"])
     })
 })

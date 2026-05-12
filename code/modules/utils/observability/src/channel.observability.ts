@@ -1,4 +1,4 @@
-import {ErrorsOr, isErrors, makeErrorFromException, value} from "@laoban/errors"
+import {ErrorsOr, isErrors, makeErrorFromException, mapErrorsOr, sequenceArrayErrorsOrK, value} from "@laoban/errors"
 import {
     CountMetric,
     DurationMetric,
@@ -16,10 +16,10 @@ import {
     ErrorsFn,
     flush,
     syncWriteTo,
-    Write,
+    Write, waitForAsyncWrites,
 } from "./write.with.flush"
 
-export type ChannelObservability = Observability & {
+export type git ChannelObservability = Observability & {
     flush: (out: Write) => Promise<ErrorsOr<unknown>>
     close: () => Promise<ErrorsOr<void>>
 }
@@ -74,40 +74,41 @@ export const channelObservability = <Purpose, ReadChannel, WriteChannel, Ref>(
         durationMetric,
     })
 }
-
-export const closeChannelObservability = async <Purpose, ReadChannel, WriteChannel, Ref>(
+export const closeChannelObservability = async <
+    Purpose,
+    ReadChannel,
+    WriteChannel,
+    Ref,
+>(
     moduleScope: ModuleObservabilityScope,
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ): Promise<ErrorsOr<void>> => {
-    const key = channelsState.tc.keyFrom(moduleScope)
-    const moduleState = channelsState.state[key]
+    try {
+        await waitForAsyncWrites(channelsState)
 
-    if (!moduleState?.channels)
-        return value(undefined)
+        const key = channelsState.tc.keyFrom(moduleScope)
+        const moduleState = channelsState.state[key]
 
-    const errors: unknown[] = []
+        if (!moduleState?.channels)
+            return value(undefined)
 
-    for (const channel of moduleState.channels) {
-        try {
-            const result = await channelsState.tc.closeWritable(channel)
-            if (isErrors(result)) {
-                channelsState.onError(result)
-                errors.push(...result.errors)
-            }
-        } catch (e) {
-            const error = makeErrorFromException("closeChannelObservability", e)
-            channelsState.onError(error)
-            errors.push(...error.errors)
-        }
+        const closeResult = await sequenceArrayErrorsOrK(
+            moduleState.channels.map(channel =>
+                channelsState.tc.closeWritable(channel),
+            ),
+        )
+
+        moduleState.channels = undefined
+
+        return mapErrorsOr(closeResult, () => undefined)
+    } catch (e) {
+        return makeErrorFromException(
+            `closeChannelObservability(${String(moduleScope.module)})`,
+            e,
+            moduleScope,
+        )
     }
-
-    moduleState.channels = undefined
-
-    return errors.length === 0
-        ? value(undefined)
-        : {errors: errors as any}
 }
-
 /**
  * Create a module-aware channel-backed observability from existing shared
  * channel state.

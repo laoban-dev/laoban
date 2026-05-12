@@ -1,6 +1,6 @@
 {
-  "name": "@laoban/integration_tests",
-  "description": "Integration tests that check the cli actually works",
+  "name": "@laoban/generational_reporter",
+  "description": "Handles loop over generations 'print a title', 'for each item print a line', 'print a summary','print errors'",
   "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
@@ -17,31 +17,11 @@
     ]
   },
   "dependencies": {
-    "commander": "^14.0.0",
-    "@laoban/clidsl": "2.0.0",
-    "@laoban/commander": "2.0.0",
     "@laoban/errors": "2.0.0",
-    "@laoban/file_operations": "2.0.0",
-    "@laoban/node_execution": "2.0.0",
-    "@laoban/generational_reporter": "2.0.0",
     "@laoban/observability": "2.0.0",
-    "@laoban/observability_node": "2.0.0",
-    "@laoban/os": "2.0.0",
-    "@laoban/laoban_cli": "2.0.0",
-    "laoban": "2.0.0",
-    "@laoban/node_os": "2.0.0",
-    "@laoban/safe": "2.0.0",
-    "@laoban/strings": "2.0.0",
-    "@laoban/validation": "2.0.0",
-    "@laoban/config_cli": "2.0.0",
-    "@laoban/package_cli": "2.0.0",
-    "@laoban/scripts_cli": "2.0.0",
-    "@laoban/update_cli": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {
-    "ts-node": "^10.9.2",
-    "@types/node": "^25.6.0",
     "typescript": "^5.2.2",
     "@testing-library/jest-dom": "^6.1.4",
     "@types/jest": "^29.0.0",
@@ -67,7 +47,8 @@
   "files": [
     "dist/index.js",
     "dist/index.d.ts",
-    "dist/src/"
+    "dist/src/",
+    "build/"
   ],
   "keywords": [
     "indexing"
@@ -76,6 +57,7 @@
   "repository": "git@github.com:phil-rice/laoban.git",
   "scripts": {
     "test": "jest --config jest.config.json --env node",
-    "test:watch": "npm run test -- --watch"
+    "test:watch": "npm run test -- --watch",
+    "start": "react-scripts start"
   }
 }

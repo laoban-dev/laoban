@@ -6,6 +6,7 @@ import {
     makeErrorFromException,
     mapArrayK,
     mapErrorsOr,
+    sequenceArrayErrorsOrK,
     value,
 } from "@laoban/errors"
 import {ModuleObservabilityScope} from "./observability"
@@ -136,20 +137,31 @@ export type SameChannelTc<Purpose, Channel, Ref> =
 /**
  * State for one module's mirrored durable output.
  *
- * refs are the durable targets, for example ".log" and ".session".
- * channels are the currently open writable handles for those refs.
+ * `moduleScope` is stored with the state because the state is keyed by
+ * `ModuleKey`, but flushing needs the original `ModuleObservabilityScope` in
+ * order to project durable content through the runtime `ChannelTc`.
  *
- * `channels` is lifecycle state only. It is opened by writes and closed by
- * module observability lifecycle code. It is not used to decide whether flush
- * should project content.
+ * `refs` are the durable targets for this module, for example ".log" and
+ * ".session". Writes are mirrored to all refs.
  *
- * `lastSize` is the projection marker for refs[0], the representative durable
+ * `channels` are the currently open writable handles for those refs. Module
+ * observability lifecycle code is responsible for closing these handles and
+ * clearing `channels`. A state remains flushable after `channels` is cleared.
+ *
+ * `touched` means this module has successfully written durable content since
+ * the last successful flush. `flushAllTouchedChannels` uses this flag to avoid
+ * scanning/projection work for modules that have not changed in the current
+ * generation/lifecycle window.
+ *
+ * `lastSize` is the projection marker for `refs[0]`, the representative durable
  * source used during flush. Mirrored refs receive the same writes, but only one
  * ref is projected to stdout to avoid duplicate output.
  */
 export type ChannelState<WriteChannel, Ref> = {
     lastSize: Marker
     refs: Ref[]
+    moduleScope: ModuleObservabilityScope
+    touched: boolean
     channels?: WriteChannel[]
 }
 
@@ -185,22 +197,24 @@ export function emptyChannelState<Purpose, ReadChannel, WriteChannel, Ref>(
  * module already has durable state and a flush marker.
  */
 export async function getOrCreateChannels<Purpose, ReadChannel, WriteChannel, Ref>(
-    channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
+    channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
     moduleScope: ModuleObservabilityScope,
 ): Promise<ErrorsOr<WriteChannel[]>> {
-    const {tc, purposes} = channelState
+    const {tc, purposes} = channelsState
     const key = tc.keyFrom(moduleScope)
 
-    const existingState = channelState.state[key]
+    const existingState = channelsState.state[key]
     const append = existingState !== undefined
 
     const moduleState: ChannelState<WriteChannel, Ref> = existingState ?? {
         refs: purposes.map(tc.reference(moduleScope)),
         lastSize: 0,
+        moduleScope,
+        touched: false,
         channels: undefined,
     }
 
-    channelState.state[key] = moduleState
+    channelsState.state[key] = moduleState
 
     if (moduleState.channels)
         return value(moduleState.channels)
@@ -223,26 +237,34 @@ export type AsyncWrite = (msg: string) => Promise<void>
  * and routes failures to the configured error sink.
  */
 export const asyncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
-    channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
+    channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
     (moduleScope: ModuleObservabilityScope): AsyncWrite =>
         async (text: string): Promise<void> => {
+            const key = channelsState.tc.keyFrom(moduleScope)
+
             try {
-                const errorsOr = await flatMapErrorsOrK(
-                    await getOrCreateChannels(channelState, moduleScope),
-                    channels =>
-                        mapArrayK(channels, channel =>
-                            channelState.tc.write(channel, text),
-                        ),
+                const channelsResult = await getOrCreateChannels(channelsState, moduleScope)
+
+                if (isErrors(channelsResult)) {
+                    channelsState.onError(channelsResult)
+                    return
+                }
+
+                channelsState.state[key].touched = true
+
+                const writeResult = await mapArrayK(
+                    channelsResult.value,
+                    channel =>
+                        channelsState.tc.write(channel, text),
                 )
 
-                if (isErrors(errorsOr))
-                    channelState.onError(errorsOr)
+                if (isErrors(writeResult))
+                    channelsState.onError(writeResult)
             } catch (e: unknown) {
-                channelState.onError(makeErrorFromException(`asyncWriteTo(${moduleScope.module})`, e))
+                channelsState.onError(makeErrorFromException(`asyncWriteTo(${moduleScope.module})`, e))
             }
         }
-
 /**
  * Synchronous Write adapter over the async durable write path.
  *
@@ -250,13 +272,13 @@ export const asyncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
  * can still await or drain the tracked Promise through waitForAsyncWrites.
  */
 export const syncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
-    channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
+    channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
     (moduleScope: ModuleObservabilityScope): Write =>
         (text: string) =>
             trackAsyncWrite(
-                channelState,
-                asyncWriteTo(channelState)(moduleScope)(text),
+                channelsState,
+                asyncWriteTo(channelsState)(moduleScope)(text),
             )
 
 /**
@@ -270,20 +292,21 @@ export const syncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
  * - reads durable content from the module's representative ref at lastSize
  * - writes that delta to the supplied sink
  * - updates lastSize to the returned marker
+ * - clears touched after successful projection
  *
  * Calling flush repeatedly is safe: if no durable content has been added since
  * lastSize, the runtime sendFromRefToWrite implementation should return the
  * same marker and write nothing.
  */
 export const flush = <Purpose, ReadChannel, WriteChannel, Ref>(
-    channelState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
+    channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
     (moduleScope: ModuleObservabilityScope) =>
         async (write: Write): Promise<ErrorsOr<unknown>> => {
-            const {tc, state, purposes} = channelState
+            const {tc, state, purposes} = channelsState
             if (purposes.length === 0) return value([])
 
-            await waitForAsyncWrites(channelState)
+            await waitForAsyncWrites(channelsState)
 
             const key = tc.keyFrom(moduleScope)
             const moduleState = state[key]
@@ -294,6 +317,31 @@ export const flush = <Purpose, ReadChannel, WriteChannel, Ref>(
                 await tc.sendFromRefToWrite(moduleState.refs[0], moduleState.lastSize, write),
                 newMarker => {
                     moduleState.lastSize = newMarker
+                    moduleState.touched = false
                 },
             )
         }
+
+/**
+ * Flush every module that has written durable content since its last successful
+ * flush.
+ *
+ * A module state remains flushable after its writable channels have been closed
+ * and `channels` has been cleared. The `touched` flag identifies which known
+ * module states actually need projection work; the `lastSize` marker prevents
+ * duplicate projected output.
+ */
+export const flushAllTouchedChannels = <Purpose, ReadChannel, WriteChannel, Ref>(
+    channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
+) =>
+    async (write: Write): Promise<ErrorsOr<unknown>> =>
+        mapErrorsOr(
+            await sequenceArrayErrorsOrK(
+                Object.values(channelsState.state)
+                    .filter(state => state.touched)
+                    .map(state =>
+                        flush(channelsState)(state.moduleScope)(write),
+                    ),
+            ),
+            () => undefined,
+        )

@@ -14,7 +14,6 @@ export type ExecutorFn<Writable> = (
     command: string,
     cwd: DirectoryName,
     env: Env,
-    writable: Writable,
     observability: Observability
 ) => Promise<ExitCode>
 

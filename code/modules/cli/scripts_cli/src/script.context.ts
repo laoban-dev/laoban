@@ -8,14 +8,14 @@ import {ScriptFilterValues} from "./filter.packages";
 import {LaobanScript, ScriptName} from "@laoban/scripts";
 import {ErrorsOr} from "@laoban/errors";
 
-export type LaobanScriptCliContext = LaobanPackageCliContext & ObservabilityContext & {
-    handleLaobanScript: HandleLaobanScriptFn<LaobanScriptCliContext>;
+export type LaobanScriptCliContext<ReadChannel, WriteChannel, Ref> =
+    LaobanPackageCliContext<ReadChannel, WriteChannel, Ref> &
+    ObservabilityContext & {
+    handleLaobanScript: HandleLaobanScriptFn<
+        LaobanScriptCliContext<ReadChannel, WriteChannel, Ref>, ReadChannel, WriteChannel, Ref>
     makeDictionary: ScriptExecutionItemTemplateDictionaryFn
-    channelsState: ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel, ReferenceFileName>
-    stdOut: NodeWriteChannel
-    execution: NodeExecution;
+    execution: NodeExecution
     env: Env
-
 }
 
 export interface ScriptCommandValues extends ScriptFilterValues {
@@ -32,7 +32,7 @@ export interface ScriptCommandValues extends ScriptFilterValues {
     ignoreGuards: boolean;
 }
 
-export type HandleLaobanScriptFn<TContext extends LaobanPackageCliContext> =
+export type HandleLaobanScriptFn<TContext extends LaobanPackageCliContext<ReadChannel, WriteChannel, Ref>, ReadChannel, WriteChannel, Ref> =
     (scriptName: ScriptName, script: LaobanScript, values: ScriptCommandValues, context: TContext) => Promise<ErrorsOr<any>>;
 
 export type ReferenceFileName = string

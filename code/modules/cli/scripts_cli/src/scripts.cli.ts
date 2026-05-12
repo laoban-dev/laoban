@@ -1,116 +1,309 @@
-import {CliCommand, defineCommand} from "@laoban/clidsl";
-import {LaobanScript, LaobanScripts, ScriptName} from "@laoban/scripts";
-import {mapObject, sortObjectByName} from "@laoban/records";
-import {LaobanScriptCliContext} from "./script.context";
-import {Purpose, ScriptCommandValues} from "./handleLaobanScriptFn";
+import {
+    BaseIssue,
+    errors,
+    ErrorsOr,
+    flatMapBaseIssueK,
+    isErrors,
+    value,
+} from "@laoban/errors"
+import {ExecutionPlanStats, prettyPrintExecutionPlan} from "@laoban/execution_plan"
+import {
+    ChannelObservability,
+    flushAllTouchedChannels,
+    ModuleName,
+    ModuleObservabilityScope,
+    Observability,
+    withModuleObservability,
+} from "@laoban/observability"
+import {
+    GenerationWalkSummary,
+    GenerationalWalkConfig,
+    GenerationalWalkVisitor,
+    generationalWalk,
+} from "@laoban/generational_reporter"
+import {
+    LaobanPackageChannelPurpose,
+} from "@laoban/package_cli"
+import {LoadedLaobanProject, LoadedPackageDetail} from "@laoban/package_details"
+import {LaobanScript, ScriptName} from "@laoban/scripts"
+import {
+    makeScriptExecutionPlan,
+    ScriptExecutionItem,
+    scriptExecutionPlanPrettyPrintTypeClass,
+} from "@laoban/script_plan"
+import {detemplateScriptExecutionPlan} from "./resolve.templates"
+import {safePrettyJson} from "@laoban/safe"
+import {filterExecutionPlan} from "./filter.packages"
+import {DirectoryName} from "@laoban/execution"
+import {LaobanScriptCliContext, ScriptCommandValues} from "./script.context"
 
-export const purposes: Purpose[] = ['log', 'session'];
+export type LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref> =
+    LaobanScriptCliContext<ReadChannel, WriteChannel, Ref>
 
-export const scriptCommandOptions = {
-    dryrun: {
-        shortName: "d",
-        description: "displays the command instead of executing it",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
-    },
-    shellDebug: {
-        shortName: "s",
-        description: "debugging around the shell",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
-    },
-    quiet: {
-        shortName: "q",
-        description: "don't display the output from the commands",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
-    },
-    variables: {
-        shortName: "v",
-        description: "used when debugging scripts. Shows the variables available to a command when the command is executed",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
-    },
-    one: {
-        shortName: "1",
-        description: "executes in this project directory (opposite of --all)",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
-    },
-    all: {
-        shortName: "a",
-        description: "executes this in all projects, even if 'ín' a project",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
-    },
-    packages: {
-        shortName: "p",
-        description: "executes this in the packages matching the regex. e.g. -p 'name'",
-        type: "string" as const,
-        required: false,
-        defaultValue: ""
-    },
-    generationPlan: {
-        shortName: "g",
-        description: "instead of executing shows the generation plan",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
-    },
-    throttle: {
-        shortName: "t",
-        description: "only this number of scripts will be executed in parallel",
-        type: "string" as const,
-        required: false,
-        defaultValue: "0"
-    },
-    debug: {
-        description: "enables debugging. <debug> is a space separated list. legal values include [session,update,link,guard,templates,files, scripts]",
-        type: "string" as const,
-        required: false,
-        defaultValue: ""
-    },
-    sessionId: {
-        description: "specifies the session id, which is mainly used for logging",
-        type: "string" as const,
-        required: false,
-        defaultValue: ""
-    },
-    ignoreGuards: {
-        description: "Runs the command ignoring any guards. This may give erratic behaviour!",
-        type: "boolean" as const,
-        required: false,
-        defaultValue: false
-    }
-};
+type ScriptExecutionInput = Readonly<{
+    loadedProject: LoadedLaobanProject
+    fullPlan: ScriptExecutionItem[][]
+}>
 
-export function makeScriptCommand<C extends LaobanScriptCliContext>(
+function logPlan(
     scriptName: ScriptName,
-    script: LaobanScript
-): CliCommand<ScriptCommandValues, C> {
-    return defineCommand<ScriptCommandValues, C>()({
-        description: script.description,
-        positionals: {},
-        options: scriptCommandOptions,
-        execute: async (values: ScriptCommandValues, context: C) =>
-            context.handleLaobanScript(scriptName, script, values, context)
-    });
+    plan: ScriptExecutionItem[][],
+    stats: ExecutionPlanStats<LoadedPackageDetail>,
+    {log}: Observability,
+): void {
+    log(`Plan for script: ${scriptName}`)
+    log("\n" + prettyPrintExecutionPlan(plan, scriptExecutionPlanPrettyPrintTypeClass))
+    log("Stats")
+    log(`  commandCount: ${stats.commandCount}`)
+    log(`  distinctPackageDetails: ${stats.distinctPackageDetails.length}`)
+    log(`  executionItemCount: ${stats.executionItemCount}`)
+    log(`  packageExecutionItemCount: ${stats.packageExecutionItemCount}`)
+    log(`  barrierCount: ${stats.barrierCount}`)
+    log(`  generationCount: ${stats.generationCount}`)
+    log(`  largestGenerationSize: ${stats.largestGenerationSize}`)
 }
 
-export function makeScriptCommands<C extends LaobanScriptCliContext>(
-    scripts: LaobanScripts
-): Record<string, CliCommand<ScriptCommandValues, C>> {
-    return sortObjectByName(
-        mapObject(
-            scripts,
-            (script, name) =>
-                makeScriptCommand<C>(name, script)
+function packageNameOf(item: ScriptExecutionItem): string {
+    return item.kind === "oncePerWorkSpace"
+        ? "workspace"
+        : item.pkg!.contents.name
+}
+
+function prettyPrintPlanWithRhs<G>(
+    plan: G[][],
+    nameOf: (g: G) => string,
+    rhsOf: (g: G) => string,
+    linePrefix: string = "Package: ",
+): string {
+    const maxNameWidth = plan.reduce(
+        (max, generation) => Math.max(
+            max,
+            0,
+            ...generation.map(item => nameOf(item).length),
+        ),
+        0,
+    )
+
+    return plan
+        .reduce(
+            (acc: string[], generation: G[]) =>
+                acc.concat(
+                    generation.map((item: G) =>
+                        `${linePrefix}${nameOf(item).padEnd(maxNameWidth)} ${rhsOf(item)}`,
+                    ),
+                ),
+            [],
         )
-    );
+        .join("\n")
+}
+
+function logVariables<ReadChannel, WriteChannel, Ref>(
+    loadedProject: LoadedLaobanProject,
+    fullPlan: ScriptExecutionItem[][],
+    context: LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref>,
+): void {
+    context.observability.log(prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => {
+        const dictionary = context.makeDictionary(item, loadedProject)
+        return safePrettyJson(dictionary)
+    }))
+}
+
+function executionDirectoryOf(item: ScriptExecutionItem): DirectoryName {
+    const result = item.pkg!.dir
+    if (!result)
+        throw new Error(`Script execution item has no command directory: ${item.command.command}`)
+
+    return result
+}
+
+function moduleScopeOf(item: ScriptExecutionItem): ModuleObservabilityScope {
+    return {
+        module: item.pkg!.contents.name,
+        directory: item.pkg!.dir,
+    }
+}
+
+function commandFailedIssue(
+    scriptName: ScriptName,
+    moduleName: ModuleName,
+    item: ScriptExecutionItem,
+    cwd: DirectoryName,
+    exitCode: number,
+): ErrorsOr<never, BaseIssue> {
+    return errors({
+        kind: "commandFailed",
+        message: `Command failed with exit code ${exitCode}`,
+        context: {
+            scriptName,
+            moduleName,
+            stepIndex: item.stepIndex,
+            command: item.command.command,
+            cwd,
+            exitCode,
+        },
+    })
+}
+
+async function executeOneScriptItem<ReadChannel, WriteChannel, Ref>(
+    context: LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref>,
+    scriptName: ScriptName,
+    options: ScriptCommandValues,
+    item: ScriptExecutionItem,
+    observability: ChannelObservability,
+): Promise<ErrorsOr<number, BaseIssue>> {
+    const moduleScope = moduleScopeOf(item)
+    const moduleName = moduleScope.module
+    const cwd = executionDirectoryOf(item)
+
+    const result = await context.execution.execute({
+        command: item.command.command,
+        cwd,
+        env: {},
+        writable: (...msgs) => console.log(...msgs),
+        observability,
+        config: context.execution.config,
+        dryRun: options.dryrun,
+        title: options.shellDebug,
+    })
+
+    if (isErrors(result)) return result
+    if (result.value === 0) return result
+
+    return commandFailedIssue(
+        scriptName,
+        moduleName,
+        item,
+        cwd,
+        result.value,
+    )
+}
+
+async function executeScript<ReadChannel, WriteChannel, Ref>(
+    context: LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref>,
+    scriptName: ScriptName,
+    options: ScriptCommandValues,
+    loadedProject: LoadedLaobanProject,
+    executionPlan: ScriptExecutionItem[][],
+): Promise<ErrorsOr<unknown, BaseIssue>> {
+    context.observability.log(`Script ${scriptName} execution`)
+
+    const visitor: GenerationalWalkVisitor<ScriptExecutionInput, ScriptExecutionItem> = {
+        visit: async (_input, item, observability) =>
+            executeOneScriptItem(
+                context,
+                scriptName,
+                options,
+                item,
+                observability,
+            ),
+
+        displaySummary: async (
+            _input: ScriptExecutionInput,
+            summary: GenerationWalkSummary,
+            observability: Observability,
+        ) => {
+            observability.log(
+                `script ${scriptName}: ${summary.visitedItemCount}/${summary.plannedItemCount}`,
+            )
+            return value(undefined)
+        },
+    }
+
+    const config: GenerationalWalkConfig<
+        ScriptExecutionInput,
+        ScriptExecutionItem,
+        LaobanPackageChannelPurpose,
+        ReadChannel,
+        WriteChannel,
+        Ref
+    > = {
+        observability: context.observability,
+        channelsState: context.channelsState,
+
+        load: async () =>
+            value({
+                loadedProject,
+                fullPlan: executionPlan,
+            }),
+
+        toGenerations: input =>
+            value(input.fullPlan),
+
+        toModuleScope: (_input, item) =>
+            moduleScopeOf(item),
+
+        withItemObservability: (scope, fn) =>
+            withModuleObservability(context, scope, fn),
+
+        flush: () =>
+            flushAllTouchedChannels(context.channelsState)(context.stdOut),
+
+        continueOnGenerationError: true,
+    }
+
+    return generationalWalk(config, visitor)
+}
+
+export async function defaultHandleLaobanScript<ReadChannel, WriteChannel, Ref>(
+    scriptName: ScriptName,
+    script: LaobanScript,
+    options: ScriptCommandValues,
+    context: LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref>,
+): Promise<ErrorsOr<unknown, BaseIssue>> {
+    return flatMapBaseIssueK(
+        await context.loadConfigAndPackagesFn(context),
+        async loadedProject =>
+            flatMapBaseIssueK(
+                makeScriptExecutionPlan(
+                    loadedProject,
+                    scriptName,
+                    script,
+                    context.observability,
+                ),
+                async executionPlan => {
+                    const filtered = filterExecutionPlan(
+                        loadedProject,
+                        executionPlan.plan,
+                        options,
+                        context,
+                    )
+
+                    return flatMapBaseIssueK(
+                        detemplateScriptExecutionPlan(
+                            filtered,
+                            loadedProject,
+                            context.observability,
+                        ),
+                        async fullPlan => {
+                            if (options.generationPlan) {
+                                logPlan(
+                                    scriptName,
+                                    fullPlan,
+                                    executionPlan.stats,
+                                    context.observability,
+                                )
+                                return value(undefined)
+                            }
+
+                            if (options.variables) {
+                                logVariables(
+                                    loadedProject,
+                                    fullPlan,
+                                    context,
+                                )
+                                return value(undefined)
+                            }
+
+                            return executeScript(
+                                context,
+                                scriptName,
+                                options,
+                                loadedProject,
+                                fullPlan,
+                            )
+                        },
+                    )
+                },
+            ),
+    )
 }

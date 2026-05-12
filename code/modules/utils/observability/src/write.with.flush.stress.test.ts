@@ -3,6 +3,7 @@ import {
     ChannelTc,
     emptyChannelState,
     flush,
+    flushAllTouchedChannels,
     syncWriteTo,
     Write,
 } from "./write.with.flush"
@@ -61,9 +62,8 @@ const makeFakeTc = () => {
             const allText = (durable[ref] ?? []).join("")
             const delta = allText.slice(from)
 
-            if (delta.length > 0) {
+            if (delta.length > 0)
                 write(delta)
-            }
 
             return value(allText.length)
         },
@@ -73,7 +73,81 @@ const makeFakeTc = () => {
 }
 
 describe("stress: async logging does not lose messages", () => {
-    it("writes M messages across N modules over multiple flush cycles", async () => {
+    it("writes M messages across N modules over multiple explicit module flush cycles", async () => {
+        const N = 50
+        const M = 20
+        const cycles = 100
+
+        const {tc, durable} = makeFakeTc()
+
+        const state = emptyChannelState(tc, ["log"], e => {
+            throw new Error(JSON.stringify(e))
+        })
+
+        const writer = syncWriteTo(state)
+        const modules = Array.from({length: N}, (_, i) => `module-${i}`)
+        const moduleScopes = modules.map(module => scope(module, module))
+
+        const flushedByCycle: string[][] = []
+
+        for (let c = 0; c < cycles; c++) {
+            await Promise.all(
+                moduleScopes.flatMap(moduleScope =>
+                    Array.from({length: M}, async (_, i) => {
+                        await delay(Math.floor(Math.random() * 5))
+                        writer(moduleScope)(`msg ${c}-${i}\n`)
+                    }),
+                ),
+            )
+
+            const flushed: string[] = []
+
+            const results = await Promise.all(
+                moduleScopes.map(moduleScope =>
+                    flush(state)(moduleScope)(text => {
+                        flushed.push(text)
+                    }),
+                ),
+            )
+
+            expect(results).toEqual(modules.map(() => value(undefined)))
+            flushedByCycle.push(flushed)
+        }
+
+        for (const module of modules) {
+            const moduleScope = scope(module, module)
+            const ref = tc.reference(moduleScope)("log")
+
+            expect(durable[ref]).toHaveLength(M * cycles)
+
+            const expected = new Set(
+                Array.from({length: cycles}).flatMap((_, c) =>
+                    Array.from({length: M}, (_, i) => `msg ${c}-${i}\n`),
+                ),
+            )
+
+            expect(new Set(durable[ref])).toEqual(expected)
+        }
+
+        for (let c = 0; c < cycles; c++) {
+            const flushedText = flushedByCycle[c].join("")
+            const flushedLines = flushedText
+                .split("\n")
+                .filter(line => line.length > 0)
+
+            expect(flushedLines).toHaveLength(N * M)
+
+            const expected = new Set(
+                Array.from({length: N}).flatMap(() =>
+                    Array.from({length: M}, (_, i) => `msg ${c}-${i}`),
+                ),
+            )
+
+            expect(new Set(flushedLines)).toEqual(expected)
+        }
+    })
+
+    it("writes M messages across N modules over multiple flushAllTouchedChannels cycles", async () => {
         const N = 50
         const M = 20
         const cycles = 100
@@ -94,21 +168,32 @@ describe("stress: async logging does not lose messages", () => {
                     Array.from({length: M}, async (_, i) => {
                         await delay(Math.floor(Math.random() * 5))
                         writer(moduleScope)(`msg ${c}-${i}\n`)
-                    })
-                )
+                    }),
+                ),
             )
 
             const flushed: string[] = []
 
-            const results = await Promise.all(
-                moduleScopes.map(moduleScope =>
-                    flush(state)(moduleScope)(text => {
-                        flushed.push(text)
-                    })
-                )
+            const result = await flushAllTouchedChannels(state)(text => {
+                flushed.push(text)
+            })
+
+            expect(result).toEqual(value(undefined))
+
+            const flushedLines = flushed
+                .join("")
+                .split("\n")
+                .filter(line => line.length > 0)
+
+            expect(flushedLines).toHaveLength(N * M)
+
+            const expected = new Set(
+                Array.from({length: N}).flatMap(() =>
+                    Array.from({length: M}, (_, i) => `msg ${c}-${i}`),
+                ),
             )
 
-            expect(results).toEqual(modules.map(() => value(undefined)))
+            expect(new Set(flushedLines)).toEqual(expected)
         }
 
         for (const module of modules) {
@@ -119,8 +204,8 @@ describe("stress: async logging does not lose messages", () => {
 
             const expected = new Set(
                 Array.from({length: cycles}).flatMap((_, c) =>
-                    Array.from({length: M}, (_, i) => `msg ${c}-${i}\n`)
-                )
+                    Array.from({length: M}, (_, i) => `msg ${c}-${i}\n`),
+                ),
             )
 
             expect(new Set(durable[ref])).toEqual(expected)

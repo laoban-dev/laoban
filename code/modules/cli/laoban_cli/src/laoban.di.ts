@@ -9,6 +9,7 @@ import {
     ModuleObservabilityScope,
     parseDebugConfig,
     realTimeService,
+    Write,
 } from "@laoban/observability"
 import {Command} from "commander"
 import * as process from "node:process"
@@ -112,19 +113,25 @@ export function makeLaobanDi(options: MakeLaobanDiOptions = {}): ErrorsOr<Laoban
     const argv = options.argv ?? process.argv
     const env: Env = options.env ?? process.env
     const cwd = options.cwd ?? process.cwd()
-    const stdOut = options.stdout ?? process.stdout
-    const stdErr = options.stderr ?? process.stderr
+
+    const stdOutChannel = options.stdout ?? process.stdout
+    const stdErrChannel = options.stderr ?? process.stderr
+
+    const stdOut: Write = msg => {
+        stdOutChannel.write(msg)
+    }
+
     const now = options.now ?? new Date().toISOString()
     const pathSafeNow = safePathSegment(now)
     const command = argv[2] ?? "root"
     const correlationId = `${pathSafeNow}/${safePathSegment(command)}`
 
-    const onError = (e: unknown) => stdErr.write(`${String(e)}\n`)
+    const onError = (e: unknown) => stdErrChannel.write(`${String(e)}\n`)
 
     const reference = makeReference(pathSafeNow)
 
     const {observability} = createNodeObservability<Purpose>({
-        channel: stdOut,
+        channel: stdOutChannel,
         purposes,
         onError,
         reference,

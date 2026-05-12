@@ -22,6 +22,7 @@
     "@laoban/commander": "2.0.0",
     "@laoban/config_cli": "2.0.0",
     "@laoban/errors": "2.0.0",
+    "@laoban/generational_reporter": "2.0.0",
     "@laoban/laoban_config": "2.0.0",
     "@laoban/observability": "2.0.0",
     "@laoban/safe": "2.0.0",

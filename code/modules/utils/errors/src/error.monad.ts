@@ -1,6 +1,10 @@
 import { NameAnd } from "@laoban/records";
 import { safeJson } from "@laoban/safe";
 
+/**
+ * A structured issue that can be accumulated and rendered by callers.
+ * `kind` and `context` are intentionally generic so modules can define their own issue domains.
+ */
 export type BaseIssue<K = unknown, C = unknown> = {
     kind?: K;
     message: string;
@@ -9,27 +13,47 @@ export type BaseIssue<K = unknown, C = unknown> = {
     severity?: "error" | "warning";
 };
 
+/**
+ * Successful result, optionally carrying warnings gathered along the way.
+ * Warnings do not prevent the value from being used.
+ */
 export type Value<T, E extends BaseIssue = BaseIssue> = {
     value: T;
     warnings?: E[];
 };
 
+/**
+ * Failed result, optionally carrying warnings and a reference for diagnostics.
+ * `errors` should always contain at least one issue.
+ */
 export type Errors<E extends BaseIssue = BaseIssue> = {
     errors: E[];
     warnings?: E[];
     reference?: string;
 };
 
+/**
+ * Standard Laoban result type.
+ * A result is either a value-with-optional-warnings or errors-with-optional-warnings.
+ */
 export type ErrorsOr<T, E extends BaseIssue = BaseIssue> =
     | Errors<E>
     | Value<T, E>;
 
+/**
+ * Construct a successful ErrorsOr result.
+ * Use this even when there are warnings; warnings do not make the operation fail.
+ */
 export const value = <T, E extends BaseIssue = BaseIssue>(
     t: T,
     warnings?: E[],
 ): ErrorsOr<T, E> =>
     warnings && warnings.length > 0 ? { value: t, warnings } : { value: t };
 
+/**
+ * Construct a failed ErrorsOr result from one required error and optional extra errors.
+ * Warnings and reference are preserved when supplied.
+ */
 export const errors = <E extends BaseIssue = BaseIssue>(
     first: E,
     rest?: E[],
@@ -44,6 +68,10 @@ export const errors = <E extends BaseIssue = BaseIssue>(
     };
 };
 
+/**
+ * Exception adapter for test helpers and imperative boundaries.
+ * Prefer returning ErrorsOr in core code; throw this only at edges.
+ */
 export class ErrorsException<E extends BaseIssue = BaseIssue> extends Error {
     constructor(
         public errors: E[],
@@ -55,14 +83,26 @@ export class ErrorsException<E extends BaseIssue = BaseIssue> extends Error {
     }
 }
 
+/**
+ * Type guard for successful ErrorsOr results.
+ * Narrows to Value<T,E> so `.value` can be read safely.
+ */
 export function isValue<T, E extends BaseIssue = BaseIssue>(e: unknown): e is Value<T, E> {
     return e !== null && typeof e === "object" && "value" in e;
 }
 
+/**
+ * Type guard for failed ErrorsOr results.
+ * Narrows to Errors<E> so `.errors` can be read safely.
+ */
 export function isErrors<T, E extends BaseIssue = BaseIssue>(e: unknown): e is Errors<E> {
     return e !== null && typeof e === "object" && "errors" in e;
 }
 
+/**
+ * Internal defensive check for helper boundaries.
+ * Throws if a mapper promised ErrorsOr but returned an invalid shape.
+ */
 function assertErrorsOr<T, E extends BaseIssue = BaseIssue>(
     e: unknown,
     message: string,
@@ -72,15 +112,27 @@ function assertErrorsOr<T, E extends BaseIssue = BaseIssue>(
     }
 }
 
+/**
+ * Return warnings from either a success or failed result.
+ * Use this when aggregating warnings independently from errors.
+ */
 export function warnings<T, E extends BaseIssue = BaseIssue>(e: ErrorsOr<T, E>): E[] {
     return e.warnings ?? [];
 }
 
+/**
+ * Extract the value or throw ErrorsException.
+ * Intended for tests and imperative boundaries, not normal core flow.
+ */
 export function valueOrThrow<T, E extends BaseIssue = BaseIssue>(e: ErrorsOr<T, E>): T {
     if (isErrors(e)) throw new ErrorsException(e.errors, e.warnings, e.reference);
     return e.value;
 }
 
+/**
+ * Extract the value, or return a default for errors/null/undefined values.
+ * Useful at tolerant boundaries where failure should collapse to a fallback.
+ */
 export const valueOrDefault = <T, E extends BaseIssue = BaseIssue>(
     e: ErrorsOr<T, E>,
     defaultValue: T,
@@ -90,6 +142,10 @@ export const valueOrDefault = <T, E extends BaseIssue = BaseIssue>(
     return v === null || v === undefined ? defaultValue : v;
 };
 
+/**
+ * Extract errors or throw if the result was successful.
+ * Intended for tests that expect a failure.
+ */
 export function errorsOrThrow<T, E extends BaseIssue = BaseIssue>(e: ErrorsOr<T, E>): E[] {
     if (isValue(e)) {
         throw new ErrorsException(
@@ -100,6 +156,10 @@ export function errorsOrThrow<T, E extends BaseIssue = BaseIssue>(e: ErrorsOr<T,
     return e.errors;
 }
 
+/**
+ * Extract the full Errors object or throw if the result was successful.
+ * Use when tests need warnings/reference as well as errors.
+ */
 export function errorObjectOrThrow<T, E extends BaseIssue = BaseIssue>(e: ErrorsOr<T, E>): Errors<E> {
     if (isValue(e)) {
         throw new ErrorsException(
@@ -110,6 +170,10 @@ export function errorObjectOrThrow<T, E extends BaseIssue = BaseIssue>(e: Errors
     return e;
 }
 
+/**
+ * Convert an unknown thrown exception into a structured Errors result.
+ * Use at unsafe external boundaries, not for ordinary domain validation.
+ */
 export function makeErrorFromException<E extends BaseIssue = BaseIssue>(
     context: string,
     err: unknown,
@@ -123,6 +187,10 @@ export function makeErrorFromException<E extends BaseIssue = BaseIssue>(
     return { errors: [issue as E] };
 }
 
+/**
+ * Map over a successful value while preserving warnings.
+ * Errors pass through unchanged.
+ */
 export function mapErrorsOr<T, T1, E extends BaseIssue = BaseIssue>(
     e: ErrorsOr<T, E>,
     f: (t: T) => T1,
@@ -136,6 +204,10 @@ export function mapErrorsOr<T, T1, E extends BaseIssue = BaseIssue>(
     return e;
 }
 
+/**
+ * Monadic bind for ErrorsOr.
+ * Short-circuits on errors, and appends warnings from both steps.
+ */
 export function flatMapErrorsOr<T, T1, E extends BaseIssue = BaseIssue>(
     e: ErrorsOr<T, E>,
     f: (t: T) => ErrorsOr<T1, E>,
@@ -162,6 +234,10 @@ export function flatMapErrorsOr<T, T1, E extends BaseIssue = BaseIssue>(
     };
 }
 
+/**
+ * Async map over a successful value while preserving warnings.
+ * Errors pass through without invoking the async function.
+ */
 export function mapErrorsOrK<T, T1, E extends BaseIssue = BaseIssue>(
     e: ErrorsOr<T, E>,
     f: (t: T) => Promise<T1>,
@@ -172,6 +248,10 @@ export function mapErrorsOrK<T, T1, E extends BaseIssue = BaseIssue>(
     );
 }
 
+/**
+ * Async monadic bind for ErrorsOr.
+ * Short-circuits on existing errors, and appends warnings from both steps.
+ */
 export function flatMapErrorsOrK<T, T1, E extends BaseIssue = BaseIssue>(
     e: ErrorsOr<T, E>,
     f: (t: T) => Promise<ErrorsOr<T1, E>>,
@@ -198,6 +278,10 @@ export function flatMapErrorsOrK<T, T1, E extends BaseIssue = BaseIssue>(
     });
 }
 
+/**
+ * Collapse ErrorsOr to a plain value by handling errors explicitly.
+ * Use sparingly; this intentionally discards warnings on success.
+ */
 export function recover<T, E extends BaseIssue = BaseIssue>(
     e: ErrorsOr<T, E>,
     f: (e: Errors<E>) => T,
@@ -206,15 +290,27 @@ export function recover<T, E extends BaseIssue = BaseIssue>(
     return e.value;
 }
 
+/**
+ * Standard async function shape for one-input operations that return ErrorsOr.
+ * Useful for ports, adapters, and Kleisli-style composition.
+ */
 export type AsyncErrorCall<From, To, E extends BaseIssue = BaseIssue> = (
     from: From,
 ) => Promise<ErrorsOr<To, E>>;
 
+/**
+ * Standard async function shape for two-input operations that return ErrorsOr.
+ * Useful when avoiding tuple noise in injected functions.
+ */
 export type AsyncErrorCall2<From1, From2, To, E extends BaseIssue = BaseIssue> = (
     from1: From1,
     from2: From2,
 ) => Promise<ErrorsOr<To, E>>;
 
+/**
+ * Applicative sequencing for arrays of ErrorsOr.
+ * Does not short-circuit: collects all errors and all warnings from every item.
+ */
 export function sequenceArrayErrorsOr<T, E extends BaseIssue = BaseIssue>(
     es: ErrorsOr<T, E>[],
 ): ErrorsOr<T[], E> {
@@ -256,6 +352,10 @@ export function flattenArrayOfErrorsOr<T, E extends BaseIssue = BaseIssue>(
     return sequenceArrayErrorsOr(es);
 }
 
+/**
+ * Async applicative sequencing for arrays of promised ErrorsOr.
+ * Runs promises concurrently, then collects all errors and warnings.
+ */
 export async function sequenceArrayErrorsOrK<T, E extends BaseIssue = BaseIssue>(
     es: Promise<ErrorsOr<T, E>>[],
 ): Promise<ErrorsOr<T[], E>> {
@@ -284,6 +384,10 @@ export function flattenArrayOfErrorsOrK<T, E extends BaseIssue = BaseIssue>(
     return sequenceArrayErrorsOrK(es);
 }
 
+/**
+ * Map an array with an ErrorsOr-returning function, collecting all results.
+ * Does not short-circuit; use flatMap when sequencing dependent operations.
+ */
 export function traverseArrayErrorsOr<T, U, E extends BaseIssue = BaseIssue>(
     arr: T[],
     fn: (t: T) => ErrorsOr<U, E>,
@@ -302,6 +406,10 @@ export function traverseArrayErrorsOr<T, U, E extends BaseIssue = BaseIssue>(
     );
 }
 
+/**
+ * Async traverse for arrays with an ErrorsOr-returning async function.
+ * Runs all mapped promises concurrently and accumulates all errors/warnings.
+ */
 export async function traverseArrayErrorsOrK<T, U, E extends BaseIssue = BaseIssue>(
     arr: T[],
     fn: (t: T) => Promise<ErrorsOr<U, E>>,
@@ -320,6 +428,10 @@ export async function traverseArrayErrorsOrK<T, U, E extends BaseIssue = BaseIss
     );
 }
 
+/**
+ * Traverse a two-dimensional array with an ErrorsOr-returning function.
+ * Preserves the nested array shape while accumulating errors/warnings.
+ */
 export function traverseNestedArrayErrorsOr<G, H, E extends BaseIssue = BaseIssue>(
     inp: G[][],
     fn: (g: G) => ErrorsOr<H, E>,
@@ -341,6 +453,10 @@ export function flatmapArrayOfArrayOfErrorsOr<G, H, E extends BaseIssue = BaseIs
 
 type UnwrapErrorsOr<X> = X extends ErrorsOr<infer T, any> ? T : never;
 
+/**
+ * Turn a record of ErrorsOr values into an ErrorsOr record of plain values.
+ * Accumulates errors/warnings across all entries without short-circuiting.
+ */
 export function flattenRecordOfErrorsOr<
     R extends Record<string, ErrorsOr<any, E>>,
     E extends BaseIssue = BaseIssue
@@ -383,6 +499,10 @@ export function flattenRecordOfErrorsOr<
     return allWarnings.length > 0 ? { value: out as Out, warnings: allWarnings } : { value: out as Out };
 }
 
+/**
+ * Partition a record of ErrorsOr into successful values, errors, and warnings.
+ * Useful when callers want partial successes rather than a single ErrorsOr.
+ */
 export function partitionNameAndErrorsOr<T, E extends BaseIssue = BaseIssue>(
     es: NameAnd<ErrorsOr<T, E>>,
 ): { values: NameAnd<T>; errors: E[]; warnings: E[] } {
@@ -408,6 +528,10 @@ export function partitionNameAndErrorsOr<T, E extends BaseIssue = BaseIssue>(
     return { values, errors: allErrors, warnings: allWarnings };
 }
 
+/**
+ * Internal warning combiner.
+ * Returns undefined instead of an empty array to keep serialized results compact.
+ */
 function append<E>(...items: (E[] | undefined)[]): E[] | undefined {
     const result: E[] = [];
     for (const item of items) {
@@ -416,6 +540,10 @@ function append<E>(...items: (E[] | undefined)[]): E[] | undefined {
     return result.length > 0 ? result : undefined;
 }
 
+/**
+ * flatMap for operations whose issue types differ.
+ * Widens both issue domains back to BaseIssue at module boundaries.
+ */
 export function flatMapBaseIssue<G, H, E1 extends BaseIssue, E2 extends BaseIssue>(
     inp: ErrorsOr<G, E1>,
     fn: (g: G) => ErrorsOr<H, E2>,
@@ -426,6 +554,10 @@ export function flatMapBaseIssue<G, H, E1 extends BaseIssue, E2 extends BaseIssu
     );
 }
 
+/**
+ * Async flatMap for operations whose issue types differ.
+ * Widens both issue domains back to BaseIssue at module boundaries.
+ */
 export async function flatMapBaseIssueK<G, H, E1 extends BaseIssue, E2 extends BaseIssue>(
     inp: ErrorsOr<G, E1>,
     fn: (g: G) => Promise<ErrorsOr<H, E2>>,
@@ -433,6 +565,10 @@ export async function flatMapBaseIssueK<G, H, E1 extends BaseIssue, E2 extends B
     return flatMapErrorsOrK(inp, (g) => fn(g) as Promise<ErrorsOr<H, BaseIssue>>);
 }
 
+/**
+ * map for operations whose issue type should be widened to BaseIssue.
+ * Useful when exposing module-specific results through a common API.
+ */
 export function mapBaseIssue<G, H, E extends BaseIssue>(
     inp: ErrorsOr<G, E>,
     fn: (g: G) => H,
@@ -443,6 +579,10 @@ export function mapBaseIssue<G, H, E extends BaseIssue>(
     );
 }
 
+/**
+ * Async map for operations whose issue type should be widened to BaseIssue.
+ * Useful when exposing module-specific results through a common API.
+ */
 export async function mapBaseIssueK<G, H, E extends BaseIssue>(
     inp: ErrorsOr<G, E>,
     fn: (g: G) => Promise<H>,
@@ -461,4 +601,46 @@ export function mapArrayK<T, T1, E extends BaseIssue>(
     fn: (t: T) => Promise<ErrorsOr<T1, E>>,
 ): Promise<ErrorsOr<T1[], E>> {
     return traverseArrayErrorsOrK(arr, fn);
+}
+
+/**
+ * Run a main operation and then always run cleanup, combining both ErrorsOr results.
+ * Keeps the main value if both succeed; accumulates errors and warnings from both.
+ */
+export async function withCleanupErrorsOr<T, E extends BaseIssue = BaseIssue>(
+    main: () => Promise<ErrorsOr<T, E>>,
+    cleanup: () => Promise<ErrorsOr<unknown, E>>,
+): Promise<ErrorsOr<T, E>> {
+    const mainResult = await main();
+    const cleanupResult = await cleanup();
+
+    const allWarnings = [
+        ...warnings(mainResult),
+        ...warnings(cleanupResult),
+    ];
+
+    if (isErrors(mainResult) || isErrors(cleanupResult)) {
+        const allErrors = [
+            ...(isErrors(mainResult) ? mainResult.errors : []),
+            ...(isErrors(cleanupResult) ? cleanupResult.errors : []),
+        ];
+
+        const [first, ...rest] = allErrors;
+
+        return errors(
+            first,
+            rest,
+            allWarnings.length > 0 ? allWarnings : undefined,
+            isErrors(mainResult)
+                ? mainResult.reference
+                : isErrors(cleanupResult)
+                    ? cleanupResult.reference
+                    : undefined,
+        );
+    }
+
+    return value(
+        mainResult.value,
+        allWarnings.length > 0 ? allWarnings : undefined,
+    );
 }

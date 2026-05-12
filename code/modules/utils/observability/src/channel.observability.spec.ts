@@ -1,4 +1,4 @@
-import {channelObservability, channelObservabilityWithModule, writeToChannel} from "./channelObservability"
+import {channelObservability, channelObservabilityWithModule, writeToChannel} from "./channel.observability"
 import {ChannelTc, emptyChannelState, Write} from "./write.with.flush"
 import {
     defaultObservabilityContext,
