@@ -14,6 +14,7 @@
     "@laoban/node_os",
     "@laoban/safe",
     "@laoban/strings",
+    "@laoban/records",
     "@laoban/validation",
     "@laoban/config_cli",
     "@laoban/package_cli",

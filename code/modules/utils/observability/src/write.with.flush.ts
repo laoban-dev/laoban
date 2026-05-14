@@ -1,10 +1,8 @@
 import {
     Errors,
     ErrorsOr,
-    flatMapErrorsOrK,
     isErrors,
     makeErrorFromException,
-    mapArrayK,
     mapErrorsOr,
     sequenceArrayErrorsOrK,
     value,
@@ -24,10 +22,13 @@ export type Marker = number
 export type AsyncWriteResult = void | Promise<void>
 
 /**
- * A simple text sink.
+ * A simple text sink used by Observability.
  *
- * Used when durable content is projected somewhere else, such as stdout
- * during a flush.
+ * This is not the durable channel abstraction. It is the small synchronous-looking
+ * function shape consumed by makeObservability.
+ *
+ * Runtime-specific durable channels remain represented by WriteChannel and are
+ * manipulated through ChannelTc.
  */
 export type Write = (msg: string) => AsyncWriteResult
 
@@ -105,12 +106,20 @@ export type CreateOptions = {
     append: boolean
 }
 
+export type ComposeWritables<WriteChannel> = (
+    channels: WriteChannel[],
+    onError?: ErrorsFn,
+) => WriteChannel
+
 /**
  * Runtime-specific durable channel operations.
  *
- * The core observability code knows only that it can open, write, close, and
- * project durable content from a stable marker. Node files/streams are one
- * implementation; tests and other runtimes can provide others.
+ * The core observability code knows only that it can open, write, compose,
+ * close, and project durable content from a stable marker into another
+ * writable channel.
+ *
+ * Node files/streams are one implementation; tests and other runtimes can
+ * provide others.
  */
 export type ChannelTc<Purpose, ReadChannel, WriteChannel, Ref> = {
     reference: (moduleScope: ModuleObservabilityScope) => (purpose: Purpose) => Ref
@@ -119,16 +128,33 @@ export type ChannelTc<Purpose, ReadChannel, WriteChannel, Ref> = {
     create: (ref: Ref, options: CreateOptions) => Promise<ErrorsOr<WriteChannel>>
     write: (channel: WriteChannel, text: string) => Promise<ErrorsOr<void>>
 
+    /**
+     * Compose several writable channels into one writable channel.
+     *
+     * For Node this returns a real Writable fan-out stream. The composed
+     * writable is lifecycle-neutral: closing the durable child channels remains
+     * the responsibility of closeWritable on the original channels.
+     */
+    composeWritables: ComposeWritables<WriteChannel>
+
     closeReadable: (channel: ReadChannel) => Promise<ErrorsOr<void>>
     closeWritable: (channel: WriteChannel) => Promise<ErrorsOr<void>>
 
     /**
-     * Project durable content from marker `from` to the current durable end.
+     * Project durable content from marker `from` to the current durable end
+     * into a runtime writable channel.
      *
      * Returns the new marker. For file-backed implementations this is typically
      * the file size in bytes observed during the projection.
+     *
+     * In the Node implementation this can be implemented by piping a readable
+     * stream for the durable ref range into the supplied writable channel.
      */
-    sendFromRefToWrite: (ref: Ref, from: Marker, write: Write) => Promise<ErrorsOr<Marker>>
+    sendFromRefToWrite: (
+        ref: Ref,
+        from: Marker,
+        write: WriteChannel,
+    ) => Promise<ErrorsOr<Marker>>
 }
 
 export type SameChannelTc<Purpose, Channel, Ref> =
@@ -148,10 +174,10 @@ export type SameChannelTc<Purpose, Channel, Ref> =
  * observability lifecycle code is responsible for closing these handles and
  * clearing `channels`. A state remains flushable after `channels` is cleared.
  *
- * `touched` means this module has successfully written durable content since
- * the last successful flush. `flushAllTouchedChannels` uses this flag to avoid
- * scanning/projection work for modules that have not changed in the current
- * generation/lifecycle window.
+ * `touched` means this module has started durable output since the last
+ * successful flush. `flushAllTouchedChannels` uses this flag to avoid projection
+ * work for modules that have not changed in the current generation/lifecycle
+ * window.
  *
  * `lastSize` is the projection marker for `refs[0]`, the representative durable
  * source used during flush. Mirrored refs receive the same writes, but only one
@@ -220,7 +246,9 @@ export async function getOrCreateChannels<Purpose, ReadChannel, WriteChannel, Re
         return value(moduleState.channels)
 
     return mapErrorsOr(
-        await mapArrayK(moduleState.refs, ref => tc.create(ref, {append})),
+        await sequenceArrayErrorsOrK(
+            moduleState.refs.map(ref => tc.create(ref, {append})),
+        ),
         channels => {
             moduleState.channels = channels
             return channels
@@ -228,69 +256,95 @@ export async function getOrCreateChannels<Purpose, ReadChannel, WriteChannel, Re
     )
 }
 
-export type AsyncWrite = (msg: string) => Promise<void>
+/**
+ * Mark a module as having started durable output since the previous successful
+ * flush.
+ *
+ * We mark at write-start, not write-success. If the durable write partially
+ * succeeds then fails, attempting to flush the representative durable ref is
+ * safer than accidentally hiding partial durable output.
+ */
+export const markTouched = <Purpose, ReadChannel, WriteChannel, Ref>(
+    channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
+    moduleScope: ModuleObservabilityScope,
+): void => {
+    const key = channelsState.tc.keyFrom(moduleScope)
+    const moduleState = channelsState.state[key]
+
+    if (moduleState) {
+        moduleState.touched = true
+        return
+    }
+
+    channelsState.onError(
+        makeErrorFromException(
+            `markTouched(${String(moduleScope.module)})`,
+            new Error("No channel state exists for module"),
+            moduleScope,
+        ),
+    )
+}
 
 /**
- * Async durable write for one module.
+ * Async durable write to an already-open writable channel.
  *
- * Opens module channels if needed, writes the text to every mirrored channel,
- * and routes failures to the configured error sink.
+ * This does not create channels and does not mirror to child channels. The
+ * caller supplies the target channel, which for module observability will
+ * normally be the composed fan-out channel.
  */
-export const asyncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
+export const asyncWriteToChannel = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
-    (moduleScope: ModuleObservabilityScope): AsyncWrite =>
+    (channel: WriteChannel) =>
         async (text: string): Promise<void> => {
-            const key = channelsState.tc.keyFrom(moduleScope)
-
             try {
-                const channelsResult = await getOrCreateChannels(channelsState, moduleScope)
-
-                if (isErrors(channelsResult)) {
-                    channelsState.onError(channelsResult)
-                    return
-                }
-
-                channelsState.state[key].touched = true
-
-                const writeResult = await mapArrayK(
-                    channelsResult.value,
-                    channel =>
-                        channelsState.tc.write(channel, text),
-                )
+                const writeResult = await channelsState.tc.write(channel, text)
 
                 if (isErrors(writeResult))
                     channelsState.onError(writeResult)
             } catch (e: unknown) {
-                channelsState.onError(makeErrorFromException(`asyncWriteTo(${moduleScope.module})`, e))
+                channelsState.onError(
+                    makeErrorFromException("asyncWriteToChannel", e),
+                )
             }
         }
+
 /**
- * Synchronous Write adapter over the async durable write path.
+ * Synchronous Write adapter over an async durable channel write.
  *
- * log/debug callers can ignore the returned value. Tests and lifecycle code
- * can still await or drain the tracked Promise through waitForAsyncWrites.
+ * log/debug callers can ignore the returned value. Lifecycle code can still
+ * await or drain the tracked Promise through waitForAsyncWrites.
+ *
+ * This is the key bridge:
+ *
+ * - Observability.log/debug remain sync at the call site
+ * - durable channel writes can be async
+ * - lifecycle boundaries can wait for all writes started so far
  */
 export const syncWriteTo = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
-    (moduleScope: ModuleObservabilityScope): Write =>
-        (text: string) =>
-            trackAsyncWrite(
-                channelsState,
-                asyncWriteTo(channelsState)(moduleScope)(text),
-            )
+    (moduleScope: ModuleObservabilityScope) =>
+        (channel: WriteChannel): Write =>
+            (text: string) => {
+                markTouched(channelsState, moduleScope)
+
+                return trackAsyncWrite(
+                    channelsState,
+                    asyncWriteToChannel(channelsState)(channel)(text),
+                )
+            }
 
 /**
- * Project durable module output to a sink.
+ * Project durable module output to a writable channel.
  *
  * Flush does not own channel lifecycle. It does not close writable channels.
- * Module lifecycle code is responsible for closing channels before flush is
- * called. Flush only:
+ * Module lifecycle code is responsible for closing module channels before flush
+ * is called. Flush only:
  *
  * - waits for already-started async writes to settle
  * - reads durable content from the module's representative ref at lastSize
- * - writes that delta to the supplied sink
+ * - writes/pipes that delta to the supplied writable channel
  * - updates lastSize to the returned marker
  * - clears touched after successful projection
  *
@@ -302,7 +356,7 @@ export const flush = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
     (moduleScope: ModuleObservabilityScope) =>
-        async (write: Write): Promise<ErrorsOr<unknown>> => {
+        async (write: WriteChannel): Promise<ErrorsOr<unknown>> => {
             const {tc, state, purposes} = channelsState
             if (purposes.length === 0) return value([])
 
@@ -314,7 +368,11 @@ export const flush = <Purpose, ReadChannel, WriteChannel, Ref>(
             if (moduleState === undefined) return value([])
 
             return mapErrorsOr(
-                await tc.sendFromRefToWrite(moduleState.refs[0], moduleState.lastSize, write),
+                await tc.sendFromRefToWrite(
+                    moduleState.refs[0],
+                    moduleState.lastSize,
+                    write,
+                ),
                 newMarker => {
                     moduleState.lastSize = newMarker
                     moduleState.touched = false
@@ -334,7 +392,7 @@ export const flush = <Purpose, ReadChannel, WriteChannel, Ref>(
 export const flushAllTouchedChannels = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
-    async (write: Write): Promise<ErrorsOr<unknown>> =>
+    async (write: WriteChannel): Promise<ErrorsOr<unknown>> =>
         mapErrorsOr(
             await sequenceArrayErrorsOrK(
                 Object.values(channelsState.state)

@@ -17,6 +17,7 @@ function loadedProject(...details: LoadedPackageDetail[]): LoadedLaobanProject {
     return {
         loadedLaobanConfig: {
             config: {
+                throttle: 100,
                 packageManager: "pnpm" as any,
                 versionFile: "version.txt",
                 parents: [],

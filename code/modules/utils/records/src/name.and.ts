@@ -1,8 +1,17 @@
 export type NameAnd<T> = { [name: string]: T }
-export type Env = NameAnd<string|undefined>
+export type Env = NameAnd<string | undefined>
 export const mutableEmptyObject: NameAnd<never> = {};
 export const frozenEmptyObject = Object.freeze({} as NameAnd<never>);
+export function envFromProcessEnv(env: Record<string, string | undefined>): Env {
+    const result: Env = {}
 
+    for (const [key, value] of Object.entries(env)) {
+        if (value !== undefined)
+            result[key] = value
+    }
+
+    return result
+}
 export function invertObject(obj: NameAnd<string | string[]>): NameAnd<string> {
     const inverted: NameAnd<string> = {};
     for (const [key, value] of Object.entries(obj)) {
@@ -27,6 +36,7 @@ export function mapObject<T, R>(
     }
     return result;
 }
+
 export function sortObjectByName<T>(obj: NameAnd<T>): NameAnd<T> {
     const keys = Object.keys(obj).sort();
     const sorted: NameAnd<T> = {};

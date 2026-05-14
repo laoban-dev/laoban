@@ -3,10 +3,11 @@
 import {BaseIssue, errors, ErrorsOr, value} from "@laoban/errors"
 import {DebugName, Observability} from "@laoban/observability"
 import {PrefixAndValueOptions, toPrefixAndValue} from "./prefix.and.value"
+import {Env} from "@laoban/records";
 
 export type ExitCode = number
 export type DirectoryName = string
-export type Env = Record<string, string>
+
 
 const scriptExecutionDebug: DebugName = ["script", "execution"]
 
@@ -14,6 +15,7 @@ export type ExecutorFn<Writable> = (
     command: string,
     cwd: DirectoryName,
     env: Env,
+    writable: Writable,
     observability: Observability
 ) => Promise<ExitCode>
 

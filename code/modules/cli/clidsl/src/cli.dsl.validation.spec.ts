@@ -1,11 +1,12 @@
-import {isErrors, value, type ErrorsOr, valueOrThrow} from "@laoban/errors";
-import {type ValidationIssue} from "@laoban/validation";
+import {isErrors, value, type ErrorsOr, valueOrThrow} from "@laoban/errors"
+import {type ValidationIssue} from "@laoban/validation"
 import {
+    defaultModuleObservabilityScope,
     defaultObservabilityContext,
     makeObservability as makeObs,
     type ModuleName,
-    type Observability
-} from "@laoban/observability";
+    type Observability,
+} from "@laoban/observability"
 import {
     makeValidateCliCommandDef,
     makeValidateCliGroupDef,
@@ -13,27 +14,31 @@ import {
     makeValidateCliNode,
     makeValidateCliRootDef,
     validateCliOptionParameterDef,
-    validateCliPositionalParameterDef
-} from "./cli.dsl.validation";
-import type {CliGroup, CliModel, CliRoot} from "./cli.dsl";
-import {exampleCli} from "./cli.dsl.example";
+    validateCliPositionalParameterDef,
+} from "./cli.dsl.validation"
+import type {CliGroup, CliModel, CliRoot} from "./cli.dsl"
+import {exampleCli} from "./cli.dsl.example"
 
 function makeObservability(module: ModuleName = undefined): Observability {
     return makeObs({
         context: {
-            ...defaultObservabilityContext("test-correlation-id", {}, module),
-            timeService: {now: () => 0}
+            ...defaultObservabilityContext(
+                "test-correlation-id",
+                {},
+                defaultModuleObservabilityScope(module),
+            ),
+            timeService: {now: () => 0},
         },
         target: {
-            write: jest.fn()
+            write: jest.fn(),
         },
         countMetric: jest.fn(),
-        durationMetric: jest.fn()
-    });
+        durationMetric: jest.fn(),
+    })
 }
 
 function issuesOf<T>(result: ErrorsOr<T, ValidationIssue>): ValidationIssue[] {
-    return isErrors(result) ? result.errors : [];
+    return isErrors(result) ? result.errors : []
 }
 
 describe("validateCliPositionalParameterDef", () => {
@@ -41,35 +46,35 @@ describe("validateCliPositionalParameterDef", () => {
         const param = {
             type: "string" as const,
             description: "Input file",
-            required: true
-        };
+            required: true,
+        }
 
-        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
-    });
+        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param))
+    })
 
     test("accepts number positional parameter", () => {
         const param = {
             type: "number" as const,
-            description: "Retry count"
-        };
+            description: "Retry count",
+        }
 
-        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
-    });
+        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param))
+    })
 
     test("accepts string[] positional parameter", () => {
         const param = {
             type: "string[]" as const,
-            description: "Files"
-        };
+            description: "Files",
+        }
 
-        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
-    });
+        expect(validateCliPositionalParameterDef(["param"], makeObservability())(param)).toEqual(value(param))
+    })
 
     test("rejects blank description", () => {
         const param = {
             type: "string",
-            description: "   "
-        } as any;
+            description: "   ",
+        } as any
 
         expect(issuesOf(validateCliPositionalParameterDef(["param"], makeObservability())(param))).toEqual([
             {
@@ -77,16 +82,16 @@ describe("validateCliPositionalParameterDef", () => {
                 severity: "error",
                 context: ["param", "description"],
                 message: "param.description must not be blank",
-                code: "blank"
-            }
-        ]);
-    });
+                code: "blank",
+            },
+        ])
+    })
 
     test("rejects illegal type", () => {
         const param = {
             type: "boolean",
-            description: "Nope"
-        } as any;
+            description: "Nope",
+        } as any
 
         expect(issuesOf(validateCliPositionalParameterDef(["param"], makeObservability())(param))).toEqual([
             {
@@ -94,15 +99,15 @@ describe("validateCliPositionalParameterDef", () => {
                 severity: "error",
                 context: ["param"],
                 message: "param has illegal type boolean. Legal values are: number, string, string[]",
-                code: "illegal.type"
-            }
-        ]);
-    });
+                code: "illegal.type",
+            },
+        ])
+    })
 
     test("rejects missing type", () => {
         const param = {
-            description: "Input"
-        } as any;
+            description: "Input",
+        } as any
 
         expect(issuesOf(validateCliPositionalParameterDef(["param"], makeObservability())(param))).toEqual([
             {
@@ -110,11 +115,11 @@ describe("validateCliPositionalParameterDef", () => {
                 severity: "error",
                 context: ["param"],
                 message: "param has no valid type",
-                code: "missing.type"
-            }
-        ]);
-    });
-});
+                code: "missing.type",
+            },
+        ])
+    })
+})
 
 describe("validateCliOptionParameterDef", () => {
     test("accepts string option parameter", () => {
@@ -122,49 +127,49 @@ describe("validateCliOptionParameterDef", () => {
             type: "string" as const,
             description: "Output",
             shortName: "o",
-            defaultValue: "dist"
-        };
+            defaultValue: "dist",
+        }
 
-        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
-    });
+        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param))
+    })
 
     test("accepts number option parameter", () => {
         const param = {
             type: "number" as const,
             description: "Retries",
-            defaultValue: 3
-        };
+            defaultValue: 3,
+        }
 
-        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
-    });
+        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param))
+    })
 
     test("accepts boolean option parameter", () => {
         const param = {
             type: "boolean" as const,
             description: "Verbose",
-            shortName: "v"
-        };
+            shortName: "v",
+        }
 
-        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
-    });
+        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param))
+    })
 
     test("accepts string[] option parameter", () => {
         const param = {
             type: "string[]" as const,
             description: "Tags",
             shortName: "t",
-            defaultValue: ["alpha", "beta"] as string[]
-        };
+            defaultValue: ["alpha", "beta"] as string[],
+        }
 
-        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param));
-    });
+        expect(validateCliOptionParameterDef(["param"], makeObservability())(param)).toEqual(value(param))
+    })
 
     test("rejects shortName longer than one character", () => {
         const param = {
             type: "string",
             description: "Output",
-            shortName: "xx"
-        } as any;
+            shortName: "xx",
+        } as any
 
         expect(issuesOf(validateCliOptionParameterDef(["param"], makeObservability())(param))).toEqual([
             {
@@ -172,17 +177,17 @@ describe("validateCliOptionParameterDef", () => {
                 severity: "error",
                 context: ["param", "shortName"],
                 message: "param.shortName must have length = 1",
-                code: "exact.length"
-            }
-        ]);
-    });
+                code: "exact.length",
+            },
+        ])
+    })
 
     test("rejects wrong defaultValue type for number", () => {
         const param = {
             type: "number",
             description: "Retries",
-            defaultValue: "3"
-        } as any;
+            defaultValue: "3",
+        } as any
 
         expect(issuesOf(validateCliOptionParameterDef(["param"], makeObservability())(param))).toEqual([
             {
@@ -190,17 +195,17 @@ describe("validateCliOptionParameterDef", () => {
                 severity: "error",
                 context: ["param", "defaultValue"],
                 message: "param.defaultValue must be a number but was a string",
-                code: "wrong.type"
-            }
-        ]);
-    });
+                code: "wrong.type",
+            },
+        ])
+    })
 
     test("rejects wrong defaultValue type for string[]", () => {
         const param = {
             type: "string[]",
             description: "Tags",
-            defaultValue: ["ok", 2]
-        } as any;
+            defaultValue: ["ok", 2],
+        } as any
 
         expect(issuesOf(validateCliOptionParameterDef(["param"], makeObservability())(param))).toEqual([
             {
@@ -208,16 +213,16 @@ describe("validateCliOptionParameterDef", () => {
                 severity: "error",
                 context: ["param", "defaultValue", "1"],
                 message: "param.defaultValue.1 must be a string but was a number",
-                code: "wrong.type"
-            }
-        ]);
-    });
+                code: "wrong.type",
+            },
+        ])
+    })
 
     test("rejects illegal type", () => {
         const param = {
             type: "banana",
-            description: "Nope"
-        } as any;
+            description: "Nope",
+        } as any
 
         expect(issuesOf(validateCliOptionParameterDef(["param"], makeObservability())(param))).toEqual([
             {
@@ -225,15 +230,15 @@ describe("validateCliOptionParameterDef", () => {
                 severity: "error",
                 context: ["param"],
                 message: "param has illegal type banana. Legal values are: boolean, number, string, string[]",
-                code: "illegal.type"
-            }
-        ]);
-    });
-});
+                code: "illegal.type",
+            },
+        ])
+    })
+})
 
 describe("makeValidateCliCommandDef", () => {
     const execute = async () => {
-    };
+    }
 
     test("accepts valid command", () => {
         const command = {
@@ -242,21 +247,21 @@ describe("makeValidateCliCommandDef", () => {
             positionals: {
                 target: {
                     type: "string" as const,
-                    description: "Target"
-                }
+                    description: "Target",
+                },
             },
             options: {
                 verbose: {
                     type: "boolean" as const,
                     description: "Verbose",
-                    shortName: "v"
-                }
+                    shortName: "v",
+                },
             },
-            execute
-        };
+            execute,
+        }
 
-        expect(makeValidateCliCommandDef()(["command"], makeObservability())(command)).toEqual(value(command));
-    });
+        expect(makeValidateCliCommandDef()(["command"], makeObservability())(command)).toEqual(value(command))
+    })
 
     test("rejects blank description", () => {
         const command = {
@@ -264,8 +269,8 @@ describe("makeValidateCliCommandDef", () => {
             description: "   ",
             positionals: {},
             options: {},
-            execute
-        } as any;
+            execute,
+        } as any
 
         expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
             {
@@ -273,10 +278,10 @@ describe("makeValidateCliCommandDef", () => {
                 severity: "error",
                 context: ["command", "description"],
                 message: "command.description must not be blank",
-                code: "blank"
-            }
-        ]);
-    });
+                code: "blank",
+            },
+        ])
+    })
 
     test("rejects non-function execute", () => {
         const command = {
@@ -284,8 +289,8 @@ describe("makeValidateCliCommandDef", () => {
             description: "Build project",
             positionals: {},
             options: {},
-            execute: 123
-        } as any;
+            execute: 123,
+        } as any
 
         expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
             {
@@ -293,10 +298,10 @@ describe("makeValidateCliCommandDef", () => {
                 severity: "error",
                 context: ["command", "execute"],
                 message: "command.execute must be a function but was a number",
-                code: "wrong.type"
-            }
-        ]);
-    });
+                code: "wrong.type",
+            },
+        ])
+    })
 
     test("rejects overlapping positional and option keys", () => {
         const command = {
@@ -305,17 +310,17 @@ describe("makeValidateCliCommandDef", () => {
             positionals: {
                 target: {
                     type: "string",
-                    description: "Target"
-                }
+                    description: "Target",
+                },
             },
             options: {
                 target: {
                     type: "string",
-                    description: "Target again"
-                }
+                    description: "Target again",
+                },
             },
-            execute
-        } as any;
+            execute,
+        } as any
 
         expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
             {
@@ -323,10 +328,10 @@ describe("makeValidateCliCommandDef", () => {
                 severity: "error",
                 context: ["command"],
                 message: "command has keys present in both positionals and options: target",
-                code: "duplicate.key"
-            }
-        ]);
-    });
+                code: "duplicate.key",
+            },
+        ])
+    })
 
     test("rejects duplicate shortName values", () => {
         const command = {
@@ -337,16 +342,16 @@ describe("makeValidateCliCommandDef", () => {
                 verbose: {
                     type: "boolean",
                     description: "Verbose",
-                    shortName: "v"
+                    shortName: "v",
                 },
                 version: {
                     type: "boolean",
                     description: "Version",
-                    shortName: "v"
-                }
+                    shortName: "v",
+                },
             },
-            execute
-        } as any;
+            execute,
+        } as any
 
         expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
             {
@@ -354,10 +359,10 @@ describe("makeValidateCliCommandDef", () => {
                 severity: "error",
                 context: ["command"],
                 message: "command has duplicate shortName values: v",
-                code: "duplicate.shortName"
-            }
-        ]);
-    });
+                code: "duplicate.shortName",
+            },
+        ])
+    })
 
     test("propagates nested positional parameter errors", () => {
         const command = {
@@ -366,12 +371,12 @@ describe("makeValidateCliCommandDef", () => {
             positionals: {
                 target: {
                     type: "boolean",
-                    description: "Nope"
-                }
+                    description: "Nope",
+                },
             },
             options: {},
-            execute
-        } as any;
+            execute,
+        } as any
 
         expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
             {
@@ -379,10 +384,10 @@ describe("makeValidateCliCommandDef", () => {
                 severity: "error",
                 context: ["command", "positionals", "target"],
                 message: "command.positionals.target has illegal type boolean. Legal values are: number, string, string[]",
-                code: "illegal.type"
-            }
-        ]);
-    });
+                code: "illegal.type",
+            },
+        ])
+    })
 
     test("propagates nested option parameter errors", () => {
         const command = {
@@ -393,11 +398,11 @@ describe("makeValidateCliCommandDef", () => {
                 verbose: {
                     type: "boolean",
                     description: "Verbose",
-                    shortName: "xx"
-                }
+                    shortName: "xx",
+                },
             },
-            execute
-        } as any;
+            execute,
+        } as any
 
         expect(issuesOf(makeValidateCliCommandDef()(["command"], makeObservability())(command))).toEqual([
             {
@@ -405,15 +410,15 @@ describe("makeValidateCliCommandDef", () => {
                 severity: "error",
                 context: ["command", "options", "verbose", "shortName"],
                 message: "command.options.verbose.shortName must have length = 1",
-                code: "exact.length"
-            }
-        ]);
-    });
-});
+                code: "exact.length",
+            },
+        ])
+    })
+})
 
 describe("makeValidateCliGroupDef", () => {
     const execute = async () => {
-    };
+    }
 
     test("accepts valid group", () => {
         const group: CliGroup = {
@@ -425,7 +430,7 @@ describe("makeValidateCliGroupDef", () => {
                     description: "Build",
                     positionals: {},
                     options: {},
-                    execute
+                    execute,
                 },
                 admin: {
                     nodeType: "group",
@@ -436,22 +441,22 @@ describe("makeValidateCliGroupDef", () => {
                             description: "Reset",
                             positionals: {},
                             options: {},
-                            execute
-                        }
-                    }
-                }
-            }
-        };
+                            execute,
+                        },
+                    },
+                },
+            },
+        }
 
-        expect(makeValidateCliGroupDef()(["group"], makeObservability())(group)).toEqual(value(group));
-    });
+        expect(makeValidateCliGroupDef()(["group"], makeObservability())(group)).toEqual(value(group))
+    })
 
     test("rejects blank group description", () => {
         const group = {
             nodeType: "group",
             description: "",
-            children: {}
-        } as any;
+            children: {},
+        } as any
 
         expect(issuesOf(makeValidateCliGroupDef()(["group"], makeObservability())(group))).toEqual([
             {
@@ -459,10 +464,10 @@ describe("makeValidateCliGroupDef", () => {
                 severity: "error",
                 context: ["group", "description"],
                 message: "group.description must not be blank",
-                code: "blank"
-            }
-        ]);
-    });
+                code: "blank",
+            },
+        ])
+    })
 
     test("propagates nested child errors", () => {
         const group = {
@@ -477,13 +482,13 @@ describe("makeValidateCliGroupDef", () => {
                         verbose: {
                             type: "boolean",
                             description: "Verbose",
-                            shortName: "xx"
-                        }
+                            shortName: "xx",
+                        },
                     },
-                    execute
-                }
-            }
-        } as any;
+                    execute,
+                },
+            },
+        } as any
 
         expect(issuesOf(makeValidateCliGroupDef()(["group"], makeObservability())(group))).toEqual([
             {
@@ -491,15 +496,15 @@ describe("makeValidateCliGroupDef", () => {
                 severity: "error",
                 context: ["group", "children", "build", "options", "verbose", "shortName"],
                 message: "group.children.build.options.verbose.shortName must have length = 1",
-                code: "exact.length"
-            }
-        ]);
-    });
-});
+                code: "exact.length",
+            },
+        ])
+    })
+})
 
 describe("makeValidateCliRootDef", () => {
     const execute = async () => {
-    };
+    }
 
     test("accepts valid root", () => {
         const root: CliRoot = {
@@ -513,7 +518,7 @@ describe("makeValidateCliRootDef", () => {
                     description: "Build",
                     positionals: {},
                     options: {},
-                    execute
+                    execute,
                 },
                 admin: {
                     nodeType: "group",
@@ -524,23 +529,23 @@ describe("makeValidateCliRootDef", () => {
                             description: "Reset",
                             positionals: {},
                             options: {},
-                            execute
-                        }
-                    }
-                }
-            }
-        };
+                            execute,
+                        },
+                    },
+                },
+            },
+        }
 
-        expect(makeValidateCliRootDef()(["root"], makeObservability())(root)).toEqual(value(root));
-    });
+        expect(makeValidateCliRootDef()(["root"], makeObservability())(root)).toEqual(value(root))
+    })
 
     test("rejects blank root name", () => {
         const root = {
             nodeType: "root",
             name: "   ",
             description: "Laoban command line",
-            children: {}
-        } as any;
+            children: {},
+        } as any
 
         expect(issuesOf(makeValidateCliRootDef()(["root"], makeObservability())(root))).toEqual([
             {
@@ -548,18 +553,18 @@ describe("makeValidateCliRootDef", () => {
                 severity: "error",
                 context: ["root", "name"],
                 message: "root.name must not be blank",
-                code: "blank"
-            }
-        ]);
-    });
+                code: "blank",
+            },
+        ])
+    })
 
     test("rejects blank root description", () => {
         const root = {
             nodeType: "root",
             name: "laoban",
             description: "",
-            children: {}
-        } as any;
+            children: {},
+        } as any
 
         expect(issuesOf(makeValidateCliRootDef()(["root"], makeObservability())(root))).toEqual([
             {
@@ -567,10 +572,10 @@ describe("makeValidateCliRootDef", () => {
                 severity: "error",
                 context: ["root", "description"],
                 message: "root.description must not be blank",
-                code: "blank"
-            }
-        ]);
-    });
+                code: "blank",
+            },
+        ])
+    })
 
     test("rejects blank version when present", () => {
         const root = {
@@ -578,8 +583,8 @@ describe("makeValidateCliRootDef", () => {
             name: "laoban",
             description: "Laoban command line",
             version: "   ",
-            children: {}
-        } as any;
+            children: {},
+        } as any
 
         expect(issuesOf(makeValidateCliRootDef()(["root"], makeObservability())(root))).toEqual([
             {
@@ -587,10 +592,10 @@ describe("makeValidateCliRootDef", () => {
                 severity: "error",
                 context: ["root", "version"],
                 message: "root.version must not be blank",
-                code: "blank"
-            }
-        ]);
-    });
+                code: "blank",
+            },
+        ])
+    })
 
     test("propagates nested child errors", () => {
         const root = {
@@ -610,15 +615,15 @@ describe("makeValidateCliRootDef", () => {
                                 force: {
                                     type: "string",
                                     description: "Force",
-                                    shortName: "xx"
-                                }
+                                    shortName: "xx",
+                                },
                             },
-                            execute
-                        }
-                    }
-                }
-            }
-        } as any;
+                            execute,
+                        },
+                    },
+                },
+            },
+        } as any
 
         expect(issuesOf(makeValidateCliRootDef()(["root"], makeObservability())(root))).toEqual([
             {
@@ -626,15 +631,15 @@ describe("makeValidateCliRootDef", () => {
                 severity: "error",
                 context: ["root", "children", "admin", "children", "reset", "options", "force", "shortName"],
                 message: "root.children.admin.children.reset.options.force.shortName must have length = 1",
-                code: "exact.length"
-            }
-        ]);
-    });
-});
+                code: "exact.length",
+            },
+        ])
+    })
+})
 
 describe("makeValidateCliNode", () => {
     const execute = async () => {
-    };
+    }
 
     test("accepts command node", () => {
         const node = {
@@ -642,27 +647,27 @@ describe("makeValidateCliNode", () => {
             description: "Build",
             positionals: {},
             options: {},
-            execute
-        };
+            execute,
+        }
 
-        expect(makeValidateCliNode()(["node"], makeObservability())(node)).toEqual(value(node));
-    });
+        expect(makeValidateCliNode()(["node"], makeObservability())(node)).toEqual(value(node))
+    })
 
     test("accepts group node", () => {
         const node = {
             nodeType: "group" as const,
             description: "Admin",
-            children: {}
-        };
+            children: {},
+        }
 
-        expect(makeValidateCliNode()(["node"], makeObservability())(node)).toEqual(value(node));
-    });
+        expect(makeValidateCliNode()(["node"], makeObservability())(node)).toEqual(value(node))
+    })
 
     test("rejects illegal nodeType", () => {
         const node = {
             nodeType: "banana",
-            description: "Nope"
-        } as any;
+            description: "Nope",
+        } as any
 
         expect(issuesOf(makeValidateCliNode()(["node"], makeObservability())(node))).toEqual([
             {
@@ -670,15 +675,15 @@ describe("makeValidateCliNode", () => {
                 severity: "error",
                 context: ["node"],
                 message: "node has illegal type banana. Legal values are: command, group",
-                code: "illegal.type"
-            }
-        ]);
-    });
-});
+                code: "illegal.type",
+            },
+        ])
+    })
+})
 
 describe("makeValidateCliModel", () => {
     const execute = async () => {
-    };
+    }
 
     test("accepts full model", () => {
         const model: CliModel = {
@@ -693,17 +698,17 @@ describe("makeValidateCliModel", () => {
                     positionals: {
                         target: {
                             type: "string",
-                            description: "Target"
-                        }
+                            description: "Target",
+                        },
                     },
                     options: {
                         dryRun: {
                             type: "boolean",
                             description: "Dry run",
-                            shortName: "d"
-                        }
+                            shortName: "d",
+                        },
                     },
-                    execute
+                    execute,
                 },
                 admin: {
                     nodeType: "group",
@@ -714,15 +719,15 @@ describe("makeValidateCliModel", () => {
                             description: "Reset state",
                             positionals: {},
                             options: {},
-                            execute
-                        }
-                    }
-                }
-            }
-        };
+                            execute,
+                        },
+                    },
+                },
+            },
+        }
 
-        expect(makeValidateCliModel()(["model"], makeObservability())(model)).toEqual(value(model));
-    });
+        expect(makeValidateCliModel()(["model"], makeObservability())(model)).toEqual(value(model))
+    })
 
     test("propagates nested command option errors", () => {
         const model = {
@@ -742,15 +747,15 @@ describe("makeValidateCliModel", () => {
                                 force: {
                                     type: "string",
                                     description: "Force",
-                                    shortName: "xx"
-                                }
+                                    shortName: "xx",
+                                },
                             },
-                            execute
-                        }
-                    }
-                }
-            }
-        } as any;
+                            execute,
+                        },
+                    },
+                },
+            },
+        } as any
 
         expect(issuesOf(makeValidateCliModel()(["model"], makeObservability())(model))).toEqual([
             {
@@ -758,16 +763,16 @@ describe("makeValidateCliModel", () => {
                 severity: "error",
                 context: ["model", "children", "admin", "children", "reset", "options", "force", "shortName"],
                 message: "model.children.admin.children.reset.options.force.shortName must have length = 1",
-                code: "exact.length"
-            }
-        ]);
-    });
-});
+                code: "exact.length",
+            },
+        ])
+    })
+})
 
 describe("check example validates", () => {
     it("should validate the example CLI model without errors", () => {
-        const example = exampleCli;
-        const result = makeValidateCliModel()(["example"], makeObservability())(example);
-        valueOrThrow(result);
-    });
-});
+        const example = exampleCli
+        const result = makeValidateCliModel()(["example"], makeObservability())(example)
+        valueOrThrow(result)
+    })
+})

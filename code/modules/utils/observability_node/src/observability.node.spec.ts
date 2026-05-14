@@ -3,8 +3,18 @@ import {tmpdir} from "node:os"
 import * as path from "node:path"
 import {Readable, Writable} from "node:stream"
 import {errorsOrThrow, valueOrThrow} from "@laoban/errors"
-import {createNodeObservability, nodeChannelTc, NodeReadChannel, NodeRef} from "./observability.node"
-import {DebugConfig, fixedTimeService, ModuleName, ModuleObservabilityScope} from "@laoban/observability"
+import {
+    createNodeObservability,
+    nodeChannelTc,
+    NodeReadChannel,
+    NodeRef,
+} from "./observability.node"
+import {
+    DebugConfig,
+    fixedTimeService,
+    ModuleName,
+    ModuleObservabilityScope,
+} from "@laoban/observability"
 
 type Purpose = ".log" | ".session"
 
@@ -133,6 +143,27 @@ describe("nodeChannelTc", () => {
         await expect(readFile(ref, "utf8")).resolves.toBe("onetwo")
     })
 
+    it("composes writable channels into a lifecycle-neutral fan-out writable", async () => {
+        const tc = makeTc()
+        const logRef = tc.reference(scope("alpha", path.join(dir, "alpha")))(".log")
+        const sessionRef = tc.reference(scope("alpha", path.join(dir, "alpha")))(".session")
+        const onError = jest.fn()
+
+        const log = valueOrThrow(await tc.create(logRef, {append: false}))
+        const session = valueOrThrow(await tc.create(sessionRef, {append: false}))
+
+        const composed = tc.composeWritables([log, session], onError)
+
+        expect(valueOrThrow(await tc.write(composed, "hello"))).toBeUndefined()
+
+        expect(valueOrThrow(await tc.closeWritable(log))).toBeUndefined()
+        expect(valueOrThrow(await tc.closeWritable(session))).toBeUndefined()
+
+        await expect(readFile(logRef, "utf8")).resolves.toBe("hello")
+        await expect(readFile(sessionRef, "utf8")).resolves.toBe("hello")
+        expect(onError).not.toHaveBeenCalled()
+    })
+
     it("returns an error when writing to a closed writable channel", async () => {
         const tc = makeTc()
         const ref = tc.reference(scope("alpha", path.join(dir, "alpha")))(".log")
@@ -170,35 +201,39 @@ describe("nodeChannelTc", () => {
         expect(source.destroyed).toBe(true)
     })
 
-    it("sends durable content from marker to Write and returns the new marker", async () => {
+    it("sends durable content from marker to a write channel and returns the new marker", async () => {
         const tc = makeTc()
         const ref = tc.reference(scope("alpha", path.join(dir, "alpha")))(".log")
-        const writes: string[] = []
+        const out = recordingWritable()
 
         await writeRef(ref, "hello world")
 
-        const result = await tc.sendFromRefToWrite(ref, 6, text => {
-            writes.push(text)
-        })
+        const result = await tc.sendFromRefToWrite(ref, 6, out)
 
         expect(valueOrThrow(result)).toBe(Buffer.byteLength("hello world", "utf8"))
-        expect(writes.join("")).toBe("world")
+        expect(out.writes.join("")).toBe("world")
     })
 
-    it("waits for an async Write while sending durable content", async () => {
+    it("waits for a slow writable channel while sending durable content", async () => {
         const tc = makeTc()
         const ref = tc.reference(scope("alpha", path.join(dir, "alpha")))(".log")
         const writes: string[] = []
         const events: string[] = []
 
+        const out = new Writable({
+            write(chunk, _encoding, callback) {
+                events.push("write-start")
+                setTimeout(() => {
+                    writes.push(String(chunk))
+                    events.push("write-end")
+                    callback()
+                }, 5)
+            },
+        })
+
         await writeRef(ref, "hello world")
 
-        const result = await tc.sendFromRefToWrite(ref, 0, async text => {
-            events.push("write-start")
-            await new Promise<void>(resolve => setTimeout(resolve, 5))
-            writes.push(text)
-            events.push("write-end")
-        })
+        const result = await tc.sendFromRefToWrite(ref, 0, out)
 
         events.push("after-send")
 
@@ -210,42 +245,39 @@ describe("nodeChannelTc", () => {
     it("sends nothing and returns current marker when from is at the durable end", async () => {
         const tc = makeTc()
         const ref = tc.reference(scope("alpha", path.join(dir, "alpha")))(".log")
-        const writes: string[] = []
+        const out = recordingWritable()
 
         await writeRef(ref, "hello")
 
         const marker = Buffer.byteLength("hello", "utf8")
-        const result = await tc.sendFromRefToWrite(ref, marker, text => {
-            writes.push(text)
-        })
+        const result = await tc.sendFromRefToWrite(ref, marker, out)
 
         expect(valueOrThrow(result)).toBe(marker)
-        expect(writes).toEqual([])
+        expect(out.writes).toEqual([])
     })
 
     it("uses byte markers for utf8 content", async () => {
         const tc = makeTc()
         const ref = tc.reference(scope("alpha", path.join(dir, "alpha")))(".log")
-        const writes: string[] = []
+        const out = recordingWritable()
         const prefix = "你好"
         const suffix = "world"
 
         await writeRef(ref, `${prefix}${suffix}`)
 
         const from = Buffer.byteLength(prefix, "utf8")
-        const result = await tc.sendFromRefToWrite(ref, from, text => {
-            writes.push(text)
-        })
+        const result = await tc.sendFromRefToWrite(ref, from, out)
 
         expect(valueOrThrow(result)).toBe(Buffer.byteLength(`${prefix}${suffix}`, "utf8"))
-        expect(writes.join("")).toBe(suffix)
+        expect(out.writes.join("")).toBe(suffix)
     })
 
     it("returns an error when sendFromRefToWrite is given a missing ref", async () => {
         const tc = makeTc()
         const ref = path.join(dir, "missing.log")
+        const out = recordingWritable()
 
-        const result = await tc.sendFromRefToWrite(ref, 0, jest.fn())
+        const result = await tc.sendFromRefToWrite(ref, 0, out)
 
         expect(errorsOrThrow(result)).toEqual([
             {
@@ -347,26 +379,29 @@ describe("createNodeObservability", () => {
         })
 
         const alphaScope = scope("alpha", path.join(dir, "alpha"))
-        const alpha = created.withModule(alphaScope)
+        const alpha = valueOrThrow(await created.withModule(alphaScope))
 
         await (alpha.log("module", "started") as any as Promise<void>)
 
         expect(alpha.moduleScope).toBe(alphaScope)
+        expect(alpha.writable).toBeDefined()
         expect(Object.keys(created.channelsState.state)).toEqual(["alpha"])
         expect(created.channelsState.state.alpha.refs).toEqual([
             path.join(dir, "alpha", ".log"),
             path.join(dir, "alpha", ".session"),
         ])
 
+        await alpha.close()
+
         expect(await readFile(path.join(dir, "alpha", ".log"), "utf8")).toBe("00:00:00 INFO module started\n")
         expect(await readFile(path.join(dir, "alpha", ".session"), "utf8")).toBe("00:00:00 INFO module started\n")
         expect(channel.writes).toEqual([])
     })
 
-    it("flushes module observability to an injected Write", async () => {
+    it("flushes module observability to an injected write channel", async () => {
         const channel = recordingWritable()
         const onError = jest.fn()
-        const out: string[] = []
+        const out = recordingWritable()
 
         const created = createNodeObservability<Purpose>({
             correlationId: "corr-123",
@@ -377,18 +412,20 @@ describe("createNodeObservability", () => {
             onError,
         })
 
-        const alpha = created.withModule(scope("alpha", path.join(dir, "alpha")))
+        const alpha = valueOrThrow(
+            await created.withModule(scope("alpha", path.join(dir, "alpha"))),
+        )
 
         await (alpha.log("one") as any as Promise<void>)
-        await alpha.flush(text => {
-            out.push(text)
-        })
+        await alpha.close()
 
-        expect(out.join("")).toBe("00:00:00 INFO one\n")
+        expect(valueOrThrow(await alpha.flush(out))).toBeUndefined()
+
+        expect(out.writes.join("")).toBe("00:00:00 INFO one\n")
         expect(created.channelsState.state.alpha.lastSize).toBe(
             Buffer.byteLength("00:00:00 INFO one\n", "utf8"),
         )
-        expect(created.channelsState.state.alpha.channels).toBeDefined()
+        expect(created.channelsState.state.alpha.channels).toBeUndefined()
     })
 
     it("uses debug config for root and module observability", async () => {
@@ -415,9 +452,13 @@ describe("createNodeObservability", () => {
 
         await (created.observability.debug(["template", "parse"], "debug", "root parse") as any as Promise<void>)
 
-        const alpha = created.withModule(scope("alpha", path.join(dir, "alpha")))
+        const alpha = valueOrThrow(
+            await created.withModule(scope("alpha", path.join(dir, "alpha"))),
+        )
+
         await (alpha.debug(["exec"], "debug", "module debug") as any as Promise<void>)
         await (alpha.debug(["template", "parse"], "debug", "module parse") as any as Promise<void>)
+        await alpha.close()
 
         expect(channel.writes).toEqual([
             "00:00:00 DEBUG [exec] root debug\n",

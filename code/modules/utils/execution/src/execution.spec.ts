@@ -1,13 +1,7 @@
 // execute.command.spec.ts
 
 import {isErrors, isValue} from "@laoban/errors"
-import {
-    ExecuteCommandRequest,
-    executeCommand,
-    ExecutionConfig,
-    ExecutionOptions,
-    ExecutorFn
-} from "./execution"
+import {executeCommand, ExecuteCommandRequest, ExecutionConfig, ExecutionOptions, ExecutorFn} from "./execution"
 
 type TestWritable = {
     writes: string[]

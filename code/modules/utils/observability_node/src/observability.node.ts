@@ -1,8 +1,6 @@
 import {errors, ErrorsOr, isErrors, value} from "@laoban/errors"
 import {
-    ChannelObservability,
     channelObservability,
-    channelObservabilityWithModule,
     ChannelsState,
     ChannelTc,
     CountMetric,
@@ -16,16 +14,19 @@ import {
     LogLevel,
     Marker,
     ModuleKey,
+    ModuleObservability,
+    moduleObservability,
     ModuleObservabilityScope,
     Observability,
     ObservabilityContext,
     ObservabilityTemplates,
-    Write,
 } from "@laoban/observability"
 import {createReadStream, createWriteStream, promises as fs} from "node:fs"
 import * as path from "node:path"
 import {Readable, Writable} from "node:stream"
+import {finished} from "node:stream/promises"
 import {safePrettyJson} from "@laoban/safe"
+import {composeNodeWritables} from "./compose.writables"
 
 export type NodeReadChannel = Readable
 export type NodeWriteChannel = Writable
@@ -42,16 +43,6 @@ const nodeChannelError = (message: string, e?: unknown): ErrorsOr<never> =>
         message,
         context: {error: String(e)},
     } as any)
-
-const isPromiseLike = (value: unknown): value is Promise<void> =>
-    typeof value === "object" &&
-    value !== null &&
-    "then" in value &&
-    typeof (value as {then?: unknown}).then === "function"
-
-const awaitWriteResult = async (result: void | Promise<void>): Promise<void> => {
-    if (isPromiseLike(result)) await result
-}
 
 const openWriteChannel = async (
     ref: NodeRef,
@@ -82,6 +73,47 @@ const createWriteChannel = async (
     }
 }
 
+const writeNodeChannel = async (
+    channel: NodeWriteChannel,
+    text: string,
+): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
+        channel.write(text, "utf8", err =>
+            err ? reject(err) : resolve(),
+        )
+    })
+
+const pipeFileRangeToWriteChannel = async (
+    ref: NodeRef,
+    from: Marker,
+    to: Marker,
+    write: NodeWriteChannel,
+): Promise<void> => {
+    const read = createReadStream(ref, {
+        start: from,
+        end: to - 1,
+        encoding: "utf8",
+    })
+
+    read.on("data", chunk => {
+        read.pause()
+
+        const ok = write.write(String(chunk), "utf8", err => {
+            if (err) {
+                read.destroy(err)
+                return
+            }
+
+            read.resume()
+        })
+
+        if (!ok)
+            write.once("drain", () => read.resume())
+    })
+
+    await finished(read)
+}
+
 export const nodeChannelTc = <Purpose>(
     options: NodeChannelTcOptions<Purpose>,
 ): ChannelTc<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef> => ({
@@ -101,14 +133,15 @@ export const nodeChannelTc = <Purpose>(
 
     write: async (channel: NodeWriteChannel, text: string): Promise<ErrorsOr<void>> => {
         try {
-            await new Promise<void>((resolve, reject) => {
-                channel.write(text, "utf8", err => err ? reject(err) : resolve())
-            })
+            await writeNodeChannel(channel, text)
             return value(undefined)
         } catch (e) {
             return nodeChannelError("Failed to write to channel", e)
         }
     },
+
+    composeWritables: (channels, onError) =>
+        composeNodeWritables(channels, onError),
 
     closeReadable: async (channel: NodeReadChannel): Promise<ErrorsOr<void>> => {
         try {
@@ -134,7 +167,7 @@ export const nodeChannelTc = <Purpose>(
     sendFromRefToWrite: async (
         ref: NodeRef,
         from: Marker,
-        write: Write,
+        write: NodeWriteChannel,
     ): Promise<ErrorsOr<Marker>> => {
         try {
             const stat = await fs.stat(ref)
@@ -142,15 +175,7 @@ export const nodeChannelTc = <Purpose>(
 
             if (end <= from) return value(end)
 
-            const read = createReadStream(ref, {
-                start: from,
-                end: end - 1,
-                encoding: "utf8",
-            })
-
-            for await (const chunk of read) {
-                await awaitWriteResult(write(String(chunk)))
-            }
+            await pipeFileRangeToWriteChannel(ref, from, end, write)
 
             return value(end)
         } catch (e: any) {
@@ -208,7 +233,9 @@ export type CreatedNodeObservability<Purpose> = Readonly<{
     observability: Observability
     channelsState: ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef>
     tc: ChannelTc<Purpose, NodeReadChannel, NodeWriteChannel, NodeRef>
-    withModule: (moduleScope: ModuleObservabilityScope) => ChannelObservability
+    withModule: (
+        moduleScope: ModuleObservabilityScope,
+    ) => Promise<ErrorsOr<ModuleObservability<NodeWriteChannel>>>
 }>
 
 export const createNodeObservability = <Purpose>({
@@ -261,7 +288,7 @@ export const createNodeObservability = <Purpose>({
         channelsState,
         tc,
         withModule: moduleScope =>
-            channelObservabilityWithModule(
+            moduleObservability(
                 {
                     ...context,
                     moduleScope,

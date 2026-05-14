@@ -3,7 +3,10 @@ import * as path from "node:path"
 
 import {value, valueOrThrow} from "@laoban/errors"
 import {
-    flushAllTouchedChannels, syncWriteTo, waitForAsyncWrites,
+    flushAllTouchedChannels,
+    getOrCreateChannels,
+    syncWriteTo,
+    waitForAsyncWrites,
     withModuleObservability,
 } from "@laoban/observability"
 import {
@@ -18,7 +21,7 @@ describe("nodeObservabilityFixture", () => {
         await fixture.cleanup()
     })
 
-    it("creates a context with real node channel state, a Write function, and a stdout recorder", async () => {
+    it("creates a context with real node channel state, a stdout writable channel, and a stdout recorder", async () => {
         const context = await fixture.makeContext()
 
         expect(context.root).toEqual(expect.any(String))
@@ -27,8 +30,8 @@ describe("nodeObservabilityFixture", () => {
         expect(context.channelsState.state).toEqual({})
         expect(context.stdOutRecorder.lines()).toEqual([])
 
-        context.stdOut("hello\n")
-        context.stdOut("world\n")
+        context.stdOut.write("hello\n")
+        context.stdOut.write("world\n")
 
         expect(context.stdOutRecorder.lines()).toEqual([
             "hello",
@@ -215,11 +218,21 @@ describe("nodeObservabilityFixture", () => {
         expect(path.basename(context.root)).toMatch(/^custom-node-observability-/)
         expect(context.observability.correlationId).toEqual("custom-correlation")
     })
-    it("fixture low-level syncWriteTo writes real files", async () => {
+
+    it("fixture low-level syncWriteTo writes real files through a composed channel", async () => {
         const context = await fixture.makeContext()
         const moduleScope = fixture.moduleScope("alpha", "/workspace/alpha")
 
-        const write = syncWriteTo(context.channelsState)(moduleScope)
+        const channels = valueOrThrow(
+            await getOrCreateChannels(context.channelsState, moduleScope),
+        )
+
+        const composed = context.channelsState.tc.composeWritables(
+            channels,
+            context.channelsState.onError,
+        )
+
+        const write = syncWriteTo(context.channelsState)(moduleScope)(composed)
 
         write("hello raw\n")
 
@@ -230,6 +243,15 @@ describe("nodeObservabilityFixture", () => {
             fixture.logPath(context, "/workspace/alpha"),
             fixture.sessionPath(context, "/workspace/alpha"),
         ])
+
+        expect(valueOrThrow(
+            await context.channelsState.tc.closeWritable(channels[0]),
+        )).toBeUndefined()
+        expect(valueOrThrow(
+            await context.channelsState.tc.closeWritable(channels[1]),
+        )).toBeUndefined()
+
+        context.channelsState.state.alpha.channels = undefined
 
         expect(await fixture.readLog(context, "/workspace/alpha")).toEqual("hello raw\n")
         expect(await fixture.readSession(context, "/workspace/alpha")).toEqual("hello raw\n")

@@ -29,6 +29,7 @@
     "@laoban/node_os": "2.0.0",
     "@laoban/safe": "2.0.0",
     "@laoban/strings": "2.0.0",
+    "@laoban/records": "2.0.0",
     "@laoban/validation": "2.0.0",
     "@laoban/config_cli": "2.0.0",
     "@laoban/package_cli": "2.0.0",

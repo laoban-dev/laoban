@@ -1,11 +1,11 @@
-import {value} from "@laoban/errors"
+import {isErrors, value} from "@laoban/errors"
 import {
     ChannelTc,
     emptyChannelState,
     flush,
     flushAllTouchedChannels,
+    getOrCreateChannels,
     syncWriteTo,
-    Write,
 } from "./write.with.flush"
 import {ModuleName, ModuleObservabilityScope} from "./observability"
 
@@ -18,6 +18,8 @@ type FakeChannel = {
     ref: Ref
     writes: string[]
     closed?: boolean
+    composed?: boolean
+    children?: FakeChannel[]
 }
 
 const scope = (
@@ -27,6 +29,11 @@ const scope = (
     module,
     directory,
 })
+
+const valueOrThrow = <T,>(result: any): T => {
+    if (isErrors(result)) throw new Error(JSON.stringify(result))
+    return result.value
+}
 
 const makeFakeTc = () => {
     const durable: Record<Ref, string[]> = {}
@@ -43,8 +50,27 @@ const makeFakeTc = () => {
             return value({ref, writes: []})
         },
 
+        composeWritables: channels => ({
+            ref: `composed(${channels.map(c => c.ref).join(",")})`,
+            writes: [],
+            composed: true,
+            children: channels,
+        }),
+
         write: async (channel, text) => {
             await delay(Math.floor(Math.random() * 5))
+
+            if (channel.composed) {
+                for (const child of channel.children ?? []) {
+                    child.writes.push(text)
+                    durable[child.ref] = durable[child.ref] ?? []
+                    durable[child.ref].push(text)
+                }
+
+                channel.writes.push(text)
+                return value(undefined)
+            }
+
             channel.writes.push(text)
             durable[channel.ref] = durable[channel.ref] ?? []
             durable[channel.ref].push(text)
@@ -58,18 +84,49 @@ const makeFakeTc = () => {
             return value(undefined)
         },
 
-        sendFromRefToWrite: async (ref, from, write: Write) => {
+        sendFromRefToWrite: async (ref, from, write) => {
             const allText = (durable[ref] ?? []).join("")
             const delta = allText.slice(from)
 
             if (delta.length > 0)
-                write(delta)
+                write.writes.push(delta)
 
             return value(allText.length)
         },
     }
 
     return {tc, durable}
+}
+
+const makeState = (
+    tc: ChannelTc<Purpose, never, FakeChannel, Ref>,
+) =>
+    emptyChannelState<Purpose, never, FakeChannel, Ref>(
+        tc,
+        ["log"],
+        e => {
+            throw new Error(JSON.stringify(e))
+        },
+    )
+
+const makeModuleWriters = async (
+    state: ReturnType<typeof makeState>,
+    moduleScopes: ModuleObservabilityScope[],
+) => {
+    const writers = new Map<string, (text: string) => void | Promise<void>>()
+
+    for (const moduleScope of moduleScopes) {
+        const channels = valueOrThrow<FakeChannel[]>(
+            await getOrCreateChannels(state, moduleScope),
+        )
+
+        const composed = state.tc.composeWritables(channels, state.onError)
+        const write = syncWriteTo(state)(moduleScope)(composed)
+
+        writers.set(String(moduleScope.module ?? "root"), write)
+    }
+
+    return writers
 }
 
 describe("stress: async logging does not lose messages", () => {
@@ -79,14 +136,11 @@ describe("stress: async logging does not lose messages", () => {
         const cycles = 100
 
         const {tc, durable} = makeFakeTc()
+        const state = makeState(tc)
 
-        const state = emptyChannelState(tc, ["log"], e => {
-            throw new Error(JSON.stringify(e))
-        })
-
-        const writer = syncWriteTo(state)
         const modules = Array.from({length: N}, (_, i) => `module-${i}`)
         const moduleScopes = modules.map(module => scope(module, module))
+        const writers = await makeModuleWriters(state, moduleScopes)
 
         const flushedByCycle: string[][] = []
 
@@ -95,23 +149,24 @@ describe("stress: async logging does not lose messages", () => {
                 moduleScopes.flatMap(moduleScope =>
                     Array.from({length: M}, async (_, i) => {
                         await delay(Math.floor(Math.random() * 5))
-                        writer(moduleScope)(`msg ${c}-${i}\n`)
+
+                        const write = writers.get(String(moduleScope.module))!
+                        write(`msg ${c}-${i}\n`)
                     }),
                 ),
             )
 
             const flushed: string[] = []
+            const out: FakeChannel = {ref: `stdout-${c}`, writes: flushed}
 
             const results = await Promise.all(
                 moduleScopes.map(moduleScope =>
-                    flush(state)(moduleScope)(text => {
-                        flushed.push(text)
-                    }),
+                    flush(state)(moduleScope)(out),
                 ),
             )
 
             expect(results).toEqual(modules.map(() => value(undefined)))
-            flushedByCycle.push(flushed)
+            flushedByCycle.push([...flushed])
         }
 
         for (const module of modules) {
@@ -153,34 +208,31 @@ describe("stress: async logging does not lose messages", () => {
         const cycles = 100
 
         const {tc, durable} = makeFakeTc()
+        const state = makeState(tc)
 
-        const state = emptyChannelState(tc, ["log"], e => {
-            throw new Error(JSON.stringify(e))
-        })
-
-        const writer = syncWriteTo(state)
         const modules = Array.from({length: N}, (_, i) => `module-${i}`)
         const moduleScopes = modules.map(module => scope(module, module))
+        const writers = await makeModuleWriters(state, moduleScopes)
 
         for (let c = 0; c < cycles; c++) {
             await Promise.all(
                 moduleScopes.flatMap(moduleScope =>
                     Array.from({length: M}, async (_, i) => {
                         await delay(Math.floor(Math.random() * 5))
-                        writer(moduleScope)(`msg ${c}-${i}\n`)
+
+                        const write = writers.get(String(moduleScope.module))!
+                        write(`msg ${c}-${i}\n`)
                     }),
                 ),
             )
 
-            const flushed: string[] = []
+            const out: FakeChannel = {ref: `stdout-${c}`, writes: []}
 
-            const result = await flushAllTouchedChannels(state)(text => {
-                flushed.push(text)
-            })
+            const result = await flushAllTouchedChannels(state)(out)
 
             expect(result).toEqual(value(undefined))
 
-            const flushedLines = flushed
+            const flushedLines = out.writes
                 .join("")
                 .split("\n")
                 .filter(line => line.length > 0)

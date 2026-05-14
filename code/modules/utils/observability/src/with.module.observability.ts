@@ -1,6 +1,12 @@
-import {ErrorsOr, withCleanupErrorsOr} from "@laoban/errors"
-import {ChannelObservability, channelObservabilityWithModule} from "./channel.observability"
-import {ModuleObservabilityScope, Observability} from "./observability"
+import {ErrorsOr, isErrors, withCleanupErrorsOr} from "@laoban/errors"
+import {
+    ModuleObservability,
+    moduleObservability,
+} from "./module.observability"
+import {
+    ModuleObservabilityScope,
+    Observability,
+} from "./observability"
 import {ChannelsState} from "./write.with.flush"
 
 export type WithModuleObservabilityContext<
@@ -13,15 +19,25 @@ export type WithModuleObservabilityContext<
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>
 }>
 
-export function withModuleObservability<
-    TContext extends WithModuleObservabilityContext<any, any, any, any>,
+export async function withModuleObservability<
+    Purpose,
+    ReadChannel,
+    WriteChannel,
+    Ref,
     T,
 >(
-    context: TContext,
+    context: WithModuleObservabilityContext<
+        Purpose,
+        ReadChannel,
+        WriteChannel,
+        Ref
+    >,
     moduleScope: ModuleObservabilityScope,
-    fn: (observability: ChannelObservability) => Promise<ErrorsOr<T>>,
+    fn: (
+        observability: ModuleObservability<WriteChannel>,
+    ) => Promise<ErrorsOr<T>>,
 ): Promise<ErrorsOr<T>> {
-    const observability = channelObservabilityWithModule(
+    const observabilityResult = await moduleObservability(
         {
             ...context.observability,
             moduleScope,
@@ -29,6 +45,11 @@ export function withModuleObservability<
         moduleScope,
         context.channelsState,
     )
+
+    if (isErrors(observabilityResult))
+        return observabilityResult
+
+    const observability = observabilityResult.value
 
     return withCleanupErrorsOr(
         () => fn(observability),

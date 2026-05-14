@@ -1,112 +1,114 @@
-import {Command} from "commander";
-import type {Observability} from "@laoban/observability";
-import {exampleCli} from "@laoban/clidsl";
-import {addCliModelToCommander} from "./cli.commander.add.model";
+import {Command} from "commander"
+import {
+    type Observability,
+    recordingObservability,
+} from "@laoban/observability"
+import {exampleCli} from "@laoban/clidsl"
+import {addCliModelToCommander} from "./cli.commander.add.model"
 
 function makeObservability(): Observability {
-    return {
-        correlationId: "test-correlation-id",
-        logger: jest.fn(),
-        debug: jest.fn(),
-        countMetric: jest.fn(),
-        durationMetric: jest.fn(),
-        debugLevels: {},
-        timeService: { now: () => 0 }
-    };
+    return recordingObservability(
+        {},
+        "test-correlation-id",
+        {now: () => 0},
+    ).observability
 }
 
 function buildProgram() {
-    const program = new Command();
-    const observability = makeObservability();
+    const program = new Command()
+    const observability = makeObservability()
 
     addCliModelToCommander(program, exampleCli, {
         observability,
-        addAction: cmd => cmd.action(() => {})
-    });
+        addAction: cmd => cmd.action(() => {}),
+    })
 
-    return { program, observability };
+    return {program, observability}
 }
 
 function findCommand(root: Command, ...path: string[]): Command | undefined {
-    let current: Command | undefined = root;
+    let current: Command | undefined = root
+
     for (const segment of path) {
-        current = current.commands.find(c => c.name() === segment);
-        if (!current) return undefined;
+        current = current.commands.find(c => c.name() === segment)
+
+        if (!current) return undefined
     }
-    return current;
+
+    return current
 }
 
 function optionFlags(command: Command): string[] {
-    return command.options.map(o => o.flags);
+    return command.options.map(o => o.flags)
 }
 
 describe("Commander smoke tests", () => {
     test("projects exampleCli structure into real Commander", () => {
-        const { program } = buildProgram();
+        const {program} = buildProgram()
 
         expect(program.commands.map(c => c.name())).toEqual([
             "build",
             "project",
-            "package"
-        ]);
+            "package",
+        ])
 
-        expect(findCommand(program, "build")?.description()).toBe("Build one or more targets");
-        expect(findCommand(program, "project")?.description()).toBe("Project commands");
-        expect(findCommand(program, "package")?.description()).toBe("Package commands");
+        expect(findCommand(program, "build")?.description()).toBe("Build one or more targets")
+        expect(findCommand(program, "project")?.description()).toBe("Project commands")
+        expect(findCommand(program, "package")?.description()).toBe("Package commands")
 
         expect(findCommand(program, "project")?.commands.map(c => c.name())).toEqual([
-            "init"
-        ]);
+            "init",
+        ])
 
         expect(findCommand(program, "package")?.commands.map(c => c.name())).toEqual([
             "publish",
-            "version"
-        ]);
-    });
+            "version",
+        ])
+    })
 
     test("projects build command options into real Commander", () => {
-        const { program } = buildProgram();
-        const build = findCommand(program, "build");
+        const {program} = buildProgram()
+        const build = findCommand(program, "build")
 
-        expect(build).toBeDefined();
+        expect(build).toBeDefined()
         expect(optionFlags(build!)).toEqual([
             "-v, --verbose",
-            "-r, --retries <retries>"
-        ]);
-    });
+            "-r, --retries <retries>",
+        ])
+    })
 
     test("projects publish command options into real Commander", () => {
-        const { program } = buildProgram();
-        const publish = findCommand(program, "package", "publish");
+        const {program} = buildProgram()
+        const publish = findCommand(program, "package", "publish")
 
-        expect(publish).toBeDefined();
+        expect(publish).toBeDefined()
         expect(optionFlags(publish!)).toEqual([
             "--registry <registry>",
             "-d, --dryRun",
-            "--tag <tag...>"
-        ]);
-    });
+            "--tag <tag...>",
+        ])
+    })
 
     test("can parse build command arguments and options", () => {
-        const { program } = buildProgram();
+        const {program} = buildProgram()
 
         program.parse(
             ["build", "target-a", "file1", "file2", "--verbose", "--retries", "3"],
-            { from: "user" }
-        );
+            {from: "user"},
+        )
 
-        const build = findCommand(program, "build");
-        expect(build).toBeDefined();
+        const build = findCommand(program, "build")
+        expect(build).toBeDefined()
 
-        expect(build!.args).toEqual(["target-a", "file1", "file2"]);
+        expect(build!.args).toEqual(["target-a", "file1", "file2"])
         expect(build!.opts()).toEqual({
             verbose: true,
-            retries: "3"
-        });
-    });
+            retries: "3",
+        })
+    })
 
     test("can parse nested publish command arguments and options", () => {
-        const { program } = buildProgram();
+        const {program} = buildProgram()
 
         program.parse(
             [
@@ -119,19 +121,19 @@ describe("Commander smoke tests", () => {
                 "alpha",
                 "--tag",
                 "beta",
-                "--dryRun"
+                "--dryRun",
             ],
-            { from: "user" }
-        );
+            {from: "user"},
+        )
 
-        const publish = findCommand(program, "package", "publish");
-        expect(publish).toBeDefined();
+        const publish = findCommand(program, "package", "publish")
+        expect(publish).toBeDefined()
 
-        expect(publish!.args).toEqual(["my-package"]);
+        expect(publish!.args).toEqual(["my-package"])
         expect(publish!.opts()).toEqual({
             registry: "https://registry.example.com",
             tag: ["alpha", "beta"],
-            dryRun: true
-        });
-    });
-});
+            dryRun: true,
+        })
+    })
+})

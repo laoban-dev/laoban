@@ -12,9 +12,12 @@ import {withModuleObservability} from "./with.module.observability"
 
 type TestPurpose = "log"
 
-type TestChannel = Readonly<{
+type TestChannel = {
     ref: string
-}>
+    children?: TestChannel[]
+    composed?: boolean
+    closed?: boolean
+}
 
 function makeObservability(): Observability {
     return {
@@ -50,6 +53,16 @@ function makeChannelTc(events: string[]): ChannelTc<TestPurpose, never, TestChan
             return value({ref})
         },
 
+        composeWritables: channels => {
+            const ref = `composed(${channels.map(c => c.ref).join(",")})`
+            events.push(`compose ${ref}`)
+            return {
+                ref,
+                children: channels,
+                composed: true,
+            }
+        },
+
         write: async (channel, text) => {
             events.push(`write ${channel.ref}: ${text}`)
             return value(undefined)
@@ -60,6 +73,7 @@ function makeChannelTc(events: string[]): ChannelTc<TestPurpose, never, TestChan
 
         closeWritable: async channel => {
             events.push(`close ${channel.ref}`)
+            channel.closed = true
             return value(undefined)
         },
 
@@ -107,10 +121,9 @@ describe("withModuleObservability", () => {
         directory: "/workspace/alpha",
     }
 
-    it("passes module observability to the callback and returns the callback value", async () => {
+    it("creates module observability, passes it to the callback, closes child channels, and returns the callback value", async () => {
         const events: string[] = []
         const context = makeContext(events)
-        addOpenChannel(context.channelsState, moduleScope)
 
         const actual = await withModuleObservability(
             context,
@@ -118,12 +131,17 @@ describe("withModuleObservability", () => {
             async observability => {
                 events.push("run")
                 expect(observability.moduleScope).toEqual(moduleScope)
+                expect(observability.writable.ref).toEqual(
+                    "composed(/workspace/alpha/log.log)",
+                )
                 return value("done")
             },
         )
 
         expect(valueOrThrow(actual)).toEqual("done")
         expect(events).toEqual([
+            "create /workspace/alpha/log.log",
+            "compose composed(/workspace/alpha/log.log)",
             "run",
             "close /workspace/alpha/log.log",
         ])
@@ -134,7 +152,6 @@ describe("withModuleObservability", () => {
     it("closes module observability when the callback returns errors", async () => {
         const events: string[] = []
         const context = makeContext(events)
-        addOpenChannel(context.channelsState, moduleScope)
 
         const actual = await withModuleObservability(
             context,
@@ -156,6 +173,8 @@ describe("withModuleObservability", () => {
         ])
 
         expect(events).toEqual([
+            "create /workspace/alpha/log.log",
+            "compose composed(/workspace/alpha/log.log)",
             "run",
             "close /workspace/alpha/log.log",
         ])
@@ -163,10 +182,9 @@ describe("withModuleObservability", () => {
         expect(context.channelsState.state.alpha.channels).toBeUndefined()
     })
 
-    it("does not catch thrown callback exceptions", async () => {
+    it("does not catch thrown callback exceptions and therefore does not run ErrorsOr cleanup", async () => {
         const events: string[] = []
         const context = makeContext(events)
-        addOpenChannel(context.channelsState, moduleScope)
 
         await expect(
             withModuleObservability(
@@ -182,6 +200,8 @@ describe("withModuleObservability", () => {
         // withCleanupErrorsOr is ErrorsOr cleanup, not exception-finally.
         // Thrown exceptions are bugs/unsafe boundaries and are not caught here.
         expect(events).toEqual([
+            "create /workspace/alpha/log.log",
+            "compose composed(/workspace/alpha/log.log)",
             "run",
         ])
 
@@ -190,7 +210,7 @@ describe("withModuleObservability", () => {
         ])
     })
 
-    it("does not require a channel to have been opened", async () => {
+    it("creates the module channel even if the callback does not log", async () => {
         const events: string[] = []
         const context = makeContext(events)
 
@@ -204,8 +224,12 @@ describe("withModuleObservability", () => {
         )
 
         expect(valueOrThrow(actual)).toEqual(123)
-        expect(events).toEqual([])
-        expect(context.channelsState.state.alpha).toBeUndefined()
+        expect(events).toEqual([
+            "create /workspace/alpha/log.log",
+            "compose composed(/workspace/alpha/log.log)",
+            "close /workspace/alpha/log.log",
+        ])
+        expect(context.channelsState.state.alpha.channels).toBeUndefined()
     })
 
     it("uses the supplied module scope rather than the root scope", async () => {
@@ -225,9 +249,14 @@ describe("withModuleObservability", () => {
         )
 
         expect(valueOrThrow(actual)).toBeUndefined()
+        expect(events).toEqual([
+            "create /workspace/alpha/log.log",
+            "compose composed(/workspace/alpha/log.log)",
+            "close /workspace/alpha/log.log",
+        ])
     })
 
-    it("writes through the module channel and closes it at the lifecycle boundary", async () => {
+    it("writes through the composed module channel and closes the real child channel at the lifecycle boundary", async () => {
         const events: string[] = []
         const context = makeContext(events)
 
@@ -243,9 +272,10 @@ describe("withModuleObservability", () => {
 
         expect(valueOrThrow(actual)).toEqual("done")
         expect(events).toEqual([
-            "run",
             "create /workspace/alpha/log.log",
-            "write /workspace/alpha/log.log: 00:00:00 INFO hello\n",
+            "compose composed(/workspace/alpha/log.log)",
+            "run",
+            "write composed(/workspace/alpha/log.log): 00:00:00 INFO hello\n",
             "close /workspace/alpha/log.log",
         ])
 
@@ -253,7 +283,7 @@ describe("withModuleObservability", () => {
         expect(context.channelsState.state.alpha.touched).toBe(true)
     })
 
-    it("waits for scheduled async writes before deciding whether there is anything to close", async () => {
+    it("waits for scheduled async writes before closing real child channels", async () => {
         const events: string[] = []
         let releaseWrite!: () => void
         let writeStarted!: () => void
@@ -302,9 +332,10 @@ describe("withModuleObservability", () => {
         await writeStartedPromise
 
         expect(events).toEqual([
-            "run",
             "create /workspace/alpha/log.log",
-            "write-start /workspace/alpha/log.log: 00:00:00 INFO hello\n",
+            "compose composed(/workspace/alpha/log.log)",
+            "run",
+            "write-start composed(/workspace/alpha/log.log): 00:00:00 INFO hello\n",
         ])
 
         releaseWrite()
@@ -313,10 +344,11 @@ describe("withModuleObservability", () => {
 
         expect(valueOrThrow(actual)).toEqual("done")
         expect(events).toEqual([
-            "run",
             "create /workspace/alpha/log.log",
-            "write-start /workspace/alpha/log.log: 00:00:00 INFO hello\n",
-            "write-end /workspace/alpha/log.log: 00:00:00 INFO hello\n",
+            "compose composed(/workspace/alpha/log.log)",
+            "run",
+            "write-start composed(/workspace/alpha/log.log): 00:00:00 INFO hello\n",
+            "write-end composed(/workspace/alpha/log.log): 00:00:00 INFO hello\n",
             "close /workspace/alpha/log.log",
         ])
 
@@ -349,8 +381,6 @@ describe("withModuleObservability", () => {
             channelsState,
         }
 
-        addOpenChannel(channelsState, moduleScope)
-
         const actual = await withModuleObservability(
             context,
             moduleScope,
@@ -365,6 +395,8 @@ describe("withModuleObservability", () => {
         ])
 
         expect(events).toEqual([
+            "create /workspace/alpha/log.log",
+            "compose composed(/workspace/alpha/log.log)",
             "close /workspace/alpha/log.log",
         ])
 
@@ -396,8 +428,6 @@ describe("withModuleObservability", () => {
             channelsState,
         }
 
-        addOpenChannel(channelsState, moduleScope)
-
         const actual = await withModuleObservability(
             context,
             moduleScope,
@@ -419,9 +449,84 @@ describe("withModuleObservability", () => {
         ])
 
         expect(events).toEqual([
+            "create /workspace/alpha/log.log",
+            "compose composed(/workspace/alpha/log.log)",
             "close /workspace/alpha/log.log",
         ])
 
         expect(channelsState.state.alpha.channels).toBeUndefined()
+    })
+
+    it("returns channel creation errors and does not run the callback", async () => {
+        const events: string[] = []
+
+        const tc: ChannelTc<TestPurpose, never, TestChannel, string> = {
+            ...makeChannelTc(events),
+            create: async ref => {
+                events.push(`create ${ref}`)
+                return errors({
+                    kind: "create",
+                    message: "create failed",
+                })
+            },
+        }
+
+        const channelsState = emptyChannelState<TestPurpose, never, TestChannel, string>(
+            tc,
+            ["log"],
+            error => events.push(`error ${error.errors.map(e => e.message).join(", ")}`),
+        )
+
+        const context = {
+            observability: makeObservability(),
+            channelsState,
+        }
+
+        const actual = await withModuleObservability(
+            context,
+            moduleScope,
+            async () => {
+                events.push("run")
+                return value("done")
+            },
+        )
+
+        expect(errorsOrThrow(actual)).toEqual([
+            {
+                kind: "create",
+                message: "create failed",
+            },
+        ])
+
+        expect(events).toEqual([
+            "create /workspace/alpha/log.log",
+        ])
+        expect(channelsState.state.alpha.channels).toBeUndefined()
+    })
+
+    it("reuses existing open channels if the state already has them", async () => {
+        const events: string[] = []
+        const context = makeContext(events)
+        addOpenChannel(context.channelsState, moduleScope)
+
+        const actual = await withModuleObservability(
+            context,
+            moduleScope,
+            async observability => {
+                events.push("run")
+                observability.log("hello")
+                return value("done")
+            },
+        )
+
+        expect(valueOrThrow(actual)).toEqual("done")
+        expect(events).toEqual([
+            "compose composed(/workspace/alpha/log.log)",
+            "run",
+            "write composed(/workspace/alpha/log.log): 00:00:00 INFO hello\n",
+            "close /workspace/alpha/log.log",
+        ])
+
+        expect(context.channelsState.state.alpha.channels).toBeUndefined()
     })
 })

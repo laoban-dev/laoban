@@ -4,19 +4,25 @@ import {
     ErrorsOr,
     flatMapBaseIssueK,
     isErrors,
-    traverseArrayErrorsOrK,
     value,
 } from "@laoban/errors"
 import {ExecutionPlanStats, prettyPrintExecutionPlan} from "@laoban/execution_plan"
 import {
-    ChannelObservability,
-    channelObservabilityWithModule,
-    flush,
+    flushAllTouchedChannels,
     ModuleName,
+    ModuleObservability,
     ModuleObservabilityScope,
     Observability,
-    writeToChannel,
 } from "@laoban/observability"
+import {
+    GenerationWalkSummary,
+    GenerationalWalkConfig,
+    GenerationalWalkVisitor,
+    generationalWalk,
+} from "@laoban/generational_reporter"
+import {
+    LaobanPackageChannelPurpose,
+} from "@laoban/package_cli"
 import {LoadedLaobanProject, LoadedPackageDetail} from "@laoban/package_details"
 import {LaobanScript, ScriptName} from "@laoban/scripts"
 import {
@@ -28,13 +34,20 @@ import {detemplateScriptExecutionPlan} from "./resolve.templates"
 import {safePrettyJson} from "@laoban/safe"
 import {filterExecutionPlan} from "./filter.packages"
 import {DirectoryName} from "@laoban/execution"
-import {NodeExecution} from "@laoban/node_execution"
 import {LaobanScriptCliContext, ScriptCommandValues} from "./script.context"
 
-export type LaobanScriptExecutionContext =
-    LaobanScriptCliContext & {
-    execution: NodeExecution
-}
+export type LaobanScriptExecutionContext<
+    ReadChannel,
+    WriteChannel,
+    Ref,
+    ExecutorName extends string = string,
+> =
+    LaobanScriptCliContext<ReadChannel, WriteChannel, Ref, ExecutorName>
+
+type ScriptExecutionInput = Readonly<{
+    loadedProject: LoadedLaobanProject
+    fullPlan: ScriptExecutionItem[][]
+}>
 
 function logPlan(
     scriptName: ScriptName,
@@ -88,10 +101,15 @@ function prettyPrintPlanWithRhs<G>(
         .join("\n")
 }
 
-function logVariables<TContext extends LaobanScriptCliContext>(
+function logVariables<
+    ReadChannel,
+    WriteChannel,
+    Ref,
+    ExecutorName extends string = string,
+>(
     loadedProject: LoadedLaobanProject,
     fullPlan: ScriptExecutionItem[][],
-    context: TContext,
+    context: LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref, ExecutorName>,
 ): void {
     context.observability.log(prettyPrintPlanWithRhs(fullPlan, packageNameOf, item => {
         const dictionary = context.makeDictionary(item, loadedProject)
@@ -101,7 +119,9 @@ function logVariables<TContext extends LaobanScriptCliContext>(
 
 function executionDirectoryOf(item: ScriptExecutionItem): DirectoryName {
     const result = item.pkg!.dir
-    if (!result) throw new Error(`Script execution item has no command directory: ${item.command.command}`)
+
+    if (!result)
+        throw new Error(`Script execution item has no command directory: ${item.command.command}`)
 
     return result
 }
@@ -110,36 +130,6 @@ function moduleScopeOf(item: ScriptExecutionItem): ModuleObservabilityScope {
     return {
         module: item.pkg!.contents.name,
         directory: item.pkg!.dir,
-    }
-}
-
-/**
- * Create a module-scoped channel observability for one unit of script work,
- * run the supplied block, and always close the module channels afterwards.
- *
- * This owns channel lifecycle for one module execution item.
- *
- * It deliberately does not flush. Flush is generation-level projection from
- * durable logs to stdout and remains in executeScript after each generation.
- */
-async function withModuleObservability<TContext extends LaobanScriptExecutionContext, T>(
-    context: TContext,
-    moduleScope: ModuleObservabilityScope,
-    fn: (observability: ChannelObservability) => Promise<T>,
-): Promise<T> {
-    const observability = channelObservabilityWithModule(
-        {
-            ...context.observability,
-            moduleScope,
-        },
-        moduleScope,
-        context.channelsState,
-    )
-
-    try {
-        return await fn(observability)
-    } finally {
-        await observability.close()
     }
 }
 
@@ -164,97 +154,129 @@ function commandFailedIssue(
     })
 }
 
-async function executeOneScriptItem<TContext extends LaobanScriptExecutionContext>(
-    context: TContext,
+async function executeOneScriptItem<
+    ReadChannel,
+    WriteChannel,
+    Ref,
+    ExecutorName extends string = string,
+>(
+    context: LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref, ExecutorName>,
     scriptName: ScriptName,
     options: ScriptCommandValues,
     item: ScriptExecutionItem,
+    observability: ModuleObservability<WriteChannel>,
 ): Promise<ErrorsOr<number, BaseIssue>> {
     const moduleScope = moduleScopeOf(item)
     const moduleName = moduleScope.module
+    const cwd = executionDirectoryOf(item)
 
-    return withModuleObservability(context, moduleScope, async observability => {
-        const cwd = executionDirectoryOf(item)
-
-        const result = await context.execution.execute({
-            command: item.command.command,
-            cwd,
-            env: {},
-            writable: context.stdOut,
-            observability,
-            config: context.execution.config,
-            dryRun: options.dryrun,
-            title: options.shellDebug,
-        })
-
-        if (isErrors(result)) return result
-        if (result.value === 0) return result
-
-        return commandFailedIssue(
-            scriptName,
-            moduleName,
-            item,
-            cwd,
-            result.value,
-        )
+    const result = await context.execution.execute({
+        command: item.command.command,
+        cwd,
+        env: context.env,
+        writable: observability.writable,
+        observability,
+        config: context.execution.config,
+        dryRun: options.dryrun,
+        title: options.shellDebug,
     })
+
+    if (isErrors(result)) return result
+    if (result.value === 0) return result
+
+    return commandFailedIssue(
+        scriptName,
+        moduleName,
+        item,
+        cwd,
+        result.value,
+    )
 }
 
-async function flushGeneration<TContext extends LaobanScriptExecutionContext>(
-    context: TContext,
-    generation: ScriptExecutionItem[],
-): Promise<ErrorsOr<unknown, BaseIssue>> {
-    const write = writeToChannel(context.channelsState.tc, context.channelsState.onError)(context.stdOut)
-
-    const issues: BaseIssue[] = []
-
-    for (const item of generation) {
-        const result = await flush(context.channelsState)(moduleScopeOf(item))(write)
-
-        if (isErrors(result))
-            issues.push(...result.errors)
-    }
-
-    return issues.length > 0
-        ? {errors: issues}
-        : value(undefined)
-}
-
-async function executeScript<TContext extends LaobanScriptExecutionContext>(
-    context: TContext,
+async function executeScript<
+    ReadChannel,
+    WriteChannel,
+    Ref,
+    ExecutorName extends string = string,
+>(
+    context: LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref, ExecutorName>,
     scriptName: ScriptName,
     options: ScriptCommandValues,
+    loadedProject: LoadedLaobanProject,
     executionPlan: ScriptExecutionItem[][],
-): Promise<ErrorsOr<void, BaseIssue>> {
+): Promise<ErrorsOr<unknown, BaseIssue>> {
     context.observability.log(`Script ${scriptName} execution`)
 
-    const issues: BaseIssue[] = []
+    const visitor: GenerationalWalkVisitor<
+        ScriptExecutionInput,
+        ScriptExecutionItem,
+        WriteChannel
+    > = {
+        visit: async (_input, item, observability) =>
+            executeOneScriptItem(
+                context,
+                scriptName,
+                options,
+                item,
+                observability,
+            ),
 
-    for (const generation of executionPlan) {
-        const generationErrors = await traverseArrayErrorsOrK(generation, async item =>
-            executeOneScriptItem(context, scriptName, options, item),
-        )
+        displaySummary: async (
+            _input: ScriptExecutionInput,
+            summary: GenerationWalkSummary,
+            observability: Observability,
+        ) => {
+            observability.log(
+                `script ${scriptName}: ${summary.visitedItemCount}/${summary.plannedItemCount}`,
+            )
 
-        const flushResult = await flushGeneration(context, generation)
-
-        if (isErrors(generationErrors))
-            issues.push(...generationErrors.errors)
-
-        if (isErrors(flushResult))
-            issues.push(...flushResult.errors)
+            return value(undefined)
+        },
     }
 
-    return issues.length > 0
-        ? {errors: issues}
-        : value(undefined)
+    const config: GenerationalWalkConfig<
+        ScriptExecutionInput,
+        ScriptExecutionItem,
+        LaobanPackageChannelPurpose,
+        ReadChannel,
+        WriteChannel,
+        Ref
+    > = {
+        observability: context.observability,
+        channelsState: context.channelsState,
+
+        load: async () =>
+            value({
+                loadedProject,
+                fullPlan: executionPlan,
+            }),
+
+        toGenerations: input =>
+            value(input.fullPlan),
+
+        toModuleScope: (_input, item) =>
+            moduleScopeOf(item),
+
+        flush: out =>
+            flushAllTouchedChannels(context.channelsState)(out),
+
+        continueOnGenerationError: true,
+    }
+
+    return generationalWalk(config, visitor, context.stdOut)
 }
 
-export async function defaultHandleLaobanScript<TContext extends LaobanScriptExecutionContext>(
+export async function defaultHandleLaobanScript<
+    ReadChannel,
+    WriteChannel,
+    Ref,
+    ExecutorName extends string = string,
+>(
     scriptName: ScriptName,
     script: LaobanScript,
     options: ScriptCommandValues,
-    context: TContext,
-): Promise<ErrorsOr<void, BaseIssue>> {
+    context: LaobanScriptExecutionContext<ReadChannel, WriteChannel, Ref, ExecutorName>,
+): Promise<ErrorsOr<unknown, BaseIssue>> {
     return flatMapBaseIssueK(
         await context.loadConfigAndPackagesFn(context),
         async loadedProject =>
@@ -273,7 +295,7 @@ export async function defaultHandleLaobanScript<TContext extends LaobanScriptExe
                         context,
                     )
 
-                    return await flatMapBaseIssueK(
+                    return flatMapBaseIssueK(
                         detemplateScriptExecutionPlan(
                             filtered,
                             loadedProject,
@@ -287,18 +309,25 @@ export async function defaultHandleLaobanScript<TContext extends LaobanScriptExe
                                     executionPlan.stats,
                                     context.observability,
                                 )
+
                                 return value(undefined)
                             }
 
                             if (options.variables) {
-                                logVariables(loadedProject, fullPlan, context)
+                                logVariables(
+                                    loadedProject,
+                                    fullPlan,
+                                    context,
+                                )
+
                                 return value(undefined)
                             }
 
-                            return await executeScript(
+                            return executeScript(
                                 context,
                                 scriptName,
                                 options,
+                                loadedProject,
                                 fullPlan,
                             )
                         },

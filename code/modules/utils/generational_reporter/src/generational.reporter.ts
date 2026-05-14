@@ -9,16 +9,12 @@ import {
     warnings,
 } from "@laoban/errors"
 import {
-    ChannelObservability,
+    ModuleObservability,
     ModuleObservabilityScope,
     Observability,
     WithModuleObservabilityContext,
+    withModuleObservability,
 } from "@laoban/observability"
-
-export type WithItemObservability = (
-    moduleScope: ModuleObservabilityScope,
-    fn: (observability: ChannelObservability) => Promise<ErrorsOr<unknown>>,
-) => Promise<ErrorsOr<unknown>>
 
 export interface GenerationalWalkConfig<
     Input,
@@ -32,8 +28,14 @@ export interface GenerationalWalkConfig<
     toGenerations: (input: Input) => ErrorsOr<G[][]>
     toModuleScope: (input: Input, item: G) => ModuleObservabilityScope
 
-    withItemObservability: WithItemObservability
-    flush: () => Promise<ErrorsOr<unknown>>
+    /**
+     * Flush touched module output to the supplied runtime write channel.
+     *
+     * The walker controls when this happens: after each generation and once at
+     * the end. The caller supplies the output channel to generationalWalk,
+     * usually stdout in the Node implementation.
+     */
+    flush: (out: WriteChannel) => Promise<ErrorsOr<unknown>>
 
     continueOnGenerationError?: boolean
 }
@@ -47,11 +49,11 @@ export interface GenerationWalkSummary {
     stoppedEarly: boolean
 }
 
-export interface GenerationalWalkVisitor<Input, G> {
+export interface GenerationalWalkVisitor<Input, G, WriteChannel = unknown> {
     visit: (
         input: Input,
         item: G,
-        observability: ChannelObservability,
+        observability: ModuleObservability<WriteChannel>,
     ) => Promise<ErrorsOr<unknown>>
 
     displayGenerationErrors?: (
@@ -85,7 +87,8 @@ export async function generationalWalk<
     Ref = unknown,
 >(
     config: GenerationalWalkConfig<Input, G, Purpose, ReadChannel, WriteChannel, Ref>,
-    visitor: GenerationalWalkVisitor<Input, G>,
+    visitor: GenerationalWalkVisitor<Input, G, WriteChannel>,
+    flushTo: WriteChannel,
 ): Promise<ErrorsOr<unknown>> {
     return flatMapBaseIssueK(await config.load(), async input => {
         const generationsResult = config.toGenerations(input)
@@ -105,7 +108,8 @@ export async function generationalWalk<
 
             const generationVisitResult = await sequenceArrayErrorsOrK(
                 generation.map(item =>
-                    config.withItemObservability(
+                    withModuleObservability(
+                        config,
                         config.toModuleScope(input, item),
                         moduleObservability =>
                             visitor.visit(input, item, moduleObservability),
@@ -123,7 +127,7 @@ export async function generationalWalk<
                 allErrors.push(...generationVisitResult.errors)
             }
 
-            const flushResult = await config.flush()
+            const flushResult = await config.flush(flushTo)
 
             allWarnings.push(...warnings(flushResult))
 
@@ -153,7 +157,7 @@ export async function generationalWalk<
             }
         }
 
-        const finalFlushResult = await config.flush()
+        const finalFlushResult = await config.flush(flushTo)
 
         allWarnings.push(...warnings(finalFlushResult))
 

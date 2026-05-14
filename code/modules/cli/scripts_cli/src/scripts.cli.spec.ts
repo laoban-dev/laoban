@@ -5,8 +5,13 @@ import {
     makeScriptCommands,
     scriptCommandOptions,
 } from "./scripts.cli"
-import {LaobanScriptCliContext} from "./script.context"
-import {ScriptCommandValues} from "./handleLaobanScriptFn"
+import {
+    LaobanScriptCliContext,
+    ScriptCommandValues,
+} from "./script.context"
+import {value} from "@laoban/errors"
+
+type TestContext = LaobanScriptCliContext<unknown, unknown, unknown>
 
 function makeObservability() {
     return {
@@ -45,11 +50,11 @@ function makeValues(): ScriptCommandValues {
     }
 }
 
-function makeContext(): LaobanScriptCliContext {
+function makeContext(): TestContext {
     return {
         observability: makeObservability(),
-        handleLaobanScript: jest.fn(async () => ({})),
-    } as any
+        handleLaobanScript: jest.fn(async () => value(undefined)),
+    } as unknown as TestContext
 }
 
 describe("makeScriptCommand", () => {

@@ -1,4 +1,4 @@
-export * from './src/channel.observability'
+export * from './src/module.observability'
 export * from './src/with.module.observability'
 export * from './src/observability'
 export * from './src/observability.debug'

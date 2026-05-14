@@ -11,8 +11,6 @@ import {
     flushAllTouchedChannels,
     ModuleObservabilityScope,
     Observability,
-    Write,
-    withModuleObservability,
 } from "@laoban/observability"
 import {
     GenerationWalkSummary,
@@ -61,7 +59,15 @@ export type LaobanPackageCliContext<ReadChannel, WriteChannel, Ref> =
         WriteChannel,
         Ref
     >
-    stdOut: Write
+
+    /**
+     * Runtime stdout channel.
+     *
+     * In the Node adapter this will normally be process.stdout, represented as
+     * the runtime WriteChannel. This layer remains generic and does not know
+     * Node streams directly.
+     */
+    stdOut: WriteChannel
 
     throttle: number
     throttlePlan: ThrottlePlanFn<LoadedPackageDetail>
@@ -131,7 +137,11 @@ function packageListLine(detail: LoadedPackageDetail): string {
 async function runPackageListReport<ReadChannel, WriteChannel, Ref>(
     context: LaobanPackageCliContext<ReadChannel, WriteChannel, Ref>,
 ): Promise<ErrorsOr<unknown>> {
-    const visitor: GenerationalWalkVisitor<LoadedLaobanProject, LoadedPackageDetail> = {
+    const visitor: GenerationalWalkVisitor<
+        LoadedLaobanProject,
+        LoadedPackageDetail,
+        WriteChannel
+    > = {
         visit: async (_loaded, detail, observability) => {
             observability.log(packageListLine(detail))
             return value(undefined)
@@ -177,16 +187,13 @@ async function runPackageListReport<ReadChannel, WriteChannel, Ref>(
         toModuleScope: (_loaded, detail) =>
             packageModuleScope(detail),
 
-        withItemObservability: (scope, fn) =>
-            withModuleObservability(context, scope, fn),
-
-        flush: () =>
-            flushAllTouchedChannels(context.channelsState)(context.stdOut),
+        flush: out =>
+            flushAllTouchedChannels(context.channelsState)(out),
 
         continueOnGenerationError: true,
     }
 
-    return generationalWalk(config, visitor)
+    return generationalWalk(config, visitor, context.stdOut)
 }
 
 const packageListCommand = <ReadChannel, WriteChannel, Ref>() =>

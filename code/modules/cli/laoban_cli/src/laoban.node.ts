@@ -5,6 +5,7 @@ import {nodeOsOps, setWritableMaxListenersFromCpu} from "@laoban/node_os";
 
 import {runLaobanApp} from "./laoban.app";
 import {makeLaobanDi} from "./laoban.di";
+import {envFromProcessEnv} from "@laoban/records";
 
 export async function runLaobanNodeCli(): Promise<number> {
     setWritableMaxListenersFromCpu(nodeOsOps, process.stdout);
@@ -12,7 +13,7 @@ export async function runLaobanNodeCli(): Promise<number> {
     const diOrError = makeLaobanDi({
         argv: process.argv,
         cwd: process.cwd(),
-        env: process.env,
+        env: envFromProcessEnv(process.env),
         stdout: process.stdout,
         stderr: process.stderr,
     });

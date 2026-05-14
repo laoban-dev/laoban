@@ -132,6 +132,7 @@ export const makeObservability = ({
     log: (...msg: unknown[]) =>
         target.write(`${renderObservabilityLine({
             ...context,
+            templates: context.observabilityTemplates,
             template: "log",
             level: "info",
             msg,
@@ -142,6 +143,7 @@ export const makeObservability = ({
 
         return target.write(`${renderObservabilityLine({
             ...context,
+            templates: context.observabilityTemplates,
             template: "debug",
             context: renderDebugName(debugName),
             level,
@@ -149,7 +151,6 @@ export const makeObservability = ({
         })}\n`)
     },
 })
-
 export const nullObservability = (
     correlationId: CorrelationId = "none",
 ): Observability =>

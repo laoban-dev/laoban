@@ -1,4 +1,5 @@
 import {
+    envFromProcessEnv,
     frozenEmptyObject,
     invertObject,
     mapEntries,
@@ -244,3 +245,48 @@ describe("prettyRecordJson", () => {
 }`);
     });
 });
+
+
+
+describe("envFromProcessEnv", () => {
+    it("returns an empty Env for an empty ProcessEnv", () => {
+        expect(envFromProcessEnv({})).toEqual({})
+    })
+
+    it("keeps entries whose values are strings", () => {
+        expect(envFromProcessEnv({
+            NODE_ENV: "test",
+            HOME: "/home/phil",
+            EMPTY: "",
+        })).toEqual({
+            NODE_ENV: "test",
+            HOME: "/home/phil",
+            EMPTY: "",
+        })
+    })
+
+    it("drops entries whose values are undefined", () => {
+        expect(envFromProcessEnv({
+            KEEP: "yes",
+            DROP: undefined,
+            ALSO_KEEP: "",
+        })).toEqual({
+            KEEP: "yes",
+            ALSO_KEEP: "",
+        })
+    })
+
+    it("does not mutate the supplied ProcessEnv", () => {
+        const input: NodeJS.ProcessEnv = {
+            KEEP: "yes",
+            DROP: undefined,
+        }
+
+        envFromProcessEnv(input)
+
+        expect(input).toEqual({
+            KEEP: "yes",
+            DROP: undefined,
+        })
+    })
+})

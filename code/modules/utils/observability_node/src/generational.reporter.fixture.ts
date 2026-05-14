@@ -10,9 +10,13 @@ import {
     ModuleObservabilityScope,
     Observability,
     recordingObservability,
-    Write,
 } from "@laoban/observability"
-import {nodeChannelTc, NodeReadChannel, NodeRef, NodeWriteChannel} from "./observability.node"
+import {
+    nodeChannelTc,
+    NodeReadChannel,
+    NodeRef,
+    NodeWriteChannel,
+} from "./observability.node"
 import {RecordingWritable} from "./recording.writable"
 
 export type TestNodeObservabilityPurpose = ".log" | ".session"
@@ -26,7 +30,16 @@ export type TestNodeObservabilityContext = {
         NodeWriteChannel,
         NodeRef
     >
-    stdOut: Write
+
+    /**
+     * Runtime stdout channel.
+     *
+     * This is deliberately a NodeWriteChannel, not a Write function. Flush is
+     * channel-based: the Node ChannelTc decides how to pipe durable bytes from a
+     * ref into this writable channel.
+     */
+    stdOut: NodeWriteChannel
+
     stdOutRecorder: RecordingWritable
     root: string
 }
@@ -129,10 +142,7 @@ export function nodeObservabilityFixture(): NodeObservabilityFixture {
         )
 
         const stdOutRecorder = new RecordingWritable()
-
-        const stdOut: Write = msg => {
-            stdOutRecorder.write(msg)
-        }
+        const stdOut: NodeWriteChannel = stdOutRecorder
 
         const tc = nodeChannelTc<TestNodeObservabilityPurpose>({
             reference: testNodeReference(root),
@@ -141,7 +151,12 @@ export function nodeObservabilityFixture(): NodeObservabilityFixture {
 
         const purposes: TestNodeObservabilityPurpose[] = [".log", ".session"]
 
-        const channelsState = emptyChannelState(
+        const channelsState = emptyChannelState<
+            TestNodeObservabilityPurpose,
+            NodeReadChannel,
+            NodeWriteChannel,
+            NodeRef
+        >(
             tc,
             purposes,
             onError,

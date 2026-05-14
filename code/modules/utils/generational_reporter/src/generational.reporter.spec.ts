@@ -6,13 +6,17 @@ import {
     warnings,
 } from "@laoban/errors"
 import {
-    ChannelObservability,
     defaultModuleObservabilityScope,
     makeObservability,
+    ModuleObservability,
     ModuleObservabilityScope,
     nullLog,
     Observability,
     WithModuleObservabilityContext,
+} from "@laoban/observability"
+import {
+    ChannelTc,
+    emptyChannelState,
 } from "@laoban/observability"
 import {
     GenerationWalkSummary,
@@ -30,9 +34,18 @@ type Input = {
 }
 
 type TestPurpose = ".log"
-type TestReadChannel = unknown
-type TestWriteChannel = unknown
-type TestRef = unknown
+
+type TestReadChannel = never
+
+type TestWriteChannel = {
+    ref: string
+    writes: string[]
+    closed?: boolean
+    composed?: boolean
+    children?: TestWriteChannel[]
+}
+
+type TestRef = string
 
 type TestConfig = GenerationalWalkConfig<
     Input,
@@ -69,15 +82,52 @@ function testObservability(
     })
 }
 
-function fakeChannelObservability(
-    observability: Observability,
-    moduleScope: ModuleObservabilityScope,
-): ChannelObservability {
+function testChannelTc(): ChannelTc<
+    TestPurpose,
+    TestReadChannel,
+    TestWriteChannel,
+    TestRef
+> {
     return {
-        ...observability,
-        moduleScope,
-        close: jest.fn(async () => value(undefined)),
-    } as unknown as ChannelObservability
+        reference: moduleScope =>
+            purpose => `${moduleScope.directory}/${purpose}`,
+
+        keyFrom: moduleScope =>
+            String(moduleScope.module ?? ""),
+
+        create: async ref =>
+            value({
+                ref,
+                writes: [],
+            }),
+
+        composeWritables: channels => ({
+            ref: `composed(${channels.map(channel => channel.ref).join(",")})`,
+            writes: [],
+            composed: true,
+            children: channels,
+        }),
+
+        write: async (channel, text) => {
+            channel.writes.push(text)
+
+            for (const child of channel.children ?? [])
+                child.writes.push(text)
+
+            return value(undefined)
+        },
+
+        closeReadable: async () =>
+            value(undefined),
+
+        closeWritable: async channel => {
+            channel.closed = true
+            return value(undefined)
+        },
+
+        sendFromRefToWrite: async () =>
+            value(0),
+    }
 }
 
 function testConfig(
@@ -85,10 +135,22 @@ function testConfig(
     countMetrics: string[] = [],
 ): TestConfig {
     const observability = testObservability(countMetrics)
+    const tc = testChannelTc()
 
     const context: TestContext = {
         observability,
-        channelsState: {} as any,
+        channelsState: emptyChannelState<
+            TestPurpose,
+            TestReadChannel,
+            TestWriteChannel,
+            TestRef
+        >(
+            tc,
+            [".log"],
+            e => {
+                throw new Error(JSON.stringify(e))
+            },
+        ),
     }
 
     return {
@@ -111,11 +173,7 @@ function testConfig(
             defaultModuleObservabilityScope(item.name, `/modules/${item.name}`),
         ),
 
-        withItemObservability: jest.fn(async (moduleScope, fn) =>
-            fn(fakeChannelObservability(observability, moduleScope)),
-        ),
-
-        flush: jest.fn(async () => value(undefined)),
+        flush: jest.fn(async (_out: TestWriteChannel) => value(undefined)),
 
         continueOnGenerationError: true,
 
@@ -124,20 +182,26 @@ function testConfig(
 }
 
 function testVisitor(
-    overrides: Partial<GenerationalWalkVisitor<Input, Item>> = {},
-): GenerationalWalkVisitor<Input, Item> {
+    overrides: Partial<GenerationalWalkVisitor<Input, Item, TestWriteChannel>> = {},
+): GenerationalWalkVisitor<Input, Item, TestWriteChannel> {
     return {
         visit: jest.fn(async () => value(undefined)),
         ...overrides,
     }
 }
 
+const flushTo = (): TestWriteChannel => ({
+    ref: "stdout",
+    writes: [],
+})
+
 describe("generationalWalk", () => {
     it("loads input, converts it to generations, visits every item, wraps each item in module observability, and flushes after each generation plus once at the end", async () => {
         const config = testConfig()
         const visitor = testVisitor()
+        const out = flushTo()
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, out)
 
         expect(result).toEqual(value(undefined))
 
@@ -168,23 +232,6 @@ describe("generationalWalk", () => {
             {name: "c"},
         )
 
-        expect(config.withItemObservability).toHaveBeenCalledTimes(3)
-        expect(config.withItemObservability).toHaveBeenNthCalledWith(
-            1,
-            defaultModuleObservabilityScope("a", "/modules/a"),
-            expect.any(Function),
-        )
-        expect(config.withItemObservability).toHaveBeenNthCalledWith(
-            2,
-            defaultModuleObservabilityScope("b", "/modules/b"),
-            expect.any(Function),
-        )
-        expect(config.withItemObservability).toHaveBeenNthCalledWith(
-            3,
-            defaultModuleObservabilityScope("c", "/modules/c"),
-            expect.any(Function),
-        )
-
         expect(visitor.visit).toHaveBeenCalledTimes(3)
         expect(visitor.visit).toHaveBeenNthCalledWith(
             1,
@@ -194,6 +241,9 @@ describe("generationalWalk", () => {
                 moduleScope: expect.objectContaining({
                     module: "a",
                     directory: "/modules/a",
+                }),
+                writable: expect.objectContaining({
+                    composed: true,
                 }),
             }),
         )
@@ -206,6 +256,9 @@ describe("generationalWalk", () => {
                     module: "b",
                     directory: "/modules/b",
                 }),
+                writable: expect.objectContaining({
+                    composed: true,
+                }),
             }),
         )
         expect(visitor.visit).toHaveBeenNthCalledWith(
@@ -217,25 +270,31 @@ describe("generationalWalk", () => {
                     module: "c",
                     directory: "/modules/c",
                 }),
+                writable: expect.objectContaining({
+                    composed: true,
+                }),
             }),
         )
 
         expect(config.flush).toHaveBeenCalledTimes(3)
+        expect(config.flush).toHaveBeenNthCalledWith(1, out)
+        expect(config.flush).toHaveBeenNthCalledWith(2, out)
+        expect(config.flush).toHaveBeenNthCalledWith(3, out)
     })
 
-    it("does not call toGenerations, visit, withItemObservability, or flush when load fails", async () => {
+    it("does not call toGenerations, visit, or flush when load fails", async () => {
         const loadError = issue("load failed")
         const config = testConfig({
             load: jest.fn(async () => errors(loadError)),
         })
         const visitor = testVisitor()
+        const out = flushTo()
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, out)
 
         expect(result).toEqual(errors(loadError))
         expect(config.toGenerations).not.toHaveBeenCalled()
         expect(config.toModuleScope).not.toHaveBeenCalled()
-        expect(config.withItemObservability).not.toHaveBeenCalled()
         expect(visitor.visit).not.toHaveBeenCalled()
         expect(config.flush).not.toHaveBeenCalled()
     })
@@ -254,11 +313,11 @@ describe("generationalWalk", () => {
             ),
         })
         const visitor = testVisitor()
+        const out = flushTo()
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, out)
 
         expect(result).toEqual(errors(planningError, [], [loadWarning, planningWarning]))
-        expect(config.withItemObservability).not.toHaveBeenCalled()
         expect(visitor.visit).not.toHaveBeenCalled()
         expect(config.flush).not.toHaveBeenCalled()
     })
@@ -280,7 +339,7 @@ describe("generationalWalk", () => {
             }),
         })
 
-        await generationalWalk(config, visitor)
+        await generationalWalk(config, visitor, flushTo())
 
         expect(calls).toEqual([
             "visit:a",
@@ -295,9 +354,14 @@ describe("generationalWalk", () => {
     it("does not start the next generation until the current generation has finished and flushed", async () => {
         const calls: string[] = []
         let releaseA!: () => void
+        let resolveBEnded!: () => void
 
         const aFinished = new Promise<void>(resolve => {
             releaseA = resolve
+        })
+
+        const bEnded = new Promise<void>(resolve => {
+            resolveBEnded = resolve
         })
 
         const config = testConfig({
@@ -315,14 +379,17 @@ describe("generationalWalk", () => {
                     await aFinished
 
                 calls.push(`end:${item.name}`)
+
+                if (item.name === "b")
+                    resolveBEnded()
+
                 return value(undefined)
             }),
         })
 
-        const walkPromise = generationalWalk(config, visitor)
+        const walkPromise = generationalWalk(config, visitor, flushTo())
 
-        await Promise.resolve()
-        await Promise.resolve()
+        await bEnded
 
         expect(calls).toEqual([
             "start:a",
@@ -346,7 +413,6 @@ describe("generationalWalk", () => {
             "flush",
         ])
     })
-
     it("continues to later generations by default when a generation has errors", async () => {
         const visitError = issue("b failed")
         const displayedErrors: BaseIssue[][] = []
@@ -365,7 +431,7 @@ describe("generationalWalk", () => {
             }),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, flushTo())
 
         expect(visitor.visit).toHaveBeenCalledTimes(3)
         expect(config.flush).toHaveBeenCalledTimes(3)
@@ -393,7 +459,7 @@ describe("generationalWalk", () => {
             displayGenerationErrors: jest.fn(async () => value(undefined)),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, flushTo())
 
         expect(visitor.visit).toHaveBeenCalledTimes(2)
         expect(visitor.visit).toHaveBeenCalledWith(
@@ -432,7 +498,7 @@ describe("generationalWalk", () => {
             displayGenerationErrors: jest.fn(async () => value(undefined)),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, flushTo())
 
         expect(visitor.displayGenerationErrors).toHaveBeenCalledTimes(1)
         expect(visitor.displayGenerationErrors).toHaveBeenCalledWith(
@@ -489,7 +555,7 @@ describe("generationalWalk", () => {
             ),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, flushTo())
 
         expect(isErrors(result)).toBe(true)
 
@@ -539,7 +605,7 @@ describe("generationalWalk", () => {
             }),
         })
 
-        await generationalWalk(config, visitor)
+        await generationalWalk(config, visitor, flushTo())
 
         expect(calls).toEqual([
             "visit:a",
@@ -570,7 +636,7 @@ describe("generationalWalk", () => {
             displayFinalIssues: jest.fn(async () => value(undefined)),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, flushTo())
 
         expect(visitor.displayFinalIssues).toHaveBeenCalledTimes(1)
         expect(visitor.displayFinalIssues).toHaveBeenCalledWith(
@@ -596,7 +662,7 @@ describe("generationalWalk", () => {
             displayFinalIssues: jest.fn(async () => value(undefined)),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, flushTo())
 
         expect(visitor.displayFinalIssues).toHaveBeenCalledTimes(1)
         expect(visitor.displayFinalIssues).toHaveBeenCalledWith(
@@ -619,7 +685,7 @@ describe("generationalWalk", () => {
             displaySummary: jest.fn(async () => errors(summaryError)),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, flushTo())
 
         expect(isErrors(result)).toBe(true)
         if (isErrors(result))
@@ -636,7 +702,7 @@ describe("generationalWalk", () => {
             displayFinalIssues: jest.fn(async () => errors(finalIssuesError)),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, flushTo())
 
         expect(isErrors(result)).toBe(true)
         if (isErrors(result))
@@ -648,7 +714,7 @@ describe("generationalWalk", () => {
         const config = testConfig({}, countMetrics)
         const visitor = testVisitor()
 
-        await generationalWalk(config, visitor)
+        await generationalWalk(config, visitor, flushTo())
 
         expect(countMetrics).toEqual([
             "generationalWalk.generationCount.2",
@@ -675,7 +741,7 @@ describe("generationalWalk", () => {
             ),
         })
 
-        await generationalWalk(config, visitor)
+        await generationalWalk(config, visitor, flushTo())
 
         expect(countMetrics).toContain("generationalWalk.stoppedEarly")
         expect(countMetrics).toContain("generationalWalk.visitedItemCount.2")
@@ -694,12 +760,13 @@ describe("generationalWalk", () => {
             displaySummary: jest.fn(async () => value(undefined)),
         })
 
-        const result = await generationalWalk(config, visitor)
+        const out = flushTo()
+        const result = await generationalWalk(config, visitor, out)
 
         expect(result).toEqual(value(undefined))
         expect(visitor.visit).not.toHaveBeenCalled()
-        expect(config.withItemObservability).not.toHaveBeenCalled()
         expect(config.flush).toHaveBeenCalledTimes(1)
+        expect(config.flush).toHaveBeenCalledWith(out)
 
         expect(visitor.displaySummary).toHaveBeenCalledWith(
             {generations: []},

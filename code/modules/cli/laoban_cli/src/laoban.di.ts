@@ -9,45 +9,27 @@ import {
     ModuleObservabilityScope,
     parseDebugConfig,
     realTimeService,
-    Write,
 } from "@laoban/observability"
 import {Command} from "commander"
 import * as process from "node:process"
 
 import {defaultLoadTextConfig, FileOpsHelperConfig} from "@laoban/files"
-import {
-    nodeFileOps,
-    nodeFileOpsDefaults,
-    nodeLoadTextInfrastructure,
-} from "@laoban/files_node"
-import {
-    LaobanConfigLoadConfig,
-    loadLaobanConfig,
-} from "@laoban/laoban_config"
-import {Env} from "@laoban/records"
+import {nodeFileOps, nodeFileOpsDefaults, nodeLoadTextInfrastructure,} from "@laoban/files_node"
+import {LaobanConfigLoadConfig, loadLaobanConfig,} from "@laoban/laoban_config"
 import {
     createNodeObservability,
     nodeChannelTc,
     NodeReadChannel,
+    NodeRef,
     NodeWriteChannel,
 } from "@laoban/observability_node"
-import {loadConfigAndPackages} from "@laoban/package_cli"
+import {LaobanPackageChannelPurpose, loadConfigAndPackages,} from "@laoban/package_cli"
 import {loadConfig} from "@laoban/config_cli"
 import {loadPackages} from "@laoban/package_details"
 import {safePathSegment, safePrettyJson} from "@laoban/safe"
-import {
-    defaultHandleLaobanScript,
-    makeScriptExecutionItemTemplateDictionary,
-    Purpose,
-    purposes,
-} from "@laoban/scripts_cli"
+import {defaultHandleLaobanScript, makeScriptExecutionItemTemplateDictionary,} from "@laoban/scripts_cli"
 import {LaobanCliContext} from "./laoban.context"
-import {
-    makeNodeExecution,
-    NodeExecution,
-    NodeExecutionOptions,
-} from "@laoban/node_execution/src/node.execution"
-import {defaultFileCommands} from "@laoban/node_execution"
+import {defaultFileCommands, makeNodeExecution, NodeExecution, NodeExecutionOptions,} from "@laoban/node_execution"
 import {defaultPrefixAndValueOptions} from "@laoban/execution"
 import {ErrorsOr, mapErrorsOr} from "@laoban/errors"
 import {nodeOsOps} from "@laoban/node_os"
@@ -63,6 +45,7 @@ import {
     doubleAngleVarDefn,
     mustachesVarDefn,
 } from "@laoban/template"
+import {Env, envFromProcessEnv} from "@laoban/records";
 
 export type LaobanDi = {
     argv: string[]
@@ -81,62 +64,94 @@ export type MakeLaobanDiOptions = Readonly<{
     now?: string
 }>
 
+const packageChannelPurposes: LaobanPackageChannelPurpose[] = [
+    ".log",
+    ".session",
+]
+
 export function makeReference(pathSafeNow: string) {
-    return (moduleScope: ModuleObservabilityScope) => (purpose: Purpose): string => {
-        const safeModuleName = moduleScope.module ?? "__root__"
+    return (moduleScope: ModuleObservabilityScope) =>
+        (purpose: LaobanPackageChannelPurpose): NodeRef => {
+            const safeModuleName = safePathSegment(moduleScope.module ?? "__root__")
 
-        switch (purpose) {
-            case "log":
-                return `${moduleScope.directory}/.log`
+            switch (purpose) {
+                case ".log":
+                    return `${moduleScope.directory}/.log`
 
-            case "session":
-                return `.session/${pathSafeNow}/${safeModuleName}.log`
+                case ".session":
+                    return `.session/${pathSafeNow}/${safeModuleName}.log`
+            }
         }
-    }
 }
 
 export function makeChannelsState(
     pathSafeNow: string,
     onError: (e: unknown) => void,
-): ChannelsState<Purpose, NodeReadChannel, NodeWriteChannel, string> {
-    return emptyChannelState(
-        nodeChannelTc({
+): ChannelsState<
+    LaobanPackageChannelPurpose,
+    NodeReadChannel,
+    NodeWriteChannel,
+    NodeRef
+> {
+    return emptyChannelState<
+        LaobanPackageChannelPurpose,
+        NodeReadChannel,
+        NodeWriteChannel,
+        NodeRef
+    >(
+        nodeChannelTc<LaobanPackageChannelPurpose>({
             reference: makeReference(pathSafeNow),
             keyFrom: moduleScope => String(moduleScope.module ?? ""),
         }),
-        purposes,
+        packageChannelPurposes,
         error => onError(safePrettyJson(error)),
     )
 }
 
 export function makeLaobanDi(options: MakeLaobanDiOptions = {}): ErrorsOr<LaobanDi> {
     const argv = options.argv ?? process.argv
-    const env: Env = options.env ?? process.env
+    const env: Env = options.env ?? envFromProcessEnv(process.env)
     const cwd = options.cwd ?? process.cwd()
 
     const stdOutChannel = options.stdout ?? process.stdout
     const stdErrChannel = options.stderr ?? process.stderr
-
-    const stdOut: Write = msg => {
-        stdOutChannel.write(msg)
-    }
 
     const now = options.now ?? new Date().toISOString()
     const pathSafeNow = safePathSegment(now)
     const command = argv[2] ?? "root"
     const correlationId = `${pathSafeNow}/${safePathSegment(command)}`
 
-    const onError = (e: unknown) => stdErrChannel.write(`${String(e)}\n`)
+    const onError = (e: unknown) => {
+        stdErrChannel.write(`${String(e)}\n`)
+    }
 
     const reference = makeReference(pathSafeNow)
 
-    const {observability} = createNodeObservability<Purpose>({
+    const nodeObservability = createNodeObservability<LaobanPackageChannelPurpose>({
+        correlationId,
+        moduleScope: defaultModuleObservabilityScope(),
+        debugConfig: {},
+        timeService: realTimeService,
         channel: stdOutChannel,
-        purposes,
-        onError,
+        purposes: packageChannelPurposes,
         reference,
+        onError,
     })
 
+    const {observability} = nodeObservability
+
+    /**
+     * We deliberately build the shared channelsState explicitly rather than
+     * using nodeObservability.channelsState, so the DI remains the single place
+     * where package/script module channel lifecycle is wired.
+     *
+     * If you prefer a single source of truth, replace this with:
+     *
+     *     const channelsState = nodeObservability.channelsState
+     *
+     * but do not create two independent channel states that are both expected
+     * to represent module output.
+     */
     const channelsState = makeChannelsState(pathSafeNow, onError)
 
     const fileOps = nodeFileOps(nodeFileOpsDefaults)
@@ -204,7 +219,12 @@ export function makeLaobanDi(options: MakeLaobanDiOptions = {}): ErrorsOr<Laoban
                     cwd,
                     start: cwd,
                     loadLaobanConfig,
-                    stdOut,
+
+                    /**
+                     * stdOut is now the runtime write channel, not a Write function.
+                     * The ChannelTc owns how durable refs are projected into it.
+                     */
+                    stdOut: stdOutChannel,
 
                     loadConfigFn: loadConfig,
                     loadPackagesFn: loadPackages,
