@@ -1,4 +1,4 @@
-import {getLastSegment, normalisePath, toKebabCase} from "./strings";
+import {getLastSegment, noExtension, normalisePath, toKebabCase} from "./strings";
 
 describe("getLastSegment", () => {
     it("returns empty string for undefined", () => {
@@ -118,5 +118,39 @@ describe("normalisePath", () => {
 
     it("normalises a windows path", () => {
         expect(normalisePath("C:\\temp\\folder\\file.txt")).toBe("C:/temp/folder/file.txt");
+    });
+});
+
+describe("noExtension", () => {
+    test("returns empty string for undefined", () => {
+        expect(noExtension(undefined)).toEqual("");
+    });
+
+    test("returns empty string for empty string", () => {
+        expect(noExtension("")).toEqual("");
+    });
+
+    test("returns filename unchanged when there is no extension", () => {
+        expect(noExtension("README")).toEqual("README");
+    });
+
+    test("removes a simple extension", () => {
+        expect(noExtension("file.txt")).toEqual("file");
+    });
+
+    test("removes only the last extension", () => {
+        expect(noExtension("a.b.c.extension")).toEqual("a.b.c");
+    });
+
+    test("handles paths with dots in directory names", () => {
+        expect(noExtension("some.folder/my.file.txt")).toEqual("some.folder/my.file");
+    });
+
+    test("returns empty string for filename that is only an extension", () => {
+        expect(noExtension(".gitignore")).toEqual("");
+    });
+
+    test("returns filename without trailing dot", () => {
+        expect(noExtension("filename.")).toEqual("filename");
     });
 });

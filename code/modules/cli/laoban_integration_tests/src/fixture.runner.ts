@@ -35,7 +35,7 @@ function isFile(filename: string): boolean {
     }
 }
 
-function findTsNodeCli(): string {
+export function findTsNodeCli(): string {
     const candidates = [
         path.join(laobanDirectory, "code", "node_modules", "ts-node", "dist", "bin.js"),
         path.join(laobanDirectory, "node_modules", "ts-node", "dist", "bin.js"),

@@ -1,10 +1,10 @@
 import {mkdtemp, readFile, rm} from "node:fs/promises"
 import {tmpdir} from "node:os"
 import * as path from "node:path"
-import {isErrors, value} from "@laoban/errors"
+import {isErrors, value, valueOrThrow} from "@laoban/errors"
 import {
     defaultModuleObservabilityScope,
-    flush,
+    flushAllTouchedChannels,
     ModuleObservabilityScope,
     withModuleObservability,
 } from "@laoban/observability"
@@ -61,7 +61,7 @@ describe("generationalWalk with real node observability", () => {
             .map(line => line.substring(line.lastIndexOf(" ") + 1))
     }
 
-    it("creates real module log files and flushes their durable content to a writer", async () => {
+    it("creates real module log files and flushes touched durable content to a writer", async () => {
         const out = recordingWritable()
 
         const alpha: Item = {
@@ -106,20 +106,9 @@ describe("generationalWalk with real node observability", () => {
             toModuleScope: (_input, item) =>
                 moduleScope(item),
 
-            withItemObservability: (scope, fn) =>
-                withModuleObservability(context, scope, fn),
 
-            flush: async () => {
-                const alphaResult = await flush(context.channelsState)(moduleScope(alpha))(msg => {
-                    out.write(msg)
-                })
-
-                if (isErrors(alphaResult)) return alphaResult
-
-                return flush(context.channelsState)(moduleScope(beta))(msg => {
-                    out.write(msg)
-                })
-            },
+            flush: () =>
+                flushAllTouchedChannels(context.channelsState)(out),
 
             continueOnGenerationError: true,
         }
@@ -131,9 +120,9 @@ describe("generationalWalk with real node observability", () => {
             },
         }
 
-        const result = await generationalWalk(config, visitor)
+        const result = await generationalWalk(config, visitor, out)
 
-        expect(isErrors(result)).toBe(false)
+        expect(valueOrThrow(result)).toBeUndefined()
 
         const alphaLog = await readFile(reference(moduleScope(alpha))(".log"), "utf8")
         const betaLog = await readFile(reference(moduleScope(beta))(".log"), "utf8")
@@ -148,9 +137,111 @@ describe("generationalWalk with real node observability", () => {
 
         const outputAfterWalk = out.text()
 
-        const secondFlush = await config.flush()
+        const secondFlush = await config.flush(out)
 
         expect(secondFlush).toEqual(value(undefined))
         expect(out.text()).toEqual(outputAfterWalk)
+    })
+
+    it("exposes a module writable that writes raw output to real durable channels", async () => {
+        const out = recordingWritable()
+
+        const alpha: Item = {
+            name: "alpha",
+            message: "alpha_raw_output",
+        }
+
+        const context = createNodeObservability<Purpose>({
+            correlationId: "test-correlation",
+            moduleScope: defaultModuleObservabilityScope(undefined, dir),
+            channel: out,
+            purposes: [".log", ".session"],
+            reference,
+            onError: jest.fn(),
+        })
+
+        const result = await withModuleObservability(
+            context,
+            moduleScope(alpha),
+            async observability => {
+                const writable =  observability.writable
+
+                if (isErrors(writable))
+                    return writable
+
+                await new Promise<void>((resolve, reject) => {
+                    writable.write(`raw ${alpha.message}\n`, err =>
+                        err ? reject(err) : resolve(),
+                    )
+                })
+
+                observability.log(alpha.message)
+
+                return value(undefined)
+            },
+        )
+
+        expect(valueOrThrow(result)).toBeUndefined()
+
+        const alphaLog = await readFile(reference(moduleScope(alpha))(".log"), "utf8")
+        const alphaSession = await readFile(reference(moduleScope(alpha))(".session"), "utf8")
+
+        expect(alphaLog).toContain(`raw ${alpha.message}`)
+        expect(alphaLog).toContain(alpha.message)
+
+        expect(alphaSession).toContain(`raw ${alpha.message}`)
+        expect(alphaSession).toContain(alpha.message)
+    })
+
+    it("does not flush raw module writable output because raw writes do not mark channels as touched", async () => {
+        const out = recordingWritable()
+
+        const alpha: Item = {
+            name: "alpha",
+            message: "alpha_raw_output",
+        }
+
+        const context = createNodeObservability<Purpose>({
+            correlationId: "test-correlation",
+            moduleScope: defaultModuleObservabilityScope(undefined, dir),
+            channel: out,
+            purposes: [".log", ".session"],
+            reference,
+            onError: jest.fn(),
+        })
+
+        const writeResult = await withModuleObservability(
+            context,
+            moduleScope(alpha),
+            async observability => {
+                const writable = await observability.writable
+
+                if (isErrors(writable))
+                    return writable
+
+                await new Promise<void>((resolve, reject) => {
+                    writable.write(`raw ${alpha.message}\n`, err =>
+                        err ? reject(err) : resolve(),
+                    )
+                })
+
+                return value(undefined)
+            },
+        )
+
+        expect(valueOrThrow(writeResult)).toBeUndefined()
+
+        const flushResult = await flushAllTouchedChannels(context.channelsState)(out)
+
+        expect(valueOrThrow(flushResult)).toBeUndefined()
+
+        expect(out.lines()).toEqual([])
+
+        const outputAfterFlush = out.text()
+
+        const secondFlush = await flushAllTouchedChannels(context.channelsState)(out)
+
+        expect(secondFlush).toEqual(value(undefined))
+        expect(out.text()).toEqual(outputAfterFlush)
     })
 })

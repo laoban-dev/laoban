@@ -6,6 +6,7 @@ import {
     defaultLaobanLaunch,
     runLaobanInFixture,
 } from "./fixture.runner"
+import {getLastSegment, noExtension, normalisePath} from "@laoban/strings";
 
 async function makeTempRoot(): Promise<string> {
     return fs.mkdtemp(path.join(os.tmpdir(), "laoban-fixture-runner-"))
@@ -204,11 +205,12 @@ describe("defaultLaobanLaunch", () => {
     it("uses yarn ts-node and the index.ts from the Laoban executable directory", () => {
         const launch = defaultLaobanLaunch()
 
-        expect(launch.command).toEqual("yarn")
+        expect(launch.command).toEqual(process.execPath)//this is basically 'node'
+        expect(noExtension(getLastSegment(normalisePath(launch.command)))).toEqual('node')
 
-        expect(launch.args.map(arg => arg.replace(/\\/g, "/"))).toEqual([
-            "ts-node",
+        expect(launch.args.map(normalisePath)).toEqual([
+            expect.stringMatching("ts-node\/dist\/bin.js$"),
             expect.stringMatching(/code\/modules\/cli\/laoban\/index\.ts$/),
         ])
     })
-})
+    })

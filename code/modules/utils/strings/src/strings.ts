@@ -4,6 +4,11 @@ export function getLastSegment(path?: string | null): string {
     return segments.length ? segments[segments.length - 1] : "";
 }
 
+export function noExtension(path?: string): string {
+    if (!path) return "";
+    const dot = path.lastIndexOf(".");
+    return dot < 0 ? path : path.slice(0, dot);
+}
 
 export function toKebabCase(name: string | null | undefined): string | null | undefined {
     if (name === null || name === undefined) return name;
@@ -12,7 +17,8 @@ export function toKebabCase(name: string | null | undefined): string | null | un
         .replace(/_/g, '-')
         .toLowerCase();
 }
-export function normalisePath(name: string|null|undefined): string|null|undefined{
+
+export function normalisePath(name: string | null | undefined): string | null | undefined {
     if (!name) return name
     return name.replace(/\\/g, "/");
 }
