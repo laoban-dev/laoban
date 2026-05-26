@@ -1,28 +1,32 @@
 import {
+    addDiagnosticContextToErrors, addDiagnosticContextToIssue,
     AsyncErrorCall,
     AsyncErrorCall2,
     BaseIssue,
     errorObjectOrThrow,
-    errors,
     ErrorsException,
     errorsOrThrow,
-    flatmapArrayOfArrayOfErrorsOr, flatMapBaseIssue,
+    flatmapArrayOfArrayOfErrorsOr,
+    flatMapBaseIssue,
     flatMapErrorsOr,
     flatMapErrorsOrK,
     flattenArrayOfErrorsOr,
     flattenRecordOfErrorsOr,
-    isErrors,
     isValue,
-    makeErrorFromException, mapArrayK, mapBaseIssue,
+    makeErrorFromException,
+    mapArrayK,
+    mapBaseIssue,
     mapErrorsOr,
     mapErrorsOrK,
     partitionNameAndErrorsOr,
     recover,
-    value,
     valueOrDefault,
     valueOrThrow,
-    warnings, withCleanupErrorsOr,
+    warnings,
+    withCleanupErrorsOr,
 } from "./error.monad";
+import {errors, isErrors, value} from "@laoban/errors"
+
 
 type TestIssue = BaseIssue<string, unknown>;
 
@@ -869,5 +873,191 @@ describe("withCleanupErrorsOr", () => {
 
         expect(isErrors(result)).toBe(true)
         expect(events).toEqual(["main", "cleanup"])
+    })
+})
+
+describe("addDiagnosticContextToIssue", () => {
+    const diagnosticContext = {
+        currentFile: "/tmp/laoban.json",
+        loadPath: ["/tmp/laoban.json"],
+    }
+
+    it("adds diagnosticContext to an issue", () => {
+        const issue = {
+            kind: "someKind",
+            message: "Something went wrong",
+            severity: "error" as const,
+        }
+
+        expect(addDiagnosticContextToIssue(issue, diagnosticContext)).toEqual({
+            kind: "someKind",
+            message: "Something went wrong",
+            severity: "error",
+            diagnosticContext,
+        })
+    })
+
+    it("overwrites existing diagnosticContext", () => {
+        const issue = {
+            kind: "someKind",
+            message: "Something went wrong",
+            severity: "error" as const,
+            diagnosticContext: {
+                currentFile: "/old/file.json",
+            },
+        }
+
+        expect(addDiagnosticContextToIssue(issue, diagnosticContext)).toEqual({
+            kind: "someKind",
+            message: "Something went wrong",
+            severity: "error",
+            diagnosticContext,
+        })
+    })
+})
+
+describe("addDiagnosticContextToErrors", () => {
+    const diagnosticContext = {
+        currentFile: "/tmp/laoban.json",
+        loadPath: ["/tmp/laoban.json"],
+    }
+
+    it("adds diagnosticContext to errors", () => {
+        const result = errors(
+            {
+                kind: "first",
+                message: "First error",
+                severity: "error" as const,
+            },
+            [
+                {
+                    kind: "second",
+                    message: "Second error",
+                    severity: "error" as const,
+                },
+            ],
+        )
+
+        const actual = addDiagnosticContextToErrors(result, diagnosticContext)
+
+        expect(actual).toEqual(
+            errors(
+                {
+                    kind: "first",
+                    message: "First error",
+                    severity: "error",
+                    diagnosticContext,
+                },
+                [
+                    {
+                        kind: "second",
+                        message: "Second error",
+                        severity: "error",
+                        diagnosticContext,
+                    },
+                ],
+            ),
+        )
+    })
+
+    it("adds diagnosticContext to warnings on a value result", () => {
+        const result = value("ok", [
+            {
+                kind: "warning",
+                message: "A warning",
+                severity: "warning" as const,
+            },
+        ])
+
+        const actual = addDiagnosticContextToErrors(result, diagnosticContext)
+
+        expect(actual).toEqual(
+            value("ok", [
+                {
+                    kind: "warning",
+                    message: "A warning",
+                    severity: "warning",
+                    diagnosticContext,
+                },
+            ]),
+        )
+    })
+
+    it("adds diagnosticContext to warnings on an error result", () => {
+        const result = errors(
+            {
+                kind: "failed",
+                message: "Failed",
+                severity: "error" as const,
+            },
+            [],
+            [
+                {
+                    kind: "warning",
+                    message: "A warning",
+                    severity: "warning" as const,
+                },
+            ],
+        )
+
+        const actual = addDiagnosticContextToErrors(result, diagnosticContext)
+
+        expect(actual).toEqual(
+            errors(
+                {
+                    kind: "failed",
+                    message: "Failed",
+                    severity: "error",
+                    diagnosticContext,
+                },
+                [],
+                [
+                    {
+                        kind: "warning",
+                        message: "A warning",
+                        severity: "warning",
+                        diagnosticContext,
+                    },
+                ],
+            ),
+        )
+    })
+
+    it("preserves reference on an error result", () => {
+        const result = errors(
+            {
+                kind: "failed",
+                message: "Failed",
+                severity: "error" as const,
+            },
+            [],
+            [],
+            "reference-123",
+        )
+
+        const actual = addDiagnosticContextToErrors(result, diagnosticContext)
+
+        expect(actual).toEqual(
+            errors(
+                {
+                    kind: "failed",
+                    message: "Failed",
+                    severity: "error",
+                    diagnosticContext,
+                },
+                [],
+                [],
+                "reference-123",
+            ),
+        )
+    })
+
+    it("returns a value result when the input is a value result", () => {
+        const result = value("ok")
+
+        const actual = addDiagnosticContextToErrors(result, diagnosticContext)
+
+        expect(isErrors(actual)).toBe(false)
+        expect(actual).toEqual(value("ok", []))
     })
 })

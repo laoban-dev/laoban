@@ -1,6 +1,6 @@
 {
-  "name": "@laoban/package_cli",
-  "description": "Cli commands around the packages. Such as listing all packages, showing the details of a package and showing dependencies between them",
+  "name": "@laoban/arrays",
+  "description": "utility functions for arrays",
   "version": "2.0.0",
   "main": "dist/index",
   "types": "dist/index",
@@ -17,22 +17,9 @@
     ]
   },
   "dependencies": {
-    "commander": "^14.0.0",
-    "@laoban/arrays": "2.0.0",
-    "@laoban/clidsl": "2.0.0",
-    "@laoban/commander": "2.0.0",
-    "@laoban/config_cli": "2.0.0",
-    "@laoban/errors": "2.0.0",
-    "@laoban/generational_reporter": "2.0.0",
-    "@laoban/laoban_config": "2.0.0",
-    "@laoban/observability": "2.0.0",
-    "@laoban/safe": "2.0.0",
-    "@laoban/strings": "2.0.0",
-    "@laoban/validation": "2.0.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
     "typescript": "^5.2.2",
     "@testing-library/jest-dom": "^6.1.4",
     "@types/jest": "^29.0.0",
@@ -58,7 +45,8 @@
   "files": [
     "dist/index.js",
     "dist/index.d.ts",
-    "dist/src/"
+    "dist/src/",
+    "build/"
   ],
   "keywords": [
     "indexing"

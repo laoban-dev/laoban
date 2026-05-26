@@ -1,13 +1,14 @@
 import {
-    chainValidators,
+    AnyValidationContext,
+    chainValidators, childValidationContext,
     combineValidators,
     composeOr,
     composeTypedOr,
     deprecatedField,
-    exactLength,
+    exactLength, fileValidationContext,
     format,
     ifPresent,
-    integer,
+    integer, isFileValidationContext,
     max,
     maxItems,
     maxLength,
@@ -17,7 +18,7 @@ import {
     mustBeArrayOf,
     mustBeArrayOfIfPresent,
     mustBeBoolean,
-    mustBeBooleanIfPresent,
+    mustBeBooleanIfPresent, mustBeBooleanStringOrObject,
     mustBeEnum,
     mustBeLiteral,
     mustBeNameAnd,
@@ -27,7 +28,7 @@ import {
     mustBeObjectWithFields,
     mustBeOneOf,
     mustBeString,
-    mustBeStringIfPresent,
+    mustBeStringIfPresent, mustBeStringOrObject,
     nonBlank,
     nullableValidator,
     oneValidationError,
@@ -35,7 +36,7 @@ import {
     renderContext,
     validationError,
     validationErrors,
-    ValidationIssue,
+    ValidationIssue, validationPath,
     validationWarning,
     Validator,
     when,
@@ -243,16 +244,14 @@ describe("chainValidators", () => {
         _context => input =>
             value(input)
 
-    const warn: Validator<string> =
+    const warn: Validator<string, AnyValidationContext> =
         context => input =>
             value(input, [
-                {
-                    kind: "validation",
-                    severity: "warning",
+                validationWarning(
                     context,
-                    message: `${renderContext(context)} warning`,
-                    code: "warning",
-                },
+                    `${renderContext(context)} warning`,
+                    {code: "warning"},
+                ),
             ])
 
     test("returns value when all validators pass", () => {
@@ -868,19 +867,17 @@ describe("composeTypedOr", () => {
     type Dog = { type: "dog"; barks: boolean }
     type Pet = Cat | Dog
 
-    const catV: Validator<Cat> = ctx => v => {
-        if (!v || typeof v !== "object") return oneValidationError(ctx, `${renderContext(ctx)} must be an object`, {code: "wrong.type"})
-        if ((v as any).type !== "cat") return oneValidationError([...ctx, "type"], `${renderContext([...ctx, "type"])} must be "cat"`, {code: "wrong.literal"})
-        if (typeof (v as any).meows !== "boolean") return oneValidationError([...ctx, "meows"], `${renderContext([...ctx, "meows"])} must be a boolean`, {code: "wrong.type"})
-        return value(v)
-    }
+    const catV: Validator<Cat, AnyValidationContext> =
+        mustBeObjectWithFields<Cat, AnyValidationContext>({
+            type: mustBeLiteral("cat"),
+            meows: mustBeBoolean,
+        }, true)
 
-    const dogV: Validator<Dog> = ctx => v => {
-        if (!v || typeof v !== "object") return oneValidationError(ctx, `${renderContext(ctx)} must be an object`, {code: "wrong.type"})
-        if ((v as any).type !== "dog") return oneValidationError([...ctx, "type"], `${renderContext([...ctx, "type"])} must be "dog"`, {code: "wrong.literal"})
-        if (typeof (v as any).barks !== "boolean") return oneValidationError([...ctx, "barks"], `${renderContext([...ctx, "barks"])} must be a boolean`, {code: "wrong.type"})
-        return value(v)
-    }
+    const dogV: Validator<Dog, AnyValidationContext> =
+        mustBeObjectWithFields<Dog, AnyValidationContext>({
+            type: mustBeLiteral("dog"),
+            barks: mustBeBoolean,
+        }, true)
 
     const typed = composeTypedOr<{
         cat: Validator<Cat>
@@ -944,7 +941,7 @@ describe("composeTypedOr", () => {
                 kind: "validation",
                 severity: "error",
                 context: ["pet", "meows"],
-                message: "pet.meows must be a boolean",
+                message: "pet.meows must be a boolean but was a string",
                 code: "wrong.type",
             },
         ])
@@ -1611,16 +1608,14 @@ describe("ifPresent", () => {
         _context => input =>
             value(input)
 
-    const warn: Validator<string> =
+    const warn: Validator<string, AnyValidationContext> =
         context => input =>
             value(input, [
-                {
-                    kind: "validation",
-                    severity: "warning",
+                validationWarning(
                     context,
-                    message: `${renderContext(context)} warning`,
-                    code: "warning",
-                },
+                    `${renderContext(context)} warning`,
+                    {code: "warning"},
+                ),
             ])
 
     test("passes through undefined without calling inner validator", () => {
@@ -1684,6 +1679,392 @@ describe("ifPresent", () => {
                     code: "warning",
                 },
             ],
+        })
+    })
+})
+describe("mustBeStringOrObject", () => {
+    interface CommandObject {
+        command: string
+        status?: boolean
+    }
+
+    const validateCommandObject = mustBeObjectWithFields<CommandObject>(
+        {
+            command: mustBeString,
+            status: mustBeBooleanIfPresent,
+        },
+        true,
+    )
+
+    const validator = mustBeStringOrObject(validateCommandObject)
+
+    test("passes when input is a string", () => {
+        const result = validator(["scripts", "build", "commands", "0"], makeObservability())("yarn build")
+
+        expect(result).toEqual({
+            value: "yarn build",
+        })
+    })
+
+    test("passes when input is a valid object", () => {
+        const input = {
+            command: "yarn build",
+            status: true,
+        }
+
+        const result = validator(["scripts", "build", "commands", "0"], makeObservability())(input)
+
+        expect(result).toEqual({
+            value: input,
+        })
+    })
+
+    test("delegates to object validator when input is an object", () => {
+        const input = {
+            name: "tsc",
+            not: "tsc --noEmit false --outDir dist",
+            status: true,
+        }
+
+        const result = validator(["scripts", "link", "commands", "0"], makeObservability())(input as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["scripts", "link", "commands", "0", "command"],
+                message: "scripts.link.commands.0.command is required but was undefined",
+                code: "required",
+            },
+        ])
+    })
+
+    test("does not report string branch failures when input is an object", () => {
+        const input = {
+            name: "tsc",
+            not: "tsc --noEmit false --outDir dist",
+            status: true,
+        }
+
+        const result = validator(["scripts", "link", "commands", "0"], makeObservability())(input as any)
+
+        expect(issuesOf(result)).not.toContainEqual({
+            kind: "validation",
+            severity: "error",
+            context: ["scripts", "link", "commands", "0"],
+            message: "scripts.link.commands.0 must be a string but was a object",
+            code: "wrong.type",
+        })
+
+        expect(issuesOf(result)).not.toContainEqual({
+            kind: "validation",
+            severity: "error",
+            context: ["scripts", "link", "commands", "0"],
+            message: "scripts.link.commands.0 is not a string",
+            code: "not.type",
+        })
+    })
+
+    test("fails cleanly when input is a number", () => {
+        const result = validator(["scripts", "build", "commands", "0"], makeObservability())(123 as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["scripts", "build", "commands", "0"],
+                message: "scripts.build.commands.0 must be a string or object but was number",
+                code: "wrong.type",
+            },
+        ])
+    })
+
+    test("fails cleanly when input is a boolean", () => {
+        const result = validator(["scripts", "build", "commands", "0"], makeObservability())(true as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["scripts", "build", "commands", "0"],
+                message: "scripts.build.commands.0 must be a string or object but was boolean",
+                code: "wrong.type",
+            },
+        ])
+    })
+
+    test("fails cleanly when input is null", () => {
+        const result = validator(["scripts", "build", "commands", "0"], makeObservability())(null as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["scripts", "build", "commands", "0"],
+                message: "scripts.build.commands.0 must be a string or object but was null",
+                code: "wrong.type",
+            },
+        ])
+    })
+
+    test("fails cleanly when input is an array", () => {
+        const result = validator(["scripts", "build", "commands", "0"], makeObservability())(["yarn build"] as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["scripts", "build", "commands", "0"],
+                message: "scripts.build.commands.0 must be a string or object but was array",
+                code: "wrong.type",
+            },
+        ])
+    })
+
+    test("preserves warnings from the object validator", () => {
+        interface ObjectWithDeprecatedField {
+            command: string
+            old?: string
+        }
+
+        const objectValidator = mustBeObjectWithFields<ObjectWithDeprecatedField>(
+            {
+                command: mustBeString,
+                old: ifPresent(deprecatedField("old is deprecated") as Validator<string>),
+            },
+            true,
+        )
+
+        const v = mustBeStringOrObject(objectValidator)
+
+        const result = v(["cmd"], makeObservability())({
+            command: "yarn build",
+            old: "legacy",
+        })
+
+        expect(result).toEqual({
+            value: {
+                command: "yarn build",
+                old: "legacy",
+            },
+            warnings: [
+                {
+                    kind: "validation",
+                    severity: "warning",
+                    context: ["cmd", "old"],
+                    message: "old is deprecated",
+                    code: "deprecated",
+                },
+            ],
+        })
+    })
+})
+
+describe("mustBeBooleanStringOrObject", () => {
+    interface GuardObject {
+        value: string
+        default?: boolean
+    }
+
+    const validateGuardObject = mustBeObjectWithFields<GuardObject>(
+        {
+            value: mustBeString,
+            default: mustBeBooleanIfPresent,
+        },
+        true,
+    )
+
+    const validator = mustBeBooleanStringOrObject(validateGuardObject)
+
+    test("passes when input is a boolean", () => {
+        expect(validator(["guard"], makeObservability())(true)).toEqual({
+            value: true,
+        })
+
+        expect(validator(["guard"], makeObservability())(false)).toEqual({
+            value: false,
+        })
+    })
+
+    test("passes when input is a string", () => {
+        expect(validator(["guard"], makeObservability())("${package.guards.test}")).toEqual({
+            value: "${package.guards.test}",
+        })
+    })
+
+    test("passes when input is a valid object", () => {
+        const input = {
+            value: "${package.guards.test}",
+            default: true,
+        }
+
+        expect(validator(["guard"], makeObservability())(input)).toEqual({
+            value: input,
+        })
+    })
+
+    test("delegates object validation errors to the object validator", () => {
+        const result = validator(["guard"], makeObservability())({
+            default: true,
+        } as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["guard", "value"],
+                message: "guard.value is required but was undefined",
+                code: "required",
+            },
+        ])
+    })
+
+    test("fails cleanly when input is a number", () => {
+        const result = validator(["guard"], makeObservability())(123 as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["guard"],
+                message: "guard must be a boolean, string or object but was number",
+                code: "wrong.type",
+            },
+        ])
+    })
+
+    test("fails cleanly when input is null", () => {
+        const result = validator(["guard"], makeObservability())(null as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["guard"],
+                message: "guard must be a boolean, string or object but was null",
+                code: "wrong.type",
+            },
+        ])
+    })
+
+    test("fails cleanly when input is an array", () => {
+        const result = validator(["guard"], makeObservability())(["x"] as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["guard"],
+                message: "guard must be a boolean, string or object but was array",
+                code: "wrong.type",
+            },
+        ])
+    })
+
+    test("works with file-backed validation context", () => {
+        const result = validator(
+            fileValidationContext("laoban.json", ["scripts", "build", "guard"]),
+            makeObservability(),
+        )({default: true} as any)
+
+        expect(issuesOf(result)).toEqual([
+            {
+                kind: "validation",
+                severity: "error",
+                context: ["scripts", "build", "guard", "value"],
+                message: "scripts.build.guard.value is required but was undefined",
+                code: "required",
+                diagnosticContext: {
+                    currentFile: "laoban.json",
+                },
+            },
+        ])
+    })
+})
+
+describe("file-backed validation context", () => {
+    test("fileValidationContext creates diagnostic context and path", () => {
+        expect(fileValidationContext("laoban.json", ["scripts"], ["parent.json"])).toEqual({
+            diagnosticContext: {
+                currentFile: "laoban.json",
+                loadPath: ["parent.json"],
+            },
+            path: ["scripts"],
+        })
+    })
+
+    test("isFileValidationContext identifies file validation context", () => {
+        expect(isFileValidationContext(fileValidationContext("laoban.json"))).toBe(true)
+        expect(isFileValidationContext(["scripts"])).toBe(false)
+    })
+
+    test("validationPath returns path for both context shapes", () => {
+        expect(validationPath(["scripts", "build"])).toEqual(["scripts", "build"])
+        expect(validationPath(fileValidationContext("laoban.json", ["scripts", "build"]))).toEqual([
+            "scripts",
+            "build",
+        ])
+    })
+
+    test("childValidationContext appends child for normal validation path", () => {
+        expect(childValidationContext(["scripts"], "build")).toEqual([
+            "scripts",
+            "build",
+        ])
+    })
+
+    test("childValidationContext appends child while preserving diagnostic context", () => {
+        expect(
+            childValidationContext(
+                fileValidationContext("laoban.json", ["scripts"], ["parent.json"]),
+                "build",
+            ),
+        ).toEqual({
+            diagnosticContext: {
+                currentFile: "laoban.json",
+                loadPath: ["parent.json"],
+            },
+            path: ["scripts", "build"],
+        })
+    })
+
+    test("validationError includes diagnosticContext for file-backed context", () => {
+        expect(
+            validationError(
+                fileValidationContext("laoban.json", ["scripts", "build"], ["parent.json"]),
+                "bad",
+                {code: "x"},
+            ),
+        ).toEqual({
+            kind: "validation",
+            severity: "error",
+            context: ["scripts", "build"],
+            message: "bad",
+            code: "x",
+            diagnosticContext: {
+                currentFile: "laoban.json",
+                loadPath: ["parent.json"],
+            },
+        })
+    })
+
+    test("validationWarning includes diagnosticContext for file-backed context", () => {
+        expect(
+            validationWarning(
+                fileValidationContext("laoban.json", ["scripts"], ["parent.json"]),
+                "warn",
+                {code: "w"},
+            ),
+        ).toEqual({
+            kind: "validation",
+            severity: "warning",
+            context: ["scripts"],
+            message: "warn",
+            code: "w",
+            diagnosticContext: {
+                currentFile: "laoban.json",
+                loadPath: ["parent.json"],
+            },
         })
     })
 })

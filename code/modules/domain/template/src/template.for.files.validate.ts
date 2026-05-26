@@ -4,6 +4,7 @@ import {
     chainValidators,
     composeTypedOr,
     deprecatedField,
+    fileValidationContext,
     ifPresent,
     mustBeArrayOfIfPresent,
     mustBeBooleanIfPresent,
@@ -12,9 +13,12 @@ import {
     mustBeOneOf,
     mustBeString,
     mustBeStringIfPresent,
+    oneValidationError,
     renderContext,
-    ValidationIssue,
-    Validator,
+    validationWarning,
+    type AnyValidationContext,
+    type ValidationIssue,
+    type Validator,
 } from "@laoban/validation"
 import {
     LegacyTemplateFileDeclaration,
@@ -26,63 +30,55 @@ import {
     TemplateSyntax,
 } from "./template.for.files"
 
-export const templateSyntaxValidator: Validator<TemplateSyntax> =
+export const templateSyntaxValidator: Validator<TemplateSyntax, AnyValidationContext> =
     mustBeOneOf("${}", "{{}}", ":", "<<>>")
 
-export const templateObjectValidator: Validator<{as: TemplateSyntax}> =
-    mustBeObjectWithFields<{as: TemplateSyntax}>({
+export const templateObjectValidator: Validator<{as: TemplateSyntax}, AnyValidationContext> =
+    mustBeObjectWithFields<{as: TemplateSyntax}, AnyValidationContext>({
         as: templateSyntaxValidator,
     }, true)
 
-export const templateParentDefinitionValidator: Validator<TemplateParentDefinition> =
-    mustBeObjectWithFields<TemplateParentDefinition>({
+export const templateParentDefinitionValidator: Validator<TemplateParentDefinition, AnyValidationContext> =
+    mustBeObjectWithFields<TemplateParentDefinition, AnyValidationContext>({
         src: mustBeString,
         delete: mustBeArrayOfIfPresent(mustBeString),
     }, true)
 
-const deprecatedLegacyTemplateFileDeclaration: Validator<LegacyTemplateFileDeclaration> =
-    (context) =>
-        (input): ErrorsOr<LegacyTemplateFileDeclaration, ValidationIssue> =>
-            value(input, [
-                {
-                    kind: "validation",
-                    severity: "warning",
-                    context,
-                    code: "deprecated",
-                    message: "Legacy template file declaration syntax is deprecated. Use explicit copy/merge file operations.",
-                },
-            ])
-
-const fileOrUrlOrArrayIfPresent: Validator<string | string[] | undefined> =
-    (context) =>
-        (input): ErrorsOr<string | string[] | undefined, ValidationIssue> => {
-            if (input === undefined || input === null) return value(input)
-            if (typeof input === "string") return value(input)
-
-            if (Array.isArray(input)) {
-                const badIndex = input.findIndex(item => typeof item !== "string")
-                if (badIndex === -1) return value(input)
-
-                return errors({
-                    kind: "validation",
-                    severity: "error",
-                    context,
-                    code: "wrong.type",
-                    message: `${renderContext(context)} must be a string or string[] but array item ${badIndex} was a ${describeType(input[badIndex])}`,
-                })
-            }
-
-            return errors({
-                kind: "validation",
-                severity: "error",
+const deprecatedLegacyTemplateFileDeclaration: Validator<LegacyTemplateFileDeclaration, AnyValidationContext> =
+    context => input =>
+        value(input, [
+            validationWarning(
                 context,
-                code: "wrong.type",
-                message: `${renderContext(context)} must be a string or string[] but was a ${describeType(input)}`,
-            })
+                "Legacy template file declaration syntax is deprecated. Use explicit copy/merge file operations.",
+                {code: "deprecated"},
+            ),
+        ])
+
+const fileOrUrlOrArrayIfPresent: Validator<string | string[] | undefined, AnyValidationContext> =
+    context => input => {
+        if (input === undefined || input === null) return value(input)
+        if (typeof input === "string") return value(input)
+
+        if (Array.isArray(input)) {
+            const badIndex = input.findIndex(item => typeof item !== "string")
+            if (badIndex === -1) return value(input)
+
+            return oneValidationError(
+                context,
+                `${renderContext(context)} must be a string or string[] but array item ${badIndex} was a ${describeType(input[badIndex])}`,
+                {code: "wrong.type"},
+            )
         }
 
-export const templateCopyFileDeclarationValidator: Validator<TemplateCopyFileDeclaration> =
-    mustBeObjectWithFields<TemplateCopyFileDeclaration>({
+        return oneValidationError(
+            context,
+            `${renderContext(context)} must be a string or string[] but was a ${describeType(input)}`,
+            {code: "wrong.type"},
+        )
+    }
+
+export const templateCopyFileDeclarationValidator: Validator<TemplateCopyFileDeclaration, AnyValidationContext> =
+    mustBeObjectWithFields<TemplateCopyFileDeclaration, AnyValidationContext>({
         type: mustBeOneOf("copy"),
         source: mustBeStringIfPresent,
         target: mustBeStringIfPresent,
@@ -90,8 +86,8 @@ export const templateCopyFileDeclarationValidator: Validator<TemplateCopyFileDec
         template: ifPresent(templateObjectValidator),
     }, true)
 
-export const templateMergeFileDeclarationValidator: Validator<TemplateMergeFileDeclaration> =
-    mustBeObjectWithFields<TemplateMergeFileDeclaration>({
+export const templateMergeFileDeclarationValidator: Validator<TemplateMergeFileDeclaration, AnyValidationContext> =
+    mustBeObjectWithFields<TemplateMergeFileDeclaration, AnyValidationContext>({
         type: mustBeOneOf("merge"),
         source: fileOrUrlOrArrayIfPresent,
         target: mustBeStringIfPresent,
@@ -100,10 +96,10 @@ export const templateMergeFileDeclarationValidator: Validator<TemplateMergeFileD
         template: ifPresent(templateObjectValidator),
     }, true)
 
-export const legacyTemplateFileDeclarationValidator: Validator<LegacyTemplateFileDeclaration> =
+export const legacyTemplateFileDeclarationValidator: Validator<LegacyTemplateFileDeclaration, AnyValidationContext> =
     chainValidators(
         deprecatedLegacyTemplateFileDeclaration,
-        mustBeObjectWithFields<LegacyTemplateFileDeclaration>({
+        mustBeObjectWithFields<LegacyTemplateFileDeclaration, AnyValidationContext>({
             file: mustBeStringIfPresent,
             template: ifPresent(templateSyntaxValidator),
             mergeWithParent: ifPresent(mustBeOneOf("json")),
@@ -115,7 +111,7 @@ export const legacyTemplateFileDeclarationValidator: Validator<LegacyTemplateFil
         }, true),
     )
 
-export const newTemplateFileDeclarationValidator: Validator<TemplateCopyFileDeclaration | TemplateMergeFileDeclaration> =
+export const newTemplateFileDeclarationValidator: Validator<TemplateCopyFileDeclaration | TemplateMergeFileDeclaration, AnyValidationContext> =
     composeTypedOr(
         templateFileDeclarationType,
         {
@@ -124,22 +120,21 @@ export const newTemplateFileDeclarationValidator: Validator<TemplateCopyFileDecl
         },
     )
 
-export const templateFileDeclarationValidator: Validator<TemplateFileDeclaration> =
-    (context, observability) =>
-        (input): ErrorsOr<TemplateFileDeclaration, ValidationIssue> => {
-            if (!hasTypeField(input)) {
-                return legacyTemplateFileDeclarationValidator(context, observability)(
-                    input as LegacyTemplateFileDeclaration,
-                )
-            }
-
-            return newTemplateFileDeclarationValidator(context, observability)(
-                input as TemplateCopyFileDeclaration | TemplateMergeFileDeclaration,
+export const templateFileDeclarationValidator: Validator<TemplateFileDeclaration, AnyValidationContext> =
+    (context, observability) => input => {
+        if (!hasTypeField(input)) {
+            return legacyTemplateFileDeclarationValidator(context, observability)(
+                input as LegacyTemplateFileDeclaration,
             )
         }
 
-export const templateDeclarationValidator: Validator<TemplateDeclaration> =
-    mustBeObjectWithFields<TemplateDeclaration>({
+        return newTemplateFileDeclarationValidator(context, observability)(
+            input as TemplateCopyFileDeclaration | TemplateMergeFileDeclaration,
+        )
+    }
+
+export const templateDeclarationValidator: Validator<TemplateDeclaration, AnyValidationContext> =
+    mustBeObjectWithFields<TemplateDeclaration, AnyValidationContext>({
         parent: mustBeArrayOfIfPresent(templateParentDefinitionValidator),
         defaultSrcPrefix: mustBeStringIfPresent,
         description: mustBeStringIfPresent,
@@ -149,17 +144,25 @@ export const templateDeclarationValidator: Validator<TemplateDeclaration> =
     }, true)
 
 export function validateTemplateDeclaration(
+    currentFile: string,
     input: TemplateDeclaration,
     observability: Observability,
 ): ErrorsOr<TemplateDeclaration, ValidationIssue> {
-    return templateDeclarationValidator([], observability)(input)
+    return templateDeclarationValidator(
+        fileValidationContext(currentFile),
+        observability,
+    )(input)
 }
 
 export function validateTemplateFileDeclaration(
+    currentFile: string,
     input: TemplateFileDeclaration,
     observability: Observability,
 ): ErrorsOr<TemplateFileDeclaration, ValidationIssue> {
-    return templateFileDeclarationValidator([], observability)(input)
+    return templateFileDeclarationValidator(
+        fileValidationContext(currentFile),
+        observability,
+    )(input)
 }
 
 function describeType(input: unknown): string {

@@ -1,107 +1,115 @@
-import { errors, value, type ErrorsOr } from "@laoban/errors";
+import {errors, value, type ErrorsOr} from "@laoban/errors"
 import {
     type DirectoryName,
     type Filename,
     type FileExistsFn,
     type FileOpIssue,
     type FileOpsHelperConfig,
-    type FileOpsHelperDefaults,
     type ListDirectoryFn,
-    makeFileOpIssue
-} from "@laoban/files";
-import { findAllByNameUnder as makeFindAllByNameUnder } from "@laoban/files";
-import * as fs from "fs/promises";
-import * as path from "path";
+    makeFileOpIssue,
+} from "@laoban/files"
+import * as fs from "fs/promises"
+import * as path from "path"
 
-const pathOps = {
+export const pathOps = {
     dirname: (directory: DirectoryName): DirectoryName => path.dirname(directory),
     resolvePath: (p: string): DirectoryName => path.resolve(p),
-    joinPath: (directory: DirectoryName, filename: Filename): string => path.join(directory, filename)
-};
+    joinPath: (directory: DirectoryName, filename: Filename): string =>
+        path.join(directory, filename),
+}
 
 type HasObservability = Readonly<{
-    observability?: FileOpsHelperConfig["observability"];
-}>;
+    observability?: FileOpsHelperConfig["observability"]
+}>
+
+const codeFrom = (e: unknown): string | undefined =>
+    typeof e === "object" &&
+    e !== null &&
+    "code" in e &&
+    typeof (e as {code?: unknown}).code === "string"
+        ? (e as {code: string}).code
+        : undefined
 
 export const nodeFileExists: FileExistsFn = async (
     filename,
-    _config?: HasObservability
+    _config?: HasObservability,
 ): Promise<ErrorsOr<boolean, FileOpIssue>> => {
     try {
-        await fs.access(filename);
-        return value(true);
+        await fs.access(filename)
+        return value(true)
     } catch {
-        return value(false);
+        return value(false)
     }
-};
+}
 
 export const nodeListDirectory: ListDirectoryFn = async (
     directory,
-    _config?: FileOpsHelperConfig
+    _config?: FileOpsHelperConfig,
 ): Promise<ErrorsOr<Filename[], FileOpIssue>> => {
     try {
-        const stat = await fs.stat(directory);
+        const stat = await fs.stat(directory)
+
         if (!stat.isDirectory()) {
             return errors(
                 makeFileOpIssue(
+                    directory,
                     "invalidPath",
                     `${directory} is not a directory`,
                     {
                         operation: "fileops.listDirectory",
-                        directory
                     },
                     undefined,
-                    "notDirectory"
-                )
-            );
+                    "notDirectory",
+                ),
+            )
         }
 
-        const names = await fs.readdir(directory);
-        return value(names);
+        const names = await fs.readdir(directory)
+        return value(names)
     } catch (e: unknown) {
-        const err = e as NodeJS.ErrnoException;
+        const code = codeFrom(e)
 
-        if (err?.code === "ENOENT") {
+        if (code === "ENOENT") {
             return errors(
                 makeFileOpIssue(
+                    directory,
                     "notFound",
                     `Directory not found: ${directory}`,
                     {
                         operation: "fileops.listDirectory",
-                        directory
                     },
                     e,
-                    "ENOENT"
-                )
-            );
+                    code,
+                ),
+            )
         }
 
-        if (err?.code === "EACCES" || err?.code === "EPERM") {
+        if (code === "EACCES" || code === "EPERM") {
             return errors(
                 makeFileOpIssue(
+                    directory,
                     "notReadable",
                     `Directory is not readable: ${directory}`,
                     {
                         operation: "fileops.listDirectory",
-                        directory
                     },
                     e,
-                    err.code
-                )
-            );
+                    code,
+                ),
+            )
         }
 
         return errors(
             makeFileOpIssue(
+                directory,
                 "io",
                 `Unable to list directory: ${directory}`,
                 {
                     operation: "fileops.listDirectory",
-                    directory
                 },
                 e,
-                err?.code
-            )
-        );
+                code,
+            ),
+        )
     }
-};
+}

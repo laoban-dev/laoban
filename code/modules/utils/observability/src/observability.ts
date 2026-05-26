@@ -52,7 +52,7 @@ export type ObservabilityTarget = Readonly<{
     write: Write
 }>
 
-export type Observability = ObservabilityContext & Readonly<{
+export type Observability = ObservabilityContext & ObservabilityTarget & Readonly<{
     log: Log
     debug: Debug
     countMetric: CountMetric
@@ -128,7 +128,7 @@ export const makeObservability = ({
     ...context,
     countMetric,
     durationMetric,
-
+    ...target,
     log: (...msg: unknown[]) =>
         target.write(`${renderObservabilityLine({
             ...context,

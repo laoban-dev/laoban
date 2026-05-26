@@ -89,6 +89,13 @@ export type NodeObservabilityFixture = Readonly<{
         }
         msg: string
     }
+    expectedRootWrite: (msg: string) => {
+        moduleScope: {
+            module: undefined
+            directory: "."
+        }
+        msg: string
+    }
 
     moduleScope: (
         module: string | null | undefined,
@@ -232,6 +239,15 @@ export function nodeObservabilityFixture(): NodeObservabilityFixture {
             msg: `00:00:00 INFO ${msg}\n`,
         }
     }
+    function expectedRootWrite(msg: string) {
+        return {
+            moduleScope: {
+                module: undefined,
+                directory: "." as const,
+            },
+            msg: `${msg}\n`,
+        }
+    }
 
     function moduleScope(
         module: string | null | undefined,
@@ -252,6 +268,7 @@ export function nodeObservabilityFixture(): NodeObservabilityFixture {
         logPath,
         sessionPath,
         expectedRootLog,
+        expectedRootWrite,
         moduleScope,
     }
 }

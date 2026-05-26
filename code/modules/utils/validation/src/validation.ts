@@ -1,52 +1,166 @@
 import {NameAnd} from "@laoban/records"
 import {safeJson} from "@laoban/safe"
-import {BaseIssue, Errors, errors, ErrorsOr, isErrors, value, warnings} from "@laoban/errors"
+import {
+    BaseIssue,
+    CommonIssue,
+    DiagnosticContext,
+    Errors,
+    errors,
+    ErrorsOr,
+    fileIssue,
+    isErrors,
+    value,
+    warnings,
+} from "@laoban/errors"
 import {DebugName, Observability} from "@laoban/observability"
 
 export type LiteralValue = string | number | boolean | null
 
-export type ValidationContext = string[]
+/**
+ * The normal validation path inside the value being validated.
+ *
+ * This is the old ValidationContext shape and remains the default.
+ * Existing callers using string[] continue to work unchanged.
+ */
+export type ValidationPath = string[]
 
-export type ValidationIssue = BaseIssue<"validation", ValidationContext> & {
+export type ValidationContext = ValidationPath
+
+/**
+ * Optional richer context for file-backed validation.
+ *
+ * The validator still stores `path` as the issue context.
+ * The file information is placed in `diagnosticContext`.
+ */
+export type FileValidationContext = {
+    diagnosticContext: DiagnosticContext
+    path: ValidationPath
+}
+
+export type AnyValidationContext =
+    | ValidationContext
+    | FileValidationContext
+
+export type ValidationIssue<Context = ValidationContext> = BaseIssue<"validation", Context> & {
     kind: "validation"
 }
 
-export type Validator<T> = (
-    context: ValidationContext,
+/**
+ * Existing usage remains:
+ *
+ *   Validator<T>
+ *
+ * The optional Context parameter only exists for callers that want file-backed
+ * validation contexts.
+ */
+export type Validator<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+> = (
+    context: Context,
     observability: Observability
-) => (t: T) => ErrorsOr<T, ValidationIssue>
+) => (t: T) => ErrorsOr<T, ValidationIssue<ValidationContext>>
 
-export function validationError(
-    context: ValidationContext,
-    message: string,
-    extras?: Partial<ValidationIssue>
-): ValidationIssue {
+export function fileValidationContext(
+    currentFile: string,
+    path: ValidationPath = [],
+    loadPath?: string[],
+): FileValidationContext {
     return {
+        diagnosticContext: {
+            currentFile,
+            ...(loadPath === undefined ? {} : {loadPath}),
+        },
+        path,
+    }
+}
+
+export function isFileValidationContext(
+    context: AnyValidationContext,
+): context is FileValidationContext {
+    return !Array.isArray(context) &&
+        typeof context === "object" &&
+        context !== null &&
+        Array.isArray((context as FileValidationContext).path) &&
+        typeof (context as FileValidationContext).diagnosticContext?.currentFile === "string"
+}
+
+export function validationPath(
+    context: AnyValidationContext,
+): ValidationPath {
+    return isFileValidationContext(context)
+        ? context.path
+        : context
+}
+
+export function childValidationContext<Context extends AnyValidationContext>(
+    context: Context,
+    child: string,
+): Context {
+    return (
+        isFileValidationContext(context)
+            ? {
+                ...context,
+                path: [...context.path, child],
+            }
+            : [...validationPath(context), child]
+    ) as Context
+}
+
+function validationFileIssue(
+    context: FileValidationContext,
+    issue: CommonIssue<"validation", ValidationPath>,
+): ValidationIssue<ValidationContext> {
+    return {
+        ...fileIssue(
+            context.diagnosticContext.currentFile,
+            issue,
+            context.diagnosticContext.loadPath,
+        ),
+        kind: "validation",
+    }
+}
+
+export function validationError<Context extends AnyValidationContext = AnyValidationContext>(
+    context: Context,
+    message: string,
+    extras?: Partial<ValidationIssue<ValidationContext>>,
+): ValidationIssue<ValidationContext> {
+    const issue: CommonIssue<"validation", ValidationContext> = {
         kind: "validation",
         severity: "error",
-        context,
+        context: validationPath(context),
         message,
         ...extras,
     }
+
+    return isFileValidationContext(context)
+        ? validationFileIssue(context, issue)
+        : issue as ValidationIssue<ValidationContext>
 }
 
-export function validationWarning(
-    context: ValidationContext,
+export function validationWarning<Context extends AnyValidationContext = AnyValidationContext>(
+    context: Context,
     message: string,
-    extras?: Partial<ValidationIssue>
-): ValidationIssue {
-    return {
+    extras?: Partial<ValidationIssue<ValidationContext>>,
+): ValidationIssue<ValidationContext> {
+    const issue: CommonIssue<"validation", ValidationContext> = {
         kind: "validation",
         severity: "warning",
-        context,
+        context: validationPath(context),
         message,
         ...extras,
     }
+
+    return isFileValidationContext(context)
+        ? validationFileIssue(context, issue)
+        : issue as ValidationIssue<ValidationContext>
 }
 
-export function renderContext(context: ValidationContext): string {
-    if (context.length === 0) return "<root>"
-    return context.join(".")
+export function renderContext(context: AnyValidationContext): string {
+    const path = validationPath(context)
+    if (path.length === 0) return "<root>"
+    return path.join(".")
 }
 
 export function validationErrors(
@@ -58,8 +172,8 @@ export function validationErrors(
     return errors(first, rest, warningList, reference)
 }
 
-export function oneValidationError(
-    context: ValidationContext,
+export function oneValidationError<Context extends AnyValidationContext = AnyValidationContext>(
+    context: Context,
     message: string,
     extras?: Partial<ValidationIssue>,
     warningList?: ValidationIssue[],
@@ -76,7 +190,7 @@ export function oneValidationError(
 export function debugValidation(
     observability: Observability,
     area: DebugName,
-    context: ValidationContext,
+    context: AnyValidationContext,
     message: string,
     input: unknown,
 ): void {
@@ -108,12 +222,15 @@ export function flattenValidationResults<T>(
     return value(values, warns)
 }
 
-type UnwrapValidator<V> = V extends Validator<infer U> ? U : never
+type UnwrapValidator<V> = V extends Validator<infer U, any> ? U : never
 
-export function combineValidators<T>(
-    ...validators: Validator<T>[]
-): Validator<T> {
-    return (context: ValidationContext, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
+export function combineValidators<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    ...validators: Validator<T, Context>[]
+): Validator<T, Context> {
+    return (context: Context, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
         debugValidation(observability, ["validation"], context, "combine validators", input)
 
         const combined = flattenValidationResults(
@@ -124,10 +241,13 @@ export function combineValidators<T>(
     }
 }
 
-export function chainValidators<T>(
-    ...validators: Validator<T>[]
-): Validator<T> {
-    return (context: ValidationContext, observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
+export function chainValidators<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    ...validators: Validator<T, Context>[]
+): Validator<T, Context> {
+    return (context: Context, observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
         let warningList: ValidationIssue[] = []
 
         for (const validator of validators) {
@@ -142,18 +262,19 @@ export function chainValidators<T>(
 }
 
 export function composeOr<
-    V extends Record<string, Validator<any>>
+    V extends Record<string, Validator<any, Context>>,
+    Context extends AnyValidationContext = AnyValidationContext
 >(
     validators: V
-): Validator<UnwrapValidator<V[keyof V]>> {
-    return (context: ValidationContext, observability: Observability) => (input: UnwrapValidator<V[keyof V]>): ErrorsOr<UnwrapValidator<V[keyof V]>, ValidationIssue> => {
+): Validator<UnwrapValidator<V[keyof V]>, Context> {
+    return (context: Context, observability: Observability) => (input: UnwrapValidator<V[keyof V]>): ErrorsOr<UnwrapValidator<V[keyof V]>, ValidationIssue> => {
         const reasons: ValidationIssue[] = []
         const warns: ValidationIssue[] = []
 
         debugValidation(observability, ["validation", "union"], context, "compose or", input)
 
         for (const key in validators) {
-            const validator = validators[key] as Validator<UnwrapValidator<V[keyof V]>>
+            const validator = validators[key] as Validator<UnwrapValidator<V[keyof V]>, Context>
             const result = validator(context, observability)(input as any)
 
             warns.push(...(warnings(result) ?? []))
@@ -169,13 +290,14 @@ export function composeOr<
 }
 
 export function composeTypedOr<
-    V extends Record<string, Validator<any>>,
-    T extends UnwrapValidator<V[keyof V]>
+    V extends Record<string, Validator<any, Context>>,
+    T extends UnwrapValidator<V[keyof V]>,
+    Context extends AnyValidationContext = AnyValidationContext
 >(
     typeFn: (t: T) => keyof V,
     validators: V
-): Validator<T> {
-    return (context: ValidationContext, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
+): Validator<T, Context> {
+    return (context: Context, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
         let type: keyof V | undefined
 
         try {
@@ -213,11 +335,82 @@ export function composeTypedOr<
     }
 }
 
-export function mustBeType<T>(
+export function mustBeBooleanStringOrObject<
+    T,
+    Context extends AnyValidationContext = ValidationContext
+>(
+    objectValidator: Validator<T, Context>,
+): Validator<boolean | string | T, Context> {
+    return (context: Context, observability: Observability) =>
+        (input: boolean | string | T): ErrorsOr<boolean | string | T, ValidationIssue> => {
+            debugValidation(
+                observability,
+                ["validation", "union"],
+                context,
+                "must be boolean, string or object",
+                input,
+            )
+
+            if (typeof input === "boolean") return value(input)
+            if (typeof input === "string") return value(input)
+
+            if (typeof input === "object" && input !== null && !Array.isArray(input)) {
+                return objectValidator(context, observability)(input as T)
+            }
+
+            return oneValidationError(
+                context,
+                `${renderContext(context)} must be a boolean, string or object but was ${
+                    input === null ? "null" :
+                        Array.isArray(input) ? "array" :
+                            typeof input
+                }`,
+                {code: "wrong.type"},
+            )
+        }
+}
+
+export function mustBeStringOrObject<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    objectValidator: Validator<T, Context>,
+): Validator<string | T, Context> {
+    return (context: Context, observability: Observability) => (input: string | T): ErrorsOr<string | T, ValidationIssue> => {
+        debugValidation(
+            observability,
+            ["validation", "union"],
+            context,
+            "must be string or object",
+            input,
+        )
+
+        if (typeof input === "string") return value(input)
+
+        if (typeof input === "object" && input !== null && !Array.isArray(input)) {
+            return objectValidator(context, observability)(input as T)
+        }
+
+        return oneValidationError(
+            context,
+            `${renderContext(context)} must be a string or object but was ${
+                input === null ? "null" :
+                    Array.isArray(input) ? "array" :
+                        typeof input
+            }`,
+            {code: "wrong.type"},
+        )
+    }
+}
+
+export function mustBeType<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
     typeCheck: (v: unknown) => v is T,
     typeName: string
-): Validator<T> {
-    return (context: ValidationContext, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
+): Validator<T, Context> {
+    return (context: Context, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
         debugValidation(observability, ["validation"], context, `must be type ${typeName}`, input)
 
         if (input === undefined) {
@@ -246,22 +439,28 @@ export function mustBeType<T>(
     }
 }
 
-export const ifPresent = <T>(
-    validator: Validator<T>
-): Validator<T | undefined> =>
-    (context: ValidationContext, observability) =>
+export const ifPresent = <
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    validator: Validator<T, Context>
+): Validator<T | undefined, Context> =>
+    (context: Context, observability) =>
         (input: T | undefined): ErrorsOr<T | undefined, ValidationIssue> =>
             input === undefined || input === null
                 ? value(input)
                 : validator(context, observability)(input)
 
-export function mustBeTypeIfPresent<T>(
+export function mustBeTypeIfPresent<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
     typeCheck: (v: unknown) => v is T,
     typeName: string
-): Validator<T | undefined> {
-    const required = mustBeType<T>(typeCheck, typeName)
+): Validator<T | undefined, Context> {
+    const required = mustBeType<T, Context>(typeCheck, typeName)
 
-    return (context: ValidationContext, observability: Observability) => (input: T | undefined): ErrorsOr<T | undefined, ValidationIssue> => {
+    return (context: Context, observability: Observability) => (input: T | undefined): ErrorsOr<T | undefined, ValidationIssue> => {
         debugValidation(observability, ["validation"], context, `must be type ${typeName} if present`, input)
 
         if (input === undefined || input === null) return value(input)
@@ -271,25 +470,28 @@ export function mustBeTypeIfPresent<T>(
     }
 }
 
-export const mustBeString: Validator<string> =
-    mustBeType((v): v is string => typeof v === "string", "string")
+export const mustBeString: Validator<string, AnyValidationContext> =
+    mustBeType<string, AnyValidationContext>((v): v is string => typeof v === "string", "string")
 
-export const mustBeNumber: Validator<number> =
-    mustBeType((v): v is number => typeof v === "number", "number")
+export const mustBeNumber: Validator<number, AnyValidationContext> =
+    mustBeType<number, AnyValidationContext>((v): v is number => typeof v === "number", "number")
 
-export const mustBeBoolean: Validator<boolean> =
-    mustBeType((v): v is boolean => typeof v === "boolean", "boolean")
+export const mustBeBoolean: Validator<boolean, AnyValidationContext> =
+    mustBeType<boolean, AnyValidationContext>((v): v is boolean => typeof v === "boolean", "boolean")
 
-export const mustBeStringIfPresent: Validator<string | undefined> =
-    mustBeTypeIfPresent((v): v is string => typeof v === "string", "string")
+export const mustBeStringIfPresent: Validator<string | undefined, AnyValidationContext> =
+    mustBeTypeIfPresent<string, AnyValidationContext>((v): v is string => typeof v === "string", "string")
 
-export const mustBeNumberIfPresent: Validator<number | undefined> =
-    mustBeTypeIfPresent((v): v is number => typeof v === "number", "number")
+export const mustBeNumberIfPresent: Validator<number | undefined, AnyValidationContext> =
+    mustBeTypeIfPresent<number, AnyValidationContext>((v): v is number => typeof v === "number", "number")
 
-export const mustBeBooleanIfPresent: Validator<boolean | undefined> =
-    mustBeTypeIfPresent((v): v is boolean => typeof v === "boolean", "boolean")
+export const mustBeBooleanIfPresent: Validator<boolean | undefined, AnyValidationContext> =
+    mustBeTypeIfPresent<boolean, AnyValidationContext>((v): v is boolean => typeof v === "boolean", "boolean")
 
-export function mustBeOneOf<const T extends readonly unknown[]>(...values: T): Validator<T[number]> {
+export function mustBeOneOf<
+    const T extends readonly unknown[],
+    Context extends AnyValidationContext = AnyValidationContext
+>(...values: T): Validator<T[number], Context> {
     return (context, _observability) => (input) => {
         if (input === undefined) {
             return oneValidationError(
@@ -324,12 +526,15 @@ export function mustBeOneOf<const T extends readonly unknown[]>(...values: T): V
     }
 }
 
-export function mustBeLiteral<T extends LiteralValue>(
+export function mustBeLiteral<
+    T extends LiteralValue,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
     expected: T
-): Validator<T> {
+): Validator<T, Context> {
     const typeName = expected === null ? "null" : typeof expected
 
-    return (context: ValidationContext, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
+    return (context: Context, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
         debugValidation(
             observability,
             ["validation"],
@@ -382,10 +587,13 @@ export function mustBeLiteral<T extends LiteralValue>(
     }
 }
 
-export function mustBeArrayOf<T>(
-    itemValidator: Validator<T>
-): Validator<T[]> {
-    return (context: ValidationContext, observability: Observability) => (input: T[]): ErrorsOr<T[], ValidationIssue> => {
+export function mustBeArrayOf<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    itemValidator: Validator<T, Context>
+): Validator<T[], Context> {
+    return (context: Context, observability: Observability) => (input: T[]): ErrorsOr<T[], ValidationIssue> => {
         debugValidation(observability, ["validation", "shape"], context, "must be array of", input)
 
         if (!Array.isArray(input)) {
@@ -397,7 +605,7 @@ export function mustBeArrayOf<T>(
         }
 
         const itemResults = input.map((item, idx) =>
-            itemValidator([...context, String(idx)], observability)(item),
+            itemValidator(childValidationContext(context, String(idx)), observability)(item),
         )
 
         const flattened = flattenValidationResults(itemResults)
@@ -405,12 +613,15 @@ export function mustBeArrayOf<T>(
     }
 }
 
-export function mustBeArrayOfIfPresent<T>(
-    itemValidator: Validator<T>
-): Validator<T[] | undefined> {
+export function mustBeArrayOfIfPresent<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    itemValidator: Validator<T, Context>
+): Validator<T[] | undefined, Context> {
     const required = mustBeArrayOf(itemValidator)
 
-    return (context: ValidationContext, observability: Observability) => (input: T[] | undefined): ErrorsOr<T[] | undefined, ValidationIssue> => {
+    return (context: Context, observability: Observability) => (input: T[] | undefined): ErrorsOr<T[] | undefined, ValidationIssue> => {
         debugValidation(observability, ["validation", "shape"], context, "must be array of if present", input)
 
         if (input === undefined || input === null) return value(input)
@@ -421,12 +632,13 @@ export function mustBeArrayOfIfPresent<T>(
 }
 
 export function mustBeObjectWithFields<
-    T extends Record<string, any>
+    T extends Record<string, any>,
+    Context extends AnyValidationContext = AnyValidationContext
 >(
-    fields: { [K in keyof T]: Validator<T[K]> },
+    fields: { [K in keyof T]: Validator<T[K], Context> },
     required?: boolean
-): Validator<T> {
-    return (context: ValidationContext, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
+): Validator<T, Context> {
+    return (context: Context, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
         debugValidation(
             observability,
             ["validation", "shape"],
@@ -448,18 +660,25 @@ export function mustBeObjectWithFields<
         const obj = input as { [K in keyof T]: unknown }
 
         const results = (Object.keys(fields) as (keyof T)[]).map(key =>
-            fields[key]([...context, String(key)], observability)(obj[key] as T[typeof key]),
+            fields[key](
+                childValidationContext(context, String(key)),
+                observability,
+            )(obj[key] as T[typeof key]),
         )
 
         const flattened = flattenValidationResults(results)
         return isErrors(flattened) ? flattened : value(input, flattened.warnings)
     }
 }
-export function mustBeNameAnd<T>(
-    validator: Validator<T>,
+
+export function mustBeNameAnd<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    validator: Validator<T, Context>,
     required?: boolean
-): Validator<NameAnd<T>> {
-    return (context: ValidationContext, observability: Observability) => (input: NameAnd<T>): ErrorsOr<NameAnd<T>, ValidationIssue> => {
+): Validator<NameAnd<T>, Context> {
+    return (context: Context, observability: Observability) => (input: NameAnd<T>): ErrorsOr<NameAnd<T>, ValidationIssue> => {
         debugValidation(observability, ["validation", "field"], context, "must be NameAnd", input)
 
         if (input === undefined) {
@@ -513,7 +732,7 @@ export function mustBeNameAnd<T>(
                 continue
             }
 
-            results.push(validator([...context, key], observability)(val))
+            results.push(validator(childValidationContext(context, key), observability)(val))
         }
 
         const flattened = flattenValidationResults(results)
@@ -531,12 +750,15 @@ export function mustBeNameAnd<T>(
     }
 }
 
-export function mustBeNameAndIfPresent<T>(
-    validator: Validator<T>
-): Validator<NameAnd<T> | undefined> {
+export function mustBeNameAndIfPresent<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    validator: Validator<T, Context>
+): Validator<NameAnd<T> | undefined, Context> {
     const required = mustBeNameAnd(validator, true)
 
-    return (context: ValidationContext, observability: Observability) => (input: NameAnd<T> | undefined): ErrorsOr<NameAnd<T> | undefined, ValidationIssue> => {
+    return (context: Context, observability: Observability) => (input: NameAnd<T> | undefined): ErrorsOr<NameAnd<T> | undefined, ValidationIssue> => {
         debugValidation(observability, ["validation", "field"], context, "must be NameAnd if present", input)
 
         if (input === undefined || input === null) return value(input)
@@ -546,8 +768,10 @@ export function mustBeNameAndIfPresent<T>(
     }
 }
 
-export const minLength = (n: number): Validator<string> =>
-    (context: ValidationContext) => (input: string): ErrorsOr<string, ValidationIssue> =>
+export const minLength = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(n: number): Validator<string, Context> =>
+    (context: Context) => (input: string): ErrorsOr<string, ValidationIssue> =>
         input.length >= n
             ? value(input)
             : oneValidationError(
@@ -556,8 +780,10 @@ export const minLength = (n: number): Validator<string> =>
                 {code: "min.length"},
             )
 
-export const maxLength = (n: number): Validator<string> =>
-    (context: ValidationContext) => (input: string): ErrorsOr<string, ValidationIssue> =>
+export const maxLength = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(n: number): Validator<string, Context> =>
+    (context: Context) => (input: string): ErrorsOr<string, ValidationIssue> =>
         input.length <= n
             ? value(input)
             : oneValidationError(
@@ -566,8 +792,10 @@ export const maxLength = (n: number): Validator<string> =>
                 {code: "max.length"},
             )
 
-export const exactLength = (n: number): Validator<string> =>
-    (context: ValidationContext) => (input: string): ErrorsOr<string, ValidationIssue> =>
+export const exactLength = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(n: number): Validator<string, Context> =>
+    (context: Context) => (input: string): ErrorsOr<string, ValidationIssue> =>
         input.length === n
             ? value(input)
             : oneValidationError(
@@ -576,8 +804,10 @@ export const exactLength = (n: number): Validator<string> =>
                 {code: "exact.length"},
             )
 
-export const pattern = (re: RegExp, name?: string): Validator<string> =>
-    (context: ValidationContext) => (input: string): ErrorsOr<string, ValidationIssue> =>
+export const pattern = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(re: RegExp, name?: string): Validator<string, Context> =>
+    (context: Context) => (input: string): ErrorsOr<string, ValidationIssue> =>
         re.test(input)
             ? value(input)
             : oneValidationError(
@@ -586,8 +816,8 @@ export const pattern = (re: RegExp, name?: string): Validator<string> =>
                 {code: "pattern"},
             )
 
-export const nonBlank: Validator<string> =
-    (context: ValidationContext) => (input: string): ErrorsOr<string, ValidationIssue> =>
+export const nonBlank: Validator<string, AnyValidationContext> =
+    context => input =>
         input.trim().length > 0
             ? value(input)
             : oneValidationError(
@@ -596,7 +826,9 @@ export const nonBlank: Validator<string> =
                 {code: "blank"},
             )
 
-export const format = (fmt: string): Validator<string> => {
+export const format = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(fmt: string): Validator<string, Context> => {
     switch (fmt) {
         case "uuid": {
             const uuidRe =
@@ -604,12 +836,14 @@ export const format = (fmt: string): Validator<string> => {
             return pattern(uuidRe, "uuid")
         }
         default:
-            return (_context: ValidationContext) => (input: string) => value(input)
+            return (_context: Context) => (input: string) => value(input)
     }
 }
 
-export const min = (n: number): Validator<number> =>
-    (context: ValidationContext) => (input: number): ErrorsOr<number, ValidationIssue> =>
+export const min = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(n: number): Validator<number, Context> =>
+    (context: Context) => (input: number): ErrorsOr<number, ValidationIssue> =>
         input >= n
             ? value(input)
             : oneValidationError(
@@ -618,8 +852,10 @@ export const min = (n: number): Validator<number> =>
                 {code: "min"},
             )
 
-export const max = (n: number): Validator<number> =>
-    (context: ValidationContext) => (input: number): ErrorsOr<number, ValidationIssue> =>
+export const max = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(n: number): Validator<number, Context> =>
+    (context: Context) => (input: number): ErrorsOr<number, ValidationIssue> =>
         input <= n
             ? value(input)
             : oneValidationError(
@@ -628,8 +864,10 @@ export const max = (n: number): Validator<number> =>
                 {code: "max"},
             )
 
-export const integer = (): Validator<number> =>
-    (context: ValidationContext) => (input: number): ErrorsOr<number, ValidationIssue> =>
+export const integer = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(): Validator<number, Context> =>
+    (context: Context) => (input: number): ErrorsOr<number, ValidationIssue> =>
         Number.isInteger(input)
             ? value(input)
             : oneValidationError(
@@ -638,8 +876,10 @@ export const integer = (): Validator<number> =>
                 {code: "integer"},
             )
 
-export const minItems = (n: number): Validator<unknown[]> =>
-    (context: ValidationContext) => (input: unknown[]): ErrorsOr<unknown[], ValidationIssue> =>
+export const minItems = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(n: number): Validator<unknown[], Context> =>
+    (context: Context) => (input: unknown[]): ErrorsOr<unknown[], ValidationIssue> =>
         input.length >= n
             ? value(input)
             : oneValidationError(
@@ -648,8 +888,10 @@ export const minItems = (n: number): Validator<unknown[]> =>
                 {code: "min.items"},
             )
 
-export const maxItems = (n: number): Validator<unknown[]> =>
-    (context: ValidationContext) => (input: unknown[]): ErrorsOr<unknown[], ValidationIssue> =>
+export const maxItems = <
+    Context extends AnyValidationContext = AnyValidationContext
+>(n: number): Validator<unknown[], Context> =>
+    (context: Context) => (input: unknown[]): ErrorsOr<unknown[], ValidationIssue> =>
         input.length <= n
             ? value(input)
             : oneValidationError(
@@ -658,19 +900,25 @@ export const maxItems = (n: number): Validator<unknown[]> =>
                 {code: "max.items"},
             )
 
-export const when = <T>(
+export const when = <
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
     cond: boolean,
-    validator: Validator<T>
-): Validator<T> =>
+    validator: Validator<T, Context>
+): Validator<T, Context> =>
     (context, observability) => (input) =>
         cond ? validator(context, observability)(input) : value(input)
 
-export function mustBeEnum<T extends string>(
+export function mustBeEnum<
+    T extends string,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
     values: readonly T[]
-): Validator<T> {
+): Validator<T, Context> {
     const allowed = new Set<string>(values)
 
-    return (context: ValidationContext, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
+    return (context: Context, observability: Observability) => (input: T): ErrorsOr<T, ValidationIssue> => {
         debugValidation(
             observability,
             ["validation"],
@@ -713,10 +961,13 @@ export function mustBeEnum<T extends string>(
     }
 }
 
-export function nullableValidator<T>(
-    validator: Validator<T>
-): Validator<T | null | undefined> {
-    return (context: ValidationContext, observability: Observability) => (input: T | null | undefined): ErrorsOr<T | null | undefined, ValidationIssue> => {
+export function nullableValidator<
+    T,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
+    validator: Validator<T, Context>
+): Validator<T | null | undefined, Context> {
+    return (context: Context, observability: Observability) => (input: T | null | undefined): ErrorsOr<T | null | undefined, ValidationIssue> => {
         debugValidation(observability, ["validation"], context, "nullable if present", input)
 
         if (input === null || input === undefined) return value(input)
@@ -726,10 +977,13 @@ export function nullableValidator<T>(
     }
 }
 
-export function deprecatedField<T = unknown>(
+export function deprecatedField<
+    T = unknown,
+    Context extends AnyValidationContext = AnyValidationContext
+>(
     message: string,
-): Validator<T> {
-    return (context: ValidationContext) => (input: T): ErrorsOr<T, ValidationIssue> =>
+): Validator<T, Context> {
+    return (context: Context) => (input: T): ErrorsOr<T, ValidationIssue> =>
         value(input, [
             validationWarning(context, message, {code: "deprecated"}),
         ])

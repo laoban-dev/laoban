@@ -1,4 +1,4 @@
-import {ErrorsOr} from "@laoban/errors"
+import {CommonIssue, ErrorsOr, fileIssue, FileIssue} from "@laoban/errors"
 import {nullObservability, Observability} from "@laoban/observability"
 
 export type Filename = string
@@ -33,13 +33,7 @@ export type FileOpIssueContext = Readonly<{
     cause?: unknown
 }>
 
-export type FileOpIssue = Readonly<{
-    kind: FileOpIssueKind
-    message: string
-    context?: FileOpIssueContext
-    code?: string
-    severity?: "error" | "warning"
-}>
+export type FileOpIssue = FileIssue<FileOpIssueKind, FileOpIssueContext>
 
 export type LoadFileFn = (
     filename: FileOrUrl,
@@ -197,22 +191,27 @@ export interface FileOps extends WriteTextFileOps {
 }
 
 export const makeFileOpIssue = (
+    currentFile: FileOrUrl,
     kind: FileOpIssueKind,
     message: string,
     context?: FileOpIssueContext,
     cause?: unknown,
     code?: string,
-): FileOpIssue => ({
-    kind,
-    message,
-    ...(context === undefined
-        ? {}
-        : {
-            context:
-                cause === undefined
-                    ? context
-                    : {...context, cause},
-        }),
-    ...(code === undefined ? {} : {code}),
-    severity: "error",
-})
+): FileOpIssue =>
+    fileIssue(
+        currentFile,
+        {
+            kind,
+            message,
+            ...(context === undefined
+                ? {}
+                : {
+                    context:
+                        cause === undefined
+                            ? context
+                            : {...context, cause},
+                }),
+            ...(code === undefined ? {} : {code}),
+            severity: "error",
+        },
+    )

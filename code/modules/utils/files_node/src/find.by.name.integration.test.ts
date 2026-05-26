@@ -1,8 +1,10 @@
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
+
 import {isErrors, valueOrThrow} from "@laoban/errors"
-import {findAllByNameUnder as makeFindAllByNameUnder} from "@laoban/files"
+import {type FileOpIssue, findAllByNameUnder as makeFindAllByNameUnder} from "@laoban/files"
+
 import {nodeFileOpsDefaults} from "./fileops.node.defaults"
 
 const nodeFindAllByNameUnder =
@@ -18,6 +20,17 @@ const writeFile = async (filename: string, content = ""): Promise<void> => {
 
 const mkdir = async (dirname: string): Promise<void> => {
     await fs.mkdir(dirname, {recursive: true})
+}
+
+const withoutCause = (issue: FileOpIssue): FileOpIssue => {
+    if (issue.context === undefined) return issue
+
+    const {cause: _cause, ...context} = issue.context
+
+    return {
+        ...issue,
+        context,
+    }
 }
 
 describe("nodeFindAllByNameUnder", () => {
@@ -91,9 +104,48 @@ describe("nodeFindAllByNameUnder", () => {
         const result = await nodeFindAllByNameUnder(missing, "package.details.json")
 
         expect(isErrors(result)).toBe(true)
+
         if (isErrors(result)) {
-            expect(result.errors[0].kind).toBe("notFound")
-            expect(result.errors[0].context?.directory).toBe(missing)
+            expect(result.errors.map(withoutCause)).toEqual([
+                {
+                    kind: "notFound",
+                    message: `Failed listing directory [${missing}]`,
+                    severity: "error",
+                    code: "ENOENT",
+                    context: {
+                        operation: "listDirectory",
+                    },
+                    diagnosticContext: {
+                        currentFile: missing,
+                    },
+                },
+            ])
+        }
+    })
+
+    it("returns invalidPath when the root is a file", async () => {
+        const file = path.join(root, "plain-file.txt")
+        await writeFile(file, "hello")
+
+        const result = await nodeFindAllByNameUnder(file, "package.details.json")
+
+        expect(isErrors(result)).toBe(true)
+
+        if (isErrors(result)) {
+            expect(result.errors.map(withoutCause)).toEqual([
+                {
+                    kind: "invalidPath",
+                    message: `Failed listing directory [${file}]`,
+                    severity: "error",
+                    code: "ENOTDIR",
+                    context: {
+                        operation: "listDirectory",
+                    },
+                    diagnosticContext: {
+                        currentFile: file,
+                    },
+                },
+            ])
         }
     })
 

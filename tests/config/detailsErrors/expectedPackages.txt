@@ -1,4 +1,20 @@
-Bad package.details.json for <root>/detailsErrors/projects/detailsFileDoesntParse
-    projects/noGuards   => proj2     (typescript)
-    projects/noName     => undefined (typescript)
-    projects/noTemplate => proj2     (undefined )
+Errors
+
+in file projects/detailsFileDoesntParse/package.details.json
+  parsePackageDetailsFailed: Could not parse package details JSON
+
+in file projects/noName/package.details.json
+  name
+    required: name is required but was undefined
+  guards.extraDeps
+    wrong.type: guards.extraDeps must be a boolean but was a object
+  guards.extraDevDeps
+    wrong.type: guards.extraDevDeps must be a boolean but was a object
+
+in file projects/noTemplate/package.details.json
+  template
+    required: template is required but was undefined
+  guards.extraDeps
+    wrong.type: guards.extraDeps must be a boolean but was a string
+  guards.extraDevDeps
+    wrong.type: guards.extraDevDeps must be a boolean but was a object

@@ -62,27 +62,29 @@ function getListCommand() {
 
 describe("laoban config commands", () => {
     it("loadConfig delegates to context.loadLaobanConfig with the expected arguments", async () => {
-        const result = value({anything: "goes"} as any);
+        const result: Awaited<ReturnType<LoadConfigFn>> =
+            value({anything: "goes"} as any)
+
         const loadLaobanConfig = jest.fn<ReturnType<LoadConfigFn>, Parameters<LoadConfigFn>>(
-            async () => result
-        );
+            async () => result,
+        )
 
-        const context = makeContext(loadLaobanConfig);
+        const context = makeContext(loadLaobanConfig)
 
-        const actual = await loadConfig(context);
+        const actual = await loadConfig(context)
 
-        expect(actual).toBe(result);
+        expect(actual).toBe(result)
         expect(loadLaobanConfig).toHaveBeenCalledWith(
             {
                 osOps: context.osOps,
                 fileOps: context.fileOps,
                 observability: context.observability,
                 markerFileName: "laoban.json",
-                loadTextConfig: context.loadLaobanFileConfig
+                loadTextConfig: context.loadLaobanFileConfig,
             },
-            context.cwd
-        );
-    });
+            context.cwd,
+        )
+    })
 
     it("config view returns the effective config", async () => {
         const config = {name: "demo"};

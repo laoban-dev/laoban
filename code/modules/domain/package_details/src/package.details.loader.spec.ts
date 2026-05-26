@@ -1,4 +1,4 @@
-import {isErrors} from "@laoban/errors"
+import {isErrors, isFileIssue} from "@laoban/errors"
 import {type FileOps, PathOps} from "@laoban/files"
 import {type LoadedLaobanConfig} from "@laoban/laoban_config"
 import {recordingObservability} from "@laoban/observability"
@@ -122,7 +122,6 @@ describe("loadPackages", () => {
             },
         })
     })
-
     it("returns an issue when a package file contains invalid JSON text", async () => {
         const packageFile = "/workspace/a/package.details.json"
         const fileOps = makeFileOps({
@@ -143,16 +142,19 @@ describe("loadPackages", () => {
         expect(isErrors(result)).toBe(true)
         if (!isErrors(result)) throw new Error("Expected errors")
 
-        expect(result.errors).toHaveLength(1)
-        expect(result.errors[0]).toMatchObject({
-            kind: "parsePackageDetailsFailed",
-            message: expect.stringContaining(`Could not parse package details JSON in ${packageFile}`),
-            context: {
-                packageFile,
+        expect(result.errors).toEqual([
+            {
+                kind: "parsePackageDetailsFailed",
+                message: "Could not parse package details JSON",
+                context: {
+                    error: "Expected property name or '}' in JSON at position 2 (line 1 column 3)",
+                },
+                diagnosticContext: {
+                    currentFile: "/workspace/a/package.details.json",
+                },
             },
-        })
+        ])
     })
-
     it("returns all validation errors for one malformed package file", async () => {
         const packageFile = "/workspace/a/package.details.json"
         const fileOps = makeFileOps({
@@ -175,19 +177,55 @@ describe("loadPackages", () => {
         expect(isErrors(result)).toBe(true)
         if (!isErrors(result)) throw new Error("Expected errors")
 
-        const validationIssues = result.errors.filter(isValidationIssue)
-        expect(validationIssues.length).toBeGreaterThanOrEqual(3)
-        expect(validationIssues.every(issue => hasPackageFileContext(issue, packageFile))).toBe(true)
+        expect(result.errors).toEqual([
+            {
+                code: "wrong.type",
+                context: [
+                    "template",
+                ],
+                diagnosticContext: {
+                    currentFile: "/workspace/a/package.details.json",
+                },
+                kind: "validation",
+                message: "template must be a string but was a number",
+                severity: "error",
+            },
+            {
+                code: "blank",
+                context: [
+                    "name",
+                ],
+                diagnosticContext: {
+                    currentFile: "/workspace/a/package.details.json",
+                },
+                kind: "validation",
+                message: "name must not be blank",
+                severity: "error",
+            },
+            {
+                code: "wrong.type",
+                context: [
+                    "description",
+                ],
+                diagnosticContext: {
+                    currentFile: "/workspace/a/package.details.json",
+                },
+                kind: "validation",
+                message: "description must be a string but was a number",
+                severity: "error",
+            },
+        ])
     })
-
     it("returns validation errors from multiple malformed package files", async () => {
         const packageFileA = "/workspace/a/package.details.json"
         const packageFileB = "/workspace/b/package.details.json"
+
         const fileOps = makeFileOps({
             findAllByNameUnder: jest.fn().mockResolvedValue({
                 value: [packageFileA, packageFileB],
                 warnings: [],
             }),
+
             loadText: jest.fn().mockImplementation(async (file: string) => {
                 if (file === packageFileA) {
                     return {
@@ -214,10 +252,44 @@ describe("loadPackages", () => {
         expect(isErrors(result)).toBe(true)
         if (!isErrors(result)) throw new Error("Expected errors")
 
-        const validationIssues = result.errors.filter(isValidationIssue)
-        expect(validationIssues.length).toBeGreaterThanOrEqual(3)
-        expect(validationIssues.some(issue => hasPackageFileContext(issue, packageFileA))).toBe(true)
-        expect(validationIssues.some(issue => hasPackageFileContext(issue, packageFileB))).toBe(true)
+        expect(result.errors).toEqual([
+            {
+                code: "wrong.type",
+                context: [
+                    "template",
+                ],
+                diagnosticContext: {
+                    currentFile: "/workspace/a/package.details.json",
+                },
+                kind: "validation",
+                message: "template must be a string but was a number",
+                severity: "error",
+            },
+            {
+                code: "wrong.type",
+                context: [
+                    "template",
+                ],
+                diagnosticContext: {
+                    currentFile: "/workspace/b/package.details.json",
+                },
+                kind: "validation",
+                message: "template must be a string but was a number",
+                severity: "error",
+            },
+            {
+                code: "blank",
+                context: [
+                    "name",
+                ],
+                diagnosticContext: {
+                    currentFile: "/workspace/b/package.details.json",
+                },
+                kind: "validation",
+                message: "name must not be blank",
+                severity: "error",
+            },
+        ])
     })
 
     it("returns duplicate package name issues", async () => {

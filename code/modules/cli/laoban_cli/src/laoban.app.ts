@@ -143,7 +143,7 @@ export async function runLaobanApp(
                 observability: context.observability,
                 makeContext: di.makeContext,
                 onError: async (observability, e) => {
-                    dumpErrors(observability, e)
+                    di.dumpErrors(observability, e)
                 },
             }),
         )

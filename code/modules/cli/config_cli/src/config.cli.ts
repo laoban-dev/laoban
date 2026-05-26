@@ -1,5 +1,5 @@
-import {mapErrorsOr, type ErrorsOr} from "@laoban/errors";
-import {LoadConfigFn, type LoadedLaobanConfig, type LoaderIssue} from "@laoban/laoban_config";
+import {mapErrorsOr, type ErrorsOr, FileIssue} from "@laoban/errors";
+import {LoadConfigFn, type LoadedLaobanConfig} from "@laoban/laoban_config";
 import {type BasicCliContext, CliGroup, type CliModel, defineCommand, group, root} from "@laoban/clidsl";
 import {type FileOps, type LoadTextConfig} from "@laoban/files";
 import {OsOps} from "@laoban/os";
@@ -16,7 +16,7 @@ export interface LaobanConfigCliContext extends BasicCliContext {
 
 }
 
-export function loadConfig(context: LaobanConfigCliContext): Promise<ErrorsOr<LoadedLaobanConfig, LoaderIssue>> {
+export function loadConfig(context: LaobanConfigCliContext): Promise<ErrorsOr<LoadedLaobanConfig, FileIssue>> {
     return context.loadLaobanConfig(
         {
             osOps: context.osOps,

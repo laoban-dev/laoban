@@ -106,7 +106,7 @@ describe("loadText", () => {
     });
 
     it("returns unknownMarker when the source starts with @ but no marker matches", async () => {
-        const result = await loader("@missing/file.txt", config);
+        const result = await loader("@missing/file.txt", config)
 
         expect(result).toEqual({
             errors: [
@@ -116,14 +116,17 @@ describe("loadText", () => {
                     severity: "error",
                     context: {
                         operation: "load",
-                        filename: "@missing/file.txt",
+                    },
+                    diagnosticContext: {
+                        currentFile: "@missing/file.txt",
                     },
                 },
             ],
-        });
-        expect(loadFile).not.toHaveBeenCalled();
-        expect(loadUrl).not.toHaveBeenCalled();
-    });
+        })
+
+        expect(loadFile).not.toHaveBeenCalled()
+        expect(loadUrl).not.toHaveBeenCalled()
+    })
 
     it("passes through errors from loadFile", async () => {
         const fileError = errors({
@@ -207,7 +210,7 @@ describe("loadText", () => {
     });
 
     it("returns unknownMarker from loadFromMarker directly when no marker matches", async () => {
-        const result = await markerLoader("@other/readme.md", config);
+        const result = await markerLoader("@other/readme.md", config)
 
         expect(result).toEqual({
             errors: [
@@ -217,12 +220,14 @@ describe("loadText", () => {
                     severity: "error",
                     context: {
                         operation: "load",
-                        filename: "@other/readme.md",
+                    },
+                    diagnosticContext: {
+                        currentFile: "@other/readme.md",
                     },
                 },
             ],
-        });
-    });
+        })
+    })
 
     it("uses defaults infrastructure when config does not provide infrastructure", async () => {
         loadFile.mockResolvedValue(value("from defaults"));

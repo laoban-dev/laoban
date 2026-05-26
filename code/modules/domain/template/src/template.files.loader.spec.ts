@@ -1,6 +1,14 @@
+import {
+    BaseIssue,
+    errors,
+    errorsOrThrow,
+    isErrors,
+    isFileIssue,
+    value,
+    valueOrThrow,
+} from "@laoban/errors"
 import {ICodec} from "@laoban/codec"
-import {errors, errorsOrThrow, isErrors, value, valueOrThrow} from "@laoban/errors"
-import {FileOpIssue, FileOps,} from "@laoban/files"
+import {FileOpIssue, FileOps} from "@laoban/files"
 import {nullObservability} from "@laoban/observability"
 import {
     loadedTemplateDeclaration,
@@ -12,6 +20,8 @@ import {
 
 describe("template file loading", () => {
     const observability = nullObservability()
+
+    const templateFile = "@laoban@/templates/typescript/template.json"
 
     const validTemplateDeclaration = {
         defaultSrcPrefix: "@laoban@/templates/typescript",
@@ -30,6 +40,21 @@ describe("template file loading", () => {
                 fileType: "json",
             },
         },
+    }
+
+    function toExpectedFileIssue(error: BaseIssue) {
+        expect(isFileIssue(error)).toBe(true)
+
+        if (!isFileIssue(error))
+            throw new Error(`Expected file issue: ${JSON.stringify(error)}`)
+
+        return {
+            kind: error.kind,
+            code: error.code,
+            context: error.context,
+            message: error.message,
+            diagnosticContext: error.diagnosticContext,
+        }
     }
 
     function loadTextMock(
@@ -76,7 +101,7 @@ describe("template file loading", () => {
 
             const result = await loadNormalisedTemplate(config, {
                 templates: {
-                    typescript: "@laoban@/templates/typescript/template.json",
+                    typescript: templateFile,
                 },
                 templateName: "typescript",
                 requestedBy: "package alpha",
@@ -84,7 +109,7 @@ describe("template file loading", () => {
 
             expect(valueOrThrow(result)).toEqual({
                 name: "typescript",
-                source: "@laoban@/templates/typescript/template.json",
+                source: templateFile,
                 files: {
                     "README.md": {
                         type: "copy",
@@ -107,7 +132,7 @@ describe("template file loading", () => {
 
             expect(config.fileOps.loadText).toHaveBeenCalledTimes(1)
             expect(config.fileOps.loadText).toHaveBeenCalledWith(
-                "@laoban@/templates/typescript/template.json",
+                templateFile,
                 config.loadTextConfig,
             )
 
@@ -144,7 +169,7 @@ describe("template file loading", () => {
 
             const result = await loadNormalisedTemplate(config, {
                 templates: {
-                    typescript: "@laoban@/templates/typescript/template.json",
+                    typescript: templateFile,
                 },
                 templateName: "typescript",
                 requestedBy: "package alpha",
@@ -152,7 +177,7 @@ describe("template file loading", () => {
 
             expect(valueOrThrow(result)).toEqual({
                 name: "typescript",
-                source: "@laoban@/templates/typescript/template.json",
+                source: templateFile,
                 files: {
                     "index.ts": {
                         type: "copy",
@@ -203,7 +228,7 @@ describe("template file loading", () => {
             const result = await loadNormalisedTemplate(config, {
                 templates: {
                     javascript: "@laoban@/templates/javascript/template.json",
-                    typescript: "@laoban@/templates/typescript/template.json",
+                    typescript: templateFile,
                 },
                 templateName: "react",
                 requestedBy: "package alpha",
@@ -232,7 +257,9 @@ describe("template file loading", () => {
                 message: "Could not load template file",
                 context: {
                     operation: "loadText",
-                    filename: "@laoban@/templates/typescript/template.json",
+                },
+                diagnosticContext: {
+                    currentFile: templateFile,
                 },
                 severity: "error",
             }
@@ -245,7 +272,7 @@ describe("template file loading", () => {
 
             const result = await loadNormalisedTemplate(config, {
                 templates: {
-                    typescript: "@laoban@/templates/typescript/template.json",
+                    typescript: templateFile,
                 },
                 templateName: "typescript",
                 requestedBy: "package alpha",
@@ -278,7 +305,7 @@ describe("template file loading", () => {
 
             const result = await loadNormalisedTemplate(config, {
                 templates: {
-                    typescript: "@laoban@/templates/typescript/template.json",
+                    typescript: templateFile,
                 },
                 templateName: "typescript",
                 requestedBy: "package alpha",
@@ -302,24 +329,22 @@ describe("template file loading", () => {
 
             const result = await loadNormalisedTemplate(config, {
                 templates: {
-                    typescript: "@laoban@/templates/typescript/template.json",
+                    typescript: templateFile,
                 },
                 templateName: "typescript",
                 requestedBy: "package alpha",
             })
 
             expect(isErrors(result)).toBe(true)
-            expect(errorsOrThrow(result).map(error => ({
-                kind: error.kind,
-                code: error.code,
-                context: error.context,
-                message: error.message,
-            }))).toEqual([
+            expect(errorsOrThrow(result).map(toExpectedFileIssue)).toEqual([
                 {
                     kind: "validation",
                     code: "required",
                     context: ["files"],
                     message: "files is required but was undefined",
+                    diagnosticContext: {
+                        currentFile: templateFile,
+                    },
                 },
             ])
         })
@@ -329,13 +354,13 @@ describe("template file loading", () => {
         it("returns the configured source for a template name", () => {
             const result = templateSource({
                 templates: {
-                    typescript: "@laoban@/templates/typescript/template.json",
+                    typescript: templateFile,
                 },
                 templateName: "typescript",
                 requestedBy: "package alpha",
             })
 
-            expect(valueOrThrow(result)).toBe("@laoban@/templates/typescript/template.json")
+            expect(valueOrThrow(result)).toBe(templateFile)
         })
 
         it("returns available template names sorted when the template is unknown", () => {
@@ -376,11 +401,11 @@ describe("template file loading", () => {
         it("builds a loaded template declaration", () => {
             expect(loadedTemplateDeclaration(
                 "typescript",
-                "@laoban@/templates/typescript/template.json",
+                templateFile,
                 validTemplateDeclaration as any,
             )).toEqual({
                 name: "typescript",
-                source: "@laoban@/templates/typescript/template.json",
+                source: templateFile,
                 declaration: validTemplateDeclaration,
             })
         })

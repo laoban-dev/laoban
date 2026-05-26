@@ -1,16 +1,19 @@
 import {
+    AnyValidationContext,
     composeOr,
     ifPresent,
     mustBeArrayOf,
     mustBeBoolean,
-    mustBeBooleanIfPresent, mustBeLiteral,
+    mustBeBooleanIfPresent,
     mustBeNameAnd,
     mustBeNameAndIfPresent,
-    mustBeObjectWithFields, mustBeOneOf,
+    mustBeObjectWithFields,
+    mustBeOneOf,
     mustBeString,
     mustBeStringIfPresent,
+    mustBeStringOrObject, renderContext, validationError,
     type Validator,
-} from "@laoban/validation";
+} from "@laoban/validation"
 import {
     type CommandArgs,
     type EnvName,
@@ -24,7 +27,7 @@ import {
     type RawScriptGuard,
     type RawScriptGuardObject,
     type ScriptGuard,
-} from "./scripts.domain";
+} from "./scripts.domain"
 
 /**
  * Validates a raw guard object.
@@ -38,8 +41,8 @@ export const validateRawScriptGuardObject: Validator<RawScriptGuardObject> =
             value: mustBeString,
             default: mustBeBooleanIfPresent,
         },
-        true
-    );
+        true,
+    )
 
 /**
  * Validates a raw script guard.
@@ -48,13 +51,34 @@ export const validateRawScriptGuardObject: Validator<RawScriptGuardObject> =
  * - a literal boolean
  * - a string, typically containing interpolation such as `${packageDetails.guards.test}`
  * - an object with value/default
+ *
+ * We do not use composeOr here because the branch can be selected cleanly
+ * from the runtime type. If the input is an object, validate it as an object
+ * and do not report that it failed to be a string or boolean.
  */
-export const validateRawScriptGuard: Validator<RawScriptGuard> = composeOr({
-    boolean: mustBeBoolean,
-    string: mustBeString,
-    object: validateRawScriptGuardObject as Validator<RawScriptGuard>,
-});
-
+export const validateRawScriptGuard: Validator<RawScriptGuard, AnyValidationContext> =
+    (context, observability) => input => {
+        if (typeof input === "boolean") return {value: input}
+        if (typeof input === "string") return {value: input}
+        if (typeof input === "object" && input !== null && !Array.isArray(input)) {
+            return validateRawScriptGuardObject(context, observability)(
+                input as RawScriptGuardObject,
+            )
+        }
+        return {
+            errors: [
+                validationError(
+                    context,
+                    `${renderContext(context)} must be a boolean, string or object but was ${
+                        input === null ? "null" :
+                            Array.isArray(input) ? "array" :
+                                typeof input
+                    }`,
+                    {code: "wrong.type"},
+                ),
+            ],
+        }
+    }
 /**
  * Validates a normalized script guard.
  *
@@ -69,8 +93,8 @@ export const validateScriptGuard: Validator<ScriptGuard> =
             }),
             default: mustBeBooleanIfPresent,
         },
-        true
-    );
+        true,
+    )
 
 /**
  * Validates command arguments.
@@ -78,7 +102,7 @@ export const validateScriptGuard: Validator<ScriptGuard> =
  * commandArgs is a map from CLI argument name to help text.
  */
 export const validateCommandArgs: Validator<CommandArgs | undefined> =
-    mustBeNameAndIfPresent(mustBeString);
+    mustBeNameAndIfPresent(mustBeString)
 
 /**
  * Validates environment variables.
@@ -86,12 +110,13 @@ export const validateCommandArgs: Validator<CommandArgs | undefined> =
  * env is a map from environment variable name to value.
  */
 export const validateEnv: Validator<Record<EnvName, EnvValue> | undefined> =
-    mustBeNameAndIfPresent(mustBeString);
+    mustBeNameAndIfPresent(mustBeString)
 
 /**
  * Validates execution scope.
  */
-export const validateExecutionScope: Validator<ExecutionScope> = mustBeOneOf("eachPackage", "oncePerWorkSpace")
+export const validateExecutionScope: Validator<ExecutionScope> =
+    mustBeOneOf("eachPackage", "oncePerWorkSpace")
 
 /**
  * Validates a raw command in object form.
@@ -106,8 +131,8 @@ export const validateRawLaobanCommandObject: Validator<RawLaobanCommandObject> =
             status: mustBeBooleanIfPresent,
             executionScope: ifPresent(validateExecutionScope),
         },
-        true
-    );
+        true,
+    )
 
 /**
  * Validates a raw command.
@@ -115,11 +140,14 @@ export const validateRawLaobanCommandObject: Validator<RawLaobanCommandObject> =
  * Raw commands may be written either as:
  * - a shorthand string command
  * - a full command object
+ *
+ * We do not use composeOr here. If the input is an object, validate it as
+ * a command object. Reporting that it is "not a string" is noise.
  */
-export const validateRawLaobanCommand: Validator<RawLaobanCommand> = composeOr({
-    string: mustBeString,
-    object: validateRawLaobanCommandObject as Validator<RawLaobanCommand>,
-});
+export const validateRawLaobanCommand: Validator<RawLaobanCommand> =
+    mustBeStringOrObject(
+        validateRawLaobanCommandObject as Validator<RawLaobanCommandObject>,
+    ) as Validator<RawLaobanCommand>
 
 /**
  * Validates a raw laoban script as loaded from laoban.json.
@@ -139,8 +167,8 @@ export const validateRawLaobanScript: Validator<RawLaobanScript> =
             commandArgs: validateCommandArgs,
             env: validateEnv,
         },
-        true
-    );
+        true,
+    )
 
 /**
  * Validates a normalized command.
@@ -161,8 +189,8 @@ export const validateLaobanCommand: Validator<LaobanCommand> =
             status: mustBeBoolean,
             executionScope: validateExecutionScope,
         },
-        true
-    );
+        true,
+    )
 
 /**
  * Validates a fully normalized script.
@@ -187,5 +215,5 @@ export const validateLaobanScript: Validator<LaobanScript> =
             commandArgs: mustBeNameAnd(mustBeString, true),
             env: mustBeNameAnd(mustBeString, true),
         },
-        true
-    );
+        true,
+    )

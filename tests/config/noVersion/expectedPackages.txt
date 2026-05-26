@@ -1,2 +1,8 @@
-projects/project1 => proj1 (typescript)
-projects/project2 => proj2 (typescript)
+Directory          Name   Template
+-----------------  -----  ----------
+projects/project1  proj1  typescript
+projects/project2  proj2  typescript
+
+Summary
+  packages:    2
+  generations: 1

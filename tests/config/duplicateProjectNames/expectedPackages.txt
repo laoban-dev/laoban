@@ -1,2 +1,7 @@
-projects/project1 => projectName (typescript)
-projects/project2 => projectName (typescript)
+Errors
+
+Other errors
+
+Duplicate package name: projectName, found in:
+  projects/project1/package.details.json
+  projects/project2/package.details.json

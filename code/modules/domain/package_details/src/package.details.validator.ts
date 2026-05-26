@@ -1,6 +1,5 @@
 import {
     chainValidators,
-    combineValidators,
     ifPresent,
     mustBeArrayOf,
     mustBeBoolean,
@@ -8,12 +7,13 @@ import {
     mustBeObjectWithFields,
     mustBeString,
     nonBlank,
-    type Validator
-} from "@laoban/validation";
-import {type PackageDetails} from "./package.details";
+    type AnyValidationContext,
+    type Validator,
+} from "@laoban/validation"
+import {type PackageDetails} from "./package.details"
 
-export const validatePackageDetails: Validator<PackageDetails> =
-    mustBeObjectWithFields<PackageDetails>({
+export const validatePackageDetails: Validator<PackageDetails, AnyValidationContext> =
+    mustBeObjectWithFields<PackageDetails, AnyValidationContext>({
         template: chainValidators(mustBeString, nonBlank),
         name: chainValidators(mustBeString, nonBlank),
         description: ifPresent(chainValidators(mustBeString, nonBlank)),
@@ -21,6 +21,6 @@ export const validatePackageDetails: Validator<PackageDetails> =
         devLinks: ifPresent(mustBeArrayOf(chainValidators(mustBeString, nonBlank))),
         peerLinks: ifPresent(mustBeArrayOf(chainValidators(mustBeString, nonBlank))),
         guards: mustBeNameAndIfPresent(mustBeBoolean),
-        files: ifPresent(mustBeObjectWithFields<Record<string, any>>({})),
-        meta: ifPresent(mustBeObjectWithFields<Record<string, any>>({}))
-    }, true);
+        files: ifPresent(mustBeObjectWithFields<Record<string, any>, AnyValidationContext>({})),
+        meta: ifPresent(mustBeObjectWithFields<Record<string, any>, AnyValidationContext>({})),
+    }, true)

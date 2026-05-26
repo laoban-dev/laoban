@@ -7,6 +7,7 @@ import {
 
 describe("template file validators", () => {
     const observability = nullObservability()
+    const currentFile = "template.json"
 
     describe("validateTemplateDeclaration", () => {
         it("accepts a template declaration using new copy and merge operations", () => {
@@ -37,7 +38,7 @@ describe("template file validators", () => {
                 },
             } as any
 
-            const result = validateTemplateDeclaration(declaration, observability)
+            const result = validateTemplateDeclaration(currentFile, declaration, observability)
 
             expect(valueOrThrow(result)).toBe(declaration)
             expect(warnings(result)).toEqual([])
@@ -55,7 +56,7 @@ describe("template file validators", () => {
                     },
                 } as any
 
-                const result = validateTemplateFileDeclaration(declaration, observability)
+                const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
                 expect(valueOrThrow(result)).toBe(declaration)
                 expect(warnings(result)).toEqual([])
@@ -94,7 +95,7 @@ describe("template file validators", () => {
                 },
             } as any
 
-            const result = validateTemplateDeclaration(declaration, observability)
+            const result = validateTemplateDeclaration(currentFile, declaration, observability)
 
             expect(valueOrThrow(result)).toBe(declaration)
 
@@ -122,7 +123,7 @@ describe("template file validators", () => {
                     template: syntax,
                 } as any
 
-                const result = validateTemplateFileDeclaration(declaration, observability)
+                const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
                 expect(valueOrThrow(result)).toBe(declaration)
                 expect(warnings(result).map(warning => ({
@@ -140,7 +141,7 @@ describe("template file validators", () => {
                 description: "No files",
             } as any
 
-            const result = validateTemplateDeclaration(declaration, observability)
+            const result = validateTemplateDeclaration(currentFile, declaration, observability)
 
             expect(isErrors(result)).toBe(true)
             expect(errorsOrThrow(result).map(error => ({
@@ -163,7 +164,7 @@ describe("template file validators", () => {
                 files: [],
             } as any
 
-            const result = validateTemplateDeclaration(declaration, observability)
+            const result = validateTemplateDeclaration(currentFile, declaration, observability)
 
             expect(isErrors(result)).toBe(true)
             expect(errorsOrThrow(result).map(error => ({
@@ -192,7 +193,7 @@ describe("template file validators", () => {
                 files: {},
             } as any
 
-            const result = validateTemplateDeclaration(declaration, observability)
+            const result = validateTemplateDeclaration(currentFile, declaration, observability)
 
             expect(isErrors(result)).toBe(true)
             expect(errorsOrThrow(result).map(error => ({
@@ -222,7 +223,7 @@ describe("template file validators", () => {
                 files: {},
             } as any
 
-            const result = validateTemplateDeclaration(declaration, observability)
+            const result = validateTemplateDeclaration(currentFile, declaration, observability)
 
             expect(isErrors(result)).toBe(true)
             expect(errorsOrThrow(result).map(error => ({
@@ -266,7 +267,7 @@ describe("template file validators", () => {
                 },
             } as any
 
-            const result = validateTemplateFileDeclaration(declaration, observability)
+            const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
             expect(valueOrThrow(result)).toBe(declaration)
             expect(warnings(result)).toEqual([])
@@ -284,7 +285,7 @@ describe("template file validators", () => {
                 },
             } as any
 
-            const result = validateTemplateFileDeclaration(declaration, observability)
+            const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
             expect(valueOrThrow(result)).toBe(declaration)
             expect(warnings(result)).toEqual([])
@@ -298,7 +299,7 @@ describe("template file validators", () => {
                 sample: false,
             } as any
 
-            const result = validateTemplateFileDeclaration(declaration, observability)
+            const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
             expect(valueOrThrow(result)).toBe(declaration)
             expect(warnings(result).map(warning => ({
@@ -316,7 +317,7 @@ describe("template file validators", () => {
                 source: "./README.md",
             } as any
 
-            const result = validateTemplateFileDeclaration(declaration, observability)
+            const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
             expect(isErrors(result)).toBe(true)
             expect(errorsOrThrow(result).map(error => ({
@@ -343,7 +344,7 @@ describe("template file validators", () => {
                 },
             } as any
 
-            const result = validateTemplateFileDeclaration(declaration, observability)
+            const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
             expect(isErrors(result)).toBe(true)
             expect(errorsOrThrow(result).map(error => ({
@@ -386,7 +387,7 @@ describe("template file validators", () => {
                 },
             } as any
 
-            const result = validateTemplateFileDeclaration(declaration, observability)
+            const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
             expect(isErrors(result)).toBe(true)
             expect(errorsOrThrow(result).map(error => ({
@@ -431,7 +432,7 @@ describe("template file validators", () => {
                 sample: "yes",
             } as any
 
-            const result = validateTemplateFileDeclaration(declaration, observability)
+            const result = validateTemplateFileDeclaration(currentFile, declaration, observability)
 
             expect(isErrors(result)).toBe(true)
 

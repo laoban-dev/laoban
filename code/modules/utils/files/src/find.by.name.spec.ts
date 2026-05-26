@@ -3,27 +3,37 @@ import {
     defaultFileOpsHelperConfig,
     defaultIgnoreDirectories,
     type FileOpIssue,
+    type FileOpIssueContext,
     type FileOpsHelperDefaults,
     type WriteTextFn,
+    makeFileOpIssue,
 } from "./fileops"
 import {findAllByNameUnder} from "./find.by.name"
 
-const makeIssue = (message: string): FileOpIssue => ({
-    kind: "unexpected",
-    message,
-    severity: "error",
-})
+const makeIssue = (
+    currentFile: string,
+    message: string,
+    context?: FileOpIssueContext,
+): FileOpIssue =>
+    makeFileOpIssue(
+        currentFile,
+        "unexpected",
+        message,
+        context,
+    )
 
 const unusedWriteText: WriteTextFn = async filename =>
-    errors({
-        kind: "unexpected",
-        message: `writeText should not be called while finding files: ${filename}`,
-        severity: "error",
-        context: {
-            operation: "writeText",
+    errors(
+        makeFileOpIssue(
             filename,
-        },
-    })
+            "unexpected",
+            `writeText should not be called while finding files: ${filename}`,
+            {
+                operation: "writeText",
+                filename,
+            },
+        ),
+    )
 
 function makeDefaults(args: {
     fileExists: FileOpsHelperDefaults["infrastructure"]["fileExists"]
@@ -64,8 +74,16 @@ describe("findAllByNameUnder", () => {
             fileExists: async filename => value(files.has(filename)),
             listDirectory: async directory => {
                 const children = directories[directory]
+
                 return children === undefined
-                    ? errors(makeIssue(`not a directory: ${directory}`))
+                    ? errors(makeIssue(
+                        directory,
+                        `not a directory: ${directory}`,
+                        {
+                            operation: "listDirectory",
+                            directory,
+                        },
+                    ))
                     : value(children)
             },
         })
@@ -99,8 +117,16 @@ describe("findAllByNameUnder", () => {
             fileExists: async filename => value(files.has(filename)),
             listDirectory: async directory => {
                 const children = directories[directory]
+
                 return children === undefined
-                    ? errors(makeIssue(`not a directory: ${directory}`))
+                    ? errors(makeIssue(
+                        directory,
+                        `not a directory: ${directory}`,
+                        {
+                            operation: "listDirectory",
+                            directory,
+                        },
+                    ))
                     : value(children)
             },
             ignoreDirectories: defaultIgnoreDirectories,
@@ -130,8 +156,16 @@ describe("findAllByNameUnder", () => {
             fileExists: async filename => value(files.has(filename)),
             listDirectory: async directory => {
                 const children = directories[directory]
+
                 return children === undefined
-                    ? errors(makeIssue(`not a directory: ${directory}`))
+                    ? errors(makeIssue(
+                        directory,
+                        `not a directory: ${directory}`,
+                        {
+                            operation: "listDirectory",
+                            directory,
+                        },
+                    ))
                     : value(children)
             },
         })
@@ -159,8 +193,16 @@ describe("findAllByNameUnder", () => {
             fileExists: async () => value(false),
             listDirectory: async directory => {
                 const children = directories[directory]
+
                 return children === undefined
-                    ? errors(makeIssue(`not a directory: ${directory}`))
+                    ? errors(makeIssue(
+                        directory,
+                        `not a directory: ${directory}`,
+                        {
+                            operation: "listDirectory",
+                            directory,
+                        },
+                    ))
                     : value(children)
             },
         })
@@ -171,11 +213,17 @@ describe("findAllByNameUnder", () => {
     })
 
     it("propagates an error when the root directory cannot be listed", async () => {
-        const rootError = errors<FileOpIssue>({
-            kind: "io",
-            message: "cannot list root",
-            severity: "error",
-        })
+        const rootError = errors<FileOpIssue>(
+            makeFileOpIssue(
+                "/root",
+                "io",
+                "cannot list root",
+                {
+                    operation: "listDirectory",
+                    directory: "/root",
+                },
+            ),
+        )
 
         const defaults = makeDefaults({
             fileExists: async () => value(false),
@@ -189,11 +237,17 @@ describe("findAllByNameUnder", () => {
     })
 
     it("propagates an error when fileExists fails", async () => {
-        const existsError = errors<FileOpIssue>({
-            kind: "io",
-            message: "cannot stat file",
-            severity: "error",
-        })
+        const existsError = errors<FileOpIssue>(
+            makeFileOpIssue(
+                "/root/package.details.json",
+                "io",
+                "cannot stat file",
+                {
+                    operation: "fileExists",
+                    filename: "/root/package.details.json",
+                },
+            ),
+        )
 
         const directories: Record<string, string[]> = {
             "/root": [],
@@ -204,8 +258,16 @@ describe("findAllByNameUnder", () => {
                 filename === "/root/package.details.json" ? existsError : value(false),
             listDirectory: async directory => {
                 const children = directories[directory]
+
                 return children === undefined
-                    ? errors(makeIssue(`not a directory: ${directory}`))
+                    ? errors(makeIssue(
+                        directory,
+                        `not a directory: ${directory}`,
+                        {
+                            operation: "listDirectory",
+                            directory,
+                        },
+                    ))
                     : value(children)
             },
         })
@@ -226,8 +288,16 @@ describe("findAllByNameUnder", () => {
             fileExists: async filename => value(files.has(filename)),
             listDirectory: async directory => {
                 const children = directories[directory]
+
                 return children === undefined
-                    ? errors(makeIssue(`not a directory: ${directory}`))
+                    ? errors(makeIssue(
+                        directory,
+                        `not a directory: ${directory}`,
+                        {
+                            operation: "listDirectory",
+                            directory,
+                        },
+                    ))
                     : value(children)
             },
         })

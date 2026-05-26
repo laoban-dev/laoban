@@ -127,16 +127,44 @@ function command(name: "list" | "view" | "sort"): any {
     const group: any = laobanPackageCommands<NodeReadChannel, NodeWriteChannel, NodeRef>()
     return group.commands?.[name] ?? group.children?.[name] ?? group[name]
 }
-
-const expectedLog = (msg: string) =>
-    fixture.expectedRootLog(msg)
+const packageHeaderWrite = () =>
+    expectedWrite(
+        [
+            "Directory  Name   Template",
+            "---------  -----  --------",
+        ].join("\n"),
+    )
+const expectedWrite = (msg: string) =>
+    fixture.expectedRootWrite(msg)
 
 const packageLine = (
     directory: string,
     name: string,
     template: string = "default",
+    directoryWidth: number = "directory".length,
+    nameWidth: number = "alpha".length,
 ): string =>
-    `00:00:00 INFO ${directory}\t${name}\t${template}`
+    [
+        directory.padEnd(directoryWidth),
+        name.padEnd(nameWidth),
+        template,
+    ].join("  ").trimEnd()
+
+const directoryWidth = "Directory".length
+const nameWidth = "alpha".length
+
+const summaryWrite = (
+    packages: number,
+    generations: number,
+) =>
+    expectedWrite(
+        [
+            "",
+            "Summary",
+            `  packages:    ${packages}`,
+            `  generations: ${generations}`,
+        ].join("\n"),
+    )
 
 describe("package cli", () => {
     beforeEach(() => {
@@ -208,7 +236,10 @@ describe("package cli", () => {
             } as any
 
             context.loadConfigFn.mockResolvedValue(value(loadedConfig))
-            context.loadPackagesFn.mockResolvedValue(errors({kind: "badPackages", message: "cannot load packages"} as any))
+            context.loadPackagesFn.mockResolvedValue(errors({
+                kind: "badPackages",
+                message: "cannot load packages",
+            } as any))
 
             const result = await loadConfigAndPackages(context)
 
@@ -282,7 +313,7 @@ describe("package cli", () => {
     })
 
     describe("commands", () => {
-        it("list writes durable package logs, mirrors them to session, flushes touched channels to stdout, and logs the summary", async () => {
+        it("list writes durable package logs, mirrors them to session, flushes touched channels to stdout, and writes the summary", async () => {
             const context = await makeContext()
             const loaded = loadedProject({
                 alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha")),
@@ -296,17 +327,17 @@ describe("package cli", () => {
 
             expect(valueOrThrow(result)).toBeUndefined()
 
-            const alphaLine = `${packageLine("/workspace/alpha", "alpha")}\n`
-            const betaLine = `${packageLine("/workspace/beta", "beta")}\n`
+            const alphaLine = `${packageLine("alpha", "alpha", "default")}\n`
+            const betaLine = `${packageLine("beta", "beta", "default")}\n`
 
             expect(await fixture.readLog(context, "/workspace/alpha")).toEqual(alphaLine)
             expect(await fixture.readSession(context, "/workspace/alpha")).toEqual(alphaLine)
             expect(await fixture.readLog(context, "/workspace/beta")).toEqual(betaLine)
             expect(await fixture.readSession(context, "/workspace/beta")).toEqual(betaLine)
 
-            expect(context.stdOutRecorder.lines()).toEqual([
-                packageLine("/workspace/alpha", "alpha"),
-                packageLine("/workspace/beta", "beta"),
+            expect(context.stdOutRecorder.lines().sort()).toEqual([
+                packageLine("alpha", "alpha", "default"),
+                packageLine("beta", "beta", "default"),
             ])
 
             expect(context.channelsState.state.alpha.moduleScope).toEqual({
@@ -326,7 +357,8 @@ describe("package cli", () => {
             expect(context.channelsState.state.beta.touched).toBe(false)
 
             expect(context.recording.logs).toEqual([
-                expectedLog("packages: 2/2"),
+                packageHeaderWrite(),
+                summaryWrite(2, 1),
             ])
         })
 
@@ -346,12 +378,12 @@ describe("package cli", () => {
 
             expect(valueOrThrow(result)).toBeUndefined()
 
-            const alphaLine = `${packageLine("/workspace/alpha", "alpha")}\n`
-            const betaLine = `${packageLine("/workspace/beta", "beta")}\n`
+            const alphaLine = `${packageLine("alpha", "alpha", "default")}\n`
+            const betaLine = `${packageLine("beta", "beta", "default")}\n`
 
             expect(context.stdOutRecorder.lines()).toEqual([
-                packageLine("/workspace/alpha", "alpha"),
-                packageLine("/workspace/beta", "beta"),
+                packageLine("alpha", "alpha", "default"),
+                packageLine("beta", "beta", "default"),
             ])
 
             expect(await fixture.readLog(context, "/workspace/alpha")).toEqual(alphaLine)
@@ -365,22 +397,23 @@ describe("package cli", () => {
             expect(context.channelsState.state.beta.touched).toBe(false)
 
             expect(context.recording.logs).toEqual([
-                expectedLog("packages: 2/2"),
+                packageHeaderWrite(),
+                summaryWrite(2, 2),
             ])
         })
 
-        it("view logs the package name requested", async () => {
+        it("view writes the package name requested", async () => {
             const context = await makeContext()
 
             const result = await command("view").execute({name: "alpha"}, context)
 
             expect(result).toEqual(value(undefined))
             expect(context.recording.logs).toEqual([
-                expectedLog("package view alpha"),
+                expectedWrite("package view alpha"),
             ])
         })
 
-        it("sort logs vertical output by default", async () => {
+        it("sort writes vertical output by default", async () => {
             const context = await makeContext()
             const loaded = loadedProject({
                 alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha")),
@@ -403,11 +436,11 @@ describe("package cli", () => {
             await command("sort").execute({horizontal: false}, context)
 
             expect(context.recording.logs).toEqual([
-                expectedLog(expectedOutput),
+                expectedWrite(expectedOutput),
             ])
         })
 
-        it("sort logs swimlane output when requested", async () => {
+        it("sort writes swimlane output when requested", async () => {
             const context = await makeContext()
             const loaded = loadedProject({
                 alpha: loadedPackageDetail("/workspace/alpha/package.details.json", normalised("alpha")),
@@ -430,7 +463,7 @@ describe("package cli", () => {
             await command("sort").execute({horizontal: true}, context)
 
             expect(context.recording.logs).toEqual([
-                expectedLog(expectedOutput),
+                expectedWrite(expectedOutput),
             ])
         })
     })

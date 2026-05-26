@@ -1,8 +1,9 @@
 {
-  "template": "typescript",
+  "template": "node",
   "name": "@laoban/package_cli",
   "description": "Cli commands around the packages. Such as listing all packages, showing the details of a package and showing dependencies between them",
   "links": [
+    "@laoban/arrays",
     "@laoban/clidsl",
     "@laoban/commander",
     "@laoban/config_cli",

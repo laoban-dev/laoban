@@ -101,8 +101,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "EACCES",
                     context: {
                         operation: "fileExists",
-                        filename: "/tmp/secret.txt",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/secret.txt",
                     },
                 }),
             )
@@ -133,8 +135,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "EIO",
                     context: {
                         operation: "fileExists",
-                        filename: "/tmp/file.txt",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/file.txt",
                     },
                 }),
             )
@@ -209,8 +213,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "ENOENT",
                     context: {
                         operation: "listDirectory",
-                        directory: "/tmp/missing",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/missing",
                     },
                 }),
             )
@@ -241,8 +247,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "EACCES",
                     context: {
                         operation: "listDirectory",
-                        directory: "/tmp/secret",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/secret",
                     },
                 }),
             )
@@ -264,8 +272,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "EIO",
                     context: {
                         operation: "listDirectory",
-                        directory: "/tmp/bad",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/bad",
                     },
                 }),
             )
@@ -328,8 +338,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "EACCES",
                     context: {
                         operation: "writeText",
-                        filename: "/tmp/secret/file.txt",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/secret/file.txt",
                     },
                 }),
             )
@@ -360,8 +372,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "EIO",
                     context: {
                         operation: "writeText",
-                        filename: "/tmp/bad/file.txt",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/bad/file.txt",
                     },
                 }),
             )
@@ -411,8 +425,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "ENOENT",
                     context: {
                         operation: "loadText",
-                        filename: "/tmp/missing.txt",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/missing.txt",
                     },
                 }),
             )
@@ -438,8 +454,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "EPERM",
                     context: {
                         operation: "loadText",
-                        filename: "/tmp/secret.txt",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/secret.txt",
                     },
                 }),
             )
@@ -461,8 +479,10 @@ describe("nodeFileOpsDefaults", () => {
                     code: "EIO",
                     context: {
                         operation: "loadText",
-                        filename: "/tmp/file.txt",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "/tmp/file.txt",
                     },
                 }),
             )
@@ -518,7 +538,9 @@ describe("nodeFileOpsDefaults", () => {
                     severity: "error",
                     context: {
                         operation: "loadText",
-                        filename: "https://example.com/missing.txt",
+                    },
+                    diagnosticContext: {
+                        currentFile: "https://example.com/missing.txt",
                     },
                 }),
             )
@@ -543,8 +565,10 @@ describe("nodeFileOpsDefaults", () => {
                     severity: "error",
                     context: {
                         operation: "loadText",
-                        filename: "https://example.com/a.txt",
                         cause,
+                    },
+                    diagnosticContext: {
+                        currentFile: "https://example.com/a.txt",
                     },
                 }),
             )

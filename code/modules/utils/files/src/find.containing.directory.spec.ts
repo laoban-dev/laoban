@@ -107,13 +107,13 @@ describe("findContainingDirectory", () => {
     });
 
     it("returns notFound when it reaches the root without finding the marker", async () => {
-        fileExists.mockResolvedValue(value(false));
+        fileExists.mockResolvedValue(value(false))
 
         const result = await finder(
             "/workspace/project",
             "laoban.json",
             config,
-        );
+        )
 
         expect(result).toEqual({
             errors: [
@@ -127,14 +127,18 @@ describe("findContainingDirectory", () => {
                         start: "/workspace/project",
                         markerFileName: "laoban.json",
                     },
+                    diagnosticContext: {
+                        currentFile: "/workspace/project",
+                    },
                 },
             ],
-        });
-        expect(recorded.counts).toEqual([]);
-        expect(recorded.durations).toEqual([]);
-        expect(recorded.debug).toEqual([]);
-        expect(recorded.logs).toEqual([]);
-    });
+        })
+
+        expect(recorded.counts).toEqual([])
+        expect(recorded.durations).toEqual([])
+        expect(recorded.debug).toEqual([])
+        expect(recorded.logs).toEqual([])
+    })
 
     it("passes through errors from fileExists", async () => {
         const existsError = errors({

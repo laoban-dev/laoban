@@ -1,4 +1,4 @@
-import { ErrorsOr, errors, value } from "@laoban/errors";
+import {ErrorsOr, errors, value} from "@laoban/errors"
 import {
     defaultFindContainingDirectoryConfig,
     DirectoryName,
@@ -6,17 +6,27 @@ import {
     FindContainingDirectoryConfig,
     FindContainingDirectoryDefaults,
     FileOpIssue,
+    FileOpIssueContext,
     FileOpIssueKind,
     makeFileOpIssue,
-} from "./fileops";
+} from "./fileops"
 
 const makeIssue = (
+    currentFile: DirectoryName,
     kind: FileOpIssueKind,
     message: string,
-    context: FileOpIssue["context"],
+    context: FileOpIssueContext,
     cause?: unknown,
     code?: string,
-): FileOpIssue => makeFileOpIssue(kind, message, context, cause, code);
+): FileOpIssue =>
+    makeFileOpIssue(
+        currentFile,
+        kind,
+        message,
+        context,
+        cause,
+        code,
+    )
 
 export const findContainingDirectory =
     (defaults: FindContainingDirectoryDefaults) =>
@@ -25,29 +35,35 @@ export const findContainingDirectory =
             markerFileName: Filename,
             config: FindContainingDirectoryConfig = {},
         ): Promise<ErrorsOr<DirectoryName, FileOpIssue>> => {
-            const fullConfig = defaultFindContainingDirectoryConfig(defaults, config);
+            const fullConfig = defaultFindContainingDirectoryConfig(defaults, config)
 
             const {
                 fileExists,
-                pathOps: { dirname, resolvePath, joinPath },
-            } = fullConfig.infrastructure;
+                pathOps: {dirname, resolvePath, joinPath},
+            } = fullConfig.infrastructure
 
-            let current = resolvePath(start);
-            let previous = "";
+            const resolvedStart = resolvePath(start)
+
+            let current = resolvedStart
+            let previous = ""
 
             while (current !== previous) {
-                const candidate = joinPath(current, markerFileName);
-                const exists = await fileExists(candidate, fullConfig);
+                const candidate = joinPath(current, markerFileName)
+                const exists = await fileExists(candidate, fullConfig)
 
-                if ("errors" in exists) return exists;
-                if (exists.value) return value(current);
+                if ("errors" in exists)
+                    return exists
 
-                previous = current;
-                current = dirname(current);
+                if (exists.value)
+                    return value(current)
+
+                previous = current
+                current = dirname(current)
             }
 
             return errors(
                 makeIssue(
+                    resolvedStart,
                     "notFound",
                     `Could not find containing directory for marker file [${markerFileName}] starting at [${start}]`,
                     {
@@ -56,5 +72,5 @@ export const findContainingDirectory =
                         markerFileName,
                     },
                 ),
-            );
-        };
+            )
+        }

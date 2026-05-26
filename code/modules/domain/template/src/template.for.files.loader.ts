@@ -82,6 +82,7 @@ export async function loadNormalisedTemplate(
                             decoded =>
                                 flatMapBaseIssue(
                                     validateTemplateDeclaration(
+                                        source,
                                         decoded as TemplateDeclaration,
                                         config.observability,
                                     ),

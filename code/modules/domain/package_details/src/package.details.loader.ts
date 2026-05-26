@@ -1,17 +1,34 @@
-import {type BaseIssue, errors, isErrors, mapErrorsOr, type ErrorsOr, value, flatMapErrorsOrK} from "@laoban/errors";
-import {DirectoryName, type Filename, type FileOps, type LoadTextConfig} from "@laoban/files";
-import {LoadConfigFn, type LoadedLaobanConfig} from "@laoban/laoban_config";
-import {type Observability} from "@laoban/observability";
-import {type ValidationIssue} from "@laoban/validation";
-import {type NormalisedPackageDetails, type PackageDetails} from "./package.details";
-import {normalisePackageDetails} from "./package.details.normalise";
-import {validatePackageDetails} from "./package.details.validator";
-import {normalisePath} from "@laoban/strings";
-import {LaobanConfigCliContext} from "@laoban/config_cli";
-import {OsOps} from "@laoban/os";
+import {
+    type BaseIssue,
+    errors,
+    flatMapErrorsOrK,
+    isErrors,
+    mapErrorsOr,
+    type ErrorsOr,
+    value, fileIssue,
+} from "@laoban/errors"
+import {
+    DirectoryName,
+    type Filename,
+    type FileOps,
+} from "@laoban/files"
+import {LoadConfigFn, type LoadedLaobanConfig} from "@laoban/laoban_config"
+import {type Observability} from "@laoban/observability"
+import {
+    fileValidationContext,
+    type AnyValidationContext,
+    type ValidationIssue,
+    type Validator,
+} from "@laoban/validation"
+import {type NormalisedPackageDetails, type PackageDetails} from "./package.details"
+import {normalisePackageDetails} from "./package.details.normalise"
+import {validatePackageDetails} from "./package.details.validator"
+import {normalisePath} from "@laoban/strings"
 
-export const packageDetailsFileName = "package.details.json" as const;
+export const packageDetailsFileName = "package.details.json" as const
 
+const validatePackageDetailsWithFileContext =
+    validatePackageDetails as Validator<PackageDetails, AnyValidationContext>
 
 export type LoadPackagesFn =
     (loaded: LoadedLaobanConfig, context: LoadPackagesContext) => Promise<ErrorsOr<LoadedLaobanProject>>
@@ -19,117 +36,114 @@ export type LoadPackagesFn =
 export type LoadConfig = {
     loadConfig: LoadConfigFn
     loadPackages: LoadPackagesFn
-    fileOps: FileOps;
+    fileOps: FileOps
     observability: Observability
 }
 
 export interface LoadPackagesContext {
-    fileOps: FileOps;
-    observability: Observability;
+    fileOps: FileOps
+    observability: Observability
 }
 
 export interface LoadedPackageDetail {
-    packageFile: Filename;
+    packageFile: Filename
     dir: DirectoryName
-    contents: NormalisedPackageDetails;
+    contents: NormalisedPackageDetails
 }
 
-export type LoadedPackageDetails = Record<string, LoadedPackageDetail>;
+export type LoadedPackageDetails = Record<string, LoadedPackageDetail>
 
 export interface LoadedLaobanProject {
-    loadedLaobanConfig: LoadedLaobanConfig;
-    loadedPackageDetails: LoadedPackageDetails;
+    loadedLaobanConfig: LoadedLaobanConfig
+    loadedPackageDetails: LoadedPackageDetails
 }
 
 export type LoadPackagesIssueKind =
     | "findPackageDetailsFailed"
     | "loadPackageDetailsFailed"
     | "parsePackageDetailsFailed"
-    | "duplicatePackageName";
+    | "duplicatePackageName"
 
 export type LoadPackagesIssue = BaseIssue<
     LoadPackagesIssueKind,
     {
-        configDirectory?: string;
-        packageFile?: Filename;
-        packageName?: string;
-        packageFiles?: Filename[];
-        markerFileName?: string;
-        error?: string;
-        issues?: BaseIssue[];
+        configDirectory?: string
+        packageFile?: Filename
+        packageName?: string
+        packageFiles?: Filename[]
+        markerFileName?: string
+        error?: string
+        issues?: BaseIssue[]
     }
->;
+>
 
-export type LoadPackagesAllIssue = LoadPackagesIssue | ValidationIssue;
+export type LoadPackagesAllIssue = LoadPackagesIssue | ValidationIssue
 
 export interface LoadedPackageFile {
-    packageFile: Filename;
-    packageDetails: PackageDetails;
-    normalised: NormalisedPackageDetails;
+    packageFile: Filename
+    packageDetails: PackageDetails
+    normalised: NormalisedPackageDetails
 }
 
 export function makeLoadPackagesIssue(
     kind: LoadPackagesIssueKind,
     message: string,
-    context?: LoadPackagesIssue["context"]
+    context?: LoadPackagesIssue["context"],
 ): LoadPackagesIssue {
     return {
         kind,
         message,
-        ...(context === undefined ? {} : {context})
-    };
+        ...(context === undefined ? {} : {context}),
+    }
 }
 
 function sortStrings(xs: string[]): string[] {
-    return [...xs].sort((a, b) => a.localeCompare(b));
+    return [...xs].sort((a, b) => a.localeCompare(b))
 }
 
 function normaliseFilename(filename: Filename): Filename {
-    return normalisePath(filename) ?? filename;
-}
-
-export function addPackageFileToValidationIssue(
-    packageFile: Filename
-): (issue: ValidationIssue) => ValidationIssue {
-    return issue => ({
-        ...issue,
-        context: [packageFile, ...(issue.context ?? [])]
-    });
+    return normalisePath(filename) ?? filename
 }
 
 export function parsePackageDetails(
     packageFile: Filename,
     text: string,
-    observability: Observability
+    observability: Observability,
 ): ErrorsOr<PackageDetails, LoadPackagesAllIssue> {
-    let parsed: unknown;
+    let parsed: unknown
+
     try {
-        parsed = JSON.parse(text);
+        parsed = JSON.parse(text)
     } catch (e) {
         return errors(
-            makeLoadPackagesIssue(
-                "parsePackageDetailsFailed",
-                `Could not parse package details JSON in ${packageFile}`,
-                {
-                    packageFile,
-                    error: e instanceof Error ? e.message : String(e)
-                }
-            )
-        );
+            fileIssue(
+                packageFile,
+                makeLoadPackagesIssue(
+                    "parsePackageDetailsFailed",
+                    "Could not parse package details JSON",
+                    {
+                        error: e instanceof Error ? e.message : String(e),
+                    },
+                ),
+            ),
+        )
     }
 
     return mapErrorsOr(
-        validatePackageDetails([], observability)(parsed as PackageDetails),
-        t => t
-    );
+        validatePackageDetails(
+            fileValidationContext(packageFile),
+            observability,
+        )(parsed as PackageDetails),
+        t => t,
+    )
 }
 
 export async function loadOnePackageFile(
     fileOps: FileOps,
     observability: Observability,
-    packageFile: Filename
+    packageFile: Filename,
 ): Promise<ErrorsOr<LoadedPackageFile, LoadPackagesAllIssue>> {
-    const loadedTextE = await fileOps.loadText(packageFile);
+    const loadedTextE = await fileOps.loadText(packageFile)
 
     if (isErrors(loadedTextE)) {
         return errors(
@@ -138,35 +152,31 @@ export async function loadOnePackageFile(
                 `Could not load package details file ${packageFile}`,
                 {
                     packageFile,
-                    issues: loadedTextE.errors
-                }
-            )
-        );
+                    issues: loadedTextE.errors,
+                },
+            ),
+        )
     }
 
-    const parsedE = parsePackageDetails(packageFile, loadedTextE.value, observability);
+    const parsedE = parsePackageDetails(packageFile, loadedTextE.value, observability)
+
     if (isErrors(parsedE)) {
-        return {
-            ...parsedE,
-            errors: parsedE.errors.map(issue =>
-                issue.kind === "validation"
-                    ? addPackageFileToValidationIssue(packageFile)(issue)
-                    : issue
-            )
-        };
+        return parsedE
     }
 
     return value(
         {
             packageFile,
             packageDetails: parsedE.value,
-            normalised: normalisePackageDetails(parsedE.value)
+            normalised: normalisePackageDetails(parsedE.value),
         },
-        parsedE.warnings
-    );
+        parsedE.warnings,
+    )
 }
 
-export function duplicatePackageIssues(duplicateMap: Record<string, Filename[]>): LoadPackagesIssue[] {
+export function duplicatePackageIssues(
+    duplicateMap: Record<string, Filename[]>,
+): LoadPackagesIssue[] {
     return Object.keys(duplicateMap)
         .filter(packageName => duplicateMap[packageName].length > 1)
         .sort((a, b) => a.localeCompare(b))
@@ -176,23 +186,23 @@ export function duplicatePackageIssues(duplicateMap: Record<string, Filename[]>)
                 `Duplicate package name '${packageName}' found in multiple package details files`,
                 {
                     packageName,
-                    packageFiles: sortStrings(duplicateMap[packageName])
-                }
-            )
-        );
+                    packageFiles: sortStrings(duplicateMap[packageName]),
+                },
+            ),
+        )
 }
 
 export async function loadPackages(
     loadedLaobanConfig: LoadedLaobanConfig,
-    context: LoadPackagesContext
+    context: LoadPackagesContext,
 ): Promise<ErrorsOr<LoadedLaobanProject, LoadPackagesAllIssue>> {
-    const {fileOps, observability} = context;
-    const {configDirectory} = loadedLaobanConfig;
+    const {fileOps, observability} = context
+    const {configDirectory} = loadedLaobanConfig
 
     const foundE = await fileOps.findAllByNameUnder(
         configDirectory,
-        packageDetailsFileName
-    );
+        packageDetailsFileName,
+    )
 
     if (isErrors(foundE)) {
         return errors(
@@ -202,52 +212,59 @@ export async function loadPackages(
                 {
                     configDirectory,
                     markerFileName: packageDetailsFileName,
-                    issues: foundE.errors
-                }
-            )
-        );
+                    issues: foundE.errors,
+                },
+            ),
+        )
     }
 
-    const packageFiles: Filename[] = sortStrings(foundE.value).map(normaliseFilename);
+    const packageFiles: Filename[] = sortStrings(foundE.value).map(normaliseFilename)
 
     const loadedResults = await Promise.all(
-        packageFiles.map(packageFile => loadOnePackageFile(fileOps, observability, packageFile))
-    );
+        packageFiles.map(packageFile =>
+            loadOnePackageFile(fileOps, observability, packageFile),
+        ),
+    )
 
-    const allErrors: LoadPackagesAllIssue[] = [];
-    const allWarnings: LoadPackagesAllIssue[] = [];
+    const allErrors: LoadPackagesAllIssue[] = []
+    const allWarnings: LoadPackagesAllIssue[] = []
 
     for (const result of loadedResults) {
         if (isErrors(result)) {
-            allErrors.push(...result.errors);
+            allErrors.push(...result.errors)
         }
+
         if (result.warnings) {
-            allWarnings.push(...result.warnings);
+            allWarnings.push(...result.warnings)
         }
     }
 
     if (allErrors.length > 0) {
-        return errors(allErrors[0], allErrors.slice(1), allWarnings);
+        return errors(allErrors[0], allErrors.slice(1), allWarnings)
     }
 
-    const loadedFiles: LoadedPackageFile[] = [];
+    const loadedFiles: LoadedPackageFile[] = []
+
     for (const result of loadedResults) {
         if (!isErrors(result)) {
-            loadedFiles.push(result.value);
+            loadedFiles.push(result.value)
         }
     }
 
-    const duplicateMap: Record<string, Filename[]> = {};
+    const duplicateMap: Record<string, Filename[]> = {}
+
     for (const loaded of loadedFiles) {
         if (!duplicateMap[loaded.normalised.name]) {
-            duplicateMap[loaded.normalised.name] = [];
+            duplicateMap[loaded.normalised.name] = []
         }
-        duplicateMap[loaded.normalised.name].push(loaded.packageFile);
+
+        duplicateMap[loaded.normalised.name].push(loaded.packageFile)
     }
 
-    const duplicateIssues = duplicatePackageIssues(duplicateMap);
+    const duplicateIssues = duplicatePackageIssues(duplicateMap)
+
     if (duplicateIssues.length > 0) {
-        return errors(duplicateIssues[0], duplicateIssues.slice(1), allWarnings);
+        return errors(duplicateIssues[0], duplicateIssues.slice(1), allWarnings)
     }
 
     const sortedEntries = loadedFiles
@@ -256,14 +273,15 @@ export async function loadPackages(
             loadedPackageDetail: {
                 packageFile: loaded.packageFile,
                 dir: context.fileOps.pathOps.dirname(loaded.packageFile),
-                contents: loaded.normalised
-            }
+                contents: loaded.normalised,
+            },
         }))
-        .sort((a, b) => a.packageName.localeCompare(b.packageName));
+        .sort((a, b) => a.packageName.localeCompare(b.packageName))
 
-    const loadedPackageDetails: LoadedPackageDetails = {};
+    const loadedPackageDetails: LoadedPackageDetails = {}
+
     for (const entry of sortedEntries) {
-        loadedPackageDetails[entry.packageName] = entry.loadedPackageDetail;
+        loadedPackageDetails[entry.packageName] = entry.loadedPackageDetail
     }
 
     observability.debug(
@@ -272,15 +290,15 @@ export async function loadPackages(
         {
             configDirectory,
             packageCount: Object.keys(loadedPackageDetails).length,
-            packageNames: Object.keys(loadedPackageDetails)
-        }
-    );
+            packageNames: Object.keys(loadedPackageDetails),
+        },
+    )
 
     return value(
         {
             loadedLaobanConfig,
-            loadedPackageDetails
+            loadedPackageDetails,
         },
-        allWarnings
-    );
+        allWarnings,
+    )
 }

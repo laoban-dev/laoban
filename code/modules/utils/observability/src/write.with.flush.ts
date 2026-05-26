@@ -3,7 +3,7 @@ import {
     ErrorsOr,
     isErrors,
     makeErrorFromException,
-    mapErrorsOr,
+    mapErrorsOr, sequenceArrayErrorsOr,
     sequenceArrayErrorsOrK,
     value,
 } from "@laoban/errors"
@@ -392,14 +392,20 @@ export const flush = <Purpose, ReadChannel, WriteChannel, Ref>(
 export const flushAllTouchedChannels = <Purpose, ReadChannel, WriteChannel, Ref>(
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>,
 ) =>
-    async (write: WriteChannel): Promise<ErrorsOr<unknown>> =>
-        mapErrorsOr(
-            await sequenceArrayErrorsOrK(
-                Object.values(channelsState.state)
-                    .filter(state => state.touched)
-                    .map(state =>
-                        flush(channelsState)(state.moduleScope)(write),
-                    ),
-            ),
+    async (write: WriteChannel): Promise<ErrorsOr<unknown>> => {
+        const states = Object.values(channelsState.state)
+            .filter(state => state.touched)
+
+        const results: ErrorsOr<unknown>[] = []
+
+        for (const state of states) {
+            results.push(
+                await flush(channelsState)(state.moduleScope)(write),
+            )
+        }
+
+        return mapErrorsOr(
+            sequenceArrayErrorsOr(results),
             () => undefined,
         )
+    }

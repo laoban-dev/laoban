@@ -27,10 +27,6 @@ export type LaobanConfigFile = Partial<
     scripts?: RawLaobanScripts
 }
 
-export type LaobanConfigDiagnosticContext = Readonly<{
-    currentFile?: Filename
-    loadPath: Filename[]
-}>
 
 export interface LaobanConfigLoadConfig {
     fileOps: FileOps

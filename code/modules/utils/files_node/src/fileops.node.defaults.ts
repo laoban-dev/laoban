@@ -31,14 +31,6 @@ export type FileOpsDefaults = Readonly<{
     pathOps: PathOps
 }>
 
-const makeIssue = (
-    kind: FileOpIssueKind,
-    message: string,
-    context: FileOpIssue["context"],
-    cause?: unknown,
-    code?: string,
-): FileOpIssue => makeFileOpIssue(kind, message, context, cause, code)
-
 const extractCode = (cause: unknown): string | undefined =>
     typeof cause === "object" &&
     cause !== null &&
@@ -46,6 +38,15 @@ const extractCode = (cause: unknown): string | undefined =>
     typeof (cause as {code?: unknown}).code === "string"
         ? (cause as {code: string}).code
         : undefined
+
+const fileIssueKind = (code: string | undefined): FileOpIssueKind =>
+    code === "ENOENT"
+        ? "notFound"
+        : code === "EACCES" || code === "EPERM"
+            ? "notReadable"
+            : code === "ENOTDIR"
+                ? "invalidPath"
+                : "io"
 
 type HasObservability = Readonly<{
     observability?: FileOpsHelperConfig["observability"]
@@ -87,12 +88,12 @@ const nodeFileExists: FileExistsFn = async (
         observability?.countMetric("fileops.fileExists.failure")
 
         return errors<FileOpIssue>(
-            makeIssue(
-                code === "EACCES" || code === "EPERM" ? "notReadable" : "io",
+            makeFileOpIssue(
+                filename,
+                fileIssueKind(code),
                 `Failed checking existence of [${filename}]`,
                 {
                     operation: "fileExists",
-                    filename,
                 },
                 cause,
                 code,
@@ -120,12 +121,6 @@ const nodeListDirectory: ListDirectoryFn = async (
         return value(entries)
     } catch (cause) {
         const code = extractCode(cause)
-        const kind: FileOpIssueKind =
-            code === "ENOENT"
-                ? "notFound"
-                : code === "EACCES" || code === "EPERM"
-                    ? "notReadable"
-                    : "io"
 
         observability?.countMetric("fileops.listDirectory.failure")
         observability?.durationMetric(
@@ -134,12 +129,12 @@ const nodeListDirectory: ListDirectoryFn = async (
         )
 
         return errors<FileOpIssue>(
-            makeIssue(
-                kind,
+            makeFileOpIssue(
+                directory,
+                fileIssueKind(code),
                 `Failed listing directory [${directory}]`,
                 {
                     operation: "listDirectory",
-                    directory,
                 },
                 cause,
                 code,
@@ -167,12 +162,6 @@ const nodeLoadFile: LoadFileFn = async (
         return value(text)
     } catch (cause) {
         const code = extractCode(cause)
-        const kind: FileOpIssueKind =
-            code === "ENOENT"
-                ? "notFound"
-                : code === "EACCES" || code === "EPERM"
-                    ? "notReadable"
-                    : "io"
 
         observability?.countMetric("fileops.loadText.file.failure")
         observability?.durationMetric(
@@ -181,12 +170,12 @@ const nodeLoadFile: LoadFileFn = async (
         )
 
         return errors<FileOpIssue>(
-            makeIssue(
-                kind,
+            makeFileOpIssue(
+                filename,
+                fileIssueKind(code),
                 `Failed to read file [${filename}]`,
                 {
                     operation: "loadText",
-                    filename,
                 },
                 cause,
                 code,
@@ -213,12 +202,12 @@ const nodeLoadUrl: LoadUrlFn = async (
             )
 
             return errors<FileOpIssue>(
-                makeIssue(
+                makeFileOpIssue(
+                    url,
                     "notReadable",
                     `Failed to load URL [${url}]. Status ${response.status}`,
                     {
                         operation: "loadText",
-                        filename: url,
                     },
                 ),
             )
@@ -241,12 +230,12 @@ const nodeLoadUrl: LoadUrlFn = async (
         )
 
         return errors<FileOpIssue>(
-            makeIssue(
+            makeFileOpIssue(
+                url,
                 "invalidUrl",
                 `Failed to load URL [${url}]`,
                 {
                     operation: "loadText",
-                    filename: url,
                 },
                 cause,
             ),
@@ -275,12 +264,6 @@ const nodeWriteText: WriteTextFn = async (
         return value(undefined)
     } catch (cause) {
         const code = extractCode(cause)
-        const kind: FileOpIssueKind =
-            code === "ENOENT"
-                ? "notFound"
-                : code === "EACCES" || code === "EPERM"
-                    ? "notReadable"
-                    : "io"
 
         observability?.countMetric("fileops.writeText.failure")
         observability?.durationMetric(
@@ -289,12 +272,12 @@ const nodeWriteText: WriteTextFn = async (
         )
 
         return errors<FileOpIssue>(
-            makeIssue(
-                kind,
+            makeFileOpIssue(
+                filename,
+                fileIssueKind(code),
                 `Failed to write file [${filename}]`,
                 {
                     operation: "writeText",
-                    filename,
                 },
                 cause,
                 code,

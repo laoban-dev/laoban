@@ -1,4 +1,4 @@
-import {ErrorsOr, isErrors, withCleanupErrorsOr} from "@laoban/errors"
+import {ErrorsOr, flatMapErrorsOrK, withCleanupErrorsOr} from "@laoban/errors"
 import {
     ModuleObservability,
     moduleObservability,
@@ -19,6 +19,45 @@ export type WithModuleObservabilityContext<
     channelsState: ChannelsState<Purpose, ReadChannel, WriteChannel, Ref>
 }>
 
+export function makeModuleObservability<
+    Purpose,
+    ReadChannel,
+    WriteChannel,
+    Ref,
+>(
+    context: WithModuleObservabilityContext<
+        Purpose,
+        ReadChannel,
+        WriteChannel,
+        Ref
+    >,
+    moduleScope: ModuleObservabilityScope,
+): Promise<ErrorsOr<ModuleObservability<WriteChannel>>> {
+    return moduleObservability(
+        {
+            ...context.observability,
+            moduleScope,
+        },
+        moduleScope,
+        context.channelsState,
+    )
+}
+
+export async function withExistingModuleObservability<
+    WriteChannel,
+    T,
+>(
+    observability: ModuleObservability<WriteChannel>,
+    fn: (
+        observability: ModuleObservability<WriteChannel>,
+    ) => Promise<ErrorsOr<T>>,
+): Promise<ErrorsOr<T>> {
+    return withCleanupErrorsOr(
+        () => fn(observability),
+        () => observability.close(),
+    )
+}
+
 export async function withModuleObservability<
     Purpose,
     ReadChannel,
@@ -37,22 +76,12 @@ export async function withModuleObservability<
         observability: ModuleObservability<WriteChannel>,
     ) => Promise<ErrorsOr<T>>,
 ): Promise<ErrorsOr<T>> {
-    const observabilityResult = await moduleObservability(
-        {
-            ...context.observability,
-            moduleScope,
-        },
-        moduleScope,
-        context.channelsState,
-    )
-
-    if (isErrors(observabilityResult))
-        return observabilityResult
-
-    const observability = observabilityResult.value
-
-    return withCleanupErrorsOr(
-        () => fn(observability),
-        () => observability.close(),
+    return flatMapErrorsOrK(
+        await makeModuleObservability(context, moduleScope),
+        observability =>
+            withExistingModuleObservability(
+                observability,
+                fn,
+            ),
     )
 }

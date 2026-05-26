@@ -2,17 +2,115 @@ import { NameAnd } from "@laoban/records";
 import { safeJson } from "@laoban/safe";
 
 /**
- * A structured issue that can be accumulated and rendered by callers.
- * `kind` and `context` are intentionally generic so modules can define their own issue domains.
+ * A structured issue that is not necessarily tied to a source file.
+ *
+ * This is the common shape used throughout Laoban for expected operational
+ * failures and warnings. It is intentionally small and open:
+ *
+ * - `kind` identifies the broad family of issue, such as "validation",
+ *   "parseJson", "cycle", or a domain-specific issue kind.
+ * - `message` is the human-readable explanation.
+ * - `context` is domain-specific structured context. For validation issues,
+ *   this is usually a path inside the thing being validated.
+ * - `code` is a stable machine-readable reason, such as "required",
+ *   "wrong.type", or "deprecated".
+ * - `severity` allows warnings and errors to share the same issue shape.
  */
-export type BaseIssue<K = unknown, C = unknown> = {
-    kind?: K;
-    message: string;
-    context?: C;
-    code?: string;
-    severity?: "error" | "warning";
-};
+export type CommonIssue<K = unknown, C = unknown> = {
+    kind?: K
+    message: string
+    context?: C
+    code?: string
+    severity?: "error" | "warning"
+}
 
+/**
+ * A structured issue associated with a known source file.
+ *
+ * Use this when the user can fix the problem by opening a specific file.
+ *
+ * The key convention is:
+ *
+ * - `diagnosticContext.currentFile` is the source file to show to the user.
+ * - `context` remains the location inside that file, if known.
+ *
+ * For example:
+ *
+ * fileIssue("packages/foo/package.details.json", {
+ *     kind: "validation",
+ *     code: "required",
+ *     context: ["name"],
+ *     message: "name is required but was undefined",
+ * })
+ *
+ * should render as something like:
+ *
+ * in file packages/foo/package.details.json
+ *
+ *   name
+ *     required: name is required but was undefined
+ */
+export type FileIssue<K = unknown, C = unknown> = CommonIssue<K, C> & {
+    diagnosticContext: DiagnosticContext
+}
+
+export type DiagnosticContext = {
+    currentFile: string
+    loadPath?: string[]
+}
+/**
+ * Any issue the Laoban error model can carry.
+ *
+ * Most code should continue to work with BaseIssue. Code that knows it is
+ * dealing with a file-backed issue can narrow with `isFileIssue`.
+ *
+ * This keeps the ErrorsOr monad simple:
+ *
+ *     ErrorsOr<T, E extends BaseIssue = BaseIssue>
+ *
+ * while still giving file-backed errors a standard shape.
+ */
+export type BaseIssue<K = unknown, C = unknown> =
+    | CommonIssue<K, C>
+    | FileIssue<K, C>
+
+/**
+ * Create a FileIssue from a normal CommonIssue.
+ *
+ * Use this at file-aware boundaries: JSON parsing, config validation,
+ * package.details.json loading, template file loading, and similar places.
+ *
+ * Do not put the filename into `context` when using this helper. The file goes
+ * in `diagnosticContext.currentFile`; `context` should describe the location
+ * inside the file.
+ */
+export function fileIssue<K = unknown, C = unknown>(
+    currentFile: string,
+    issue: CommonIssue<K, C>,
+    loadPath?: string[],
+): FileIssue<K, C> {
+    return {
+        ...issue,
+        diagnosticContext: {
+            currentFile,
+            ...(loadPath === undefined ? {} : {loadPath}),
+        },
+    }
+}
+
+/**
+ * Type guard for issues that are tied to a known source file.
+ *
+ * Rendering code should use this to decide whether an issue can be displayed
+ * in the friendly "in file ..." form.
+ */
+export function isFileIssue<K = unknown, C = unknown>(
+    issue: BaseIssue<K, C>,
+): issue is FileIssue<K, C> {
+    return typeof (issue as {diagnosticContext?: {currentFile?: unknown}})
+        .diagnosticContext
+        ?.currentFile === "string"
+}
 /**
  * Successful result, optionally carrying warnings gathered along the way.
  * Warnings do not prevent the value from being used.
@@ -643,4 +741,42 @@ export async function withCleanupErrorsOr<T, E extends BaseIssue = BaseIssue>(
         mainResult.value,
         allWarnings.length > 0 ? allWarnings : undefined,
     );
+}
+export function addDiagnosticContextToIssue<Inp extends BaseIssue>(
+    issue: Inp,
+    diagnosticContext: DiagnosticContext,
+): Inp & FileIssue {
+    return {
+        ...issue,
+        diagnosticContext,
+    }
+}
+
+export function addDiagnosticContextToErrors<T, E extends BaseIssue>(
+    result: ErrorsOr<T, E>,
+    diagnosticContext: DiagnosticContext,
+): ErrorsOr<T, (E & FileIssue) | FileIssue> {
+    const mappedWarnings = (result.warnings ?? [])
+        .map(w => addDiagnosticContextToIssue(w, diagnosticContext))
+
+    if (!isErrors(result)) {
+        return value(result.value, mappedWarnings)
+    }
+
+    if (result.errors.length === 0) {
+        return errors<FileIssue>({
+            kind: "loaderErrorWithoutIssue",
+            message: "Loader failed without any error issues",
+            diagnosticContext,
+        })
+    }
+
+    const [firstError, ...restErrors] = result.errors
+
+    return errors(
+        addDiagnosticContextToIssue(firstError, diagnosticContext),
+        restErrors.map(e => addDiagnosticContextToIssue(e, diagnosticContext)),
+        mappedWarnings,
+        result.reference,
+    )
 }

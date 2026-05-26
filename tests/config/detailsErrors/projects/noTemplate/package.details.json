@@ -5,7 +5,7 @@
   "links":       [],
   "guards":      {
     "publish":      true,
-    "extraDeps":    {},
+    "extraDeps":    "someJunkThatIsntABoolean",
     "extraDevDeps": {}
   }
 }
